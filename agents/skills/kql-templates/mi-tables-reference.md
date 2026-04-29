@@ -13733,6 +13733,79 @@ The following columns appear across many MI monitoring tables and are intentiona
 | resource_id | long | Resource identifier. |
 | sessionName | string | Session Name. |
 
+## MonManagedDatabaseInfo — Managed database metadata details
+
+**Purpose**: Managed database metadata detail snapshot used by replication TSGs to validate collation and database identity on MI workers.
+**Category**: Backup-restore / Replication
+**Schema source**: `kusto_table_schema` on `sqlazureeas2follower.eastasia.kusto.windows.net`, database `sqlazure1`
+
+| Column | Type | Description |
+|--------|------|-------------|
+| TIMESTAMP | datetime | Event timestamp. |
+| PreciseTimeStamp | datetime | High precision event timestamp. |
+| ClusterName | string | Cluster name. |
+| NodeRole | string | Node role. |
+| MachineName | string | Machine name. |
+| NodeName | string | Node name. |
+| AppName | string | Application name. |
+| AppTypeName | string | Application type name. |
+| LogicalServerName | string | Managed instance logical server name. |
+| SubscriptionId | string | Customer subscription identifier. |
+| ResourceGroup | string | Customer resource group. |
+| code_package_version | string | SQL MI code package version. |
+| end_utc_date | datetime | End of snapshot validity window. |
+| start_utc_date | datetime | Start of snapshot validity window. |
+| sql_database_id | long | SQL database ID. |
+| managed_database_id | string | Managed database GUID. |
+| owner_sid | string | Database owner SID. |
+| compatibility_level | long | Database compatibility level. |
+| collation_name | string | Database collation name. |
+| SourceNamespace | string | Telemetry source namespace. |
+| SourceMoniker | string | Telemetry source moniker. |
+| SourceVersion | string | Telemetry source version. |
+| __AuthType__ | string | Internal auth type. |
+| __AuthIdentity__ | string | Internal auth identity. |
+| polybase_enabled | string | PolyBase enabled flag. |
+| PartitionId | string | Partition identifier. |
+| allow_polybase_export | string | PolyBase export setting. |
+| __IsTrusted__ | string | Internal trust marker. |
+
+## AlrWinFabHealthDeployedAppEvent — Service Fabric deployed application health alerts
+
+**Purpose**: Service Fabric deployed application health alert surface used by replication TSGs to confirm `sqlagent.exe` crash loops and other application exit faults.
+**Category**: Availability / Replication
+**Schema source**: `kusto_table_schema` on `sqlazureeas2follower.eastasia.kusto.windows.net`, database `sqlazure1`
+
+| Column | Type | Description |
+|--------|------|-------------|
+| TIMESTAMP | datetime | Event timestamp. |
+| PreciseTimeStamp | datetime | High precision event timestamp. |
+| ClusterName | string | Cluster name. |
+| NodeRole | string | Node role. |
+| MachineName | string | Machine name. |
+| NodeName | string | Node name. |
+| AppName | string | Application name. |
+| AppTypeName | string | Application type name. |
+| LogicalServerName | string | Managed instance logical server name. |
+| SubscriptionId | string | Customer subscription identifier. |
+| ResourceGroup | string | Customer resource group. |
+| ApplicationName | string | Service Fabric deployed application name. |
+| HealthState | string | Health state classification. |
+| SourceId | string | Health source identifier. |
+| Property | string | Health property name. |
+| Description | string | Health event description. |
+| IsExpired | bool | Expiration flag for the health event. |
+| Version | long | Health event version. |
+| NodeEntityName | string | Node entity name. |
+| SourceNamespace | string | Telemetry source namespace. |
+| SourceMoniker | string | Telemetry source moniker. |
+| SourceVersion | string | Telemetry source version. |
+| __AuthType__ | string | Internal auth type. |
+| __AuthIdentity__ | string | Internal auth identity. |
+| OneBoxClusterId | string | OneBox cluster identifier. |
+| ClusterEntityName | string | Cluster entity name. |
+| __IsTrusted__ | string | Internal trust marker. |
+
 # MI Filter Patterns
 
 ```kql

@@ -8,3 +8,5 @@ shared-docs/
 mi-backup-v1/
 
 agents/search-results/
+
+session-store.db*

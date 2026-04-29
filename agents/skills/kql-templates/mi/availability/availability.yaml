@@ -3,8 +3,9 @@ SqlSkills:
   Topic: Failover - Planned_Unplanned
   Source: asmi-troubleshooter-package/Failover - Planned_Unplanned.md
   Prompts:
-  - MI Failover - Planned_Unplanned
-  - Managed Instance Failover - Planned_Unplanned
+  - MI failover group configuration
+  - Unknown
+  - Investigate failover group role
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -19,8 +20,9 @@ SqlSkills:
   Topic: Failover - Planned_Unplanned
   Source: asmi-troubleshooter-package/Failover - Planned_Unplanned.md
   Prompts:
-  - MI Failover - Planned_Unplanned
-  - Managed Instance Failover - Planned_Unplanned
+  - MI failover group configuration by server
+  - SqlFailovers LogicalServerName StartTime
+  - Check SqlFailovers StartTime
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -47,8 +49,9 @@ SqlSkills:
   Topic: Failover - Planned_Unplanned
   Source: asmi-troubleshooter-package/Failover - Planned_Unplanned.md
   Prompts:
-  - MI Failover - Planned_Unplanned
-  - Managed Instance Failover - Planned_Unplanned
+  - MI failover group configuration
+  - MonFabricApi AppName PreciseTimeStamp current_state_desc
+  - Check MonFabricApi AppName current_state_desc
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -67,8 +70,9 @@ SqlSkills:
   Topic: Failover Group
   Source: asmi-troubleshooter-package/Failover Group.md
   Prompts:
-  - MI Failover Group
-  - Managed Instance Failover Group
+  - MI failover group configuration by server
+  - MonGeoDRFailoverGroups logical_server_name failover_group_id
+  - Check MonGeoDRFailoverGroups failover_group_id
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -85,8 +89,9 @@ SqlSkills:
   Topic: Failover Group
   Source: asmi-troubleshooter-package/Failover Group.md
   Prompts:
-  - MI Failover Group
-  - Managed Instance Failover Group
+  - MI failover group configuration by server
+  - MonGeoDRFailoverGroups TIMESTAMP logical_server_name role
+  - Check MonGeoDRFailoverGroups role start_utc_date
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -105,8 +110,9 @@ SqlSkills:
   Topic: Health of replica
   Source: asmi-troubleshooter-package/Health of replica.md
   Prompts:
-  - MI Health of replica
-  - Managed Instance Health of replica
+  - MI replica health and role by server
+  - MonDmDbHadrReplicaStates LogicalServerName TIMESTAMP
+  - Investigate replica health
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -121,8 +127,9 @@ SqlSkills:
   Topic: Health of replica
   Source: asmi-troubleshooter-package/Health of replica.md
   Prompts:
-  - MI Health of replica
-  - Managed Instance Health of replica
+  - MI replica health and role by server
+  - MonFabricApi LogicalServerName event TIMESTAMP
+  - Check MonFabricApi event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -139,8 +146,9 @@ SqlSkills:
   Topic: Check Read-scale out connection
   Source: asmi-troubleshooter-package/Check Read-scale out connection.md
   Prompts:
-  - MI Check Read-scale out connection
-  - Managed Instance Check Read-scale out connection
+  - MI connectivity and networking
+  - MonLogin TIMESTAMP
+  - Investigate connectivity errors
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -153,8 +161,9 @@ SqlSkills:
   Topic: Recovery
   Source: asmi-troubleshooter-package/Recovery.md
   Prompts:
-  - MI Recovery
-  - Managed Instance Recovery
+  - MI seeding progress and failures
+  - MonRecoveryTrace TIMESTAMP
+  - Investigate seeding failures
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -167,8 +176,9 @@ SqlSkills:
   Topic: Recovery
   Source: asmi-troubleshooter-package/Recovery.md
   Prompts:
-  - MI Recovery
-  - Managed Instance Recovery
+  - MI seeding progress and failures
+  - MonRecoveryTrace trace_message
+  - Check MonRecoveryTrace trace_message
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -181,8 +191,9 @@ SqlSkills:
   Topic: Recovery
   Source: asmi-troubleshooter-package/Recovery.md
   Prompts:
-  - MI Recovery
-  - Managed Instance Recovery
+  - MI seeding progress and failures by node
+  - MonRecoveryTrace AppName TIMESTAMP NodeName
+  - Check MonRecoveryTrace AppName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -205,8 +216,9 @@ SqlSkills:
   Topic: Recovery
   Source: asmi-troubleshooter-package/Recovery.md
   Prompts:
-  - MI Recovery
-  - Managed Instance Recovery
+  - MI seeding progress and failures by database
+  - MonRecoveryTrace AppName database_name event
+  - Check MonRecoveryTrace AppName database_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -225,8 +237,9 @@ SqlSkills:
   Topic: Dump
   Source: asmi-troubleshooter-package/Dump.md
   Prompts:
-  - MI Dump
-  - Managed Instance Dump
+  - MI dump and crash analysis by server
+  - MonSqlDump LogicalServerName TIMESTAMP CompleteFileName
+  - Check MonSqlDump CompleteFileName MonSqlDump
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -252,8 +265,9 @@ SqlSkills:
   Topic: Dump
   Source: asmi-troubleshooter-package/Dump.md
   Prompts:
-  - MI Dump
-  - Managed Instance Dump
+  - MI restore request status
+  - MonManagement operation_parameters operation_type
+  - Check MonManagement operation_parameters operation_type
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -274,8 +288,9 @@ SqlSkills:
   Topic: Dump
   Source: asmi-troubleshooter-package/Dump.md
   Prompts:
-  - MI Dump
-  - Managed Instance Dump
+  - MI restore request status
+  - MonSQLSystemHealth AppName TIMESTAMP
+  - Check MonSQLSystemHealth AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -290,8 +305,9 @@ SqlSkills:
   Topic: Dump
   Source: asmi-troubleshooter-package/Dump.md
   Prompts:
-  - MI Dump
-  - Managed Instance Dump
+  - MI dump and crash analysis
+  - Unknown DumpCrashTime Result packedRecord
+  - Check Unknown DumpCrashTime Result
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -312,8 +328,9 @@ SqlSkills:
   Topic: Error code (AlrSQLErrorsReported
   Source: asmi-troubleshooter-package/Error code (AlrSQLErrorsReported.md
   Prompts:
-  - MI Error code (AlrSQLErrorsReported
-  - Managed Instance Error code (AlrSQLErrorsReported
+  - MI resource usage analysis by server
+  - AlrSQLErrorsReported LogicalServerName TIMESTAMP
+  - Check AlrSQLErrorsReported error_number state
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -332,8 +349,9 @@ SqlSkills:
   Topic: Error code (AlrSQLErrorsReported
   Source: asmi-troubleshooter-package/Error code (AlrSQLErrorsReported.md
   Prompts:
-  - MI Error code (AlrSQLErrorsReported
-  - Managed Instance Error code (AlrSQLErrorsReported
+  - MI connectivity and networking by server
+  - AlrSQLErrorsReported TIMESTAMP LogicalServerName
+  - Check AlrSQLErrorsReported error_number state
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -368,8 +386,9 @@ SqlSkills:
   Topic: Error Log (MonSQLSystemHealth
   Source: asmi-troubleshooter-package/Error Log (MonSQLSystemHealth.md
   Prompts:
-  - MI Error Log (MonSQLSystemHealth
-  - Managed Instance Error Log (MonSQLSystemHealth
+  - MI restore request status
+  - MonSQLSystemHealth TIMESTAMP
+  - Investigate restore progress
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -382,8 +401,9 @@ SqlSkills:
   Topic: SLO history
   Source: asmi-troubleshooter-package/SLO history.md
   Prompts:
-  - MI SLO history
-  - Managed Instance SLO history
+  - MI restore request status by server
+  - MonAnalyticsDBSnapshot logical_server_name TIMESTAMP first
+  - Check MonAnalyticsDBSnapshot first service_level_objective
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -402,8 +422,9 @@ SqlSkills:
   Topic: SLO history
   Source: asmi-troubleshooter-package/SLO history.md
   Prompts:
-  - MI SLO history
-  - Managed Instance SLO history
+  - MI restore request status by database
+  - MonAnalyticsDBSnapshot logical_server_name max_size_bytes
+  - Check MonAnalyticsDBSnapshot logical_database_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -424,8 +445,9 @@ SqlSkills:
   Topic: SLO history
   Source: asmi-troubleshooter-package/SLO history.md
   Prompts:
-  - MI SLO history
-  - Managed Instance SLO history
+  - MI slo history analysis
+  - Unknown StartTime
+  - Check Unknown StartTime
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -438,8 +460,9 @@ SqlSkills:
   Topic: SLO history
   Source: asmi-troubleshooter-package/SLO history.md
   Prompts:
-  - MI SLO history
-  - Managed Instance SLO history
+  - MI resource usage analysis by server
+  - MonDmRealTimeResourceStats LogicalServerName replica_type
+  - Check MonDmRealTimeResourceStats replica_type AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -458,8 +481,9 @@ SqlSkills:
   Topic: SLO history
   Source: asmi-troubleshooter-package/SLO history.md
   Prompts:
-  - MI SLO history
-  - Managed Instance SLO history
+  - MI database CPU and memory stats
+  - MonDmDbResourceGovernance primary_bucket_fill_rate_cpu
+  - Check MonDmDbResourceGovernance primary_bucket_fill_rate_cpu
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -474,8 +498,9 @@ SqlSkills:
   Topic: Failed upgrade storage or SKU
   Source: asmi-troubleshooter-package/Failed upgrade storage or SKU.md
   Prompts:
-  - MI Failed upgrade storage or SKU
-  - Managed Instance Failed upgrade storage or SKU
+  - MI storage usage and size
+  - MonManagement TIMESTAMP request_id state_machine_type
+  - Check MonManagement request_id state_machine_type
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -495,8 +520,9 @@ SqlSkills:
   Topic: Managed Instance Link
   Source: asmi-troubleshooter-package/Managed Instance Link.md
   Prompts:
-  - MI Managed Instance Link
-  - Managed Instance Managed Instance Link
+  - MI login and connection errors
+  - MonUcsConnections AppName PreciseTimeStamp error_code
+  - Check MonUcsConnections AppName error_code
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -513,8 +539,9 @@ SqlSkills:
   Topic: Managed Instance Link
   Source: asmi-troubleshooter-package/Managed Instance Link.md
   Prompts:
-  - MI Managed Instance Link
-  - Managed Instance Managed Instance Link
+  - MI restore request status
+  - MonManagementOperations operation_type operation_parameters
+  - Check MonManagementOperations operation_type
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -529,8 +556,9 @@ SqlSkills:
   Topic: Slow seeding - GeoDR
   Source: asmi-troubleshooter-package/Slow seeding - GeoDR.md
   Prompts:
-  - MI Slow seeding - GeoDR
-  - Managed Instance Slow seeding - GeoDR
+  - MI seeding progress and failures by database
+  - MonAnalyticsDBSnapshot TIMESTAMP database_type state
+  - Check MonAnalyticsDBSnapshot database_type state
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -549,8 +577,9 @@ SqlSkills:
   Topic: Slow seeding - GeoDR
   Source: asmi-troubleshooter-package/Slow seeding - GeoDR.md
   Prompts:
-  - MI Slow seeding - GeoDR
-  - Managed Instance Slow seeding - GeoDR
+  - MI seeding progress and failures by server
+  - MonDbSeedTraces TIMESTAMP AppTypeName LogicalServerName
+  - Check MonDbSeedTraces AppTypeName event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -573,8 +602,9 @@ SqlSkills:
   Topic: Slow seeding - GeoDR
   Source: asmi-troubleshooter-package/Slow seeding - GeoDR.md
   Prompts:
-  - MI Slow seeding - GeoDR
-  - Managed Instance Slow seeding - GeoDR
+  - MI seeding progress and failures by server
+  - MonDbSeedTraces TIMESTAMP AppTypeName LogicalServerName
+  - Check TIMESTAMP Success
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -599,8 +629,9 @@ SqlSkills:
   Topic: Slow seeding - GeoDR
   Source: asmi-troubleshooter-package/Slow seeding - GeoDR.md
   Prompts:
-  - MI Slow seeding - GeoDR
-  - Managed Instance Slow seeding - GeoDR
+  - MI seeding progress and failures
+  - MonNonPiiAudit TIMESTAMP request_action username
+  - Check MonNonPiiAudit request_action username
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -619,8 +650,9 @@ SqlSkills:
   Topic: Zone-Redundant Config
   Source: asmi-troubleshooter-package/Zone-Redundant Config.md
   Prompts:
-  - MI Zone-Redundant Config
-  - Managed Instance Zone-Redundant Config
+  - MI restore request status by server
+  - MonAnalyticsDBSnapshot TIMESTAMP logical_server_name
+  - Investigate restore progress
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -631,8 +663,9 @@ SqlSkills:
   Topic: Zone-Redundant Config
   Source: asmi-troubleshooter-package/Zone-Redundant Config.md
   Prompts:
-  - MI Zone-Redundant Config
-  - Managed Instance Zone-Redundant Config
+  - MI restore request status
+  - MonAnalyticsDBSnapshot TIMESTAMP
+  - Investigate restore progress
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -645,8 +678,9 @@ SqlSkills:
   Topic: Node history status
   Source: asmi-troubleshooter-package/Node history status.md
   Prompts:
-  - MI Node history status
-  - Managed Instance Node history status
+  - MI connectivity and networking
+  - AlrWinFabHealthNodeEvent ClusterName TIMESTAMP
+  - Check AlrWinFabHealthNodeEvent ClusterName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -661,8 +695,9 @@ SqlSkills:
   Topic: Node history status
   Source: asmi-troubleshooter-package/Node history status.md
   Prompts:
-  - MI Node history status
-  - Managed Instance Node history status
+  - MI connectivity and networking
+  - MonClusterLoad ClusterName TIMESTAMP
+  - Check MonClusterLoad ClusterName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -677,8 +712,9 @@ SqlSkills:
   Topic: Code Package Version & Primary Node history
   Source: asmi-troubleshooter-package/Code Package Version & Primary Node history.md
   Prompts:
-  - MI Code Package Version & Primary Node history
-  - Managed Instance Code Package Version & Primary Node history
+  - MI restore request status
+  - MonManagedServers name state code_package_version
+  - Check MonManagedServers name state
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -693,8 +729,9 @@ SqlSkills:
   Topic: Code Package Version & Primary Node history
   Source: asmi-troubleshooter-package/Code Package Version & Primary Node history.md
   Prompts:
-  - MI Code Package Version & Primary Node history
-  - Managed Instance Code Package Version & Primary Node history
+  - MI code package version & primary node history analysis
+  - MonManagedInstanceInfo AppName TIMESTAMP
+  - Check MonManagedInstanceInfo AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -709,8 +746,9 @@ SqlSkills:
   Topic: SQL node trace _ Trace Flags
   Source: asmi-troubleshooter-package/SQL node trace _ Trace Flags.md
   Prompts:
-  - MI SQL node trace _ Trace Flags
-  - Managed Instance SQL node trace _ Trace Flags
+  - MI restore request status by node
+  - MonNodeTraceETW TIMESTAMP ClusterName NodeName
+  - Check MonNodeTraceETW ClusterName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -727,8 +765,9 @@ SqlSkills:
   Topic: SQL node trace _ Trace Flags
   Source: asmi-troubleshooter-package/SQL node trace _ Trace Flags.md
   Prompts:
-  - MI SQL node trace _ Trace Flags
-  - Managed Instance SQL node trace _ Trace Flags
+  - MI restore request status
+  - MonNodeTraceETW Message TIMESTAMP
+  - Check MonNodeTraceETW Message
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -745,8 +784,9 @@ SqlSkills:
   Topic: SQL node trace _ Trace Flags
   Source: asmi-troubleshooter-package/SQL node trace _ Trace Flags.md
   Prompts:
-  - MI SQL node trace _ Trace Flags
-  - Managed Instance SQL node trace _ Trace Flags
+  - MI restore request status by node
+  - MonNodeTraceETW Message NodeName ClusterName
+  - Check MonNodeTraceETW Message NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -771,8 +811,9 @@ SqlSkills:
   Topic: SQL node trace _ Trace Flags
   Source: asmi-troubleshooter-package/SQL node trace _ Trace Flags.md
   Prompts:
-  - MI SQL node trace _ Trace Flags
-  - Managed Instance SQL node trace _ Trace Flags
+  - MI sql node trace _ trace flags analysis
+  - Unknown ClusterName TaskName TIMESTAMP
+  - Check Unknown ClusterName TaskName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -795,8 +836,9 @@ SqlSkills:
   Topic: Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
   Source: asmi-troubleshooter-package/Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation.md
   Prompts:
-  - MI Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
-  - Managed Instance Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  - MI rollout and upgrade status
+  - MonPrivateClusterCapacityManagement subscription_id
+  - Check MonPrivateClusterCapacityManagement subscription_id
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -815,8 +857,9 @@ SqlSkills:
   Topic: Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
   Source: asmi-troubleshooter-package/Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation.md
   Prompts:
-  - MI Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
-  - Managed Instance Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  - MI rollout and upgrade status
+  - MonManagedServers customer_subscription_id name TIMESTAMP
+  - Check MonManagedServers customer_subscription_id name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -833,8 +876,9 @@ SqlSkills:
   Topic: Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
   Source: asmi-troubleshooter-package/Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation.md
   Prompts:
-  - MI Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
-  - Managed Instance Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  - MI rollout and upgrade status
+  - MonManagedServers customer_subscription_id name TIMESTAMP
+  - Check MonManagedServers customer_subscription_id name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -853,8 +897,9 @@ SqlSkills:
   Topic: Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
   Source: asmi-troubleshooter-package/Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation.md
   Prompts:
-  - MI Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
-  - Managed Instance Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  - MI rollout and upgrade status
+  - MonPrivateClusters private_cluster_id TIMESTAMP
+  - Check MonPrivateClusters private_cluster_id
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -871,8 +916,9 @@ SqlSkills:
   Topic: Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
   Source: asmi-troubleshooter-package/Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation.md
   Prompts:
-  - MI Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
-  - Managed Instance Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  - MI rollout and upgrade status
+  - MonPrivateClusters tenant_ring_name
+  - Check MonPrivateClusters tenant_ring_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -887,8 +933,9 @@ SqlSkills:
   Topic: Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
   Source: asmi-troubleshooter-package/Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation.md
   Prompts:
-  - MI Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
-  - Managed Instance Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  - MI rollout and upgrade status
+  - MonPrivateClusters private_cluster_id InstanceName name
+  - Check MonPrivateClusters private_cluster_id InstanceName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -903,8 +950,9 @@ SqlSkills:
   Topic: Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
   Source: asmi-troubleshooter-package/Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation.md
   Prompts:
-  - MI Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
-  - Managed Instance Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  - MI rollout and upgrade status
+  - MonUpsertTenantRingRequests ring_buildout_id TIMESTAMP
+  - Check MonUpsertTenantRingRequests ring_buildout_id
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -921,8 +969,9 @@ SqlSkills:
   Topic: Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
   Source: asmi-troubleshooter-package/Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation.md
   Prompts:
-  - MI Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
-  - Managed Instance Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  - MI rollout and upgrade status
+  - MonUpsertTenantRingRequests ring_buildout_id TIMESTAMP
+  - Check MonUpsertTenantRingRequests ring_buildout_id
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -939,8 +988,9 @@ SqlSkills:
   Topic: Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
   Source: asmi-troubleshooter-package/Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation.md
   Prompts:
-  - MI Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
-  - Managed Instance Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  - MI rollout and upgrade status
+  - MonUpsertTenantRingRequests ring_buildout_id TIMESTAMP
+  - Check MonUpsertTenantRingRequests ring_buildout_id
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -957,8 +1007,9 @@ SqlSkills:
   Topic: Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
   Source: asmi-troubleshooter-package/Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation.md
   Prompts:
-  - MI Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
-  - Managed Instance Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  - MI rollout and upgrade status
+  - MonDeploymentAutomationInstances instance_id
+  - Check MonDeploymentAutomationInstances instance_id
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -971,8 +1022,9 @@ SqlSkills:
   Topic: Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
   Source: asmi-troubleshooter-package/Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation.md
   Prompts:
-  - MI Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
-  - Managed Instance Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  - MI rollout and upgrade status
+  - MonDeploymentAutomationInstances scenario_parameters
+  - Check MonDeploymentAutomationInstances scenario_parameters
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -987,13 +1039,14 @@ SqlSkills:
   Topic: Whether the feature wave is enabled
   Source: asmi-troubleshooter-package/Whether the feature wave is enabled.md
   Prompts:
-  - MI Whether the feature wave is enabled
-  - Managed Instance Whether the feature wave is enabled
+  - MI connectivity and networking
+  - ExtEvents TIMESTAMP area message
+  - Check ExtEvents area message
   CustomizedParameters:
   - ServerName
   - DatabaseName
   KustoQueries:
-  - TableName: Unknown
+  - TableName: ExtEvents
     ExecutedQuery: 'let subscriptionId = "32beb3f0-c4b9-4e25-a89e-5f7a042c1433";cluster(''azportalpartner.kusto.windows.net '').database(''AzurePortal'').ExtEvents| where TIMESTAMP >= ago(30d)| where area
       =~ ''SubscriptionsData.getRegionsEnabledForFeaturePack.parsedResponse''| where message has subscriptionId| order by TIMESTAMP desc | take 1| parse message with "SubscriptionsData.getRegionsEnabledForFeaturePack.parsedResponse:
       " RegionsEnabledForFeatureWave| project TIMESTAMP, RegionsEnabledForFeatureWave = parse_json(RegionsEnabledForFeatureWave)| mv-expand RegionsEnabledForFeatureWave| where RegionsEnabledForFeatureWave
@@ -1016,8 +1069,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI restore request status by database
+  - MonAnalyticsDBSnapshot service_level_objective AppName
+  - Check MonAnalyticsDBSnapshot service_level_objective AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1040,8 +1094,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI seeding progress and failures by node
+  - MonRecoveryTrace AppName TIMESTAMP NodeName
+  - Check MonRecoveryTrace AppName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1062,8 +1117,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI seeding progress and failures by database
+  - MonManagedServerCategorizedOutages logical_server_name
+  - Check MonManagedServerCategorizedOutages
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1080,8 +1136,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI login and connection errors by database
+  - MonLogin LogicalServerName event application_name
+  - Check MonLogin event application_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1100,8 +1157,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI dump and crash analysis
+  - MonSqlDumperActivity TargetAppName CompleteFileName
+  - Check MonSqlDumperActivity TargetAppName CompleteFileName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1116,8 +1174,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI dump and crash analysis
+  - MonNodeTraceETW ClusterName Message TIMESTAMP
+  - Check MonNodeTraceETW ClusterName Message
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1134,8 +1193,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI dump and crash analysis
+  - MonWatsonCloudTestAnalysis TIMESTAMP
+  - Investigate crash dumps
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1152,8 +1212,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI replica health and role
+  - MonFabricApi AppName partition_id current_state_desc
+  - Check MonFabricApi AppName partition_id
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1170,8 +1231,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI connectivity and networking
+  - AlrWinFabHealthApplicationState ApplicationName HealthState
+  - Check AlrWinFabHealthApplicationState ApplicationName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1186,8 +1248,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI rollout and upgrade status
+  - Unknown ClusterName TaskName EventType
+  - Check Unknown ClusterName TaskName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1246,8 +1309,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI restore request status
+  - MonManagement TIMESTAMP state_machine_type state
+  - Check MonManagement state_machine_type state
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1267,8 +1331,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI rollout and upgrade status
+  - MonRolloutProgress event cluster_name
+  - Check MonRolloutProgress event cluster_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1285,8 +1350,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI rollout and upgrade status
+  - MonRolloutProgress event cluster_name
+  - Check MonRolloutProgress event cluster_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1303,8 +1369,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI rollout and upgrade status
+  - MonRolloutProgress event winfab_cluster_name
+  - Check MonRolloutProgress event winfab_cluster_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1321,8 +1388,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI rollout and upgrade status
+  - MonRolloutProgress event winfab_cluster_name
+  - Check MonRolloutProgress event winfab_cluster_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1339,8 +1407,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI wait stats analysis
+  - MonDmTranActiveTransactions AppName transaction_begin_time
+  - Check MonDmTranActiveTransactions AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1361,8 +1430,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI dump and crash analysis by node
+  - MonSqlDump AppName RelativePath NodeName
+  - Check MonSqlDump AppName RelativePath
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1381,8 +1451,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI restore request status
+  - MonManagement state_machine_type old_state
+  - Check MonManagement state_machine_type old_state
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1397,8 +1468,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI restore request status
+  - MonManagement event StartResizeTime EndResizeTime
+  - Check MonManagement event StartResizeTime
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1423,8 +1495,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI restore request status
+  - MonDeploymentAutomation message downsizeTimestamp
+  - Check MonDeploymentAutomation message downsizeTimestamp
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1449,8 +1522,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI restore request status by database
+  - MonAnalyticsDBSnapshot service_level_objective
+  - Check MonAnalyticsDBSnapshot service_level_objective
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1470,8 +1544,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI replica health and role
+  - MonDmContinuousCopyStatus AppName link_type PreciseTimeStamp
+  - Check MonDmContinuousCopyStatus AppName link_type
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1495,8 +1570,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI connectivity and networking
+  - AlrWinFabHealthPartitionEvent ApplicationName
+  - Check AlrWinFabHealthPartitionEvent ApplicationName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1509,8 +1585,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI resource usage analysis by node
+  - MonRgLoad event ClusterName NodeName
+  - Check MonRgLoad event ClusterName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1533,13 +1610,14 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI resource usage analysis
+  - WinFabLogs TIMESTAMP ClusterName TaskName Primary
+  - Check TIMESTAMP Primary
   CustomizedParameters:
   - ServerName
   - DatabaseName
   KustoQueries:
-  - TableName: Unknown
+  - TableName: WinFabLogs
     ExecutedQuery: 'let NodeNames=WinFabLogs
 
       | where TIMESTAMP > ago(7d)
@@ -1603,8 +1681,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI restore request status
+  - MonRgManager ClusterName event application_name
+  - Check MonRgManager ClusterName event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1621,8 +1700,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI replica health and role
+  - Unknown operation_parameters operation_type
+  - Check Unknown operation_parameters operation_type
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1697,8 +1777,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI seeding progress and failures
+  - MonRecoveryTrace AppName database_id originalEventTimestamp
+  - Check MonRecoveryTrace AppName database_id
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1723,8 +1804,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI restore request status by server
+  - MonDatabaseMetadata LogicalServerName table_name type
+  - Check MonDatabaseMetadata table_name type
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1745,8 +1827,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI login and connection errors by node
+  - MonLogin ClusterName originalEventTimestamp is_success
+  - Check MonLogin ClusterName originalEventTimestamp
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1773,8 +1856,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI restore request status by server
+  - MonSQLSystemHealth LogicalServerName message
+  - Check MonSQLSystemHealth message
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1789,8 +1873,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI restore request status
+  - MonNonPiiAudit
+  - Investigate restore progress
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1803,8 +1888,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI resource usage analysis
+  - AlrWinFabHealthNodeEvent ClusterName TIMESTAMP
+  - Check AlrWinFabHealthNodeEvent ClusterName NodeEntityName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1823,8 +1909,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI restore request status
+  - MonDeploymentAutomation message AppName TIMESTAMP
+  - Check MonDeploymentAutomation message AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1841,8 +1928,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI restore request status by node
+  - MonCounterOneMinute ClusterName NodeName TIMESTAMP
+  - Check MonCounterOneMinute ClusterName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1859,8 +1947,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI resource usage analysis by node
+  - MonSqlRgHistory AppTypeName event AppName
+  - Check MonSqlRgHistory AppTypeName event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1889,8 +1978,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI rollout and upgrade status by node
+  - MonClusterLoad ClusterName TIMESTAMP node_type
+  - Check MonClusterLoad ClusterName node_type
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1913,8 +2003,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI login and connection errors
+  - MonLogin originalEventTimestamp ClusterName AppTypeName
+  - Check MonLogin originalEventTimestamp ClusterName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1935,8 +2026,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI restore request status
+  - MonNonPiiAudit PreciseTimeStamp request request_action
+  - Check MonNonPiiAudit request request_action
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1962,8 +2054,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI replica health and role by database
+  - MonDmDbHadrReplicaStates PreciseTimeStamp LogicalServerName
+  - Check MonDmDbHadrReplicaStates is_local
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1983,13 +2076,14 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI ha-debug-queries analysis
+  - GetSqlRunnerLog custom_maintenance_protected_ring UserField1
+  - Check GetSqlRunnerLog custom_maintenance_protected_ring
   CustomizedParameters:
   - ServerName
   - DatabaseName
   KustoQueries:
-  - TableName: MonFabricClusters
+  - TableName: GetSqlRunnerLog
     ExecutedQuery: 'let ClusterData = GetCrossClusterData("MonFabricClusters")
 
       | where custom_maintenance_protected_ring  == 1
@@ -2015,13 +2109,14 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI ha-debug-queries analysis
+  - CAD Cluster RoleInstanceName TenantName
+  - Check CAD Cluster RoleInstanceName
   CustomizedParameters:
   - ServerName
   - DatabaseName
   KustoQueries:
-  - TableName: Unknown
+  - TableName: CAD
     ExecutedQuery: 'let VMInfo = cluster("Vmainsight").database("vmadb").CAD;
 
       | where Cluster contains "am3prdapp10" and TenantName contains "71dfde68fc08496c9f1c0d9c25cc0da7"  and PreciseTimeStamp > ago(10d)
@@ -2031,8 +2126,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI rollout and upgrade status
+  - MonRolloutProgress PreciseTimeStamp event
+  - Check MonRolloutProgress event winfab_cluster_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2087,8 +2183,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI rollout and upgrade status
+  - MonRolloutProgress cluster_name
+  - Check MonRolloutProgress cluster_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2105,8 +2202,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI rollout and upgrade status
+  - MonRolloutFiltered event application_name target_version
+  - Check MonRolloutFiltered event application_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2133,8 +2231,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI ha-debug-queries analysis
+  - MonSocrates PreciseTimeStamp logical_db_name event
+  - Check MonSocrates logical_db_name event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2157,8 +2256,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI restore request status by node
+  - MonNodeTraceETW Message NodeName packageName
+  - Check MonNodeTraceETW Message NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2185,8 +2285,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI restore request status
+  - MonSQLSystemHealth ClusterName originalEventTimestamp
+  - Check MonSQLSystemHealth ClusterName originalEventTimestamp
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2205,8 +2306,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI replica health and role
+  - MonFabricDebug ClusterName originalEventTimestamp event
+  - Check MonFabricDebug ClusterName originalEventTimestamp
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2221,8 +2323,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI rollout and upgrade status
+  - Unknown ETWTimestamp TaskName ClusterName
+  - Check Unknown ETWTimestamp TaskName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2257,8 +2360,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI rollout and upgrade status by node
+  - MonClusterLoad TIMESTAMP ClusterName event
+  - Check MonClusterLoad ClusterName event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2285,8 +2389,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI memory pressure and OOM analysis
+  - MonRgLoad TIMESTAMP application_name event
+  - Check MonRgLoad application_name event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2311,8 +2416,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI restore request status by database
+  - MonManagedServers TIMESTAMP customer_subscription_id
+  - Check MonManagedServers customer_subscription_id dcount_role
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2373,8 +2479,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI replica health and role by database
+  - MonDmDbHadrReplicaStates PreciseTimeStamp is_forwarder
+  - Check MonDmDbHadrReplicaStates is_forwarder
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2428,8 +2535,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI seeding progress and failures
+  - MonManagementOperations request_id event seeding_start_time
+  - Check MonManagementOperations request_id event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2452,8 +2560,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI restore request status
+  - MonManagementOperations request_id event
+  - Check MonManagementOperations request_id event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2472,8 +2581,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI seeding progress and failures by server
+  - MonAnalyticsDBSnapshot PreciseTimeStamp logical_server_name
+  - Investigate seeding failures
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2494,8 +2604,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI login and connection errors by database
+  - MonUcsConnections PreciseTimeStamp LogicalServerName
+  - Check MonUcsConnections physical_database_id cnt
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2532,8 +2643,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI memory pressure and OOM analysis by node
+  - MonCounterOneMinute ClusterName NodeName CounterName
+  - Check MonCounterOneMinute ClusterName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2588,8 +2700,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI resource usage analysis by node
+  - Unknown ClusterName Text TaskName
+  - Check Unknown ClusterName Text
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2722,8 +2835,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI resource usage analysis by node
+  - MonContainerShare ClusterName NodeName AppName
+  - Check MonContainerShare ClusterName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2756,8 +2870,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI storage usage and size by node
+  - MonContainerShare PreciseTimeStamp ClusterName NodeName
+  - Check MonContainerShare ClusterName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2776,8 +2891,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI wait stats analysis by node
+  - MonHyperVEvents ClusterName NodeName TaskName
+  - Check MonHyperVEvents ClusterName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2796,8 +2912,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI storage usage and size by node
+  - MonSQLXStore AppName TIMESTAMP NodeName
+  - Check MonSQLXStore AppName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2814,8 +2931,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI memory pressure and OOM analysis by node
+  - MonCounterOneMinute ClusterName NodeName CounterName
+  - Check MonCounterOneMinute ClusterName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2846,8 +2964,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI wait stats analysis by server
+  - MonSqlRgHistory LogicalServerName NodeName TIMESTAMP
+  - Check MonSqlRgHistory NodeName file_path
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2872,8 +2991,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI storage usage and size by server
+  - MonManagedInstanceResourceStats LogicalServerName NodeName
+  - Check MonManagedInstanceResourceStats NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2898,8 +3018,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI replica health and role by database
+  - MonFabricThrottle database_name availability_replica_id
+  - Check MonFabricThrottle database_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2922,8 +3043,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI seeding progress and failures
+  - MonManagedInstanceCategorizedDatabaseOutages OutageType
+  - Check MonManagedInstanceCategorizedDatabaseOutages
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2944,8 +3066,9 @@ SqlSkills:
   Topic: HA-Debug-queries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/HA-Debug-queries.md
   Prompts:
-  - MI HA-Debug-queries
-  - Managed Instance HA-Debug-queries
+  - MI seeding progress and failures
+  - MonManagedInstanceCategorizedDatabaseOutages OutageType
+  - Check MonManagedInstanceCategorizedDatabaseOutages
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2964,8 +3087,9 @@ SqlSkills:
   Topic: Investigate-replica-placement-problems
   Source: TSG-SQL-MI-Availability/content/Index/Availability/Investigate-replica-placement-problems.md
   Prompts:
-  - MI Investigate-replica-placement-problems
-  - Managed Instance Investigate-replica-placement-problems
+  - MI replica health and role
+  - Unknown ClusterName ETWTimestamp Id
+  - Check Unknown ClusterName ETWTimestamp
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2984,8 +3108,9 @@ SqlSkills:
   Topic: Investigate-replica-placement-problems
   Source: TSG-SQL-MI-Availability/content/Index/Availability/Investigate-replica-placement-problems.md
   Prompts:
-  - MI Investigate-replica-placement-problems
-  - Managed Instance Investigate-replica-placement-problems
+  - MI replica health and role
+  - Unknown ClusterName ETWTimestamp Id
+  - Check Unknown ClusterName ETWTimestamp
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3004,8 +3129,9 @@ SqlSkills:
   Topic: Investigate-replica-placement-problems
   Source: TSG-SQL-MI-Availability/content/Index/Availability/Investigate-replica-placement-problems.md
   Prompts:
-  - MI Investigate-replica-placement-problems
-  - Managed Instance Investigate-replica-placement-problems
+  - MI replica health and role by node
+  - MonNodeTraceETW ClusterName PreciseTimeStamp NodeName
+  - Check MonNodeTraceETW ClusterName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3028,8 +3154,9 @@ SqlSkills:
   Topic: TRDB0102-CL-LongRecovery-RCA
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TRDB0102-CL-LongRecovery-RCA.md
   Prompts:
-  - MI TRDB0102-CL-LongRecovery-RCA
-  - Managed Instance TRDB0102-CL-LongRecovery-RCA
+  - MI seeding progress and failures by database
+  - MonRecoveryTrace AppTypeName AppName trace_message
+  - Check MonRecoveryTrace AppTypeName AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3065,8 +3192,9 @@ SqlSkills:
   Topic: TRDB0102-CL-LongRecovery-RCA
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TRDB0102-CL-LongRecovery-RCA.md
   Prompts:
-  - MI TRDB0102-CL-LongRecovery-RCA
-  - Managed Instance TRDB0102-CL-LongRecovery-RCA
+  - MI seeding progress and failures by database
+  - MonRecoveryTrace event database_name originalEventTimestamp
+  - Check MonRecoveryTrace event database_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3087,8 +3215,9 @@ SqlSkills:
   Topic: TRDB0102-CL-LongRecovery-RCA
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TRDB0102-CL-LongRecovery-RCA.md
   Prompts:
-  - MI TRDB0102-CL-LongRecovery-RCA
-  - Managed Instance TRDB0102-CL-LongRecovery-RCA
+  - MI storage usage and size
+  - MonSQLXStoreIOStats AppName event page_blob_tier
+  - Check MonSQLXStoreIOStats AppName event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3107,8 +3236,9 @@ SqlSkills:
   Topic: TRDB0102-CL-LongRecovery-RCA
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TRDB0102-CL-LongRecovery-RCA.md
   Prompts:
-  - MI TRDB0102-CL-LongRecovery-RCA
-  - Managed Instance TRDB0102-CL-LongRecovery-RCA
+  - MI seeding progress and failures by database
+  - MonRecoveryTrace originalEventTimestamp AppName
+  - Check MonRecoveryTrace originalEventTimestamp AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3131,8 +3261,9 @@ SqlSkills:
   Topic: TRDB0102-CL-LongRecovery-RCA
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TRDB0102-CL-LongRecovery-RCA.md
   Prompts:
-  - MI TRDB0102-CL-LongRecovery-RCA
-  - Managed Instance TRDB0102-CL-LongRecovery-RCA
+  - MI storage usage and size by server
+  - MonSQLXStoreIOStats LogicalServerName event file_path
+  - Check MonSQLXStoreIOStats event file_path
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3153,8 +3284,9 @@ SqlSkills:
   Topic: TRDB0102-CL-LongRecovery-RCA
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TRDB0102-CL-LongRecovery-RCA.md
   Prompts:
-  - MI TRDB0102-CL-LongRecovery-RCA
-  - Managed Instance TRDB0102-CL-LongRecovery-RCA
+  - MI I/O latency analysis by server
+  - MonSqlRgHistory event LogicalServerName
+  - Check MonSqlRgHistory event physical_database_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3177,8 +3309,9 @@ SqlSkills:
   Topic: TRDB0102-CL-LongRecovery-RCA
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TRDB0102-CL-LongRecovery-RCA.md
   Prompts:
-  - MI TRDB0102-CL-LongRecovery-RCA
-  - Managed Instance TRDB0102-CL-LongRecovery-RCA
+  - MI seeding progress and failures by database
+  - MonRecoveryTrace originalEventTimestamp AppName
+  - Check MonRecoveryTrace originalEventTimestamp AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3201,8 +3334,9 @@ SqlSkills:
   Topic: TRDB0102-CL-LongRecovery-RCA
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TRDB0102-CL-LongRecovery-RCA.md
   Prompts:
-  - MI TRDB0102-CL-LongRecovery-RCA
-  - Managed Instance TRDB0102-CL-LongRecovery-RCA
+  - MI storage usage and size by server
+  - MonDmIoVirtualFileStats originalEventTimestamp db_name
+  - Check MonDmIoVirtualFileStats originalEventTimestamp db_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3223,8 +3357,9 @@ SqlSkills:
   Topic: TRDB0102-CL-LongRecovery-RCA
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TRDB0102-CL-LongRecovery-RCA.md
   Prompts:
-  - MI TRDB0102-CL-LongRecovery-RCA
-  - Managed Instance TRDB0102-CL-LongRecovery-RCA
+  - MI seeding progress and failures by database
+  - MonRecoveryTrace originalEventTimestamp AppName
+  - Check MonRecoveryTrace originalEventTimestamp AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3250,8 +3385,9 @@ SqlSkills:
   Topic: TRDB0102-CL-LongRecovery-RCA
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TRDB0102-CL-LongRecovery-RCA.md
   Prompts:
-  - MI TRDB0102-CL-LongRecovery-RCA
-  - Managed Instance TRDB0102-CL-LongRecovery-RCA
+  - MI seeding progress and failures by database
+  - MonRecoveryTrace event recovery_step database_name
+  - Check MonRecoveryTrace event recovery_step
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3274,8 +3410,9 @@ SqlSkills:
   Topic: TRDB0102-CL-LongRecovery-RCA
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TRDB0102-CL-LongRecovery-RCA.md
   Prompts:
-  - MI TRDB0102-CL-LongRecovery-RCA
-  - Managed Instance TRDB0102-CL-LongRecovery-RCA
+  - MI restore request status by server
+  - MonSQLSystemHealth TIMESTAMP LogicalServerName
+  - Check MonSQLSystemHealth dcount_AppName AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3294,8 +3431,9 @@ SqlSkills:
   Topic: TSGCL00222-Read-scale-out-secondary-replica-laggin
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCL00222-Read-scale-out-secondary-replica-laggin.md
   Prompts:
-  - MI TSGCL00222-Read-scale-out-secondary-replica-laggin
-  - Managed Instance TSGCL00222-Read-scale-out-secondary-replica-laggin
+  - MI replica health and role by database
+  - MonDmDbHadrReplicaStates TIMESTAMP AppName
+  - Check MonDmDbHadrReplicaStates AppName logical_database_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3316,8 +3454,9 @@ SqlSkills:
   Topic: TSGCL00222-Read-scale-out-secondary-replica-laggin
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCL00222-Read-scale-out-secondary-replica-laggin.md
   Prompts:
-  - MI TSGCL00222-Read-scale-out-secondary-replica-laggin
-  - Managed Instance TSGCL00222-Read-scale-out-secondary-replica-laggin
+  - MI replica health and role
+  - MonDmDbHadrReplicaStates TIMESTAMP replica_id
+  - Check MonDmDbHadrReplicaStates replica_id
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3340,8 +3479,9 @@ SqlSkills:
   Topic: TSGCL0069-1-Mitigate-inconsistent-RemoteReplicas-v
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCL0069-1-Mitigate-inconsistent-RemoteReplicas-v.md
   Prompts:
-  - MI TSGCL0069-1-Mitigate-inconsistent-RemoteReplicas-v
-  - Managed Instance TSGCL0069-1-Mitigate-inconsistent-RemoteReplicas-v
+  - MI replica health and role
+  - MonSQLSystemHealth PreciseTimeStamp AppName message
+  - Check MonSQLSystemHealth AppName message
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3364,8 +3504,9 @@ SqlSkills:
   Topic: TSGCL0117-Database-recovery-takes-a-long-time
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCL0117-Database-recovery-takes-a-long-time.md
   Prompts:
-  - MI TSGCL0117-Database-recovery-takes-a-long-time
-  - Managed Instance TSGCL0117-Database-recovery-takes-a-long-time
+  - MI seeding progress and failures by database
+  - MonRecoveryTrace TIMESTAMP LogicalServerName database_name
+  - Check MonRecoveryTrace database_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3384,8 +3525,9 @@ SqlSkills:
   Topic: TSGCL0117-Database-recovery-takes-a-long-time
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCL0117-Database-recovery-takes-a-long-time.md
   Prompts:
-  - MI TSGCL0117-Database-recovery-takes-a-long-time
-  - Managed Instance TSGCL0117-Database-recovery-takes-a-long-time
+  - MI storage usage and size
+  - MonDmIoVirtualFileStats ADSNbspwhereADSNbspdb_nameADSNbsp
+  - Check MonDmIoVirtualFileStats
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3406,8 +3548,9 @@ SqlSkills:
   Topic: TSGCL0117-Database-recovery-takes-a-long-time
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCL0117-Database-recovery-takes-a-long-time.md
   Prompts:
-  - MI TSGCL0117-Database-recovery-takes-a-long-time
-  - Managed Instance TSGCL0117-Database-recovery-takes-a-long-time
+  - MI restore request status
+  - MonSQLSystemHealth error_id process_id TIMESTAMP
+  - Check MonSQLSystemHealth error_id process_id
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3422,8 +3565,9 @@ SqlSkills:
   Topic: TSGCL0121-Seeding-UpdateSLO-stuck-in-progress
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCL0121-Seeding-UpdateSLO-stuck-in-progress.md
   Prompts:
-  - MI TSGCL0121-Seeding-UpdateSLO-stuck-in-progress
-  - Managed Instance TSGCL0121-Seeding-UpdateSLO-stuck-in-progress
+  - MI seeding progress and failures by node
+  - MonSQLSystemHealth AppName NodeName TIMESTAMP
+  - Check MonSQLSystemHealth AppName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3442,8 +3586,9 @@ SqlSkills:
   Topic: TSGCL0121-Seeding-UpdateSLO-stuck-in-progress
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCL0121-Seeding-UpdateSLO-stuck-in-progress.md
   Prompts:
-  - MI TSGCL0121-Seeding-UpdateSLO-stuck-in-progress
-  - Managed Instance TSGCL0121-Seeding-UpdateSLO-stuck-in-progress
+  - MI seeding progress and failures
+  - MonSQLSystemHealth
+  - Investigate seeding failures
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3460,8 +3605,9 @@ SqlSkills:
   Topic: TSGCL0121-Seeding-UpdateSLO-stuck-in-progress
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCL0121-Seeding-UpdateSLO-stuck-in-progress.md
   Prompts:
-  - MI TSGCL0121-Seeding-UpdateSLO-stuck-in-progress
-  - Managed Instance TSGCL0121-Seeding-UpdateSLO-stuck-in-progress
+  - MI seeding progress and failures by server
+  - MonSqlShrinkInfo LogicalServerName originalEventTimestamp
+  - Check MonSqlShrinkInfo originalEventTimestamp
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3476,8 +3622,9 @@ SqlSkills:
   Topic: TSGCL0121.3-Stuck-seeding-WaitingForSwitchOnAllMoveUserDatabaseRequests
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCL0121.3-Stuck-seeding-WaitingForSwitchOnAllMoveUserDatabaseRequests.md
   Prompts:
-  - MI TSGCL0121.3-Stuck-seeding-WaitingForSwitchOnAllMoveUserDatabaseRequests
-  - Managed Instance TSGCL0121.3-Stuck-seeding-WaitingForSwitchOnAllMoveUserDatabaseRequests
+  - MI wait stats analysis
+  - MonSQLSystemHealth
+  - Investigate wait bottlenecks
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3492,8 +3639,9 @@ SqlSkills:
   Topic: TSGCL0121.3-Stuck-seeding-WaitingForSwitchOnAllMoveUserDatabaseRequests
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCL0121.3-Stuck-seeding-WaitingForSwitchOnAllMoveUserDatabaseRequests.md
   Prompts:
-  - MI TSGCL0121.3-Stuck-seeding-WaitingForSwitchOnAllMoveUserDatabaseRequests
-  - Managed Instance TSGCL0121.3-Stuck-seeding-WaitingForSwitchOnAllMoveUserDatabaseRequests
+  - MI wait stats analysis
+  - MonDmDbHadrReplicaStates
+  - Investigate wait bottlenecks
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3508,8 +3656,9 @@ SqlSkills:
   Topic: TSGCL0121.3-Stuck-seeding-WaitingForSwitchOnAllMoveUserDatabaseRequests
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCL0121.3-Stuck-seeding-WaitingForSwitchOnAllMoveUserDatabaseRequests.md
   Prompts:
-  - MI TSGCL0121.3-Stuck-seeding-WaitingForSwitchOnAllMoveUserDatabaseRequests
-  - Managed Instance TSGCL0121.3-Stuck-seeding-WaitingForSwitchOnAllMoveUserDatabaseRequests
+  - MI wait stats analysis
+  - MonSQLXStore
+  - Investigate wait bottlenecks
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3522,8 +3671,9 @@ SqlSkills:
   Topic: TSGCL0121.3-Stuck-seeding-WaitingForSwitchOnAllMoveUserDatabaseRequests
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCL0121.3-Stuck-seeding-WaitingForSwitchOnAllMoveUserDatabaseRequests.md
   Prompts:
-  - MI TSGCL0121.3-Stuck-seeding-WaitingForSwitchOnAllMoveUserDatabaseRequests
-  - Managed Instance TSGCL0121.3-Stuck-seeding-WaitingForSwitchOnAllMoveUserDatabaseRequests
+  - MI wait stats analysis
+  - MonSQLSystemHealth
+  - Investigate wait bottlenecks
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3536,8 +3686,9 @@ SqlSkills:
   Topic: TSGCL0121.3-Stuck-seeding-WaitingForSwitchOnAllMoveUserDatabaseRequests
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCL0121.3-Stuck-seeding-WaitingForSwitchOnAllMoveUserDatabaseRequests.md
   Prompts:
-  - MI TSGCL0121.3-Stuck-seeding-WaitingForSwitchOnAllMoveUserDatabaseRequests
-  - Managed Instance TSGCL0121.3-Stuck-seeding-WaitingForSwitchOnAllMoveUserDatabaseRequests
+  - MI wait stats analysis
+  - MonSQLSystemHealth
+  - Investigate wait bottlenecks
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3554,8 +3705,9 @@ SqlSkills:
   Topic: TSGCL0168-Unhealthy-CL-application-detected---MSDB
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCL0168-Unhealthy-CL-application-detected---MSDB.md
   Prompts:
-  - MI TSGCL0168-Unhealthy-CL-application-detected---MSDB
-  - Managed Instance TSGCL0168-Unhealthy-CL-application-detected---MSDB
+  - MI rollout and upgrade status
+  - MonManagedInstanceInfo TIMESTAMP AppName event
+  - Check MonManagedInstanceInfo AppName event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3572,8 +3724,9 @@ SqlSkills:
   Topic: TSGCL0168-Unhealthy-CL-application-detected---MSDB
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCL0168-Unhealthy-CL-application-detected---MSDB.md
   Prompts:
-  - MI TSGCL0168-Unhealthy-CL-application-detected---MSDB
-  - Managed Instance TSGCL0168-Unhealthy-CL-application-detected---MSDB
+  - MI rollout and upgrade status
+  - MonSQLSystemHealth TIMESTAMP AppName message
+  - Check MonSQLSystemHealth AppName message
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3592,8 +3745,9 @@ SqlSkills:
   Topic: TSGCL0170-Unplaced-replica-due-to-FD_UD-violation
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCL0170-Unplaced-replica-due-to-FD_UD-violation.md
   Prompts:
-  - MI TSGCL0170-Unplaced-replica-due-to-FD_UD-violation
-  - Managed Instance TSGCL0170-Unplaced-replica-due-to-FD_UD-violation
+  - MI replica health and role
+  - MonAnalyticsDBSnapshot
+  - Investigate replica health
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3622,8 +3776,9 @@ SqlSkills:
   Topic: TSGCL0170-Unplaced-replica-due-to-FD_UD-violation
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCL0170-Unplaced-replica-due-to-FD_UD-violation.md
   Prompts:
-  - MI TSGCL0170-Unplaced-replica-due-to-FD_UD-violation
-  - Managed Instance TSGCL0170-Unplaced-replica-due-to-FD_UD-violation
+  - MI replica health and role
+  - MonAnalyticsDBSnapshot
+  - Investigate replica health
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3659,8 +3814,9 @@ SqlSkills:
   Topic: TSGCL0170-Unplaced-replica-due-to-FD_UD-violation
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCL0170-Unplaced-replica-due-to-FD_UD-violation.md
   Prompts:
-  - MI TSGCL0170-Unplaced-replica-due-to-FD_UD-violation
-  - Managed Instance TSGCL0170-Unplaced-replica-due-to-FD_UD-violation
+  - MI replica health and role
+  - MonAnalyticsDBSnapshot
+  - Investigate replica health
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3706,8 +3862,9 @@ SqlSkills:
   Topic: TSGCL0170-Unplaced-replica-due-to-FD_UD-violation
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCL0170-Unplaced-replica-due-to-FD_UD-violation.md
   Prompts:
-  - MI TSGCL0170-Unplaced-replica-due-to-FD_UD-violation
-  - Managed Instance TSGCL0170-Unplaced-replica-due-to-FD_UD-violation
+  - MI replica health and role
+  - MonAnalyticsDBSnapshot
+  - Investigate replica health
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3828,8 +3985,9 @@ SqlSkills:
   Topic: TSGCL0170-Unplaced-replica-due-to-FD_UD-violation
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCL0170-Unplaced-replica-due-to-FD_UD-violation.md
   Prompts:
-  - MI TSGCL0170-Unplaced-replica-due-to-FD_UD-violation
-  - Managed Instance TSGCL0170-Unplaced-replica-due-to-FD_UD-violation
+  - MI replica health and role
+  - MonAnalyticsDBSnapshot
+  - Investigate replica health
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4009,8 +4167,9 @@ SqlSkills:
   Topic: TSGCL0170-Unplaced-replica-due-to-FD_UD-violation
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCL0170-Unplaced-replica-due-to-FD_UD-violation.md
   Prompts:
-  - MI TSGCL0170-Unplaced-replica-due-to-FD_UD-violation
-  - Managed Instance TSGCL0170-Unplaced-replica-due-to-FD_UD-violation
+  - MI replica health and role
+  - MonAnalyticsDBSnapshot
+  - Investigate replica health
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4041,8 +4200,9 @@ SqlSkills:
   Topic: TSGCL0178-Long-running-dumps-detected
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCL0178-Long-running-dumps-detected.md
   Prompts:
-  - MI TSGCL0178-Long-running-dumps-detected
-  - Managed Instance TSGCL0178-Long-running-dumps-detected
+  - MI dump and crash analysis
+  - MonSqlDump AppName CompleteFileName RelativePath
+  - Check MonSqlDump AppName CompleteFileName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4059,8 +4219,9 @@ SqlSkills:
   Topic: TSGCL0178-Long-running-dumps-detected
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCL0178-Long-running-dumps-detected.md
   Prompts:
-  - MI TSGCL0178-Long-running-dumps-detected
-  - Managed Instance TSGCL0178-Long-running-dumps-detected
+  - MI dump and crash analysis
+  - MonSqlDump AppName TIMESTAMP CompleteFileName
+  - Check MonSqlDump AppName CompleteFileName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4079,8 +4240,9 @@ SqlSkills:
   Topic: TSGCL0204-Can_t-place-replica
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCL0204-Can_t-place-replica.md
   Prompts:
-  - MI TSGCL0204-Can_t-place-replica
-  - Managed Instance TSGCL0204-Can_t-place-replica
+  - MI replica health and role
+  - Unknown ETWTimestamp
+  - Check Unknown ETWTimestamp
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4097,8 +4259,9 @@ SqlSkills:
   Topic: TSGCL0210-Sqlserver-exit-code-1460
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCL0210-Sqlserver-exit-code-1460.md
   Prompts:
-  - MI TSGCL0210-Sqlserver-exit-code-1460
-  - Managed Instance TSGCL0210-Sqlserver-exit-code-1460
+  - MI login and connection errors by node
+  - MonXdbhost ClusterName text NodeName
+  - Check MonXdbhost ClusterName text
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4119,8 +4282,9 @@ SqlSkills:
   Topic: TSGCL0212-1-RCA-LongReconfigDatabase-due-to-ERR_ST
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCL0212-1-RCA-LongReconfigDatabase-due-to-ERR_ST.md
   Prompts:
-  - MI TSGCL0212-1-RCA-LongReconfigDatabase-due-to-ERR_ST
-  - Managed Instance TSGCL0212-1-RCA-LongReconfigDatabase-due-to-ERR_ST
+  - MI replica health and role by node
+  - MonFabricApi AppName error_code error_state
+  - Check MonFabricApi AppName error_code
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4139,8 +4303,9 @@ SqlSkills:
   Topic: TSGCL0212-1-RCA-LongReconfigDatabase-due-to-ERR_ST
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCL0212-1-RCA-LongReconfigDatabase-due-to-ERR_ST.md
   Prompts:
-  - MI TSGCL0212-1-RCA-LongReconfigDatabase-due-to-ERR_ST
-  - Managed Instance TSGCL0212-1-RCA-LongReconfigDatabase-due-to-ERR_ST
+  - MI restore request status
+  - MonAnalyticsDBSnapshot fabric_application_uri state
+  - Check MonAnalyticsDBSnapshot fabric_application_uri
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4157,8 +4322,9 @@ SqlSkills:
   Topic: TSGCL0213-1-Secondary-stuck-InBuild-due-to-SQL-err
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCL0213-1-Secondary-stuck-InBuild-due-to-SQL-err.md
   Prompts:
-  - MI TSGCL0213-1-Secondary-stuck-InBuild-due-to-SQL-err
-  - Managed Instance TSGCL0213-1-Secondary-stuck-InBuild-due-to-SQL-err
+  - MI restore request status by node
+  - MonSQLSystemHealth PreciseTimeStamp AppName NodeName
+  - Check MonSQLSystemHealth AppName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4183,8 +4349,9 @@ SqlSkills:
   Topic: TSGCL0213-Secondary-stuck-InBuild
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCL0213-Secondary-stuck-InBuild.md
   Prompts:
-  - MI TSGCL0213-Secondary-stuck-InBuild
-  - Managed Instance TSGCL0213-Secondary-stuck-InBuild
+  - MI restore request status by node
+  - MonSQLSystemHealth PreciseTimeStamp AppName NodeName
+  - Check MonSQLSystemHealth AppName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4209,8 +4376,9 @@ SqlSkills:
   Topic: TSGCL0213-Secondary-stuck-InBuild
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCL0213-Secondary-stuck-InBuild.md
   Prompts:
-  - MI TSGCL0213-Secondary-stuck-InBuild
-  - Managed Instance TSGCL0213-Secondary-stuck-InBuild
+  - MI restore request status by node
+  - MonSQLSystemHealth PreciseTimeStamp AppName NodeName
+  - Check MonSQLSystemHealth AppName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4235,8 +4403,9 @@ SqlSkills:
   Topic: TSGCL0213-Secondary-stuck-InBuild
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCL0213-Secondary-stuck-InBuild.md
   Prompts:
-  - MI TSGCL0213-Secondary-stuck-InBuild
-  - Managed Instance TSGCL0213-Secondary-stuck-InBuild
+  - MI seeding progress and failures
+  - MonDbSeedTraces PreciseTimeStamp AppName NodeName
+  - Check MonDbSeedTraces AppName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4257,8 +4426,9 @@ SqlSkills:
   Topic: TSGCL0224--Attaching-files-_Xstore-returns-403_
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCL0224--Attaching-files-_Xstore-returns-403_.md
   Prompts:
-  - MI TSGCL0224--Attaching-files-_Xstore-returns-403_
-  - Managed Instance TSGCL0224--Attaching-files-_Xstore-returns-403_
+  - MI storage usage and size
+  - MonSQLXStore TIMESTAMP file_path error_response
+  - Check MonSQLXStore file_path error_response
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4275,8 +4445,9 @@ SqlSkills:
   Topic: TSGCL0235-Corrupted-page-repair
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCL0235-Corrupted-page-repair.md
   Prompts:
-  - MI TSGCL0235-Corrupted-page-repair
-  - Managed Instance TSGCL0235-Corrupted-page-repair
+  - MI restore request status
+  - MonSQLSystemHealth AppName originalEventTimestamp message
+  - Check MonSQLSystemHealth AppName originalEventTimestamp
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4295,8 +4466,9 @@ SqlSkills:
   Topic: TSGCL0236-Stuck-UpdateSlo-due-to-non-functional_Rg
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCL0236-Stuck-UpdateSlo-due-to-non-functional_Rg.md
   Prompts:
-  - MI TSGCL0236-Stuck-UpdateSlo-due-to-non-functional_Rg
-  - Managed Instance TSGCL0236-Stuck-UpdateSlo-due-to-non-functional_Rg
+  - MI restore request status
+  - MonNodeTraceETW Message TIMESTAMP
+  - Check MonNodeTraceETW Message
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4313,8 +4485,9 @@ SqlSkills:
   Topic: TSGCL0265-1-The-virtual-log-file-sequence
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCL0265-1-The-virtual-log-file-sequence.md
   Prompts:
-  - MI TSGCL0265-1-The-virtual-log-file-sequence
-  - Managed Instance TSGCL0265-1-The-virtual-log-file-sequence
+  - MI restore request status by server
+  - MonSQLSystemHealth LogicalServerName error_id NodeName
+  - Check MonSQLSystemHealth error_id NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4333,8 +4506,9 @@ SqlSkills:
   Topic: TSGCL0265-1-The-virtual-log-file-sequence
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCL0265-1-The-virtual-log-file-sequence.md
   Prompts:
-  - MI TSGCL0265-1-The-virtual-log-file-sequence
-  - Managed Instance TSGCL0265-1-The-virtual-log-file-sequence
+  - MI replica health and role by database
+  - MonDmDbHadrReplicaStates AppName logical_database_name
+  - Check MonDmDbHadrReplicaStates AppName logical_database_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4353,8 +4527,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0000-How-To-Use-Managed-Instance-Auto-RCA-Pipeline
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0000-How-To-Use-Managed-Instance-Auto-RCA-Pipeline.md
   Prompts:
-  - MI TSGCLAVAIL0000-How-To-Use-Managed-Instance-Auto-RCA-Pipeline
-  - Managed Instance TSGCLAVAIL0000-How-To-Use-Managed-Instance-Auto-RCA-Pipeline
+  - MI replica health and role by server
+  - MonManagedInstanceCategorizedDatabaseOutages OutageStartTime
+  - Check MonManagedInstanceCategorizedDatabaseOutages
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4371,8 +4546,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0000-How-To-Use-Managed-Instance-Auto-RCA-Pipeline
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0000-How-To-Use-Managed-Instance-Auto-RCA-Pipeline.md
   Prompts:
-  - MI TSGCLAVAIL0000-How-To-Use-Managed-Instance-Auto-RCA-Pipeline
-  - Managed Instance TSGCLAVAIL0000-How-To-Use-Managed-Instance-Auto-RCA-Pipeline
+  - MI seeding progress and failures by server
+  - MonManagedInstanceDatabaseOutages OutageStartTime
+  - Check MonManagedInstanceDatabaseOutages OutageStartTime
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4387,8 +4563,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0000-How-To-Use-Managed-Instance-Auto-RCA-Pipeline
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0000-How-To-Use-Managed-Instance-Auto-RCA-Pipeline.md
   Prompts:
-  - MI TSGCLAVAIL0000-How-To-Use-Managed-Instance-Auto-RCA-Pipeline
-  - Managed Instance TSGCLAVAIL0000-How-To-Use-Managed-Instance-Auto-RCA-Pipeline
+  - MI restore request status by server
+  - MonAnalyticsDBSnapshot TIMESTAMP logical_server_name
+  - Check MonAnalyticsDBSnapshot fabric_partition_id
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4405,8 +4582,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0000-How-To-Use-Managed-Instance-Auto-RCA-Pipeline
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0000-How-To-Use-Managed-Instance-Auto-RCA-Pipeline.md
   Prompts:
-  - MI TSGCLAVAIL0000-How-To-Use-Managed-Instance-Auto-RCA-Pipeline
-  - Managed Instance TSGCLAVAIL0000-How-To-Use-Managed-Instance-Auto-RCA-Pipeline
+  - MI restore request status by server
+  - MonAnalyticsDBSnapshot TIMESTAMP logical_server_name
+  - Check MonAnalyticsDBSnapshot fabric_partition_id
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4425,8 +4603,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0001-RCA-Instance-boot-deadlock
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0001-RCA-Instance-boot-deadlock.md
   Prompts:
-  - MI TSGCLAVAIL0001-RCA-Instance-boot-deadlock
-  - Managed Instance TSGCLAVAIL0001-RCA-Instance-boot-deadlock
+  - MI deadlock reports by node
+  - MonSQLSystemHealth TIMESTAMP AppTypeName AppName
+  - Check MonSQLSystemHealth AppTypeName AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4449,8 +4628,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0002-Stuck-Dispatcher-On-App
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0002-Stuck-Dispatcher-On-App.md
   Prompts:
-  - MI TSGCLAVAIL0002-Stuck-Dispatcher-On-App
-  - Managed Instance TSGCLAVAIL0002-Stuck-Dispatcher-On-App
+  - MI restore request status
+  - MonSQLSystemHealth
+  - Investigate restore progress
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4463,8 +4643,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0004-UnhealthyWorkerCLApp
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0004-UnhealthyWorkerCLApp.md
   Prompts:
-  - MI TSGCLAVAIL0004-UnhealthyWorkerCLApp
-  - Managed Instance TSGCLAVAIL0004-UnhealthyWorkerCLApp
+  - MI resource usage analysis
+  - AlrWinFabHealthApplicationState PreciseTimeStamp ClusterName
+  - Check AlrWinFabHealthApplicationState ClusterName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4491,8 +4672,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0004-UnhealthyWorkerCLApp
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0004-UnhealthyWorkerCLApp.md
   Prompts:
-  - MI TSGCLAVAIL0004-UnhealthyWorkerCLApp
-  - Managed Instance TSGCLAVAIL0004-UnhealthyWorkerCLApp
+  - MI restore request status
+  - MonManagedServers state name managed_server_id
+  - Check MonManagedServers state name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4509,8 +4691,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0004-UnhealthyWorkerCLApp
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0004-UnhealthyWorkerCLApp.md
   Prompts:
-  - MI TSGCLAVAIL0004-UnhealthyWorkerCLApp
-  - Managed Instance TSGCLAVAIL0004-UnhealthyWorkerCLApp
+  - MI resource usage analysis
+  - MonChangeManagedServerInstanceReqs target_sql_instance_name
+  - Check MonChangeManagedServerInstanceReqs
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4525,8 +4708,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0004-UnhealthyWorkerCLApp
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0004-UnhealthyWorkerCLApp.md
   Prompts:
-  - MI TSGCLAVAIL0004-UnhealthyWorkerCLApp
-  - Managed Instance TSGCLAVAIL0004-UnhealthyWorkerCLApp
+  - MI resource usage analysis
+  - Unknown ModifiedDate Title
+  - Check Unknown ModifiedDate Title
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4543,8 +4727,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0004-UnhealthyWorkerCLApp
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0004-UnhealthyWorkerCLApp.md
   Prompts:
-  - MI TSGCLAVAIL0004-UnhealthyWorkerCLApp
-  - Managed Instance TSGCLAVAIL0004-UnhealthyWorkerCLApp
+  - MI resource usage analysis
+  - MonSQLSystemHealth PreciseTimeStamp AppTypeName AppName
+  - Check MonSQLSystemHealth AppTypeName AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4567,8 +4752,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0004-UnhealthyWorkerCLApp
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0004-UnhealthyWorkerCLApp.md
   Prompts:
-  - MI TSGCLAVAIL0004-UnhealthyWorkerCLApp
-  - Managed Instance TSGCLAVAIL0004-UnhealthyWorkerCLApp
+  - MI resource usage analysis
+  - Unknown ETWTimestamp ClusterName Level
+  - Check Unknown ETWTimestamp ClusterName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4621,8 +4807,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0004-UnhealthyWorkerCLApp
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0004-UnhealthyWorkerCLApp.md
   Prompts:
-  - MI TSGCLAVAIL0004-UnhealthyWorkerCLApp
-  - Managed Instance TSGCLAVAIL0004-UnhealthyWorkerCLApp
+  - MI storage usage and size by server
+  - MonManagedInstanceResourceStats TIMESTAMP LogicalServerName
+  - Check MonManagedInstanceResourceStats storage_space_used_mb
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4641,8 +4828,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0004-UnhealthyWorkerCLApp
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0004-UnhealthyWorkerCLApp.md
   Prompts:
-  - MI TSGCLAVAIL0004-UnhealthyWorkerCLApp
-  - Managed Instance TSGCLAVAIL0004-UnhealthyWorkerCLApp
+  - MI storage usage and size by server
+  - MonSQLXStore TIMESTAMP LogicalServerName event
+  - Check MonSQLXStore event blockedActionsCount
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4661,8 +4849,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0004-UnhealthyWorkerCLApp
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0004-UnhealthyWorkerCLApp.md
   Prompts:
-  - MI TSGCLAVAIL0004-UnhealthyWorkerCLApp
-  - Managed Instance TSGCLAVAIL0004-UnhealthyWorkerCLApp
+  - MI storage usage and size by node
+  - MonSQLXStore TIMESTAMP AppName event
+  - Check MonSQLXStore AppName event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4689,8 +4878,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0004-UnhealthyWorkerCLApp
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0004-UnhealthyWorkerCLApp.md
   Prompts:
-  - MI TSGCLAVAIL0004-UnhealthyWorkerCLApp
-  - Managed Instance TSGCLAVAIL0004-UnhealthyWorkerCLApp
+  - MI resource usage analysis
+  - MonManagement keys property_name TIMESTAMP
+  - Check MonManagement keys property_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4717,8 +4907,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0004-UnhealthyWorkerCLApp
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0004-UnhealthyWorkerCLApp.md
   Prompts:
-  - MI TSGCLAVAIL0004-UnhealthyWorkerCLApp
-  - Managed Instance TSGCLAVAIL0004-UnhealthyWorkerCLApp
+  - MI failover group configuration by server
+  - MonAnalyticsDBSnapshot TIMESTAMP sql_instance_name event
+  - Check MonAnalyticsDBSnapshot sql_instance_name event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4741,8 +4932,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0004-UnhealthyWorkerCLApp
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0004-UnhealthyWorkerCLApp.md
   Prompts:
-  - MI TSGCLAVAIL0004-UnhealthyWorkerCLApp
-  - Managed Instance TSGCLAVAIL0004-UnhealthyWorkerCLApp
+  - MI connectivity and networking
+  - MonMIGeoDRFailoverGroupsConnectivity TIMESTAMP
+  - Check MonMIGeoDRFailoverGroupsConnectivity ManagedServerName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4757,8 +4949,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0004-UnhealthyWorkerCLApp
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0004-UnhealthyWorkerCLApp.md
   Prompts:
-  - MI TSGCLAVAIL0004-UnhealthyWorkerCLApp
-  - Managed Instance TSGCLAVAIL0004-UnhealthyWorkerCLApp
+  - MI resource usage analysis by node
+  - MonNodeTraceETW Message NodeName packageName
+  - Check MonNodeTraceETW Message NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4785,8 +4978,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0004-UnhealthyWorkerCLApp
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0004-UnhealthyWorkerCLApp.md
   Prompts:
-  - MI TSGCLAVAIL0004-UnhealthyWorkerCLApp
-  - Managed Instance TSGCLAVAIL0004-UnhealthyWorkerCLApp
+  - MI restore request status
+  - MonManagedServers name state PreciseTimeStamp
+  - Check MonManagedServers name state
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4801,8 +4995,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0004-UnhealthyWorkerCLApp
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0004-UnhealthyWorkerCLApp.md
   Prompts:
-  - MI TSGCLAVAIL0004-UnhealthyWorkerCLApp
-  - Managed Instance TSGCLAVAIL0004-UnhealthyWorkerCLApp
+  - MI resource usage analysis
+  - AlrWinFabHealthServiceState PreciseTimeStamp ApplicationName
+  - Check AlrWinFabHealthServiceState ApplicationName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4827,8 +5022,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0004-UnhealthyWorkerCLApp
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0004-UnhealthyWorkerCLApp.md
   Prompts:
-  - MI TSGCLAVAIL0004-UnhealthyWorkerCLApp
-  - Managed Instance TSGCLAVAIL0004-UnhealthyWorkerCLApp
+  - MI resource usage analysis
+  - MonSQLSystemHealth PreciseTimeStamp AppTypeName AppName
+  - Check MonSQLSystemHealth AppTypeName AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4855,8 +5051,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0006-TornAffinity
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0006-TornAffinity.md
   Prompts:
-  - MI TSGCLAVAIL0006-TornAffinity
-  - Managed Instance TSGCLAVAIL0006-TornAffinity
+  - MI replica health and role by database
+  - MonDmDbHadrReplicaStates TIMESTAMP AppName
+  - Check MonDmDbHadrReplicaStates AppName internal_state_desc
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4875,8 +5072,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0007-Slow-redo-on-local-secondaries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0007-Slow-redo-on-local-secondaries.md
   Prompts:
-  - MI TSGCLAVAIL0007-Slow-redo-on-local-secondaries
-  - Managed Instance TSGCLAVAIL0007-Slow-redo-on-local-secondaries
+  - MI replica health and role by server
+  - MonDmDbHadrReplicaStates TIMESTAMP LogicalServerName
+  - Check MonDmDbHadrReplicaStates synchronization_health_desc
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4897,8 +5095,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0007-Slow-redo-on-local-secondaries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0007-Slow-redo-on-local-secondaries.md
   Prompts:
-  - MI TSGCLAVAIL0007-Slow-redo-on-local-secondaries
-  - Managed Instance TSGCLAVAIL0007-Slow-redo-on-local-secondaries
+  - MI replica health and role by server
+  - MonDmDbHadrReplicaStates TIMESTAMP LogicalServerName
+  - Check MonDmDbHadrReplicaStates synchronization_health_desc
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4919,8 +5118,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0007-Slow-redo-on-local-secondaries
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0007-Slow-redo-on-local-secondaries.md
   Prompts:
-  - MI TSGCLAVAIL0007-Slow-redo-on-local-secondaries
-  - Managed Instance TSGCLAVAIL0007-Slow-redo-on-local-secondaries
+  - MI seeding progress and failures by server
+  - MonRecoveryTrace TIMESTAMP event LogicalServerName
+  - Check MonRecoveryTrace event NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4941,8 +5141,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0011-HA-Test-environment-test-failed
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0011-HA-Test-environment-test-failed.md
   Prompts:
-  - MI TSGCLAVAIL0011-HA-Test-environment-test-failed
-  - Managed Instance TSGCLAVAIL0011-HA-Test-environment-test-failed
+  - MI replica health and role
+  - AlrWinFabHealthReplicaEvent PreciseTimeStamp ApplicationName
+  - Check AlrWinFabHealthReplicaEvent ApplicationName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4963,8 +5164,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0011-HA-Test-environment-test-failed
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0011-HA-Test-environment-test-failed.md
   Prompts:
-  - MI TSGCLAVAIL0011-HA-Test-environment-test-failed
-  - Managed Instance TSGCLAVAIL0011-HA-Test-environment-test-failed
+  - MI restore request status by node
+  - MonNodeTraceETW Message NodeName packageName
+  - Check MonNodeTraceETW Message NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4991,8 +5193,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0012-XdbLaunchSqlSetup-EntryPoint-issue
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0012-XdbLaunchSqlSetup-EntryPoint-issue.md
   Prompts:
-  - MI TSGCLAVAIL0012-XdbLaunchSqlSetup-EntryPoint-issue
-  - Managed Instance TSGCLAVAIL0012-XdbLaunchSqlSetup-EntryPoint-issue
+  - MI seeding progress and failures
+  - MonXdbLaunchSetup
+  - Investigate seeding failures
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5009,8 +5212,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0012-XdbLaunchSqlSetup-EntryPoint-issue
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0012-XdbLaunchSqlSetup-EntryPoint-issue.md
   Prompts:
-  - MI TSGCLAVAIL0012-XdbLaunchSqlSetup-EntryPoint-issue
-  - Managed Instance TSGCLAVAIL0012-XdbLaunchSqlSetup-EntryPoint-issue
+  - MI restore request status
+  - MonSQLSystemHealth
+  - Investigate restore progress
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5021,8 +5225,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0012-XdbLaunchSqlSetup-EntryPoint-issue
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0012-XdbLaunchSqlSetup-EntryPoint-issue.md
   Prompts:
-  - MI TSGCLAVAIL0012-XdbLaunchSqlSetup-EntryPoint-issue
-  - Managed Instance TSGCLAVAIL0012-XdbLaunchSqlSetup-EntryPoint-issue
+  - MI replica health and role
+  - MonDmDbHadrReplicaStates
+  - Investigate replica health
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5039,8 +5244,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0012-XdbLaunchSqlSetup-EntryPoint-issue
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0012-XdbLaunchSqlSetup-EntryPoint-issue.md
   Prompts:
-  - MI TSGCLAVAIL0012-XdbLaunchSqlSetup-EntryPoint-issue
-  - Managed Instance TSGCLAVAIL0012-XdbLaunchSqlSetup-EntryPoint-issue
+  - MI restore request status
+  - MonSQLSystemHealth
+  - Investigate restore progress
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5057,8 +5263,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0013-MI-Data-Movement-Runner
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0013-MI-Data-Movement-Runner.md
   Prompts:
-  - MI TSGCLAVAIL0013-MI-Data-Movement-Runner
-  - Managed Instance TSGCLAVAIL0013-MI-Data-Movement-Runner
+  - MI replica health and role by database
+  - MonDmDbHadrReplicaStates PreciseTimeStamp AppTypeName
+  - Check MonDmDbHadrReplicaStates AppTypeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5081,8 +5288,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0013-MI-Data-Movement-Runner
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0013-MI-Data-Movement-Runner.md
   Prompts:
-  - MI TSGCLAVAIL0013-MI-Data-Movement-Runner
-  - Managed Instance TSGCLAVAIL0013-MI-Data-Movement-Runner
+  - MI replica health and role by database
+  - MonDmDbHadrReplicaStates PreciseTimeStamp AppTypeName
+  - Check MonDmDbHadrReplicaStates AppTypeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5105,8 +5313,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0013-MI-Data-Movement-Runner
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0013-MI-Data-Movement-Runner.md
   Prompts:
-  - MI TSGCLAVAIL0013-MI-Data-Movement-Runner
-  - Managed Instance TSGCLAVAIL0013-MI-Data-Movement-Runner
+  - MI connectivity and networking
+  - MonMIGeoDRFailoverGroupsConnectivity TIMESTAMP
+  - Check MonMIGeoDRFailoverGroupsConnectivity PartnerServerName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5125,8 +5334,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0013-MI-Data-Movement-Runner
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0013-MI-Data-Movement-Runner.md
   Prompts:
-  - MI TSGCLAVAIL0013-MI-Data-Movement-Runner
-  - Managed Instance TSGCLAVAIL0013-MI-Data-Movement-Runner
+  - MI restore request status
+  - MonManagedServers name service_level_objective TIMESTAMP
+  - Check MonManagedServers name service_level_objective
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5141,8 +5351,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0013-MI-Data-Movement-Runner
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0013-MI-Data-Movement-Runner.md
   Prompts:
-  - MI TSGCLAVAIL0013-MI-Data-Movement-Runner
-  - Managed Instance TSGCLAVAIL0013-MI-Data-Movement-Runner
+  - MI restore request status by server
+  - MonSQLSystemHealth originalEventTimestamp AppName
+  - Check MonSQLSystemHealth originalEventTimestamp AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5163,8 +5374,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0013-MI-Data-Movement-Runner
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0013-MI-Data-Movement-Runner.md
   Prompts:
-  - MI TSGCLAVAIL0013-MI-Data-Movement-Runner
-  - Managed Instance TSGCLAVAIL0013-MI-Data-Movement-Runner
+  - MI storage usage and size by server
+  - MonSQLXStore TIMESTAMP LogicalServerName file_path
+  - Check MonSQLXStore file_path
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5181,8 +5393,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0013-MI-Data-Movement-Runner
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0013-MI-Data-Movement-Runner.md
   Prompts:
-  - MI TSGCLAVAIL0013-MI-Data-Movement-Runner
-  - Managed Instance TSGCLAVAIL0013-MI-Data-Movement-Runner
+  - MI replica health and role by database
+  - MonDmDbHadrReplicaStates TIMESTAMP LogicalServerName
+  - Check MonDmDbHadrReplicaStates logical_database_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5204,8 +5417,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0013-MI-Data-Movement-Runner
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0013-MI-Data-Movement-Runner.md
   Prompts:
-  - MI TSGCLAVAIL0013-MI-Data-Movement-Runner
-  - Managed Instance TSGCLAVAIL0013-MI-Data-Movement-Runner
+  - MI failover group configuration by server
+  - MonGeoDRFailoverGroups PreciseTimeStamp logical_server_name
+  - Check MonGeoDRFailoverGroups partner_region
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5224,8 +5438,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0013-MI-Data-Movement-Runner
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0013-MI-Data-Movement-Runner.md
   Prompts:
-  - MI TSGCLAVAIL0013-MI-Data-Movement-Runner
-  - Managed Instance TSGCLAVAIL0013-MI-Data-Movement-Runner
+  - MI memory pressure and OOM analysis by server
+  - MonSQLSystemHealth LogicalServerName message
+  - Check MonSQLSystemHealth message process_id
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5244,8 +5459,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0013-MI-Data-Movement-Runner
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0013-MI-Data-Movement-Runner.md
   Prompts:
-  - MI TSGCLAVAIL0013-MI-Data-Movement-Runner
-  - Managed Instance TSGCLAVAIL0013-MI-Data-Movement-Runner
+  - MI replica health and role by database
+  - MonDmDbHadrReplicaStates PreciseTimeStamp AppName
+  - Check MonDmDbHadrReplicaStates AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5262,8 +5478,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0013-MI-Data-Movement-Runner
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0013-MI-Data-Movement-Runner.md
   Prompts:
-  - MI TSGCLAVAIL0013-MI-Data-Movement-Runner
-  - Managed Instance TSGCLAVAIL0013-MI-Data-Movement-Runner
+  - MI replica health and role by database
+  - MonDmDbHadrReplicaStates PreciseTimeStamp LogicalServerName
+  - Check MonDmDbHadrReplicaStates logical_database_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5284,8 +5501,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0014-Log-full-due-to-AVAILABILITY_REPLICA-due-to-backups-on-secondary-replica-(SRB)
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0014-Log-full-due-to-AVAILABILITY_REPLICA-due-to-backups-on-secondary-replica-(SRB).md
   Prompts:
-  - MI TSGCLAVAIL0014-Log-full-due-to-AVAILABILITY_REPLICA-due-to-backups-on-secondary-replica-(SRB)
-  - Managed Instance TSGCLAVAIL0014-Log-full-due-to-AVAILABILITY_REPLICA-due-to-backups-on-secondary-replica-(SRB)
+  - MI backup history and status
+  - MonSQLSystemHealth TIMESTAMP AppName error_id
+  - Check MonSQLSystemHealth AppName error_id
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5304,8 +5522,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0014-Log-full-due-to-AVAILABILITY_REPLICA-due-to-backups-on-secondary-replica-(SRB)
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0014-Log-full-due-to-AVAILABILITY_REPLICA-due-to-backups-on-secondary-replica-(SRB).md
   Prompts:
-  - MI TSGCLAVAIL0014-Log-full-due-to-AVAILABILITY_REPLICA-due-to-backups-on-secondary-replica-(SRB)
-  - Managed Instance TSGCLAVAIL0014-Log-full-due-to-AVAILABILITY_REPLICA-due-to-backups-on-secondary-replica-(SRB)
+  - MI backup history and status
+  - MonSQLSystemHealth TIMESTAMP AppName error_id
+  - Check MonSQLSystemHealth AppName error_id
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5326,8 +5545,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0015-Long-wait-on-replica-controller-cache
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0015-Long-wait-on-replica-controller-cache.md
   Prompts:
-  - MI TSGCLAVAIL0015-Long-wait-on-replica-controller-cache
-  - Managed Instance TSGCLAVAIL0015-Long-wait-on-replica-controller-cache
+  - MI wait stats analysis
+  - MonWorkerWaitStats
+  - Investigate wait bottlenecks
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5340,8 +5560,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0016-Stuck-SQL-Process
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0016-Stuck-SQL-Process.md
   Prompts:
-  - MI TSGCLAVAIL0016-Stuck-SQL-Process
-  - Managed Instance TSGCLAVAIL0016-Stuck-SQL-Process
+  - MI restore request status by node
+  - MonSQLSystemHealth AppName NodeName PreciseTimeStamp
+  - Check MonSQLSystemHealth AppName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5360,8 +5581,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0016-Stuck-SQL-Process
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0016-Stuck-SQL-Process.md
   Prompts:
-  - MI TSGCLAVAIL0016-Stuck-SQL-Process
-  - Managed Instance TSGCLAVAIL0016-Stuck-SQL-Process
+  - MI restore request status by node
+  - MonSQLSystemHealth AppName NodeName PreciseTimeStamp
+  - Check MonSQLSystemHealth AppName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5380,8 +5602,9 @@ SqlSkills:
   Topic: TSGCL0139-Torn-affinity-on-BC-instance
   Source: TSG-SQL-MI-Availability/content/Index/Availability/deprecated/TSGCL0139-Torn-affinity-on-BC-instance.md
   Prompts:
-  - MI TSGCL0139-Torn-affinity-on-BC-instance
-  - Managed Instance TSGCL0139-Torn-affinity-on-BC-instance
+  - MI failover group configuration by server
+  - MonAnalyticsDBSnapshot logical_server_name failover_group_id
+  - Check MonAnalyticsDBSnapshot failover_group_id
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5398,8 +5621,9 @@ SqlSkills:
   Topic: TSGCL0139-Torn-affinity-on-BC-instance
   Source: TSG-SQL-MI-Availability/content/Index/Availability/deprecated/TSGCL0139-Torn-affinity-on-BC-instance.md
   Prompts:
-  - MI TSGCL0139-Torn-affinity-on-BC-instance
-  - Managed Instance TSGCL0139-Torn-affinity-on-BC-instance
+  - MI failover group configuration
+  - MonGeoDRFailoverGroups failover_group_name failover_group_id
+  - Check MonGeoDRFailoverGroups failover_group_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5418,8 +5642,9 @@ SqlSkills:
   Topic: TSGCL0139-Torn-affinity-on-BC-instance
   Source: TSG-SQL-MI-Availability/content/Index/Availability/deprecated/TSGCL0139-Torn-affinity-on-BC-instance.md
   Prompts:
-  - MI TSGCL0139-Torn-affinity-on-BC-instance
-  - Managed Instance TSGCL0139-Torn-affinity-on-BC-instance
+  - MI login and connection errors by database
+  - MonLogin logical_server_name event is_success
+  - Check MonLogin event is_success
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5440,8 +5665,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0005-UnhealthyWorkerAliasDbPdcApp
   Source: TSG-SQL-MI-Availability/content/Index/Availability/deprecated/TSGCLAVAIL0005-UnhealthyWorkerAliasDbPdcApp.md
   Prompts:
-  - MI TSGCLAVAIL0005-UnhealthyWorkerAliasDbPdcApp
-  - Managed Instance TSGCLAVAIL0005-UnhealthyWorkerAliasDbPdcApp
+  - MI resource usage analysis
+  - AlrWinFabHealthApplicationState PreciseTimeStamp ClusterName
+  - Check AlrWinFabHealthApplicationState ClusterName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5466,8 +5692,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0005-UnhealthyWorkerAliasDbPdcApp
   Source: TSG-SQL-MI-Availability/content/Index/Availability/deprecated/TSGCLAVAIL0005-UnhealthyWorkerAliasDbPdcApp.md
   Prompts:
-  - MI TSGCLAVAIL0005-UnhealthyWorkerAliasDbPdcApp
-  - Managed Instance TSGCLAVAIL0005-UnhealthyWorkerAliasDbPdcApp
+  - MI dump and crash analysis by node
+  - MonSqlDumperActivity ClusterName TIMESTAMP NodeName
+  - Check MonSqlDumperActivity ClusterName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5486,8 +5713,9 @@ SqlSkills:
   Topic: TSGCLAVAIL0005-UnhealthyWorkerAliasDbPdcApp
   Source: TSG-SQL-MI-Availability/content/Index/Availability/deprecated/TSGCLAVAIL0005-UnhealthyWorkerAliasDbPdcApp.md
   Prompts:
-  - MI TSGCLAVAIL0005-UnhealthyWorkerAliasDbPdcApp
-  - Managed Instance TSGCLAVAIL0005-UnhealthyWorkerAliasDbPdcApp
+  - MI resource usage analysis
+  - AlrWinFabHealthServiceState PreciseTimeStamp ApplicationName
+  - Check AlrWinFabHealthServiceState ApplicationName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5510,8 +5738,9 @@ SqlSkills:
   Topic: TSGCHIMERA0001-Establishing-chimera-link-is-stuck
   Source: TSG-SQL-MI-Availability/content/Index/Chimera/TSGCHIMERA0001-Establishing-chimera-link-is-stuck.md
   Prompts:
-  - MI TSGCHIMERA0001-Establishing-chimera-link-is-stuck
-  - Managed Instance TSGCHIMERA0001-Establishing-chimera-link-is-stuck
+  - MI restore request status
+  - MonManagementOperations operation_type operation_parameters
+  - Check MonManagementOperations operation_type
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5528,8 +5757,9 @@ SqlSkills:
   Topic: TSGCHIMERA0001-Establishing-chimera-link-is-stuck
   Source: TSG-SQL-MI-Availability/content/Index/Chimera/TSGCHIMERA0001-Establishing-chimera-link-is-stuck.md
   Prompts:
-  - MI TSGCHIMERA0001-Establishing-chimera-link-is-stuck
-  - Managed Instance TSGCHIMERA0001-Establishing-chimera-link-is-stuck
+  - MI seeding progress and failures by database
+  - MonDbSeedTraces PreciseTimeStamp LogicalServerName
+  - Check MonDbSeedTraces database_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5546,8 +5776,9 @@ SqlSkills:
   Topic: TSGCHIMERA0001-Establishing-chimera-link-is-stuck
   Source: TSG-SQL-MI-Availability/content/Index/Chimera/TSGCHIMERA0001-Establishing-chimera-link-is-stuck.md
   Prompts:
-  - MI TSGCHIMERA0001-Establishing-chimera-link-is-stuck
-  - Managed Instance TSGCHIMERA0001-Establishing-chimera-link-is-stuck
+  - MI restore request status by server
+  - MonSQLSystemHealth LogicalServerName message
+  - Check MonSQLSystemHealth message originalEventTimestamp
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5566,8 +5797,9 @@ SqlSkills:
   Topic: TSGCHIMERA0001-Establishing-chimera-link-is-stuck
   Source: TSG-SQL-MI-Availability/content/Index/Chimera/TSGCHIMERA0001-Establishing-chimera-link-is-stuck.md
   Prompts:
-  - MI TSGCHIMERA0001-Establishing-chimera-link-is-stuck
-  - Managed Instance TSGCHIMERA0001-Establishing-chimera-link-is-stuck
+  - MI restore request status by server
+  - MonSQLSystemHealth LogicalServerName message
+  - Check MonSQLSystemHealth message originalEventTimestamp
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5588,8 +5820,9 @@ SqlSkills:
   Topic: TSGCHIMERA0001-Establishing-chimera-link-is-stuck
   Source: TSG-SQL-MI-Availability/content/Index/Chimera/TSGCHIMERA0001-Establishing-chimera-link-is-stuck.md
   Prompts:
-  - MI TSGCHIMERA0001-Establishing-chimera-link-is-stuck
-  - Managed Instance TSGCHIMERA0001-Establishing-chimera-link-is-stuck
+  - MI restore request status
+  - MonManagementOperations PreciseTimeStamp operation_type
+  - Check MonManagementOperations operation_type
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5606,8 +5839,9 @@ SqlSkills:
   Topic: TSGCHIMERA0001-Establishing-chimera-link-is-stuck
   Source: TSG-SQL-MI-Availability/content/Index/Chimera/TSGCHIMERA0001-Establishing-chimera-link-is-stuck.md
   Prompts:
-  - MI TSGCHIMERA0001-Establishing-chimera-link-is-stuck
-  - Managed Instance TSGCHIMERA0001-Establishing-chimera-link-is-stuck
+  - MI restore request status
+  - MonManagement request_id old_state new_state
+  - Check MonManagement request_id old_state
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5622,8 +5856,9 @@ SqlSkills:
   Topic: TSGCHIMERA0001-Establishing-chimera-link-is-stuck
   Source: TSG-SQL-MI-Availability/content/Index/Chimera/TSGCHIMERA0001-Establishing-chimera-link-is-stuck.md
   Prompts:
-  - MI TSGCHIMERA0001-Establishing-chimera-link-is-stuck
-  - Managed Instance TSGCHIMERA0001-Establishing-chimera-link-is-stuck
+  - MI restore request status
+  - MonManagement request_id remote_request_id
+  - Check MonManagement request_id remote_request_id
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5638,8 +5873,9 @@ SqlSkills:
   Topic: TSGCHIMERA0001-Establishing-chimera-link-is-stuck
   Source: TSG-SQL-MI-Availability/content/Index/Chimera/TSGCHIMERA0001-Establishing-chimera-link-is-stuck.md
   Prompts:
-  - MI TSGCHIMERA0001-Establishing-chimera-link-is-stuck
-  - Managed Instance TSGCHIMERA0001-Establishing-chimera-link-is-stuck
+  - MI restore request status
+  - MonManagement request_id old_state new_state
+  - Check MonManagement request_id old_state
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5654,8 +5890,9 @@ SqlSkills:
   Topic: TSGCHIMERA0001-Establishing-chimera-link-is-stuck
   Source: TSG-SQL-MI-Availability/content/Index/Chimera/TSGCHIMERA0001-Establishing-chimera-link-is-stuck.md
   Prompts:
-  - MI TSGCHIMERA0001-Establishing-chimera-link-is-stuck
-  - Managed Instance TSGCHIMERA0001-Establishing-chimera-link-is-stuck
+  - MI login and connection errors
+  - MonUcsConnections AppName PreciseTimeStamp error_code
+  - Check MonUcsConnections AppName error_code
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5672,8 +5909,9 @@ SqlSkills:
   Topic: TSGCHIMERA0002-HybridLink-TrainSignoff-TSG
   Source: TSG-SQL-MI-Availability/content/Index/Chimera/TSGCHIMERA0002-HybridLink-TrainSignoff-TSG.md
   Prompts:
-  - MI TSGCHIMERA0002-HybridLink-TrainSignoff-TSG
-  - Managed Instance TSGCHIMERA0002-HybridLink-TrainSignoff-TSG
+  - MI resource usage analysis
+  - MonLabRunResults JobName SessionName
+  - Check MonLabRunResults JobName SessionName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5695,8 +5933,9 @@ SqlSkills:
   Topic: TSGCHIMERA0003-IsHybridLag-Deadlock
   Source: TSG-SQL-MI-Availability/content/Index/Chimera/TSGCHIMERA0003-IsHybridLag-Deadlock.md
   Prompts:
-  - MI TSGCHIMERA0003-IsHybridLag-Deadlock
-  - Managed Instance TSGCHIMERA0003-IsHybridLag-Deadlock
+  - MI deadlock reports by node
+  - MonWorkerWaitStats AppName AppTypeName text_data
+  - Check MonWorkerWaitStats AppName AppTypeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5735,8 +5974,9 @@ SqlSkills:
   Topic: TSGCHIMERA0003-IsHybridLag-Deadlock
   Source: TSG-SQL-MI-Availability/content/Index/Chimera/TSGCHIMERA0003-IsHybridLag-Deadlock.md
   Prompts:
-  - MI TSGCHIMERA0003-IsHybridLag-Deadlock
-  - Managed Instance TSGCHIMERA0003-IsHybridLag-Deadlock
+  - MI deadlock reports by node
+  - MonSqlDumperActivity ClusterName NodeName TIMESTAMP
+  - Check MonSqlDumperActivity ClusterName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5753,8 +5993,9 @@ SqlSkills:
   Topic: TSGCHIMERA0004-IsInstanceSuspendedFromRevalidation
   Source: TSG-SQL-MI-Availability/content/Index/Chimera/TSGCHIMERA0004-IsInstanceSuspendedFromRevalidation.md
   Prompts:
-  - MI TSGCHIMERA0004-IsInstanceSuspendedFromRevalidation
-  - Managed Instance TSGCHIMERA0004-IsInstanceSuspendedFromRevalidation
+  - MI replica health and role
+  - MonDmDbHadrReplicaStates TIMESTAMP suspend_reason_desc
+  - Check MonDmDbHadrReplicaStates synchronization_state_desc
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5773,8 +6014,9 @@ SqlSkills:
   Topic: TSGCHIMERA0004-IsInstanceSuspendedFromRevalidation
   Source: TSG-SQL-MI-Availability/content/Index/Chimera/TSGCHIMERA0004-IsInstanceSuspendedFromRevalidation.md
   Prompts:
-  - MI TSGCHIMERA0004-IsInstanceSuspendedFromRevalidation
-  - Managed Instance TSGCHIMERA0004-IsInstanceSuspendedFromRevalidation
+  - MI restore request status
+  - MonSQLSystemHealth TIMESTAMP AppName error_id
+  - Check MonSQLSystemHealth AppName error_id
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5791,8 +6033,9 @@ SqlSkills:
   Topic: TSGCHIMERA0006-MissingTDECert
   Source: TSG-SQL-MI-Availability/content/Index/Chimera/TSGCHIMERA0006-MissingTDECert.md
   Prompts:
-  - MI TSGCHIMERA0006-MissingTDECert
-  - Managed Instance TSGCHIMERA0006-MissingTDECert
+  - MI restore request status by server
+  - MonSQLSystemHealth originalEventTimestamp LogicalServerName
+  - Check MonSQLSystemHealth originalEventTimestamp message
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5813,8 +6056,9 @@ SqlSkills:
   Topic: TSGCHIMERA0006-MissingTDECert
   Source: TSG-SQL-MI-Availability/content/Index/Chimera/TSGCHIMERA0006-MissingTDECert.md
   Prompts:
-  - MI TSGCHIMERA0006-MissingTDECert
-  - Managed Instance TSGCHIMERA0006-MissingTDECert
+  - MI restore request status
+  - MonManagement request_id state_machine_type old_state
+  - Check MonManagement request_id state_machine_type
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5831,8 +6075,9 @@ SqlSkills:
   Topic: TSGCHIMERA0007-Establishing-chimera-MIPrimary-link-is-stuck
   Source: TSG-SQL-MI-Availability/content/Index/Chimera/TSGCHIMERA0007-Establishing-chimera-MIPrimary-link-is-stuck.md
   Prompts:
-  - MI TSGCHIMERA0007-Establishing-chimera-MIPrimary-link-is-stuck
-  - Managed Instance TSGCHIMERA0007-Establishing-chimera-MIPrimary-link-is-stuck
+  - MI restore request status
+  - MonManagementOperations operation_type operation_parameters
+  - Check MonManagementOperations operation_type
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5849,8 +6094,9 @@ SqlSkills:
   Topic: TSGCHIMERA0007-Establishing-chimera-MIPrimary-link-is-stuck
   Source: TSG-SQL-MI-Availability/content/Index/Chimera/TSGCHIMERA0007-Establishing-chimera-MIPrimary-link-is-stuck.md
   Prompts:
-  - MI TSGCHIMERA0007-Establishing-chimera-MIPrimary-link-is-stuck
-  - Managed Instance TSGCHIMERA0007-Establishing-chimera-MIPrimary-link-is-stuck
+  - MI restore request status
+  - MonManagement request_id old_state new_state
+  - Check MonManagement request_id old_state
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5865,8 +6111,9 @@ SqlSkills:
   Topic: TSGCL03063A-SQL-Managed-Instance-Certificate-Creation-Failed
   Source: TSG-SQL-MI-Availability/content/Index/Chimera/TSGCL03063A-SQL-Managed-Instance-Certificate-Creation-Failed.md
   Prompts:
-  - MI TSGCL03063A-SQL-Managed-Instance-Certificate-Creation-Failed
-  - Managed Instance TSGCL03063A-SQL-Managed-Instance-Certificate-Creation-Failed
+  - MI resource usage analysis
+  - MonSqlSecurityService event resource_name request_id
+  - Check MonSqlSecurityService event resource_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5891,8 +6138,9 @@ SqlSkills:
   Topic: TSGCL0307-ManagedInstance-certificate-not-rolled-over
   Source: TSG-SQL-MI-Availability/content/Index/Chimera/TSGCL0307-ManagedInstance-certificate-not-rolled-over.md
   Prompts:
-  - MI TSGCL0307-ManagedInstance-certificate-not-rolled-over
-  - Managed Instance TSGCL0307-ManagedInstance-certificate-not-rolled-over
+  - MI restore request status
+  - MonManagement
+  - Investigate restore progress
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5905,8 +6153,9 @@ SqlSkills:
   Topic: TSGCL0307-ManagedInstance-certificate-not-rolled-over
   Source: TSG-SQL-MI-Availability/content/Index/Chimera/TSGCL0307-ManagedInstance-certificate-not-rolled-over.md
   Prompts:
-  - MI TSGCL0307-ManagedInstance-certificate-not-rolled-over
-  - Managed Instance TSGCL0307-ManagedInstance-certificate-not-rolled-over
+  - MI restore request status
+  - MonManagement
+  - Investigate restore progress
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5925,8 +6174,9 @@ SqlSkills:
   Topic: TSGCL0307-ManagedInstance-certificate-not-rolled-over
   Source: TSG-SQL-MI-Availability/content/Index/Chimera/TSGCL0307-ManagedInstance-certificate-not-rolled-over.md
   Prompts:
-  - MI TSGCL0307-ManagedInstance-certificate-not-rolled-over
-  - Managed Instance TSGCL0307-ManagedInstance-certificate-not-rolled-over
+  - MI tsgcl0307-managedinstance-certificate-not-rolled-over
+  - Unknown ManagedServerName
+  - Check Unknown ManagedServerName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5939,8 +6189,9 @@ SqlSkills:
   Topic: TSGCL0307-ManagedInstance-certificate-not-rolled-over
   Source: TSG-SQL-MI-Availability/content/Index/Chimera/TSGCL0307-ManagedInstance-certificate-not-rolled-over.md
   Prompts:
-  - MI TSGCL0307-ManagedInstance-certificate-not-rolled-over
-  - Managed Instance TSGCL0307-ManagedInstance-certificate-not-rolled-over
+  - MI restore request status
+  - MonSQLSystemHealth
+  - Investigate restore progress
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5953,8 +6204,9 @@ SqlSkills:
   Topic: TSG-%2D-How-to-check-if-RHC-(Resource-Health)-event-was-false-alarm
   Source: TSG-SQL-MI-Availability/content/Index/Resource-Health/TSG-%2D-How-to-check-if-RHC-(Resource-Health)-event-was-false-alarm.md
   Prompts:
-  - MI TSG-%2D-How-to-check-if-RHC-(Resource-Health)-event-was-false-alarm
-  - Managed Instance TSG-%2D-How-to-check-if-RHC-(Resource-Health)-event-was-false-alarm
+  - MI login and connection errors by database
+  - MonLogin originalEventTimestamp LogicalServerName event
+  - Check MonLogin originalEventTimestamp event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5979,8 +6231,9 @@ SqlSkills:
   Topic: TSGCL0208-Investigate-DB-Mail
   Source: TSG-SQL-MI-Availability/content/Index/SqlAgent&DBMail/TSGCL0208-Investigate-DB-Mail.md
   Prompts:
-  - MI TSGCL0208-Investigate-DB-Mail
-  - Managed Instance TSGCL0208-Investigate-DB-Mail
+  - MI seeding progress and failures
+  - MonSsbManagedInstanceTransmissions AppName
+  - Check MonSsbManagedInstanceTransmissions AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5995,8 +6248,9 @@ SqlSkills:
   Topic: TSGCLSQLAGENT0001-SQL-Agent-investigation
   Source: TSG-SQL-MI-Availability/content/Index/SqlAgent&DBMail/TSGCLSQLAGENT0001-SQL-Agent-investigation.md
   Prompts:
-  - MI TSGCLSQLAGENT0001-SQL-Agent-investigation
-  - Managed Instance TSGCLSQLAGENT0001-SQL-Agent-investigation
+  - MI resource usage analysis by server
+  - MonSqlAgent LogicalServerName originalEventTimestamp
+  - Check MonSqlAgent originalEventTimestamp NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -6013,8 +6267,9 @@ SqlSkills:
   Topic: TSGCLSQLAGENT0001-SQL-Agent-investigation
   Source: TSG-SQL-MI-Availability/content/Index/SqlAgent&DBMail/TSGCLSQLAGENT0001-SQL-Agent-investigation.md
   Prompts:
-  - MI TSGCLSQLAGENT0001-SQL-Agent-investigation
-  - Managed Instance TSGCLSQLAGENT0001-SQL-Agent-investigation
+  - MI resource usage analysis by server
+  - MonSqlAgent LogicalServerName originalEventTimestamp
+  - Check MonSqlAgent originalEventTimestamp NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -6033,8 +6288,9 @@ SqlSkills:
   Topic: TSGCLSQLAGENT0001-SQL-Agent-investigation
   Source: TSG-SQL-MI-Availability/content/Index/SqlAgent&DBMail/TSGCLSQLAGENT0001-SQL-Agent-investigation.md
   Prompts:
-  - MI TSGCLSQLAGENT0001-SQL-Agent-investigation
-  - Managed Instance TSGCLSQLAGENT0001-SQL-Agent-investigation
+  - MI resource usage analysis by server
+  - MonSqlAgent LogicalServerName originalEventTimestamp
+  - Check MonSqlAgent originalEventTimestamp resource_id
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -6053,8 +6309,9 @@ SqlSkills:
   Topic: TSGCLSQLAGENT0001-SQL-Agent-investigation
   Source: TSG-SQL-MI-Availability/content/Index/SqlAgent&DBMail/TSGCLSQLAGENT0001-SQL-Agent-investigation.md
   Prompts:
-  - MI TSGCLSQLAGENT0001-SQL-Agent-investigation
-  - Managed Instance TSGCLSQLAGENT0001-SQL-Agent-investigation
+  - MI memory pressure and OOM analysis
+  - MonRgLoad application_name TIMESTAMP event
+  - Check MonRgLoad application_name event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -6075,8 +6332,9 @@ SqlSkills:
   Topic: TSGCLSQLAGENT0001-SQL-Agent-investigation
   Source: TSG-SQL-MI-Availability/content/Index/SqlAgent&DBMail/TSGCLSQLAGENT0001-SQL-Agent-investigation.md
   Prompts:
-  - MI TSGCLSQLAGENT0001-SQL-Agent-investigation
-  - Managed Instance TSGCLSQLAGENT0001-SQL-Agent-investigation
+  - MI instance CPU and memory stats
+  - MonRgLoad application_name TIMESTAMP event
+  - Check MonRgLoad application_name event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -6097,8 +6355,9 @@ SqlSkills:
   Topic: TSGCLSQLAGENT0001-SQL-Agent-investigation
   Source: TSG-SQL-MI-Availability/content/Index/SqlAgent&DBMail/TSGCLSQLAGENT0001-SQL-Agent-investigation.md
   Prompts:
-  - MI TSGCLSQLAGENT0001-SQL-Agent-investigation
-  - Managed Instance TSGCLSQLAGENT0001-SQL-Agent-investigation
+  - MI resource usage analysis by node
+  - MonRgLoad TIMESTAMP ClusterName event
+  - Check MonRgLoad ClusterName event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -6123,8 +6382,9 @@ SqlSkills:
   Topic: TSGCLSQLAGENT0001-SQL-Agent-investigation
   Source: TSG-SQL-MI-Availability/content/Index/SqlAgent&DBMail/TSGCLSQLAGENT0001-SQL-Agent-investigation.md
   Prompts:
-  - MI TSGCLSQLAGENT0001-SQL-Agent-investigation
-  - Managed Instance TSGCLSQLAGENT0001-SQL-Agent-investigation
+  - MI login and connection errors
+  - MonLogin TIMESTAMP AppName application_name
+  - Check MonLogin AppName application_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -6143,8 +6403,9 @@ SqlSkills:
   Topic: TSGCLSQLAGENT0001-SQL-Agent-investigation
   Source: TSG-SQL-MI-Availability/content/Index/SqlAgent&DBMail/TSGCLSQLAGENT0001-SQL-Agent-investigation.md
   Prompts:
-  - MI TSGCLSQLAGENT0001-SQL-Agent-investigation
-  - Managed Instance TSGCLSQLAGENT0001-SQL-Agent-investigation
+  - MI restore request status
+  - MonSQLSystemHealth TIMESTAMP message error_id
+  - Check MonSQLSystemHealth message error_id
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -6165,8 +6426,9 @@ SqlSkills:
   Topic: TSGCLSQLAGENT0004-SQL-Agent-not-working-because-of-ODBC-error-on-startup
   Source: TSG-SQL-MI-Availability/content/Index/SqlAgent&DBMail/TSGCLSQLAGENT0004-SQL-Agent-not-working-because-of-ODBC-error-on-startup.md
   Prompts:
-  - MI TSGCLSQLAGENT0004-SQL-Agent-not-working-because-of-ODBC-error-on-startup
-  - Managed Instance TSGCLSQLAGENT0004-SQL-Agent-not-working-because-of-ODBC-error-on-startup
+  - MI restore request status
+  - MonSqlAgent originalEventTimestamp AppName NodeName
+  - Check MonSqlAgent originalEventTimestamp AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -6188,8 +6450,9 @@ SqlSkills:
   Topic: TSGCLSQLAGENT0004-SQL-Agent-not-working-because-of-ODBC-error-on-startup
   Source: TSG-SQL-MI-Availability/content/Index/SqlAgent&DBMail/TSGCLSQLAGENT0004-SQL-Agent-not-working-because-of-ODBC-error-on-startup.md
   Prompts:
-  - MI TSGCLSQLAGENT0004-SQL-Agent-not-working-because-of-ODBC-error-on-startup
-  - Managed Instance TSGCLSQLAGENT0004-SQL-Agent-not-working-because-of-ODBC-error-on-startup
+  - MI restore request status
+  - MonSqlAgent PreciseTimeStamp AppName NodeName
+  - Check MonSqlAgent AppName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -6208,8 +6471,9 @@ SqlSkills:
   Topic: TSGCLSQLAGENT0006-SqlAgentUser-Feature-Mitigation
   Source: TSG-SQL-MI-Availability/content/Index/SqlAgent&DBMail/TSGCLSQLAGENT0006-SqlAgentUser-Feature-Mitigation.md
   Prompts:
-  - MI TSGCLSQLAGENT0006-SqlAgentUser-Feature-Mitigation
-  - Managed Instance TSGCLSQLAGENT0006-SqlAgentUser-Feature-Mitigation
+  - MI storage usage and size by server
+  - MonContainerShare LogicalServerName event
+  - Check MonContainerShare event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -6234,8 +6498,9 @@ SqlSkills:
   Topic: TSGCLSQLAGENT0006-SqlAgentUser-Feature-Mitigation
   Source: TSG-SQL-MI-Availability/content/Index/SqlAgent&DBMail/TSGCLSQLAGENT0006-SqlAgentUser-Feature-Mitigation.md
   Prompts:
-  - MI TSGCLSQLAGENT0006-SqlAgentUser-Feature-Mitigation
-  - Managed Instance TSGCLSQLAGENT0006-SqlAgentUser-Feature-Mitigation
+  - MI restore request status by server
+  - MonSQLSystemHealth LogicalServerName message
+  - Check MonSQLSystemHealth message
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -6260,8 +6525,9 @@ SqlSkills:
   Topic: TSGCLSQLAGENT0006-SqlAgentUser-Feature-Mitigation
   Source: TSG-SQL-MI-Availability/content/Index/SqlAgent&DBMail/TSGCLSQLAGENT0006-SqlAgentUser-Feature-Mitigation.md
   Prompts:
-  - MI TSGCLSQLAGENT0006-SqlAgentUser-Feature-Mitigation
-  - Managed Instance TSGCLSQLAGENT0006-SqlAgentUser-Feature-Mitigation
+  - MI restore request status by server
+  - MonSqlAgent LogicalServerName message
+  - Check MonSqlAgent message
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -6284,8 +6550,9 @@ SqlSkills:
   Topic: TSGCLSSB0002-MI-storage-space-limit-reached-due-to-unclosed-broker-conversations
   Source: TSG-SQL-MI-Availability/content/Index/SqlMI-SSB/TSGCLSSB0002-MI-storage-space-limit-reached-due-to-unclosed-broker-conversations.md
   Prompts:
-  - MI TSGCLSSB0002-MI-storage-space-limit-reached-due-to-unclosed-broker-conversations
-  - Managed Instance TSGCLSSB0002-MI-storage-space-limit-reached-due-to-unclosed-broker-conversations
+  - MI storage usage and size by server
+  - MonManagedInstanceResourceStats TIMESTAMP LogicalServerName
+  - Check MonManagedInstanceResourceStats storage_space_used_mb
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -6302,8 +6569,9 @@ SqlSkills:
   Topic: TSGCLSSB0002-MI-storage-space-limit-reached-due-to-unclosed-broker-conversations
   Source: TSG-SQL-MI-Availability/content/Index/SqlMI-SSB/TSGCLSSB0002-MI-storage-space-limit-reached-due-to-unclosed-broker-conversations.md
   Prompts:
-  - MI TSGCLSSB0002-MI-storage-space-limit-reached-due-to-unclosed-broker-conversations
-  - Managed Instance TSGCLSSB0002-MI-storage-space-limit-reached-due-to-unclosed-broker-conversations
+  - MI storage usage and size by server
+  - MonDmIoVirtualFileStats TIMESTAMP LogicalServerName db_name
+  - Check MonDmIoVirtualFileStats db_name size_on_disk_bytes
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -6322,8 +6590,9 @@ SqlSkills:
   Topic: TSGCLSSB0003-MI-hits-OOM-due-to-unclosed-broker-conversations
   Source: TSG-SQL-MI-Availability/content/Index/SqlMI-SSB/TSGCLSSB0003-MI-hits-OOM-due-to-unclosed-broker-conversations.md
   Prompts:
-  - MI TSGCLSSB0003-MI-hits-OOM-due-to-unclosed-broker-conversations
-  - Managed Instance TSGCLSSB0003-MI-hits-OOM-due-to-unclosed-broker-conversations
+  - MI memory pressure and OOM analysis by server
+  - MonSqlMemoryClerkStats TIMESTAMP LogicalServerName
+  - Check MonSqlMemoryClerkStats memory_clerk_type MemoryInGB
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -6348,8 +6617,9 @@ SqlSkills:
   Topic: TSGCLSSB0004-Cross-Instance-Service-Broker-General-TSG
   Source: TSG-SQL-MI-Availability/content/Index/SqlMI-SSB/TSGCLSSB0004-Cross-Instance-Service-Broker-General-TSG.md
   Prompts:
-  - MI TSGCLSSB0004-Cross-Instance-Service-Broker-General-TSG
-  - Managed Instance TSGCLSSB0004-Cross-Instance-Service-Broker-General-TSG
+  - MI login and connection errors by server
+  - MonUcsConnections TIMESTAMP LogicalServerName endpoint_type
+  - Check MonUcsConnections endpoint_type stream_status
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -6378,8 +6648,9 @@ SqlSkills:
   Topic: TSGCLSSB0004-Cross-Instance-Service-Broker-General-TSG
   Source: TSG-SQL-MI-Availability/content/Index/SqlMI-SSB/TSGCLSSB0004-Cross-Instance-Service-Broker-General-TSG.md
   Prompts:
-  - MI TSGCLSSB0004-Cross-Instance-Service-Broker-General-TSG
-  - Managed Instance TSGCLSSB0004-Cross-Instance-Service-Broker-General-TSG
+  - MI login and connection errors by server
+  - MonUcsConnections TIMESTAMP LogicalServerName endpoint_type
+  - Check MonUcsConnections endpoint_type stream_status
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -6408,8 +6679,9 @@ SqlSkills:
   Topic: TSGCLSSB0004-Cross-Instance-Service-Broker-General-TSG
   Source: TSG-SQL-MI-Availability/content/Index/SqlMI-SSB/TSGCLSSB0004-Cross-Instance-Service-Broker-General-TSG.md
   Prompts:
-  - MI TSGCLSSB0004-Cross-Instance-Service-Broker-General-TSG
-  - Managed Instance TSGCLSSB0004-Cross-Instance-Service-Broker-General-TSG
+  - MI login and connection errors by server
+  - MonUcsConnections TIMESTAMP LogicalServerName endpoint_type
+  - Check MonUcsConnections endpoint_type address
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -6436,8 +6708,9 @@ SqlSkills:
   Topic: TSGCLSSB0004-Cross-Instance-Service-Broker-General-TSG
   Source: TSG-SQL-MI-Availability/content/Index/SqlMI-SSB/TSGCLSSB0004-Cross-Instance-Service-Broker-General-TSG.md
   Prompts:
-  - MI TSGCLSSB0004-Cross-Instance-Service-Broker-General-TSG
-  - Managed Instance TSGCLSSB0004-Cross-Instance-Service-Broker-General-TSG
+  - MI login and connection errors
+  - MonUcsConnections connection_id setup_event stream_status
+  - Check MonUcsConnections connection_id setup_event
   CustomizedParameters:
   - ServerName
   - DatabaseName

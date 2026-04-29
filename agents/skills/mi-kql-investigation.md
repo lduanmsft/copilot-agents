@@ -74,13 +74,40 @@ grep -i "keyword" ~/.copilot/agents/skills/kql-templates/mi/**/*.yaml
 ```
 If an exact or close match is found → extract the `ExecutedQuery` → proceed to Step 3.
 
-**2b. Fallback — Search TSG Documentation**
-If local templates don't have a good match, search broader sources:
+**2b. Fallback — Search MI TSG Documentation**
+If local templates don't have a good match, search MI documentation sources:
 
-- **Local TSG repos**: `grep -r "keyword" ~/repos/mi-tsg/TSG-SQL-MI-{Availability,BackupRestore,Performance,Networking}/`
-- **EngHub**: `enghub-search` → "SQL Managed Instance {topic} kusto query"
-- **CSS Wiki**: `csswiki-search_wiki` → search in SQLServerWindows, AzureSQLMI projects
-- **msdata wiki**: `msdata-search_wiki` → search in Database Systems project
+**MI Document Scope（合并 CSS Wiki scope 5 + msdata scope 7/8）：**
+
+| # | 来源 | 工具 | 搜索范围 |
+|---|------|------|----------|
+| **CSS Wiki（Supportability org）** |
+| 1 | CSS Wiki: AzureSQLMI | `csswiki-search_wiki` project=["AzureSQLMI"] | 支持团队的 MI TSG 和 case 经验 |
+| **msdata Wiki（Database Systems org）** |
+| 2 | msdata Wiki: TSG-SQL-MI-BackupRestore | `msdata-search_wiki` wiki=["TSG-SQL-MI-BackupRestore"] | 工程团队的备份恢复 TSG |
+| 3 | msdata Wiki: TSG-SQL-MI-Availability | `msdata-search_wiki` wiki=["TSG-SQL-MI-Availability"] | 工程团队的可用性 TSG |
+| 4 | msdata Wiki: TSG-SQL-MI-Networking | `msdata-search_wiki` wiki=["TSG-SQL-MI-Networking"] | 工程团队的网络 TSG |
+| 5 | msdata Wiki: TSG-SQL-MI-Performance | `msdata-search_wiki` wiki=["TSG-SQL-MI-Performance"] | 工程团队的性能 TSG |
+| 6 | msdata Wiki: TSG-SQL-MI-TransactionalReplication | `msdata-search_wiki` wiki=["TSG-SQL-MI-TransactionalReplication"] | 工程团队的事务复制 TSG |
+| 7 | msdata Wiki: Database Systems.wiki | `msdata-search_wiki` | MI Provisioning TSG 等 |
+| **msdata Code（Database Systems org）** |
+| 8 | msdata Code: TSG-SQL-MI-* repos | `msdata-search_code` repository=["TSG-SQL-MI-BackupRestore","TSG-SQL-MI-Availability","TSG-SQL-MI-Networking","TSG-SQL-MI-Performance","TSG-SQL-MI-TransactionalReplication"] | TSG 源码中的 KQL |
+| 9 | msdata Code: TSG-SQL-DB-GeoDr | `msdata-search_code` repository=["TSG-SQL-DB-GeoDr"] | MI Failover Group TSG |
+| **EngHub** |
+| 10 | EngHub MI docs | `enghub-search` query="SQL Managed Instance {topic}" | EngHub 上的 MI 文档 |
+
+**msdata MI TSG Repos 完整列表：**
+```
+msdata.visualstudio.com/Database Systems/_git/
+├── TSG-SQL-MI-Availability             (MI 可用性)
+├── TSG-SQL-MI-BackupRestore            (MI 备份恢复)
+├── TSG-SQL-MI-Networking               (MI 网络)
+├── TSG-SQL-MI-Performance              (MI 性能)
+├── TSG-SQL-MI-TransactionalReplication (MI 事务复制)
+├── TSG-SQL-MIRS                        (MI RS)
+├── TSG-SQL-DB-GeoDr                    (GeoDR/FOG，含 MI 部分)
+└── TSG-SQL-DB-DataIntegration          (数据集成，含 Hyperscale MI)
+```
 
 **2c. Last Resort — AI Generate with Schema Reference**
 If no template found, generate KQL using:

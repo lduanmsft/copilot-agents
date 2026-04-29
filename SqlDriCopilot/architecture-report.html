@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SQL DRI Copilot - Architecture Analysis Report</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --card: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-muted: #8b949e;
+    --accent: #58a6ff;
+    --accent2: #3fb950;
+    --accent3: #d29922;
+    --accent4: #f85149;
+    --accent5: #bc8cff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 2rem;
+  }
+  .container { max-width: 1200px; margin: 0 auto; }
+  h1 {
+    font-size: 2rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+  h1 span { color: var(--accent); }
+  .subtitle { color: var(--text-muted); margin-bottom: 2rem; font-size: 0.9rem; }
+  h2 {
+    font-size: 1.4rem;
+    margin: 2rem 0 1rem;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  h2 .num {
+    background: var(--accent);
+    color: var(--bg);
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  h3 {
+    font-size: 1.1rem;
+    margin: 1.2rem 0 0.6rem;
+    color: var(--accent2);
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.2rem;
+    margin-bottom: 1rem;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.8rem 0;
+    font-size: 0.9rem;
+  }
+  th {
+    background: #21262d;
+    text-align: left;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    color: var(--accent);
+    font-weight: 600;
+  }
+  td {
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    vertical-align: top;
+  }
+  tr:hover td { background: #1c2128; }
+  code {
+    background: #21262d;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    color: #f0883e;
+  }
+  .arch-diagram {
+    background: #0d1117;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.5rem;
+    font-family: 'Cascadia Code', 'Fira Code', monospace;
+    font-size: 0.85rem;
+    line-height: 1.8;
+    overflow-x: auto;
+    white-space: pre;
+    color: var(--text-muted);
+  }
+  .arch-diagram .highlight { color: var(--accent); font-weight: 600; }
+  .arch-diagram .green { color: var(--accent2); }
+  .arch-diagram .yellow { color: var(--accent3); }
+  .arch-diagram .red { color: var(--accent4); }
+  .arch-diagram .purple { color: var(--accent5); }
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-right: 4px;
+  }
+  .badge-be { background: #1f3a2d; color: var(--accent2); border: 1px solid #2d5a3d; }
+  .badge-fe { background: #2a2017; color: var(--accent3); border: 1px solid #4a3517; }
+  .badge-both { background: #1a2540; color: var(--accent); border: 1px solid #2a3560; }
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    margin: 2px;
+  }
+  .tag-plugin { background: #1f3a2d; color: var(--accent2); }
+  .tag-skill { background: #1a2540; color: var(--accent); }
+  .tag-agent { background: #2d1a3a; color: var(--accent5); }
+  .flow-arrow { color: var(--accent3); font-weight: bold; }
+  ul { margin: 0.5rem 0 0.5rem 1.5rem; }
+  li { margin-bottom: 0.3rem; }
+  .toc {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.5rem;
+    margin-bottom: 2rem;
+  }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  .toc ul { list-style: none; margin-left: 0; }
+  .toc li { margin-bottom: 0.4rem; }
+  .toc li::before { content: "→ "; color: var(--text-muted); }
+  .source-info {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    border-top: 1px solid var(--border);
+    margin-top: 3rem;
+    padding-top: 1rem;
+  }
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+  @media (max-width: 768px) {
+    .grid-2 { grid-template-columns: 1fr; }
+    body { padding: 1rem; }
+  }
+  .workflow-tree {
+    margin: 0.5rem 0;
+    font-size: 0.9rem;
+  }
+  .workflow-tree details {
+    margin-left: 1rem;
+    border-left: 1px solid var(--border);
+    padding-left: 0.8rem;
+    margin-bottom: 0.3rem;
+  }
+  .workflow-tree summary {
+    cursor: pointer;
+    padding: 2px 0;
+    color: var(--text);
+  }
+  .workflow-tree summary:hover { color: var(--accent); }
+  .workflow-tree .leaf {
+    margin-left: 1rem;
+    padding-left: 0.8rem;
+    border-left: 1px solid var(--border);
+    color: var(--text-muted);
+    padding: 2px 0 2px 0.8rem;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>SQL DRI Copilot <span>Architecture Analysis</span></h1>
+<p class="subtitle">Source: <code>msdata.visualstudio.com / Database Systems / DRICopilot</code> &mdash; Analyzed 2026-04-15</p>
+
+<!-- TOC -->
+<div class="toc">
+  <strong>Table of Contents</strong>
+  <ul>
+    <li><a href="#overview">Overview &amp; Entry Point</a></li>
+    <li><a href="#architecture">System Architecture</a></li>
+    <li><a href="#agents">Agent Topics (8 Agents)</a></li>
+    <li><a href="#sqlmi-config">SQL MI Agent — Detailed Config</a></li>
+    <li><a href="#plugins">Frontend Plugins</a></li>
+    <li><a href="#common-skills">Common Skills (Backend)</a></li>
+    <li><a href="#perf-workflow">SQL DB Perf Troubleshooting Workflow</a></li>
+    <li><a href="#data-sources">Data Sources &amp; Indexes</a></li>
+    <li><a href="#repo">Source Code Structure</a></li>
+  </ul>
+</div>
+
+<!-- 1. Overview -->
+<h2 id="overview"><span class="num">1</span> Overview &amp; Entry Point</h2>
+<div class="card">
+  <table>
+    <tr><th>Property</th><th>Value</th></tr>
+    <tr><td>URL</td><td><code>https://sql-dri-copilot-prod.azurewebsites.net/</code></td></tr>
+    <tr><td>Wiki</td><td><code>eng.ms/docs/cloud-ai-platform/azure-data/azure-data-analytics/azure-data-dri-copilot/.../sql-dri-copilot</code></td></tr>
+    <tr><td>Source Repo</td><td><code>msdata.visualstudio.com / Database Systems / DRICopilot</code></td></tr>
+    <tr><td>Hosting</td><td>Azure App Service (Web App)</td></tr>
+    <tr><td>Framework</td><td>Bot Framework V4 (.NET)</td></tr>
+    <tr><td>AI Backend</td><td>Azure ML PromptFlow (managed endpoint)</td></tr>
+    <tr><td>Agent Version</td><td>V2 (PromptFlowAgentVersion)</td></tr>
+    <tr><td>Auth / RBAC</td><td>CoreIdentity roles: <code>DRICopilot.Admins</code>, <code>DRICopilot.AzureSQL</code></td></tr>
+  </table>
+</div>
+
+<!-- 2. Architecture -->
+<h2 id="architecture"><span class="num">2</span> System Architecture</h2>
+<div class="card">
+<div class="arch-diagram"><span class="highlight">┌─────────────────────────────────────────────────────────────────────┐</span>
+<span class="highlight">│                        User (Browser)                               │</span>
+<span class="highlight">└──────────────────────────┬──────────────────────────────────────────┘</span>
+                           │
+                           ▼
+<span class="green">┌─────────────────────────────────────────────────────────────────────┐</span>
+<span class="green">│  Azure App Service: sql-dri-copilot-prod.azurewebsites.net          │</span>
+<span class="green">│  ┌──────────────────────────────────────────────────────────────┐   │</span>
+<span class="green">│  │  Bot Framework V4 (.NET)                                    │   │</span>
+<span class="green">│  │  ├── appsettings.sql.json (agent/plugin config per topic)   │   │</span>
+<span class="green">│  │  ├── Plugins: Suggestions, ChatReset, Kql, Notifications   │   │</span>
+<span class="green">│  │  └── Topic Router → select agent config by user choice     │   │</span>
+<span class="green">│  └──────────────────────────────┬───────────────────────────────┘   │</span>
+<span class="green">└─────────────────────────────────┬───────────────────────────────────┘</span>
+                                  │  HTTP POST /score
+                                  ▼
+<span class="yellow">┌─────────────────────────────────────────────────────────────────────┐</span>
+<span class="yellow">│  Azure ML Managed Endpoint (PromptFlow)                             │</span>
+<span class="yellow">│  Endpoint: cdric-generic-main-1.westus3.inference.ml.azure.com      │</span>
+<span class="yellow">│  ┌──────────────────────────────────────────────────────────────┐   │</span>
+<span class="yellow">│  │  Multi-Agent Router                                         │   │</span>
+<span class="yellow">│  │  ├── QA Agent          (TSG + ICM retrieval + answering)     │   │</span>
+<span class="yellow">│  │  ├── Code Agent         (code search)                       │   │</span>
+<span class="yellow">│  │  ├── KustoExecutor Agent(Kusto query gen + exec)            │   │</span>
+<span class="yellow">│  │  ├── DiagnosticDocs Agent (TSG builder, postmortem)          │   │</span>
+<span class="yellow">│  │  ├── ResetContext Agent (session reset)                      │   │</span>
+<span class="yellow">│  │  ├── PostQA Agent      (follow-up recommendations)          │   │</span>
+<span class="yellow">│  │  ├── Image Agent        (image processing)                  │   │</span>
+<span class="yellow">│  │  ├── LearnDoc Agent    (Microsoft Learn lookup)             │   │</span>
+<span class="yellow">│  │  ├── DevOps Agent       (ADO work items)                    │   │</span>
+<span class="yellow">│  │  └── ListSkill Agent   (list available skills)              │   │</span>
+<span class="yellow">│  └──────────────────────────────┬───────────────────────────────┘   │</span>
+<span class="yellow">└─────────────────────────────────┬───────────────────────────────────┘</span>
+                                  │  Skills call out to:
+                                  ▼
+<span class="purple">┌─────────────────────────────────────────────────────────────────────┐</span>
+<span class="purple">│  External Services                                                  │</span>
+<span class="purple">│  ├── Azure Cognitive Search  (TSG indexes, ICM indexes)             │</span>
+<span class="purple">│  ├── ICM Data Warehouse      (active incidents, queue summary)      │</span>
+<span class="purple">│  ├── Kusto Clusters          (telemetry, TTrainStatus, DB updates)  │</span>
+<span class="purple">│  ├── Azure DevOps            (code search, work items, git diffs)   │</span>
+<span class="purple">│  ├── Kepler                  (notebook search & execution)          │</span>
+<span class="purple">│  └── Microsoft Learn         (public documentation)                 │</span>
+<span class="purple">└─────────────────────────────────────────────────────────────────────┘</span></div>
+</div>
+
+<!-- 3. Agents -->
+<h2 id="agents"><span class="num">3</span> Agent Topics (8 Agents)</h2>
+<div class="card">
+  <p>用户进入首页后选择一个 topic，每个 topic 对应一套独立的 PromptFlow config：</p>
+  <table>
+    <tr>
+      <th>Topic</th>
+      <th>Config File</th>
+      <th>PromptFlow Endpoint</th>
+      <th>说明</th>
+    </tr>
+    <tr>
+      <td><strong>SQL DB</strong></td>
+      <td><code>config_sqlall.json</code></td>
+      <td rowspan="8"><code>cdric-generic-main-1<br>.westus3.inference<br>.ml.azure.com/score</code></td>
+      <td>Azure SQL DB 文档 + incidents</td>
+    </tr>
+    <tr>
+      <td><strong>Fabric SQL</strong></td>
+      <td><code>config_sqlfabric.json</code></td>
+      <td>Fabric SQL 文档 + incidents</td>
+    </tr>
+    <tr>
+      <td><strong>SQL VM</strong></td>
+      <td><code>config_sqlvm.json</code></td>
+      <td>SQL VM 文档 + incidents</td>
+    </tr>
+    <tr>
+      <td><strong>SQL MI</strong></td>
+      <td><code>config_sqlmi.json</code></td>
+      <td>SQL Managed Instance 文档 + incidents</td>
+    </tr>
+    <tr>
+      <td><strong>SQL Arc</strong></td>
+      <td><code>config_sqlarc.json</code></td>
+      <td>SQL Arc 文档 + incidents</td>
+    </tr>
+    <tr>
+      <td><strong>SSMS</strong></td>
+      <td><code>config_ssms.json</code> (推测)</td>
+      <td>SSMS 文档 + incidents</td>
+    </tr>
+    <tr>
+      <td><strong>SQL ES</strong></td>
+      <td><code>config_sqles.json</code> (推测)</td>
+      <td>Engineering System 文档 + SO posts</td>
+    </tr>
+    <tr>
+      <td><strong>SQL DB Perf Agent</strong></td>
+      <td><code>config_sqlperf.json</code> (推测)</td>
+      <td>性能诊断 workflow agent</td>
+    </tr>
+  </table>
+  <p style="color:var(--text-muted); font-size:0.85rem; margin-top:0.5rem;">注：标注"推测"的 config 文件名是根据命名规律推断，未在源码中直接确认。</p>
+</div>
+
+<!-- 4. SQL MI Config -->
+<h2 id="sqlmi-config"><span class="num">4</span> SQL MI Agent — Detailed Config</h2>
+<div class="card">
+  <h3>appsettings.sql.json 中的 SQL MI 配置</h3>
+  <table>
+    <tr><th>Key</th><th>Value</th></tr>
+    <tr><td>ChatName</td><td>SQL MI</td></tr>
+    <tr><td>ChatNameForMcp</td><td>SQL MI DRI Copilot</td></tr>
+    <tr><td>ChatImagePath</td><td><code>Sql/sql-mi.png</code></td></tr>
+    <tr><td>PromptFlowConfigurationFile</td><td><code>central_dri_copilot_ame/config_sqlmi.json</code></td></tr>
+    <tr><td>PromptFlowAgentVersion</td><td>V2</td></tr>
+    <tr><td>AllowedRolesNames</td><td><code>DRICopilot.Admins</code>, <code>DRICopilot.AzureSQL</code></td></tr>
+  </table>
+
+  <h3>Plugins</h3>
+  <table>
+    <tr><th>Plugin</th><th>作用</th></tr>
+    <tr>
+      <td><span class="tag tag-plugin">Control.Suggestions</span></td>
+      <td>首页推荐问题，分 6 类：Getting Started, Architecture, Monitoring, Troubleshooting, Incident Investigation, Writing Help, Incident Volume Analysis</td>
+    </tr>
+    <tr>
+      <td><span class="tag tag-plugin">Control.ChatContextReset</span></td>
+      <td>会话上下文重置检测</td>
+    </tr>
+    <tr>
+      <td><span class="tag tag-plugin">Kql.KqlHandler</span></td>
+      <td>Kusto 查询处理（生成 + 执行 KQL）</td>
+    </tr>
+    <tr>
+      <td><span class="tag tag-plugin">Control.QuestionRecommendations</span></td>
+      <td>回答后推荐后续问题</td>
+    </tr>
+    <tr>
+      <td><span class="tag tag-plugin">Control.Notifications</span></td>
+      <td>通知推送</td>
+    </tr>
+    <tr>
+      <td><span class="tag tag-plugin">OnCall.DailySummary</span></td>
+      <td>OnCall 每日摘要，监控 <code>AZURESQLDB\\MDCS-SQLPlatform</code> 的 Sev2 incidents，1 天 lookback</td>
+    </tr>
+  </table>
+
+  <h3>OnCall.DailySummary 配置</h3>
+  <table>
+    <tr><th>Property</th><th>Value</th></tr>
+    <tr><td>TenantName</td><td><code>Azure SQL DB</code></td></tr>
+    <tr><td>TeamNameForSchedule</td><td><code>AZURESQLDB\\MDCS-SQLPlatform</code></td></tr>
+    <tr><td>AdditionalFilterSetting</td><td><code>| where Severity == 2</code></td></tr>
+    <tr><td>MaxDegreeOfParallelism</td><td>5</td></tr>
+    <tr><td>LookbackTimeForNewNotification</td><td>1d</td></tr>
+  </table>
+</div>
+
+<!-- 5. Plugins -->
+<h2 id="plugins"><span class="num">5</span> Frontend Plugins</h2>
+<div class="card">
+  <p>Plugins 在 Bot Framework 前端层运行，负责 UI 交互和辅助功能：</p>
+  <div class="grid-2">
+    <div class="card" style="border-color:#2d5a3d">
+      <h3 style="margin-top:0">Control Plugins</h3>
+      <ul>
+        <li><code>Control.Suggestions</code> — 对话启动推荐</li>
+        <li><code>Control.ChatContextReset</code> — 会话重置</li>
+        <li><code>Control.QuestionRecommendations</code> — 后续问题推荐</li>
+        <li><code>Control.Notifications</code> — 推送通知</li>
+      </ul>
+    </div>
+    <div class="card" style="border-color:#2a3560">
+      <h3 style="margin-top:0">Functional Plugins</h3>
+      <ul>
+        <li><code>Kql.KqlHandler</code> — Kusto 查询生成与执行</li>
+        <li><code>OnCall.DailySummary</code> — OnCall 每日 incident 汇总</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- 6. Common Skills -->
+<h2 id="common-skills"><span class="num">6</span> Common Skills (Backend PromptFlow)</h2>
+<div class="card">
+  <p>所有 topic agent 共享的通用 skill 池，在 PromptFlow 后端执行。每个 skill 挂载到特定的 Agent 上：</p>
+  <table>
+    <tr>
+      <th>Skill</th>
+      <th>Scope</th>
+      <th>Agent</th>
+      <th>功能</th>
+    </tr>
+    <tr>
+      <td><code>icm.get_icms</code></td>
+      <td><span class="badge badge-be">BE</span></td>
+      <td><span class="tag tag-agent">QA Agent</span></td>
+      <td>从 Azure Cognitive Search ICM index 检索历史 incidents（max 20 retrieved → 4 reranked）</td>
+    </tr>
+    <tr>
+      <td><code>icm.get_active_icms</code></td>
+      <td><span class="badge badge-be">BE</span></td>
+      <td><span class="tag tag-agent">QA Agent</span></td>
+      <td>从 ICM 数据仓库检索实时活跃 incidents，支持 tenant/team 过滤 + Kusto 附加过滤</td>
+    </tr>
+    <tr>
+      <td><code>tsg.get_tsgs</code></td>
+      <td><span class="badge badge-be">BE</span></td>
+      <td><span class="tag tag-agent">QA Agent</span></td>
+      <td>从 Azure Cognitive Search TSG index 检索 TSG 文档（hybrid search：vector + text，含 feedback learning）</td>
+    </tr>
+    <tr>
+      <td>Kepler Notebook</td>
+      <td><span class="badge badge-both">BE+FE</span></td>
+      <td><span class="tag tag-agent">—</span></td>
+      <td>搜索和执行参数化 Jupyter Notebook（Kepler 平台集成）</td>
+    </tr>
+    <tr>
+      <td>Code Search</td>
+      <td><span class="badge badge-both">BE+FE</span></td>
+      <td><span class="tag tag-agent">Code / QA Agent</span></td>
+      <td>Azure DevOps 代码搜索</td>
+    </tr>
+    <tr>
+      <td>Git Diffs</td>
+      <td><span class="badge badge-be">BE</span></td>
+      <td><span class="tag tag-agent">QA Agent</span></td>
+      <td>查看 Git 变更差异</td>
+    </tr>
+    <tr>
+      <td>Session Reset Detection</td>
+      <td><span class="badge badge-both">BE+FE</span></td>
+      <td><span class="tag tag-agent">ResetContext Agent</span></td>
+      <td>检测上下文重置意图</td>
+    </tr>
+    <tr>
+      <td>Question Recommendation</td>
+      <td><span class="badge badge-both">BE+FE</span></td>
+      <td><span class="tag tag-agent">PostQA Agent</span></td>
+      <td>回答后推荐后续问题</td>
+    </tr>
+    <tr>
+      <td>Code Question Recommendation</td>
+      <td><span class="badge badge-both">BE+FE</span></td>
+      <td><span class="tag tag-agent">PostQA Agent</span></td>
+      <td>代码相关后续问题推荐</td>
+    </tr>
+    <tr>
+      <td>Topic Recommendation</td>
+      <td><span class="badge badge-be">BE</span></td>
+      <td><span class="tag tag-agent">PostQA Agent</span></td>
+      <td>话题推荐</td>
+    </tr>
+    <tr>
+      <td>Kusto Generator &amp; Executor</td>
+      <td><span class="badge badge-both">BE+FE</span></td>
+      <td><span class="tag tag-agent">PostQA / KustoExecutor</span></td>
+      <td>生成 Kusto 查询并执行，返回结果</td>
+    </tr>
+    <tr>
+      <td>Kusto Query Optimizer</td>
+      <td><span class="badge badge-be">BE</span></td>
+      <td><span class="tag tag-agent">KustoExecutor Agent</span></td>
+      <td>优化 Kusto 查询性能</td>
+    </tr>
+    <tr>
+      <td>IcM Insight</td>
+      <td><span class="badge badge-be">BE</span></td>
+      <td><span class="tag tag-agent">QA Agent</span></td>
+      <td>ICM 数据分析：活跃 ICM 按租户/严重级别/团队过滤</td>
+    </tr>
+    <tr>
+      <td>ICM Queue Summary</td>
+      <td><span class="badge badge-be">BE</span></td>
+      <td><span class="tag tag-agent">QA Agent</span></td>
+      <td>ICM 队列汇总统计</td>
+    </tr>
+    <tr>
+      <td>ICM Simple Summary</td>
+      <td><span class="badge badge-be">BE</span></td>
+      <td><span class="tag tag-agent">QA Agent</span></td>
+      <td>单个 ICM incident 摘要</td>
+    </tr>
+    <tr>
+      <td>Get Queue Name</td>
+      <td><span class="badge badge-be">BE</span></td>
+      <td><span class="tag tag-agent">QA Agent</span></td>
+      <td>获取 ICM 队列名称</td>
+    </tr>
+    <tr>
+      <td>Who Is On Call</td>
+      <td><span class="badge badge-be">BE</span></td>
+      <td><span class="tag tag-agent">QA Agent</span></td>
+      <td>查询当前 OnCall 值班人员</td>
+    </tr>
+    <tr>
+      <td>Listing Existing Skills</td>
+      <td><span class="badge badge-be">BE</span></td>
+      <td><span class="tag tag-agent">ListSkill Agent</span></td>
+      <td>列出所有可用 skill</td>
+    </tr>
+    <tr>
+      <td>Memory Traits</td>
+      <td><span class="badge badge-both">BE+FE</span></td>
+      <td><span class="tag tag-agent">QA / ViewMemoryTrait</span></td>
+      <td>跨会话记忆功能</td>
+    </tr>
+    <tr>
+      <td>TSG Builder</td>
+      <td><span class="badge badge-be">BE</span></td>
+      <td><span class="tag tag-agent">DiagnosticDocs Agent</span></td>
+      <td>自动生成 TSG 文档草稿</td>
+    </tr>
+    <tr>
+      <td>Post-Mortem Template</td>
+      <td><span class="badge badge-be">BE</span></td>
+      <td><span class="tag tag-agent">DiagnosticDocs Agent</span></td>
+      <td>生成 5-Why Postmortem 模板</td>
+    </tr>
+    <tr>
+      <td>Image Processing</td>
+      <td><span class="badge badge-be">BE</span></td>
+      <td><span class="tag tag-agent">Image Agent</span></td>
+      <td>图片内容识别与处理</td>
+    </tr>
+    <tr>
+      <td>Microsoft Learn</td>
+      <td><span class="badge badge-be">BE</span></td>
+      <td><span class="tag tag-agent">LearnDoc Agent</span></td>
+      <td>查询 Microsoft Learn 公开文档</td>
+    </tr>
+    <tr>
+      <td>Azure DevOps Work Items</td>
+      <td><span class="badge badge-be">BE</span></td>
+      <td><span class="tag tag-agent">DevOps Agent</span></td>
+      <td>搜索 Azure DevOps Work Items</td>
+    </tr>
+    <tr>
+      <td>Send OnCall Summary</td>
+      <td><span class="badge badge-both">BE+FE</span></td>
+      <td><span class="tag tag-agent">—</span></td>
+      <td>发送 OnCall 交接摘要</td>
+    </tr>
+    <tr>
+      <td>Send Handoff Summary</td>
+      <td><span class="badge badge-both">BE+FE</span></td>
+      <td><span class="tag tag-agent">—</span></td>
+      <td>发送值班交接摘要</td>
+    </tr>
+    <tr>
+      <td>Send Custom Notifications</td>
+      <td><span class="badge badge-fe">FE</span></td>
+      <td><span class="tag tag-agent">—</span></td>
+      <td>发送自定义通知</td>
+    </tr>
+  </table>
+</div>
+
+<!-- 7. Perf Workflow -->
+<h2 id="perf-workflow"><span class="num">7</span> SQL DB Perf Troubleshooting Workflow</h2>
+<div class="card">
+  <p>这是 "Sql DB Perf Troubleshooting Agent (Preview)" 使用的专属 workflow skill 树，存储在<br>
+  <code>SQL-DB-ON-Call-Common</code> 仓库的 <code>/content/Tools/ASC-Troubleshooting-Report/Performance/SqlDriCopilot-workflow/</code> 下。<br>
+  每个 <code>.md</code> 文件定义一个诊断步骤的 prompt 和跳转逻辑：</p>
+
+  <div class="workflow-tree">
+    <details open>
+      <summary><strong>SqlDriCopilot-workflow</strong> (root)</summary>
+
+      <details open>
+        <summary>CPU-Analysis</summary>
+        <details>
+          <summary>User-Pool-CPU-Analysis</summary>
+          <details>
+            <summary>User-Pool-CPU-Discrepancy-Analysis</summary>
+            <div class="leaf">Query-Execution-CPU-Analysis</div>
+            <div class="leaf">Successful-compilation-CPU-Analysis</div>
+            <div class="leaf">Failed-compilation-CPU-Analysis</div>
+          </details>
+        </details>
+        <div class="leaf">System-Pool-CPU-Analysis</div>
+        <div class="leaf">Kernel-Mode-CPU-Analysis</div>
+      </details>
+
+      <details open>
+        <summary>Memory-Issue</summary>
+        <div class="leaf">Buffer-Pool-Analysis</div>
+        <details>
+          <summary>OOM-Summary</summary>
+          <div class="leaf">OmmCause-was-Unknown</div>
+          <div class="leaf">oomCause-was-SLOW_BUFFER_POOL_SHRINK</div>
+        </details>
+      </details>
+
+      <details>
+        <summary>Memory-OverBooking-Analysis</summary>
+        <div class="leaf">DRG-Issue-Analysis</div>
+        <div class="leaf">MRG-Issue-Analysis</div>
+        <div class="leaf">Node-Low-Memory-Analysis</div>
+        <div class="leaf">PLB-Failover-Analysis</div>
+      </details>
+
+      <details open>
+        <summary>Blocking-summary</summary>
+        <details>
+          <summary>Lead-Blocker-Summary</summary>
+          <div class="leaf">Uncommitted-transaction-caused-blocking</div>
+          <div class="leaf">Azure-db-system-background-tasks-caused-blocking</div>
+          <div class="leaf">User-application-caused-blocking</div>
+        </details>
+      </details>
+
+      <details open>
+        <summary>Queries</summary>
+        <div class="leaf">Overall-Top-Wait-Types-of-Query-Execution</div>
+        <details>
+          <summary>Failed-Query-summary</summary>
+          <div class="leaf">Failed-query-execution-summary</div>
+          <div class="leaf">Failed-Compilation-Summary</div>
+        </details>
+        <div class="leaf">Top-Query-Analysis</div>
+        <details>
+          <summary>The-detail-of-query</summary>
+          <div class="leaf">WaitType-NetworkIO</div>
+        </details>
+      </details>
+
+      <details>
+        <summary>Compilation</summary>
+        <div class="leaf">Failed-compile-statistics-of-query</div>
+      </details>
+
+      <details>
+        <summary>QDS (Query Data Store)</summary>
+        <details>
+          <summary>QDS-Readonly-Root-Cause-Analysis</summary>
+          <div class="leaf">QDS-Readonly-65536-Analysis</div>
+          <div class="leaf">QDS-Readonly-131072-Analysis</div>
+          <div class="leaf">QDS-Readonly-262144-Analysis</div>
+          <div class="leaf">QDS-Readonly-524288-Analysis</div>
+          <div class="leaf">Ratio-of-statementSqlHash-to-queryHash</div>
+        </details>
+      </details>
+
+      <details>
+        <summary>Out-Of-Disk-Troubleshooting</summary>
+        <details>
+          <summary>OOD-Analysis</summary>
+          <div class="leaf">Drive-Out-Of-Disk-Analysis</div>
+          <div class="leaf">Quota-Limit-Analysis</div>
+        </details>
+      </details>
+
+      <div class="leaf">Dump-detection</div>
+      <div class="leaf">Perf-issue (entry point)</div>
+
+    </details>
+  </div>
+</div>
+
+<!-- 8. Data Sources -->
+<h2 id="data-sources"><span class="num">8</span> Data Sources &amp; Indexes</h2>
+<div class="card">
+  <table>
+    <tr><th>Data Source</th><th>Service</th><th>Used By</th><th>说明</th></tr>
+    <tr>
+      <td>TSG Documents</td>
+      <td>Azure Cognitive Search</td>
+      <td><code>tsg.get_tsgs</code></td>
+      <td>TSG index，支持 hybrid search (vector + text) + feedback learning</td>
+    </tr>
+    <tr>
+      <td>Historical ICMs</td>
+      <td>Azure Cognitive Search</td>
+      <td><code>icm.get_icms</code></td>
+      <td>ICM index，检索历史 incident 及其 mitigation</td>
+    </tr>
+    <tr>
+      <td>Active ICMs</td>
+      <td>ICM Data Warehouse (Kusto)</td>
+      <td><code>icm.get_active_icms</code></td>
+      <td>实时活跃 incidents，按 tenant/team 过滤</td>
+    </tr>
+    <tr>
+      <td>Telemetry</td>
+      <td>Kusto Clusters</td>
+      <td>Kusto Generator, Perf Agent</td>
+      <td>SQL 遥测数据（CPU, Memory, Blocking, QDS 等）</td>
+    </tr>
+    <tr>
+      <td>TTrainStatus</td>
+      <td>Kusto</td>
+      <td>Monitoring skills</td>
+      <td>部署 Train 状态跨 geo batch 查询</td>
+    </tr>
+    <tr>
+      <td>Database Update History</td>
+      <td>Kusto</td>
+      <td>Monitoring skills</td>
+      <td>数据库近期变更历史</td>
+    </tr>
+    <tr>
+      <td>Source Code</td>
+      <td>Azure DevOps</td>
+      <td>Code Search, Git Diffs</td>
+      <td><code>msdata.visualstudio.com/Database Systems</code></td>
+    </tr>
+    <tr>
+      <td>Work Items</td>
+      <td>Azure DevOps</td>
+      <td>DevOps Agent</td>
+      <td>ADO Work Items 搜索</td>
+    </tr>
+    <tr>
+      <td>Kepler Notebooks</td>
+      <td>Kepler Platform</td>
+      <td>Kepler skill</td>
+      <td>参数化 Jupyter Notebook（自动化 TSG）</td>
+    </tr>
+    <tr>
+      <td>Microsoft Learn</td>
+      <td>Public Web</td>
+      <td>LearnDoc Agent</td>
+      <td>Microsoft 公开文档</td>
+    </tr>
+  </table>
+</div>
+
+<!-- 9. Repo Structure -->
+<h2 id="repo"><span class="num">9</span> Source Code Structure</h2>
+<div class="card">
+  <p>仓库 <code>msdata / Database Systems / DRICopilot</code> 的关键目录：</p>
+<div class="arch-diagram"><span class="highlight">DRICopilot/</span>
+├── <span class="green">src/</span>
+│   ├── <span class="green">core/</span>
+│   │   └── <span class="green">bot/</span>
+│   │       ├── Configs/
+│   │       │   ├── <span class="yellow">appsettings.sql.json</span>     ← 所有 SQL agent 的配置（topic, plugins, roles）
+│   │       │   └── central_dri_copilot_ame/
+│   │       │       ├── <span class="yellow">config_sqlmi.json</span>     ← SQL MI 的 PromptFlow agent 配置
+│   │       │       ├── <span class="yellow">config_sqlall.json</span>    ← SQL DB
+│   │       │       ├── <span class="yellow">config_sqlfabric.json</span> ← Fabric SQL
+│   │       │       └── ...
+│   │       └── ... (Bot Framework V4 app)
+│   │
+│   └── <span class="green">cosa_investigator/</span>
+│       └── docs/
+│           └── <span class="purple">cosa-dricopilot-integration-design.md</span>
+│
+├── <span class="green">wiki/</span>
+│   └── Onboarding/
+│       ├── Modules/
+│       │   ├── <span class="yellow">Bot.md</span>              ← Bot Framework 设置文档
+│       │   └── <span class="yellow">PromptFlowV2.md</span>    ← PromptFlow V2 agent 文档
+│       └── Plugins/
+│           └── <span class="yellow">ListV2.md</span>          ← <span class="red">Common Skill List（完整 skill 文档）</span>
+│
+└── <span class="green">SQL-DB-ON-Call-Common/</span> (separate repo)
+    └── content/Tools/ASC-Troubleshooting-Report/Performance/
+        └── <span class="yellow">SqlDriCopilot-workflow/</span>  ← Perf Agent 的 workflow skill 树（.md files）</div>
+</div>
+
+<!-- Footer -->
+<div class="source-info">
+  <p><strong>Data Sources:</strong> Azure DevOps code search (<code>msdata / Database Systems / DRICopilot</code>, <code>SQL-DB-ON-Call-Common</code>) + <code>Supportability / SQLServerWindows</code> AI Bot Index</p>
+  <p><strong>Note:</strong> 部分 config 文件名为根据命名规律推断。完整源码需要 <code>DRICopilot.Admins</code> 或 <code>DRICopilot.AzureSQL</code> 角色权限访问仓库。</p>
+  <p><strong>Generated:</strong> 2026-04-15 by Claude Code</p>
+</div>
+
+</div>
+</body>
+</html>

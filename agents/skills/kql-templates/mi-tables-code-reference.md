@@ -2852,3 +2852,57 @@ No durable source-code definition was found in the searched repos. Search hits w
 | `SessionEndTime` | datetime | Cutoff time used when appending recent runs. | `LabRunReporter.cs` |
 | `TenantId` | string | Tenant filter applied during ingestion. | `LabRunReporter.cs` |
 
+---
+
+## Replication TSG addendum
+
+The following code references were re-verified for the Transactional Replication TSG pipeline using `msdata-search_code` and `msdata-repo_get_file_content` in the `Database Systems` project.
+
+### MonTranReplTraces — dispatcher and replication error surface
+- **Repository**: `SqlTelemetry`
+- **Key file**: `/Src/MdsRunners/MdsRunners/Runners/ManagedBackup/Replication/ReplDispatcherErrorAlert.cs`
+- **Code evidence**:
+  - `GetKustoDataForLastMinutes("MonTranReplTraces", rangeMinutes, query)` is the direct consumer.
+  - Filters `event in ("repl_dispatcher_troubleshoot", "repl_dispatcher_error")` and `message_type == "ERROR"`.
+  - Suppresses expected broken-pipe noise via `exception_message` filtering.
+  - Summarizes by `ClusterName` and `AppName`, then joins `MonAnalyticsDBSnapshot` to recover `logical_server_name`.
+- **Key columns confirmed**: `event`, `message_type`, `exception_message`, `originalEventTimestamp`, `ClusterName`, `AppName`, `logical_server_name`.
+
+### MonCDCTraces + MonLogReaderTraces — CDC scheduler and log-reader correlation
+- **Repository**: `SqlTelemetry`
+- **Key file**: `/Src/MdsRunners/MdsRunners/Runners/ManagedBackup/Replication/CdcSchedulerNotRunningDeprecated.cs`
+- **Code evidence**:
+  - Builds the primary candidate set from `MonCDCTraces` and anti-joins recent activity from both `MonCDCTraces` and `MonLogReaderTraces`.
+  - `MonCDCTraces` activity predicates include `event == 'cdc_session'`, `event == 'cdc_error'`, `event_type == 'CaptureJobFailed'`, and `event_details contains 'Skipping database because replbeginlsn and repllsn are null lsn.'`.
+  - `MonLogReaderTraces` is used as the companion signal with `event == 'repldone_session'` or `event == 'repl_logscan_session'`.
+  - Join keys are `LogicalServerName` and `logical_database_guid`, with supporting fields `logical_database_name`, `physical_database_guid`, `NodeName`, `AppName`, and `ClusterName`.
+- **Key columns confirmed**: `LogicalServerName`, `logical_database_guid`, `logical_database_name`, `physical_database_guid`, `event`, `event_type`, `event_details`, `error_number`, `status`, `component`.
+
+### MonCTTraces — syscommittab cleanup alert pipeline
+- **Repository**: `SqlTelemetry`
+- **Key file**: `/Src/MdsRunners/MdsRunners/Runners/CloudLifterRunners/SyscommittabCleanupAlertRunner.cs`
+- **Code evidence**:
+  - Runner comment explicitly states it detects `syscommittab_cleanup_alert` in `MonCTTraces`.
+  - Query filters `event == 'syscommittab_cleanup_alert'` and `column_ifexists('rows_in_delay', 0) > 250000000`.
+  - Packs `logical_database_name`, `database_id`, `physical_database_guid`, `logical_database_guid`, and `rows_in_delay` into the incident payload.
+  - Summarizes by `ClusterName`, `AppTypeName`, `AppName`, and `LogicalServerName`.
+- **Key columns confirmed**: `event`, `rows_in_delay`, `logical_database_name`, `database_id`, `physical_database_guid`, `logical_database_guid`, `AppTypeName`, `AppName`, `LogicalServerName`.
+
+### MonManagedDatabaseInfo — producer-side schema definition
+- **Repository**: `SqlTelemetry`
+- **Key file**: `/SQLKusto/ServiceGroupRoot/KqlFiles/Developer/jahiegel/sqlazure1_schema_update`
+- **Code evidence**:
+  - Kusto DDL contains `.alter-merge table MonManagedDatabaseInfo (...)`.
+  - The checked-in schema includes `code_package_version`, `end_utc_date`, `start_utc_date`, `sql_database_id`, `managed_database_id`, `owner_sid`, `compatibility_level`, and `collation_name`.
+  - This matches the replication TSG usage where `collation_name` is inspected to diagnose case-sensitive collation issues.
+- **Key columns confirmed**: `LogicalServerName`, `code_package_version`, `sql_database_id`, `managed_database_id`, `compatibility_level`, `collation_name`.
+
+### AlrWinFabHealthDeployedAppEvent — SQL Agent crash-loop alert surface
+- **Repository**: `SqlTelemetry`
+- **Key file**: `/SQLKusto/ServiceGroupRoot/KqlFiles/Developer/jahiegel/sqlazure1_schema_update`
+- **Code evidence**:
+  - Kusto DDL contains `.alter-merge table AlrWinFabHealthDeployedAppEvent (...)`.
+  - The checked-in schema includes `ApplicationName`, `HealthState`, `SourceId`, `Property`, `Description`, `IsExpired`, `Version`, and `NodeEntityName`.
+  - This matches the replication TSG query pattern that searches `Description` for `sqlagent.exe` exits and groups by `ApplicationName`.
+- **Key columns confirmed**: `ApplicationName`, `HealthState`, `SourceId`, `Property`, `Description`, `IsExpired`, `Version`, `NodeEntityName`, `LogicalServerName`, `ClusterName`.
+

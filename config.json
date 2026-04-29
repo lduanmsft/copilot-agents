@@ -1,0 +1,36 @@
+// User settings belong in settings.json.
+// This file is managed automatically.
+{
+  "firstLaunchAt": "2026-03-30T06:58:48.188Z",
+  "trustedFolders": [
+    "C:\\Users\\lduan"
+  ],
+  "askedSetupTerminals": [
+    "windows-terminal"
+  ],
+  "lastLoggedInUser": {
+    "host": "https://github.com",
+    "login": "lduanmsft"
+  },
+  "loggedInUsers": [
+    {
+      "host": "https://github.com",
+      "login": "lduanmsft"
+    }
+  ],
+  "staff": true,
+  "installedPlugins": [
+    {
+      "name": "microsoft-docs",
+      "marketplace": "",
+      "version": "0.3.1",
+      "installed_at": "2026-04-08T09:17:03.653Z",
+      "enabled": true,
+      "cache_path": "C:\\Users\\lduan\\.copilot\\installed-plugins\\_direct\\microsoftdocs--mcp",
+      "source": {
+        "source": "github",
+        "repo": "microsoftdocs/mcp"
+      }
+    }
+  ]
+}

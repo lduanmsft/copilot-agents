@@ -3,8 +3,9 @@ SqlSkills:
   Topic: CPU
   Source: asmi-troubleshooter-package/CPU.md
   Prompts:
-  - MI CPU
-  - Managed Instance CPU
+  - MI database CPU and memory stats by server
+  - MonDmRealTimeResourceStats server_name TIMESTAMP
+  - Investigate CPU pressure
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -27,8 +28,9 @@ SqlSkills:
   Topic: CPU
   Source: asmi-troubleshooter-package/CPU.md
   Prompts:
-  - MI CPU
-  - Managed Instance CPU
+  - MI instance CPU and memory stats
+  - MonManagedInstanceResourceStats
+  - Investigate CPU pressure
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -41,8 +43,9 @@ SqlSkills:
   Topic: Blocking
   Source: asmi-troubleshooter-package/Blocking.md
   Prompts:
-  - MI Blocking
-  - Managed Instance Blocking
+  - MI blocking chain details
+  - MonGovernorWorkloadGroups AppName
+  - Check MonGovernorWorkloadGroups AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -57,8 +60,9 @@ SqlSkills:
   Topic: Blocking
   Source: asmi-troubleshooter-package/Blocking.md
   Prompts:
-  - MI Blocking
-  - Managed Instance Blocking
+  - MI blocking chain details
+  - MonBlockedProcessReportFiltered TIMESTAMP
+  - Investigate blocking sessions
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -71,8 +75,9 @@ SqlSkills:
   Topic: Blocking
   Source: asmi-troubleshooter-package/Blocking.md
   Prompts:
-  - MI Blocking
-  - Managed Instance Blocking
+  - MI blocking chain details by server
+  - MonBlockedProcessReportFiltered LogicalServerName TIMESTAMP
+  - Investigate blocking sessions
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -89,8 +94,9 @@ SqlSkills:
   Topic: Blocking
   Source: asmi-troubleshooter-package/Blocking.md
   Prompts:
-  - MI Blocking
-  - Managed Instance Blocking
+  - MI blocking chain details
+  - Unknown monitorLoop last
+  - Check Unknown monitorLoop last
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -103,8 +109,9 @@ SqlSkills:
   Topic: Blocking
   Source: asmi-troubleshooter-package/Blocking.md
   Prompts:
-  - MI Blocking
-  - Managed Instance Blocking
+  - MI blocking chain details
+  - MonBlockedProcessReportFiltered TIMESTAMP
+  - Investigate blocking sessions
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -119,8 +126,9 @@ SqlSkills:
   Topic: Deadlock
   Source: asmi-troubleshooter-package/Deadlock.md
   Prompts:
-  - MI Deadlock
-  - Managed Instance Deadlock
+  - MI deadlock reports
+  - MonDeadlockReportsFiltered
+  - Investigate deadlock graph
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -133,8 +141,9 @@ SqlSkills:
   Topic: Deadlock
   Source: asmi-troubleshooter-package/Deadlock.md
   Prompts:
-  - MI Deadlock
-  - Managed Instance Deadlock
+  - MI deadlock reports by server
+  - MonDeadlockReportsFiltered SubscriptionId LogicalServerName
+  - Check MonDeadlockReportsFiltered SubscriptionId
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -153,8 +162,9 @@ SqlSkills:
   Topic: Deadlock
   Source: asmi-troubleshooter-package/Deadlock.md
   Prompts:
-  - MI Deadlock
-  - Managed Instance Deadlock
+  - MI deadlock reports by server
+  - MonDeadlockReportsFiltered SubscriptionId LogicalServerName
+  - Check MonDeadlockReportsFiltered SubscriptionId
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -173,8 +183,9 @@ SqlSkills:
   Topic: Deadlock
   Source: asmi-troubleshooter-package/Deadlock.md
   Prompts:
-  - MI Deadlock
-  - Managed Instance Deadlock
+  - MI deadlock reports by server
+  - MonDeadlockReportsFiltered SubscriptionId LogicalServerName
+  - Check MonDeadlockReportsFiltered SubscriptionId
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -195,8 +206,9 @@ SqlSkills:
   Topic: Deadlock
   Source: asmi-troubleshooter-package/Deadlock.md
   Prompts:
-  - MI Deadlock
-  - Managed Instance Deadlock
+  - MI deadlock reports by server
+  - MonEventLog LogicalServerName event
+  - Check MonEventLog event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -213,8 +225,9 @@ SqlSkills:
   Topic: Deadlock
   Source: asmi-troubleshooter-package/Deadlock.md
   Prompts:
-  - MI Deadlock
-  - Managed Instance Deadlock
+  - MI deadlock reports
+  - MonDeadlockReportsFiltered AppName
+  - Check MonDeadlockReportsFiltered AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -227,8 +240,9 @@ SqlSkills:
   Topic: Lock request timeout
   Source: asmi-troubleshooter-package/Lock request timeout.md
   Prompts:
-  - MI Lock request timeout
-  - Managed Instance Lock request timeout
+  - MI connectivity and networking
+  - AlrSQLErrorsReported
+  - Investigate connectivity errors
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -241,8 +255,9 @@ SqlSkills:
   Topic: Lock request timeout
   Source: asmi-troubleshooter-package/Lock request timeout.md
   Prompts:
-  - MI Lock request timeout
-  - Managed Instance Lock request timeout
+  - MI login and connection errors
+  - MonLogin
+  - Investigate login failures
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -255,8 +270,9 @@ SqlSkills:
   Topic: Lock request timeout
   Source: asmi-troubleshooter-package/Lock request timeout.md
   Prompts:
-  - MI Lock request timeout
-  - Managed Instance Lock request timeout
+  - MI wait stats analysis
+  - MonWiQdsExecStats
+  - Investigate wait bottlenecks
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -269,8 +285,9 @@ SqlSkills:
   Topic: Execution Stats (MonWiQdsExecStats
   Source: asmi-troubleshooter-package/Execution Stats (MonWiQdsExecStats.md
   Prompts:
-  - MI Execution Stats (MonWiQdsExecStats
-  - Managed Instance Execution Stats (MonWiQdsExecStats
+  - MI instance CPU and memory stats by server
+  - MonWiQdsExecStats LogicalServerName TIMESTAMP query_hash
+  - Check MonWiQdsExecStats query_hash statement_type
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -297,8 +314,9 @@ SqlSkills:
   Topic: Execution Stats (MonWiQdsExecStats
   Source: asmi-troubleshooter-package/Execution Stats (MonWiQdsExecStats.md
   Prompts:
-  - MI Execution Stats (MonWiQdsExecStats
-  - Managed Instance Execution Stats (MonWiQdsExecStats
+  - MI instance CPU and memory stats by server
+  - MonWiQdsExecStats LogicalServerName execution_count cpu_time
+  - Check MonWiQdsExecStats execution_count cpu_time
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -319,8 +337,9 @@ SqlSkills:
   Topic: Execution Stats (MonWiQdsExecStats
   Source: asmi-troubleshooter-package/Execution Stats (MonWiQdsExecStats.md
   Prompts:
-  - MI Execution Stats (MonWiQdsExecStats
-  - Managed Instance Execution Stats (MonWiQdsExecStats
+  - MI wait stats analysis by database
+  - MonWiQdsExecStats LogicalServerName database_name query_hash
+  - Check MonWiQdsExecStats database_name query_hash
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -341,8 +360,9 @@ SqlSkills:
   Topic: Execution Stats (MonWiQdsExecStats
   Source: asmi-troubleshooter-package/Execution Stats (MonWiQdsExecStats.md
   Prompts:
-  - MI Execution Stats (MonWiQdsExecStats
-  - Managed Instance Execution Stats (MonWiQdsExecStats
+  - MI instance CPU and memory stats by server
+  - MonWiQdsExecStats LogicalServerName query_id execution_count
+  - Check MonWiQdsExecStats query_id execution_count
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -359,8 +379,9 @@ SqlSkills:
   Topic: Execution Stats (MonWiQdsExecStats
   Source: asmi-troubleshooter-package/Execution Stats (MonWiQdsExecStats.md
   Prompts:
-  - MI Execution Stats (MonWiQdsExecStats
-  - Managed Instance Execution Stats (MonWiQdsExecStats
+  - MI wait stats analysis by server
+  - MonWiQdsExecStats LogicalServerName originalEventTimestamp
+  - Check MonWiQdsExecStats originalEventTimestamp
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -377,8 +398,9 @@ SqlSkills:
   Topic: Execution Stats (MonWiQdsExecStats
   Source: asmi-troubleshooter-package/Execution Stats (MonWiQdsExecStats.md
   Prompts:
-  - MI Execution Stats (MonWiQdsExecStats
-  - Managed Instance Execution Stats (MonWiQdsExecStats
+  - MI instance CPU and memory stats by server
+  - MonWiQdsExecStats LogicalServerName statement_sql_hash
+  - Check MonWiQdsExecStats statement_sql_hash avg_cpu_millisec
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -395,8 +417,9 @@ SqlSkills:
   Topic: Execution Stats (MonWiQdsExecStats
   Source: asmi-troubleshooter-package/Execution Stats (MonWiQdsExecStats.md
   Prompts:
-  - MI Execution Stats (MonWiQdsExecStats
-  - Managed Instance Execution Stats (MonWiQdsExecStats
+  - MI wait stats analysis by server
+  - MonWiQdsExecStats TIMESTAMP LogicalServerName event
+  - Check MonWiQdsExecStats event database_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -423,8 +446,9 @@ SqlSkills:
   Topic: Execution Stats (MonWiQdsExecStats
   Source: asmi-troubleshooter-package/Execution Stats (MonWiQdsExecStats.md
   Prompts:
-  - MI Execution Stats (MonWiQdsExecStats
-  - Managed Instance Execution Stats (MonWiQdsExecStats
+  - MI wait stats analysis by server
+  - MonWiQdsExecStats LogicalServerName
+  - Investigate wait bottlenecks
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -445,8 +469,9 @@ SqlSkills:
   Topic: Execution Stats (MonWiQdsExecStats
   Source: asmi-troubleshooter-package/Execution Stats (MonWiQdsExecStats.md
   Prompts:
-  - MI Execution Stats (MonWiQdsExecStats
-  - Managed Instance Execution Stats (MonWiQdsExecStats
+  - MI wait stats analysis by server
+  - MonWiQdsExecStats LogicalServerName
+  - Investigate wait bottlenecks
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -467,8 +492,9 @@ SqlSkills:
   Topic: Query Compile & Recompile - Parameterization
   Source: asmi-troubleshooter-package/Query Compile & Recompile - Parameterization.md
   Prompts:
-  - MI Query Compile & Recompile - Parameterization
-  - Managed Instance Query Compile & Recompile - Parameterization
+  - MI wait stats analysis by server
+  - MonWiQueryParamData LogicalServerName originalEventTimestamp
+  - Check MonWiQueryParamData originalEventTimestamp NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -489,8 +515,9 @@ SqlSkills:
   Topic: Query Compile & Recompile - Parameterization
   Source: asmi-troubleshooter-package/Query Compile & Recompile - Parameterization.md
   Prompts:
-  - MI Query Compile & Recompile - Parameterization
-  - Managed Instance Query Compile & Recompile - Parameterization
+  - MI instance CPU and memory stats by server
+  - MonWiQueryParamData LogicalServerName query_hash
+  - Check MonWiQueryParamData query_hash compile_duration
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -507,8 +534,9 @@ SqlSkills:
   Topic: Query Compile & Recompile - Parameterization
   Source: asmi-troubleshooter-package/Query Compile & Recompile - Parameterization.md
   Prompts:
-  - MI Query Compile & Recompile - Parameterization
-  - Managed Instance Query Compile & Recompile - Parameterization
+  - MI instance CPU and memory stats by database
+  - MonWiQueryParamData LogicalServerName logical_database_name
+  - Check MonWiQueryParamData logical_database_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -527,8 +555,9 @@ SqlSkills:
   Topic: Query Compile & Recompile - Parameterization
   Source: asmi-troubleshooter-package/Query Compile & Recompile - Parameterization.md
   Prompts:
-  - MI Query Compile & Recompile - Parameterization
-  - Managed Instance Query Compile & Recompile - Parameterization
+  - MI wait stats analysis by server
+  - MonWiQdsExecStats LogicalServerName
+  - Investigate wait bottlenecks
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -545,8 +574,9 @@ SqlSkills:
   Topic: Query Compile & Recompile - Parameterization
   Source: asmi-troubleshooter-package/Query Compile & Recompile - Parameterization.md
   Prompts:
-  - MI Query Compile & Recompile - Parameterization
-  - Managed Instance Query Compile & Recompile - Parameterization
+  - MI wait stats analysis by database
+  - MonWiQueryParamData TIMESTAMP LogicalServerName
+  - Check MonWiQueryParamData logical_database_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -567,8 +597,9 @@ SqlSkills:
   Topic: Query Store
   Source: asmi-troubleshooter-package/Query Store.md
   Prompts:
-  - MI Query Store
-  - Managed Instance Query Store
+  - MI wait stats analysis by database
+  - MonQueryStoreInfo AppName logical_database_name event
+  - Check MonQueryStoreInfo AppName logical_database_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -589,8 +620,9 @@ SqlSkills:
   Topic: Query Store
   Source: asmi-troubleshooter-package/Query Store.md
   Prompts:
-  - MI Query Store
-  - Managed Instance Query Store
+  - MI wait stats analysis
+  - MonQueryStoreFailures AppName
+  - Check MonQueryStoreFailures AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -605,8 +637,9 @@ SqlSkills:
   Topic: Query Store
   Source: asmi-troubleshooter-package/Query Store.md
   Prompts:
-  - MI Query Store
-  - Managed Instance Query Store
+  - MI wait stats analysis by server
+  - MonQueryStoreFailures AppName LogicalServerName event
+  - Check MonQueryStoreFailures AppName event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -625,8 +658,9 @@ SqlSkills:
   Topic: Query Store
   Source: asmi-troubleshooter-package/Query Store.md
   Prompts:
-  - MI Query Store
-  - Managed Instance Query Store
+  - MI wait stats analysis by server
+  - MonAutomaticTuning LogicalServerName query_id event
+  - Check MonAutomaticTuning query_id event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -647,8 +681,9 @@ SqlSkills:
   Topic: Query Store (QDS) - set as ReadOnly
   Source: asmi-troubleshooter-package/Query Store (QDS) - set as ReadOnly.md
   Prompts:
-  - MI Query Store (QDS) - set as ReadOnly
-  - Managed Instance Query Store (QDS) - set as ReadOnly
+  - MI wait stats analysis
+  - MonQueryStoreInfo TIMESTAMP
+  - Investigate wait bottlenecks
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -663,8 +698,9 @@ SqlSkills:
   Topic: Query Store (QDS) - set as ReadOnly
   Source: asmi-troubleshooter-package/Query Store (QDS) - set as ReadOnly.md
   Prompts:
-  - MI Query Store (QDS) - set as ReadOnly
-  - Managed Instance Query Store (QDS) - set as ReadOnly
+  - MI wait stats analysis by server
+  - MonQueryStoreInfo TIMESTAMP event LogicalServerName
+  - Check MonQueryStoreInfo event AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -685,8 +721,9 @@ SqlSkills:
   Topic: Query Store (QDS) - set as ReadOnly
   Source: asmi-troubleshooter-package/Query Store (QDS) - set as ReadOnly.md
   Prompts:
-  - MI Query Store (QDS) - set as ReadOnly
-  - Managed Instance Query Store (QDS) - set as ReadOnly
+  - MI wait stats analysis
+  - MonQueryStoreFailures TIMESTAMP
+  - Investigate wait bottlenecks
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -699,8 +736,9 @@ SqlSkills:
   Topic: Query Store (QDS) - set as ReadOnly
   Source: asmi-troubleshooter-package/Query Store (QDS) - set as ReadOnly.md
   Prompts:
-  - MI Query Store (QDS) - set as ReadOnly
-  - Managed Instance Query Store (QDS) - set as ReadOnly
+  - MI wait stats analysis
+  - MonWiQdsExecStats TIMESTAMP
+  - Investigate wait bottlenecks
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -713,8 +751,9 @@ SqlSkills:
   Topic: Wait DB level (MonDmCloudDatabaseWaitStats
   Source: asmi-troubleshooter-package/Wait DB level (MonDmCloudDatabaseWaitStats.md
   Prompts:
-  - MI Wait DB level (MonDmCloudDatabaseWaitStats
-  - Managed Instance Wait DB level (MonDmCloudDatabaseWaitStats
+  - MI wait stats analysis by server
+  - MonDmCloudDatabaseWaitStats LogicalServerName end_utc_date
+  - Check MonDmCloudDatabaseWaitStats end_utc_date
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -731,8 +770,9 @@ SqlSkills:
   Topic: Wait DB level (MonDmCloudDatabaseWaitStats
   Source: asmi-troubleshooter-package/Wait DB level (MonDmCloudDatabaseWaitStats.md
   Prompts:
-  - MI Wait DB level (MonDmCloudDatabaseWaitStats
-  - Managed Instance Wait DB level (MonDmCloudDatabaseWaitStats
+  - MI wait stats analysis by server
+  - MonDmCloudDatabaseWaitStats LogicalServerName end_utc_date
+  - Check MonDmCloudDatabaseWaitStats end_utc_date
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -749,8 +789,9 @@ SqlSkills:
   Topic: Wait DB level (MonDmCloudDatabaseWaitStats
   Source: asmi-troubleshooter-package/Wait DB level (MonDmCloudDatabaseWaitStats.md
   Prompts:
-  - MI Wait DB level (MonDmCloudDatabaseWaitStats
-  - Managed Instance Wait DB level (MonDmCloudDatabaseWaitStats
+  - MI wait stats analysis by server
+  - MonDmCloudDatabaseWaitStats LogicalServerName end_utc_date
+  - Check MonDmCloudDatabaseWaitStats end_utc_date
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -767,8 +808,9 @@ SqlSkills:
   Topic: Wait DB level (MonDmCloudDatabaseWaitStats
   Source: asmi-troubleshooter-package/Wait DB level (MonDmCloudDatabaseWaitStats.md
   Prompts:
-  - MI Wait DB level (MonDmCloudDatabaseWaitStats
-  - Managed Instance Wait DB level (MonDmCloudDatabaseWaitStats
+  - MI wait stats analysis
+  - Unknown avg_wait_time_ms
+  - Check Unknown avg_wait_time_ms
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -783,8 +825,9 @@ SqlSkills:
   Topic: Wait DB level (MonDmCloudDatabaseWaitStats
   Source: asmi-troubleshooter-package/Wait DB level (MonDmCloudDatabaseWaitStats.md
   Prompts:
-  - MI Wait DB level (MonDmCloudDatabaseWaitStats
-  - Managed Instance Wait DB level (MonDmCloudDatabaseWaitStats
+  - MI wait stats analysis
+  - MonDmCloudDatabaseWaitStats ClusterName AppName TIMESTAMP
+  - Check MonDmCloudDatabaseWaitStats ClusterName AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -809,8 +852,9 @@ SqlSkills:
   Topic: Wait DB level (MonDmCloudDatabaseWaitStats
   Source: asmi-troubleshooter-package/Wait DB level (MonDmCloudDatabaseWaitStats.md
   Prompts:
-  - MI Wait DB level (MonDmCloudDatabaseWaitStats
-  - Managed Instance Wait DB level (MonDmCloudDatabaseWaitStats
+  - MI wait stats analysis
+  - MonDmCloudDatabaseWaitStats AppName
+  - Check MonDmCloudDatabaseWaitStats AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -824,8 +868,9 @@ SqlSkills:
   Topic: Wait DB level (MonDmCloudDatabaseWaitStats
   Source: asmi-troubleshooter-package/Wait DB level (MonDmCloudDatabaseWaitStats.md
   Prompts:
-  - MI Wait DB level (MonDmCloudDatabaseWaitStats
-  - Managed Instance Wait DB level (MonDmCloudDatabaseWaitStats
+  - MI wait stats analysis
+  - MonDmCloudDatabaseWaitStats
+  - Investigate wait bottlenecks
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -838,8 +883,9 @@ SqlSkills:
   Topic: Wait Type (MonWiQdsWaitStats
   Source: asmi-troubleshooter-package/Wait Type (MonWiQdsWaitStats.md
   Prompts:
-  - MI Wait Type (MonWiQdsWaitStats
-  - Managed Instance Wait Type (MonWiQdsWaitStats
+  - MI wait stats analysis by server
+  - MonWiQdsWaitStats LogicalServerName total_query_wait_time_ms
+  - Check MonWiQdsWaitStats total_query_wait_time_ms query_id
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -854,8 +900,9 @@ SqlSkills:
   Topic: Wait Type (MonWiQdsWaitStats
   Source: asmi-troubleshooter-package/Wait Type (MonWiQdsWaitStats.md
   Prompts:
-  - MI Wait Type (MonWiQdsWaitStats
-  - Managed Instance Wait Type (MonWiQdsWaitStats
+  - MI wait stats analysis by server
+  - MonWiQdsWaitStats LogicalServerName wherequery_hash
+  - Check MonWiQdsWaitStats wherequery_hash
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -872,8 +919,9 @@ SqlSkills:
   Topic: Wait Type (MonWiQdsWaitStats
   Source: asmi-troubleshooter-package/Wait Type (MonWiQdsWaitStats.md
   Prompts:
-  - MI Wait Type (MonWiQdsWaitStats
-  - Managed Instance Wait Type (MonWiQdsWaitStats
+  - MI wait stats analysis by server
+  - MonWiQdsWaitStats LogicalServerName query_hash plan_id
+  - Check MonWiQdsWaitStats query_hash plan_id
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -894,8 +942,9 @@ SqlSkills:
   Topic: Wait Type (MonWiQdsWaitStats
   Source: asmi-troubleshooter-package/Wait Type (MonWiQdsWaitStats.md
   Prompts:
-  - MI Wait Type (MonWiQdsWaitStats
-  - Managed Instance Wait Type (MonWiQdsWaitStats
+  - MI wait stats analysis by database
+  - MonWiQdsWaitStats LogicalServerName database_name query_hash
+  - Check MonWiQdsWaitStats database_name query_hash
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -918,8 +967,9 @@ SqlSkills:
   Topic: Wait Type (MonWiQdsWaitStats
   Source: asmi-troubleshooter-package/Wait Type (MonWiQdsWaitStats.md
   Prompts:
-  - MI Wait Type (MonWiQdsWaitStats
-  - Managed Instance Wait Type (MonWiQdsWaitStats
+  - MI wait stats analysis
+  - MonWiQdsWaitStats
+  - Investigate wait bottlenecks
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -932,8 +982,9 @@ SqlSkills:
   Topic: Memory grant feedback
   Source: asmi-troubleshooter-package/Memory grant feedback.md
   Prompts:
-  - MI Memory grant feedback
-  - Managed Instance Memory grant feedback
+  - MI memory pressure and OOM analysis
+  - MonWiQdsExecStats TIMESTAMP
+  - Investigate OOM and memory pressure
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -954,8 +1005,9 @@ SqlSkills:
   Topic: Memory grant feedback
   Source: asmi-troubleshooter-package/Memory grant feedback.md
   Prompts:
-  - MI Memory grant feedback
-  - Managed Instance Memory grant feedback
+  - MI memory pressure and OOM analysis by database
+  - MonQueryProcessing AppName logical_database_name
+  - Check MonQueryProcessing AppName logical_database_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -994,8 +1046,9 @@ SqlSkills:
   Topic: Memory grant feedback
   Source: asmi-troubleshooter-package/Memory grant feedback.md
   Prompts:
-  - MI Memory grant feedback
-  - Managed Instance Memory grant feedback
+  - MI memory pressure and OOM analysis by database
+  - MonQueryProcessing AppName logical_database_name
+  - Check MonQueryProcessing AppName logical_database_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1032,8 +1085,9 @@ SqlSkills:
   Topic: Memory grant feedback
   Source: asmi-troubleshooter-package/Memory grant feedback.md
   Prompts:
-  - MI Memory grant feedback
-  - Managed Instance Memory grant feedback
+  - MI memory pressure and OOM analysis by database
+  - MonWiQueryParamData AppName logical_database_name
+  - Check MonWiQueryParamData AppName logical_database_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1070,8 +1124,9 @@ SqlSkills:
   Topic: Memory grant feedback
   Source: asmi-troubleshooter-package/Memory grant feedback.md
   Prompts:
-  - MI Memory grant feedback
-  - Managed Instance Memory grant feedback
+  - MI memory pressure and OOM analysis by database
+  - MonQueryProcessing AppName logical_database_name
+  - Check MonQueryProcessing AppName logical_database_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1108,8 +1163,9 @@ SqlSkills:
   Topic: Memory grant feedback
   Source: asmi-troubleshooter-package/Memory grant feedback.md
   Prompts:
-  - MI Memory grant feedback
-  - Managed Instance Memory grant feedback
+  - MI memory pressure and OOM analysis by database
+  - MonQueryProcessing AppName logical_database_name
+  - Check MonQueryProcessing AppName logical_database_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1142,8 +1198,9 @@ SqlSkills:
   Topic: Memory Troubleshooting Basics
   Source: asmi-troubleshooter-package/Memory Troubleshooting Basics.md
   Prompts:
-  - MI Memory Troubleshooting Basics
-  - Managed Instance Memory Troubleshooting Basics
+  - MI memory pressure and OOM analysis by server
+  - MonSQLSystemHealth AppTypeName message oom_count Failed
+  - Check AppTypeName Failed
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1160,8 +1217,9 @@ SqlSkills:
   Topic: Memory Troubleshooting Basics
   Source: asmi-troubleshooter-package/Memory Troubleshooting Basics.md
   Prompts:
-  - MI Memory Troubleshooting Basics
-  - Managed Instance Memory Troubleshooting Basics
+  - MI memory pressure and OOM analysis by server
+  - MonDmDbResourceGovernance AppTypeName ClusterName AppName
+  - Check MonDmDbResourceGovernance AppTypeName ClusterName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1178,8 +1236,9 @@ SqlSkills:
   Topic: Memory Troubleshooting Basics
   Source: asmi-troubleshooter-package/Memory Troubleshooting Basics.md
   Prompts:
-  - MI Memory Troubleshooting Basics
-  - Managed Instance Memory Troubleshooting Basics
+  - MI memory pressure and OOM analysis
+  - oomApps
+  - Investigate OOM and memory pressure
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1192,8 +1251,9 @@ SqlSkills:
   Topic: Memory-optimized object
   Source: asmi-troubleshooter-package/Memory-optimized object.md
   Prompts:
-  - MI Memory-optimized object
-  - Managed Instance Memory-optimized object
+  - MI memory pressure and OOM analysis
+  - MonDatabaseMetadata AppName TIMESTAMP
+  - Check MonDatabaseMetadata AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1212,8 +1272,9 @@ SqlSkills:
   Topic: Memory-optimized object
   Source: asmi-troubleshooter-package/Memory-optimized object.md
   Prompts:
-  - MI Memory-optimized object
-  - Managed Instance Memory-optimized object
+  - MI memory pressure and OOM analysis by server
+  - MonDmRealTimeResourceStats LogicalServerName
+  - Investigate OOM and memory pressure
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1232,8 +1293,9 @@ SqlSkills:
   Topic: Investigation memory incidents
   Source: asmi-troubleshooter-package/Investigation memory incidents.md
   Prompts:
-  - MI Investigation memory incidents
-  - Managed Instance Investigation memory incidents
+  - MI memory pressure and OOM analysis
+  - MonSQLSystemHealth AppName
+  - Check MonSQLSystemHealth AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1248,8 +1310,9 @@ SqlSkills:
   Topic: Investigation memory incidents
   Source: asmi-troubleshooter-package/Investigation memory incidents.md
   Prompts:
-  - MI Investigation memory incidents
-  - Managed Instance Investigation memory incidents
+  - MI memory pressure and OOM analysis
+  - MonSqlMemoryClerkStats TIMESTAMP
+  - Investigate OOM and memory pressure
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1268,8 +1331,9 @@ SqlSkills:
   Topic: Investigation memory incidents
   Source: asmi-troubleshooter-package/Investigation memory incidents.md
   Prompts:
-  - MI Investigation memory incidents
-  - Managed Instance Investigation memory incidents
+  - MI memory pressure and OOM analysis by server
+  - MonSqlMemoryClerkStats LogicalServerName TIMESTAMP
+  - Check MonSqlMemoryClerkStats notification AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1291,8 +1355,9 @@ SqlSkills:
   Topic: Investigation memory incidents
   Source: asmi-troubleshooter-package/Investigation memory incidents.md
   Prompts:
-  - MI Investigation memory incidents
-  - Managed Instance Investigation memory incidents
+  - MI memory pressure and OOM analysis
+  - MonSqlCaches stores PreciseTimeStamp tag_id
+  - Check MonSqlCaches stores tag_id
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1305,8 +1370,9 @@ SqlSkills:
   Topic: Investigation memory incidents
   Source: asmi-troubleshooter-package/Investigation memory incidents.md
   Prompts:
-  - MI Investigation memory incidents
-  - Managed Instance Investigation memory incidents
+  - MI memory pressure and OOM analysis by node
+  - MonSqlBrokerRingBuffer PreciseTimeStamp AppName NodeName
+  - Check MonSqlBrokerRingBuffer AppName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1321,8 +1387,9 @@ SqlSkills:
   Topic: Investigation memory incidents
   Source: asmi-troubleshooter-package/Investigation memory incidents.md
   Prompts:
-  - MI Investigation memory incidents
-  - Managed Instance Investigation memory incidents
+  - MI memory pressure and OOM analysis
+  - MonRgLoad application_name TIMESTAMP specified
+  - Check MonRgLoad application_name specified
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1339,8 +1406,9 @@ SqlSkills:
   Topic: Investigation memory incidents
   Source: asmi-troubleshooter-package/Investigation memory incidents.md
   Prompts:
-  - MI Investigation memory incidents
-  - Managed Instance Investigation memory incidents
+  - MI memory pressure and OOM analysis
+  - MonSqlMemNodeOomRingBufferOOM data cpu_time execution_count
+  - Check MonSqlMemNodeOomRingBufferOOM data cpu_time
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1355,8 +1423,9 @@ SqlSkills:
   Topic: Investigation memory incidents
   Source: asmi-troubleshooter-package/Investigation memory incidents.md
   Prompts:
-  - MI Investigation memory incidents
-  - Managed Instance Investigation memory incidents
+  - MI memory pressure and OOM analysis
+  - MonSqlMemNodeOomRingBuffer last_error instance_rg_size
+  - Check MonSqlMemNodeOomRingBuffer last_error
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1368,8 +1437,9 @@ SqlSkills:
   Topic: Investigation memory incidents
   Source: asmi-troubleshooter-package/Investigation memory incidents.md
   Prompts:
-  - MI Investigation memory incidents
-  - Managed Instance Investigation memory incidents
+  - MI memory pressure and OOM analysis
+  - MonSQLSystemHealth
+  - Investigate OOM and memory pressure
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1380,13 +1450,14 @@ SqlSkills:
   Topic: Investigation memory incidents
   Source: asmi-troubleshooter-package/Investigation memory incidents.md
   Prompts:
-  - MI Investigation memory incidents
-  - Managed Instance Investigation memory incidents
+  - MI memory pressure and OOM analysis by server
+  - MonDmDbResourceGovernance cluster AppTypeName message Failed
+  - Check cluster Failed
   CustomizedParameters:
   - ServerName
   - DatabaseName
   KustoQueries:
-  - TableName: MonSQLSystemHealth
+  - TableName: MonDmDbResourceGovernance
     ExecutedQuery: '| project originalEventTimestamp, messageOOM single DBs for a cluster in the past 7 dayslet oomApps = MonSQLSystemHealth| where AppTypeName == "Worker.ISO.Premium" or AppTypeName ==
       "Worker.ISO"| where message contains "Failed allocate pages: FAIL_PAGE_ALLOCATION" or message contains "Failed Virtual Allocate Bytes: FAIL_VIRTUAL_RESERVE" | summarize oom_count=count(message) by
       ClusterName, AppTypeName, AppName, LogicalServerName, NodeName, bin(TIMESTAMP, 15m);let singleDbApps = MonDmDbResourceGovernance| where AppTypeName == "Worker.ISO.Premium" or AppTypeName == "Worker.ISO"|
@@ -1397,8 +1468,9 @@ SqlSkills:
   Topic: Investigation memory incidents
   Source: asmi-troubleshooter-package/Investigation memory incidents.md
   Prompts:
-  - MI Investigation memory incidents
-  - Managed Instance Investigation memory incidents
+  - MI memory pressure and OOM analysis
+  - MonDmOsBPoolPerfCountersBuffer AppName Memory
+  - Check MonDmOsBPoolPerfCountersBuffer AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1410,8 +1482,9 @@ SqlSkills:
   Topic: Investigation memory incidents
   Source: asmi-troubleshooter-package/Investigation memory incidents.md
   Prompts:
-  - MI Investigation memory incidents
-  - Managed Instance Investigation memory incidents
+  - MI memory pressure and OOM analysis
+  - MonWiQdsWaitStats pagesExtension ratioBuffer ratio
+  - Check MonWiQdsWaitStats pagesExtension ratioBuffer
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1427,8 +1500,9 @@ SqlSkills:
   Topic: Investigation memory incidents
   Source: asmi-troubleshooter-package/Investigation memory incidents.md
   Prompts:
-  - MI Investigation memory incidents
-  - Managed Instance Investigation memory incidents
+  - MI memory pressure and OOM analysis
+  - MonWiQdsExecStatsCheck wait_category
+  - Check MonWiQdsExecStatsCheck wait_category
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1440,8 +1514,9 @@ SqlSkills:
   Topic: Investigation memory incidents
   Source: asmi-troubleshooter-package/Investigation memory incidents.md
   Prompts:
-  - MI Investigation memory incidents
-  - Managed Instance Investigation memory incidents
+  - MI memory pressure and OOM analysis by database
+  - MonWiQdsExecStats grants TIMESTAMP AppName
+  - Check MonWiQdsExecStats grants AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1464,8 +1539,9 @@ SqlSkills:
   Topic: Investigation memory incidents
   Source: asmi-troubleshooter-package/Investigation memory incidents.md
   Prompts:
-  - MI Investigation memory incidents
-  - Managed Instance Investigation memory incidents
+  - MI memory pressure and OOM analysis
+  - MonQueryProcessingMonQueryProcessing event AppName deflation
+  - Check MonQueryProcessingMonQueryProcessing event AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1479,8 +1555,9 @@ SqlSkills:
   Topic: Investigation memory incidents
   Source: asmi-troubleshooter-package/Investigation memory incidents.md
   Prompts:
-  - MI Investigation memory incidents
-  - Managed Instance Investigation memory incidents
+  - MI memory pressure and OOM analysis
+  - Unknown
+  - Investigate OOM and memory pressure
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1493,8 +1570,9 @@ SqlSkills:
   Topic: Investigation memory incidents
   Source: asmi-troubleshooter-package/Investigation memory incidents.md
   Prompts:
-  - MI Investigation memory incidents
-  - Managed Instance Investigation memory incidents
+  - MI memory pressure and OOM analysis
+  - MonDmOsWaitstatsMonSqlRgHistory
+  - Investigate OOM and memory pressure
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1505,8 +1583,9 @@ SqlSkills:
   Topic: Investigation memory incidents
   Source: asmi-troubleshooter-package/Investigation memory incidents.md
   Prompts:
-  - MI Investigation memory incidents
-  - Managed Instance Investigation memory incidents
+  - MI memory pressure and OOM analysis by server
+  - MonDatabaseMetadata TIMESTAMP AppName NodeName
+  - Check MonDatabaseMetadata AppName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1520,8 +1599,9 @@ SqlSkills:
   Topic: Investigation memory incidents
   Source: asmi-troubleshooter-package/Investigation memory incidents.md
   Prompts:
-  - MI Investigation memory incidents
-  - Managed Instance Investigation memory incidents
+  - MI memory pressure and OOM analysis
+  - MonSQLSystemHealth AppName
+  - Check MonSQLSystemHealth AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1538,8 +1618,9 @@ SqlSkills:
   Topic: Investigation memory incidents
   Source: asmi-troubleshooter-package/Investigation memory incidents.md
   Prompts:
-  - MI Investigation memory incidents
-  - Managed Instance Investigation memory incidents
+  - MI memory pressure and OOM analysis
+  - MonSqlMemoryClerkStats TIMESTAMP
+  - Investigate OOM and memory pressure
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1560,8 +1641,9 @@ SqlSkills:
   Topic: Investigation memory incidents
   Source: asmi-troubleshooter-package/Investigation memory incidents.md
   Prompts:
-  - MI Investigation memory incidents
-  - Managed Instance Investigation memory incidents
+  - MI memory pressure and OOM analysis by server
+  - MonSqlMemoryClerkStats LogicalServerName TIMESTAMP
+  - Investigate OOM and memory pressure
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1584,8 +1666,9 @@ SqlSkills:
   Topic: Investigation memory incidents
   Source: asmi-troubleshooter-package/Investigation memory incidents.md
   Prompts:
-  - MI Investigation memory incidents
-  - Managed Instance Investigation memory incidents
+  - MI memory pressure and OOM analysis by server
+  - MonSqlMemoryClerkStats LogicalServerName TIMESTAMP
+  - Check MonSqlMemoryClerkStats memory_clerk_type
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1606,8 +1689,9 @@ SqlSkills:
   Topic: Investigation memory incidents
   Source: asmi-troubleshooter-package/Investigation memory incidents.md
   Prompts:
-  - MI Investigation memory incidents
-  - Managed Instance Investigation memory incidents
+  - MI memory pressure and OOM analysis
+  - MonSqlRmRingBuffer TIMESTAMP notification AppName
+  - Check MonSqlRmRingBuffer notification AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1626,8 +1710,9 @@ SqlSkills:
   Topic: Investigation memory incidents
   Source: asmi-troubleshooter-package/Investigation memory incidents.md
   Prompts:
-  - MI Investigation memory incidents
-  - Managed Instance Investigation memory incidents
+  - MI memory pressure and OOM analysis
+  - MonSqlRmRingBuffer TIMESTAMP
+  - Investigate OOM and memory pressure
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1640,8 +1725,9 @@ SqlSkills:
   Topic: Investigation memory incidents
   Source: asmi-troubleshooter-package/Investigation memory incidents.md
   Prompts:
-  - MI Investigation memory incidents
-  - Managed Instance Investigation memory incidents
+  - MI memory pressure and OOM analysis by node
+  - MonSqlCaches AppName NodeName
+  - Check MonSqlCaches AppName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1658,8 +1744,9 @@ SqlSkills:
   Topic: Investigation memory incidents
   Source: asmi-troubleshooter-package/Investigation memory incidents.md
   Prompts:
-  - MI Investigation memory incidents
-  - Managed Instance Investigation memory incidents
+  - MI memory pressure and OOM analysis by node
+  - MonDmExecCachedPlansSummary PreciseTimeStamp AppName
+  - Check MonDmExecCachedPlansSummary AppName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1680,8 +1767,9 @@ SqlSkills:
   Topic: Investigation memory incidents
   Source: asmi-troubleshooter-package/Investigation memory incidents.md
   Prompts:
-  - MI Investigation memory incidents
-  - Managed Instance Investigation memory incidents
+  - MI memory pressure and OOM analysis by node
+  - MonSqlBrokerRingBuffer NodeName pool_metadata_id
+  - Check MonSqlBrokerRingBuffer NodeName pool_metadata_id
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1696,8 +1784,9 @@ SqlSkills:
   Topic: Investigation memory incidents
   Source: asmi-troubleshooter-package/Investigation memory incidents.md
   Prompts:
-  - MI Investigation memory incidents
-  - Managed Instance Investigation memory incidents
+  - MI memory pressure and OOM analysis
+  - MonRgLoad application_name TIMESTAMP memory_load
+  - Check MonRgLoad application_name memory_load
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1714,8 +1803,9 @@ SqlSkills:
   Topic: Investigation memory incidents
   Source: asmi-troubleshooter-package/Investigation memory incidents.md
   Prompts:
-  - MI Investigation memory incidents
-  - Managed Instance Investigation memory incidents
+  - MI memory pressure and OOM analysis
+  - MonSqlRmRingBuffer TIMESTAMP notification AppName
+  - Check MonSqlRmRingBuffer notification AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1734,8 +1824,9 @@ SqlSkills:
   Topic: Investigation memory incidents
   Source: asmi-troubleshooter-package/Investigation memory incidents.md
   Prompts:
-  - MI Investigation memory incidents
-  - Managed Instance Investigation memory incidents
+  - MI memory pressure and OOM analysis
+  - MonRgLoad application_name TIMESTAMP memory_load
+  - Check MonRgLoad application_name memory_load
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1752,8 +1843,9 @@ SqlSkills:
   Topic: Investigation memory incidents
   Source: asmi-troubleshooter-package/Investigation memory incidents.md
   Prompts:
-  - MI Investigation memory incidents
-  - Managed Instance Investigation memory incidents
+  - MI memory pressure and OOM analysis by server
+  - MonSQLSystemHealth AppTypeName message oom_count Failed
+  - Check AppTypeName Failed
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1770,8 +1862,9 @@ SqlSkills:
   Topic: Investigation memory incidents
   Source: asmi-troubleshooter-package/Investigation memory incidents.md
   Prompts:
-  - MI Investigation memory incidents
-  - Managed Instance Investigation memory incidents
+  - MI memory pressure and OOM analysis by server
+  - MonDmDbResourceGovernance AppTypeName ClusterName AppName
+  - Check MonDmDbResourceGovernance AppTypeName ClusterName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1788,8 +1881,9 @@ SqlSkills:
   Topic: Investigation memory incidents
   Source: asmi-troubleshooter-package/Investigation memory incidents.md
   Prompts:
-  - MI Investigation memory incidents
-  - Managed Instance Investigation memory incidents
+  - MI memory pressure and OOM analysis
+  - oomApps
+  - Investigate OOM and memory pressure
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1802,8 +1896,9 @@ SqlSkills:
   Topic: Investigation memory incidents
   Source: asmi-troubleshooter-package/Investigation memory incidents.md
   Prompts:
-  - MI Investigation memory incidents
-  - Managed Instance Investigation memory incidents
+  - MI memory pressure and OOM analysis
+  - MonDmOsBPoolPerfCounters AppName
+  - Check MonDmOsBPoolPerfCounters AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1814,8 +1909,9 @@ SqlSkills:
   Topic: Investigation memory incidents
   Source: asmi-troubleshooter-package/Investigation memory incidents.md
   Prompts:
-  - MI Investigation memory incidents
-  - Managed Instance Investigation memory incidents
+  - MI memory pressure and OOM analysis
+  - MonWiQdsWaitStats TIMESTAMP
+  - Investigate OOM and memory pressure
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1828,8 +1924,9 @@ SqlSkills:
   Topic: Investigation memory incidents
   Source: asmi-troubleshooter-package/Investigation memory incidents.md
   Prompts:
-  - MI Investigation memory incidents
-  - Managed Instance Investigation memory incidents
+  - MI memory pressure and OOM analysis
+  - MonWiQdsWaitStats originalEventTimestamp AppName
+  - Check MonWiQdsWaitStats originalEventTimestamp AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1846,8 +1943,9 @@ SqlSkills:
   Topic: Investigation memory incidents
   Source: asmi-troubleshooter-package/Investigation memory incidents.md
   Prompts:
-  - MI Investigation memory incidents
-  - Managed Instance Investigation memory incidents
+  - MI memory pressure and OOM analysis
+  - MonWiQdsExecStats TIMESTAMP AppName execution_count
+  - Check MonWiQdsExecStats AppName execution_count
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1864,8 +1962,9 @@ SqlSkills:
   Topic: Investigation memory incidents
   Source: asmi-troubleshooter-package/Investigation memory incidents.md
   Prompts:
-  - MI Investigation memory incidents
-  - Managed Instance Investigation memory incidents
+  - MI memory pressure and OOM analysis
+  - MonWiQdsExecStats originalEventTimestamp AppName query_id
+  - Check MonWiQdsExecStats originalEventTimestamp AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1884,8 +1983,9 @@ SqlSkills:
   Topic: Investigation memory incidents
   Source: asmi-troubleshooter-package/Investigation memory incidents.md
   Prompts:
-  - MI Investigation memory incidents
-  - Managed Instance Investigation memory incidents
+  - MI memory pressure and OOM analysis
+  - MonWiQdsExecStats originalEventTimestamp AppName query_id
+  - Check MonWiQdsExecStats originalEventTimestamp AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1904,8 +2004,9 @@ SqlSkills:
   Topic: Investigation memory incidents
   Source: asmi-troubleshooter-package/Investigation memory incidents.md
   Prompts:
-  - MI Investigation memory incidents
-  - Managed Instance Investigation memory incidents
+  - MI memory pressure and OOM analysis
+  - MonWiQdsExecStats TIMESTAMP
+  - Investigate OOM and memory pressure
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1918,8 +2019,9 @@ SqlSkills:
   Topic: Investigation memory incidents
   Source: asmi-troubleshooter-package/Investigation memory incidents.md
   Prompts:
-  - MI Investigation memory incidents
-  - Managed Instance Investigation memory incidents
+  - MI memory pressure and OOM analysis by server
+  - MonWiQdsExecStats LogicalServerName
+  - Investigate OOM and memory pressure
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1942,8 +2044,9 @@ SqlSkills:
   Topic: Investigation memory incidents
   Source: asmi-troubleshooter-package/Investigation memory incidents.md
   Prompts:
-  - MI Investigation memory incidents
-  - Managed Instance Investigation memory incidents
+  - MI memory pressure and OOM analysis
+  - MonSqlFrontend event AppName originalEventTimestamp
+  - Check MonSqlFrontend event AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1960,8 +2063,9 @@ SqlSkills:
   Topic: Investigation memory incidents
   Source: asmi-troubleshooter-package/Investigation memory incidents.md
   Prompts:
-  - MI Investigation memory incidents
-  - Managed Instance Investigation memory incidents
+  - MI memory pressure and OOM analysis
+  - MonDmUserActivityDetection AppName instance_rg_slo_name
+  - Check MonDmUserActivityDetection AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1976,8 +2080,9 @@ SqlSkills:
   Topic: Investigation memory incidents
   Source: asmi-troubleshooter-package/Investigation memory incidents.md
   Prompts:
-  - MI Investigation memory incidents
-  - Managed Instance Investigation memory incidents
+  - MI memory pressure and OOM analysis
+  - MonBlockedProcessReportFiltered
+  - Investigate OOM and memory pressure
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1990,8 +2095,9 @@ SqlSkills:
   Topic: Investigation memory incidents
   Source: asmi-troubleshooter-package/Investigation memory incidents.md
   Prompts:
-  - MI Investigation memory incidents
-  - Managed Instance Investigation memory incidents
+  - MI memory pressure and OOM analysis by node
+  - MonDmOsSpinlockStats TIMESTAMP AppName NodeName
+  - Check MonDmOsSpinlockStats AppName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2012,8 +2118,9 @@ SqlSkills:
   Topic: Investigation memory incidents
   Source: asmi-troubleshooter-package/Investigation memory incidents.md
   Prompts:
-  - MI Investigation memory incidents
-  - Managed Instance Investigation memory incidents
+  - MI memory pressure and OOM analysis by server
+  - MonDatabaseMetadata LogicalServerName table_name TIMESTAMP
+  - Check MonDatabaseMetadata table_name value
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2030,8 +2137,9 @@ SqlSkills:
   Topic: OOM
   Source: asmi-troubleshooter-package/OOM.md
   Prompts:
-  - MI OOM
-  - Managed Instance OOM
+  - MI memory pressure and OOM analysis
+  - MonSqlMemNodeOomRingBuffer
+  - Investigate OOM and memory pressure
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2044,8 +2152,9 @@ SqlSkills:
   Topic: OOM
   Source: asmi-troubleshooter-package/OOM.md
   Prompts:
-  - MI OOM
-  - Managed Instance OOM
+  - MI memory pressure and OOM analysis
+  - MonRgLoad TIMESTAMP
+  - Investigate OOM and memory pressure
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2062,8 +2171,9 @@ SqlSkills:
   Topic: OOM
   Source: asmi-troubleshooter-package/OOM.md
   Prompts:
-  - MI OOM
-  - Managed Instance OOM
+  - MI memory pressure and OOM analysis
+  - MonGovernorResourcePools TIMESTAMP
+  - Investigate OOM and memory pressure
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2076,8 +2186,9 @@ SqlSkills:
   Topic: OOM
   Source: asmi-troubleshooter-package/OOM.md
   Prompts:
-  - MI OOM
-  - Managed Instance OOM
+  - MI memory pressure and OOM analysis
+  - systemPoolLimitTable
+  - Investigate OOM and memory pressure
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2090,8 +2201,9 @@ SqlSkills:
   Topic: OOM
   Source: asmi-troubleshooter-package/OOM.md
   Prompts:
-  - MI OOM
-  - Managed Instance OOM
+  - MI memory pressure and OOM analysis
+  - MonRgLoad TIMESTAMP
+  - Investigate OOM and memory pressure
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2110,8 +2222,9 @@ SqlSkills:
   Topic: OOM
   Source: asmi-troubleshooter-package/OOM.md
   Prompts:
-  - MI OOM
-  - Managed Instance OOM
+  - MI memory pressure and OOM analysis
+  - MonDmOsMemoryClerks TIMESTAMP
+  - Investigate OOM and memory pressure
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2132,8 +2245,9 @@ SqlSkills:
   Topic: OOM
   Source: asmi-troubleshooter-package/OOM.md
   Prompts:
-  - MI OOM
-  - Managed Instance OOM
+  - MI memory pressure and OOM analysis
+  - MonSqlMemoryClerkStats TIMESTAMP
+  - Investigate OOM and memory pressure
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2154,8 +2268,9 @@ SqlSkills:
   Topic: OOM
   Source: asmi-troubleshooter-package/OOM.md
   Prompts:
-  - MI OOM
-  - Managed Instance OOM
+  - MI memory pressure and OOM analysis
+  - MonGovernorResourcePools TIMESTAMP
+  - Investigate OOM and memory pressure
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2176,8 +2291,9 @@ SqlSkills:
   Topic: IO Latency
   Source: asmi-troubleshooter-package/IO Latency.md
   Prompts:
-  - MI IO Latency
-  - Managed Instance IO Latency
+  - MI I/O latency analysis by server
+  - MonSqlRgHistory LogicalServerName event is_agg_volume
+  - Check MonSqlRgHistory event is_agg_volume
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2208,8 +2324,9 @@ SqlSkills:
   Topic: GP IO Throttling
   Source: asmi-troubleshooter-package/GP IO Throttling.md
   Prompts:
-  - MI GP IO Throttling
-  - Managed Instance GP IO Throttling
+  - MI restore request status by server
+  - MonAnalyticsDBSnapshot TIMESTAMP logical_server_name
+  - Check MonAnalyticsDBSnapshot logical_database_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2228,8 +2345,9 @@ SqlSkills:
   Topic: GP IO Throttling
   Source: asmi-troubleshooter-package/GP IO Throttling.md
   Prompts:
-  - MI GP IO Throttling
-  - Managed Instance GP IO Throttling
+  - MI storage usage and size by server
+  - MonSQLXStore LogicalServerName
+  - Investigate storage growth
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2244,8 +2362,9 @@ SqlSkills:
   Topic: GP IO Throttling
   Source: asmi-troubleshooter-package/GP IO Throttling.md
   Prompts:
-  - MI GP IO Throttling
-  - Managed Instance GP IO Throttling
+  - MI storage usage and size by server
+  - MonSQLXStore LogicalServerName
+  - Investigate storage growth
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2260,8 +2379,9 @@ SqlSkills:
   Topic: GP IO Throttling
   Source: asmi-troubleshooter-package/GP IO Throttling.md
   Prompts:
-  - MI GP IO Throttling
-  - Managed Instance GP IO Throttling
+  - MI storage usage and size by server
+  - MonSQLXStore LogicalServerName
+  - Investigate storage growth
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2276,8 +2396,9 @@ SqlSkills:
   Topic: GP Storage - IOPS & throughput
   Source: asmi-troubleshooter-package/GP Storage - IOPS & throughput.md
   Prompts:
-  - MI GP Storage - IOPS & throughput
-  - Managed Instance GP Storage - IOPS & throughput
+  - MI storage usage and size
+  - MonAnalyticsDBSnapshot TIMESTAMP
+  - Investigate storage growth
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2290,8 +2411,9 @@ SqlSkills:
   Topic: GP Storage - IOPS & throughput
   Source: asmi-troubleshooter-package/GP Storage - IOPS & throughput.md
   Prompts:
-  - MI GP Storage - IOPS & throughput
-  - Managed Instance GP Storage - IOPS & throughput
+  - MI storage usage and size by server
+  - MonAnalyticsDBSnapshot TIMESTAMP LogicalServerName
+  - Investigate storage growth
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2314,8 +2436,9 @@ SqlSkills:
   Topic: GP Storage - IOPS & throughput
   Source: asmi-troubleshooter-package/GP Storage - IOPS & throughput.md
   Prompts:
-  - MI GP Storage - IOPS & throughput
-  - Managed Instance GP Storage - IOPS & throughput
+  - MI storage usage and size
+  - MonSQLXStoreIOStats TIMESTAMP
+  - Investigate storage growth
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2328,8 +2451,9 @@ SqlSkills:
   Topic: GP Storage - IOPS & throughput
   Source: asmi-troubleshooter-package/GP Storage - IOPS & throughput.md
   Prompts:
-  - MI GP Storage - IOPS & throughput
-  - Managed Instance GP Storage - IOPS & throughput
+  - MI storage usage and size by server
+  - MonSQLXStoreIOStats LogicalServerName file_path event
+  - Check MonSQLXStoreIOStats file_path event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2353,8 +2477,9 @@ SqlSkills:
   Topic: GP Storage - IOPS & throughput
   Source: asmi-troubleshooter-package/GP Storage - IOPS & throughput.md
   Prompts:
-  - MI GP Storage - IOPS & throughput
-  - Managed Instance GP Storage - IOPS & throughput
+  - MI storage usage and size
+  - MonSQLXStoreIOStats
+  - Investigate storage growth
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2367,8 +2492,9 @@ SqlSkills:
   Topic: GP Storage - IOPS & throughput
   Source: asmi-troubleshooter-package/GP Storage - IOPS & throughput.md
   Prompts:
-  - MI GP Storage - IOPS & throughput
-  - Managed Instance GP Storage - IOPS & throughput
+  - MI storage usage and size
+  - MonSQLXStoreIOStats originalEventTimestamp event file_path
+  - Check MonSQLXStoreIOStats originalEventTimestamp event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2397,8 +2523,9 @@ SqlSkills:
   Topic: GP Storage - IOPS & throughput
   Source: asmi-troubleshooter-package/GP Storage - IOPS & throughput.md
   Prompts:
-  - MI GP Storage - IOPS & throughput
-  - Managed Instance GP Storage - IOPS & throughput
+  - MI storage usage and size
+  - MonSQLXStoreIOStats AppName file_path event
+  - Check MonSQLXStoreIOStats AppName file_path
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2439,8 +2566,9 @@ SqlSkills:
   Topic: Disk space usage
   Source: asmi-troubleshooter-package/Disk space usage.md
   Prompts:
-  - MI Disk space usage
-  - Managed Instance Disk space usage
+  - MI wait stats analysis by server
+  - MonSqlRgHistory TIMESTAMP LogicalServerName db_name
+  - Check MonSqlRgHistory db_name type_desc
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2463,8 +2591,9 @@ SqlSkills:
   Topic: Disk space usage
   Source: asmi-troubleshooter-package/Disk space usage.md
   Prompts:
-  - MI Disk space usage
-  - Managed Instance Disk space usage
+  - MI wait stats analysis by server
+  - MonSqlRgHistory TIMESTAMP LogicalServerName db_name
+  - Check MonSqlRgHistory db_name type_desc
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2485,8 +2614,9 @@ SqlSkills:
   Topic: Disk space usage
   Source: asmi-troubleshooter-package/Disk space usage.md
   Prompts:
-  - MI Disk space usage
-  - Managed Instance Disk space usage
+  - MI wait stats analysis by database
+  - MonWiDmDbPartitionStats AppName partition_number database_id
+  - Check MonWiDmDbPartitionStats AppName partition_number
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2505,8 +2635,9 @@ SqlSkills:
   Topic: Disk space usage
   Source: asmi-troubleshooter-package/Disk space usage.md
   Prompts:
-  - MI Disk space usage
-  - Managed Instance Disk space usage
+  - MI restore request status
+  - MonDatabaseMetadata AppName table_name TIMESTAMP
+  - Check MonDatabaseMetadata AppName table_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2523,8 +2654,9 @@ SqlSkills:
   Topic: Disk space usage
   Source: asmi-troubleshooter-package/Disk space usage.md
   Prompts:
-  - MI Disk space usage
-  - Managed Instance Disk space usage
+  - MI disk space usage analysis
+  - FilteredResults table_name schema_id id
+  - Check FilteredResults table_name schema_id
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2539,8 +2671,9 @@ SqlSkills:
   Topic: Disk space usage
   Source: asmi-troubleshooter-package/Disk space usage.md
   Prompts:
-  - MI Disk space usage
-  - Managed Instance Disk space usage
+  - MI disk space usage analysis
+  - FilteredResults table_name schema_id nsid
+  - Check FilteredResults table_name schema_id
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2555,8 +2688,9 @@ SqlSkills:
   Topic: Disk space usage
   Source: asmi-troubleshooter-package/Disk space usage.md
   Prompts:
-  - MI Disk space usage
-  - Managed Instance Disk space usage
+  - MI disk space usage analysis
+  - FilteredResults table_name index_type_desc type
+  - Check FilteredResults table_name index_type_desc
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2571,8 +2705,9 @@ SqlSkills:
   Topic: File Size & Table size
   Source: asmi-troubleshooter-package/File Size & Table size.md
   Prompts:
-  - MI File Size & Table size
-  - Managed Instance File Size & Table size
+  - MI restore request status
+  - MonDmIoVirtualFileStats
+  - Investigate restore progress
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2583,8 +2718,9 @@ SqlSkills:
   Topic: File Size & Table size
   Source: asmi-troubleshooter-package/File Size & Table size.md
   Prompts:
-  - MI File Size & Table size
-  - Managed Instance File Size & Table size
+  - MI wait stats analysis
+  - MonWiDmDbPartitionStats db_name type_desc file_id
+  - Check MonWiDmDbPartitionStats db_name type_desc
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2601,8 +2737,9 @@ SqlSkills:
   Topic: File Size & Table size
   Source: asmi-troubleshooter-package/File Size & Table size.md
   Prompts:
-  - MI File Size & Table size
-  - Managed Instance File Size & Table size
+  - MI restore request status
+  - MonDatabaseMetadata AppName table_name TIMESTAMP
+  - Check MonDatabaseMetadata AppName table_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2619,8 +2756,9 @@ SqlSkills:
   Topic: File Size & Table size
   Source: asmi-troubleshooter-package/File Size & Table size.md
   Prompts:
-  - MI File Size & Table size
-  - Managed Instance File Size & Table size
+  - MI file size & table size analysis
+  - FilteredResults table_name schema_id id
+  - Check FilteredResults table_name schema_id
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2635,8 +2773,9 @@ SqlSkills:
   Topic: File Size & Table size
   Source: asmi-troubleshooter-package/File Size & Table size.md
   Prompts:
-  - MI File Size & Table size
-  - Managed Instance File Size & Table size
+  - MI file size & table size analysis
+  - FilteredResults table_name schema_id nsid
+  - Check FilteredResults table_name schema_id
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2651,8 +2790,9 @@ SqlSkills:
   Topic: File Size & Table size
   Source: asmi-troubleshooter-package/File Size & Table size.md
   Prompts:
-  - MI File Size & Table size
-  - Managed Instance File Size & Table size
+  - MI file size & table size analysis
+  - FilteredResults table_name index_type_desc type
+  - Check FilteredResults table_name index_type_desc
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2667,8 +2807,9 @@ SqlSkills:
   Topic: File Size & Table size
   Source: asmi-troubleshooter-package/File Size & Table size.md
   Prompts:
-  - MI File Size & Table size
-  - Managed Instance File Size & Table size
+  - MI restore request status
+  - MonDmIoVirtualFileStats AppName db_name file_id
+  - Check MonDmIoVirtualFileStats AppName db_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2689,8 +2830,9 @@ SqlSkills:
   Topic: File Size & Table size
   Source: asmi-troubleshooter-package/File Size & Table size.md
   Prompts:
-  - MI File Size & Table size
-  - Managed Instance File Size & Table size
+  - MI restore request status by server
+  - MonDmIoVirtualFileStats PreciseTimeStamp LogicalServerName
+  - Check MonDmIoVirtualFileStats type_desc file_id
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2711,8 +2853,9 @@ SqlSkills:
   Topic: File Size & Table size
   Source: asmi-troubleshooter-package/File Size & Table size.md
   Prompts:
-  - MI File Size & Table size
-  - Managed Instance File Size & Table size
+  - MI restore request status by database
+  - MonAnalyticsDBSnapshot logical_server_name
+  - Check MonAnalyticsDBSnapshot logical_database_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2729,8 +2872,9 @@ SqlSkills:
   Topic: File Size & Table size
   Source: asmi-troubleshooter-package/File Size & Table size.md
   Prompts:
-  - MI File Size & Table size
-  - Managed Instance File Size & Table size
+  - MI file size & table size analysis
+  - Unknown
+  - MI file size & table size investigation
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2749,8 +2893,9 @@ SqlSkills:
   Topic: File Size & Table size
   Source: asmi-troubleshooter-package/File Size & Table size.md
   Prompts:
-  - MI File Size & Table size
-  - Managed Instance File Size & Table size
+  - MI restore request status by database
+  - MonAnalyticsDBSnapshot TIMESTAMP logical_server_name
+  - Check MonAnalyticsDBSnapshot logical_database_name AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2781,8 +2926,9 @@ SqlSkills:
   Topic: File Size & Table size
   Source: asmi-troubleshooter-package/File Size & Table size.md
   Prompts:
-  - MI File Size & Table size
-  - Managed Instance File Size & Table size
+  - MI restore request status
+  - MonDatabaseMetadata AppName table_name TIMESTAMP
+  - Check MonDatabaseMetadata AppName table_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2799,8 +2945,9 @@ SqlSkills:
   Topic: File Size & Table size
   Source: asmi-troubleshooter-package/File Size & Table size.md
   Prompts:
-  - MI File Size & Table size
-  - Managed Instance File Size & Table size
+  - MI file size & table size analysis
+  - FilteredResults table_name schema_id nsid
+  - Check FilteredResults table_name schema_id
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2815,8 +2962,9 @@ SqlSkills:
   Topic: File Size & Table size
   Source: asmi-troubleshooter-package/File Size & Table size.md
   Prompts:
-  - MI File Size & Table size
-  - Managed Instance File Size & Table size
+  - MI file size & table size analysis
+  - FilteredResults table_name index_type_desc type
+  - Check FilteredResults table_name index_type_desc
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2831,8 +2979,9 @@ SqlSkills:
   Topic: File Size & Table size
   Source: asmi-troubleshooter-package/File Size & Table size.md
   Prompts:
-  - MI File Size & Table size
-  - Managed Instance File Size & Table size
+  - MI login and connection errors by server
+  - MonLogin logical_server_name
+  - Investigate login failures
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2853,8 +3002,9 @@ SqlSkills:
   Topic: File Size & Table size
   Source: asmi-troubleshooter-package/File Size & Table size.md
   Prompts:
-  - MI File Size & Table size
-  - Managed Instance File Size & Table size
+  - MI login and connection errors by server
+  - MonLogin logical_server_name AppName
+  - Check MonLogin AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2869,8 +3019,9 @@ SqlSkills:
   Topic: File Size & Table size
   Source: asmi-troubleshooter-package/File Size & Table size.md
   Prompts:
-  - MI File Size & Table size
-  - Managed Instance File Size & Table size
+  - MI wait stats analysis
+  - MonWiDmDbPartitionStats ClusterName
+  - Check MonWiDmDbPartitionStats ClusterName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2883,8 +3034,9 @@ SqlSkills:
   Topic: File Size & Table size
   Source: asmi-troubleshooter-package/File Size & Table size.md
   Prompts:
-  - MI File Size & Table size
-  - Managed Instance File Size & Table size
+  - MI restore request status
+  - MonDatabaseMetadata AppName
+  - Check MonDatabaseMetadata AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2897,8 +3049,9 @@ SqlSkills:
   Topic: Log size
   Source: asmi-troubleshooter-package/Log size.md
   Prompts:
-  - MI Log size
-  - Managed Instance Log size
+  - MI restore request status
+  - MonDmIoVirtualFileStats
+  - Investigate restore progress
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2911,8 +3064,9 @@ SqlSkills:
   Topic: Log size
   Source: asmi-troubleshooter-package/Log size.md
   Prompts:
-  - MI Log size
-  - Managed Instance Log size
+  - MI restore request status by server
+  - MonDmIoVirtualFileStats TIMESTAMP LogicalServerName
+  - Check MonDmIoVirtualFileStats type_desc
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2939,8 +3093,9 @@ SqlSkills:
   Topic: Log size
   Source: asmi-troubleshooter-package/Log size.md
   Prompts:
-  - MI Log size
-  - Managed Instance Log size
+  - MI restore request status
+  - MonSQLSystemHealth
+  - Investigate restore progress
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2953,8 +3108,9 @@ SqlSkills:
   Topic: Log size
   Source: asmi-troubleshooter-package/Log size.md
   Prompts:
-  - MI Log size
-  - Managed Instance Log size
+  - MI connectivity and networking
+  - MonClusterLoad ClusterName
+  - Check MonClusterLoad ClusterName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2969,8 +3125,9 @@ SqlSkills:
   Topic: Log size
   Source: asmi-troubleshooter-package/Log size.md
   Prompts:
-  - MI Log size
-  - Managed Instance Log size
+  - MI restore request status by server
+  - MonSQLSystemHealth LogicalServerName
+  - Investigate restore progress
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2989,8 +3146,9 @@ SqlSkills:
   Topic: Log size
   Source: asmi-troubleshooter-package/Log size.md
   Prompts:
-  - MI Log size
-  - Managed Instance Log size
+  - MI restore request status
+  - MonAnalyticsDBSnapshot
+  - Investigate restore progress
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3001,8 +3159,9 @@ SqlSkills:
   Topic: Log size
   Source: asmi-troubleshooter-package/Log size.md
   Prompts:
-  - MI Log size
-  - Managed Instance Log size
+  - MI restore request status
+  - MonDmIoVirtualFileStats originalEventTimestamp
+  - Check MonDmIoVirtualFileStats originalEventTimestamp
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3021,8 +3180,9 @@ SqlSkills:
   Topic: Shrink
   Source: asmi-troubleshooter-package/Shrink.md
   Prompts:
-  - MI Shrink
-  - Managed Instance Shrink
+  - MI storage usage and size by server
+  - MonSqlShrinkInfo TIMESTAMP LogicalServerName
+  - Investigate storage growth
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3043,8 +3203,9 @@ SqlSkills:
   Topic: Shrink
   Source: asmi-troubleshooter-package/Shrink.md
   Prompts:
-  - MI Shrink
-  - Managed Instance Shrink
+  - MI storage usage and size by server
+  - MonSqlShrinkInfo TIMESTAMP LogicalServerName AppName
+  - Check MonSqlShrinkInfo AppName status
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3070,8 +3231,9 @@ SqlSkills:
   Topic: Shrink
   Source: asmi-troubleshooter-package/Shrink.md
   Prompts:
-  - MI Shrink
-  - Managed Instance Shrink
+  - MI storage usage and size
+  - MonSqlShrinkInfo shrink_id status originalEventTimestamp
+  - Check MonSqlShrinkInfo shrink_id status
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3090,8 +3252,9 @@ SqlSkills:
   Topic: Shrink
   Source: asmi-troubleshooter-package/Shrink.md
   Prompts:
-  - MI Shrink
-  - Managed Instance Shrink
+  - MI storage usage and size by server
+  - MonSqlShrinkInfo TIMESTAMP LogicalServerName status
+  - Check MonSqlShrinkInfo status target_size
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3111,8 +3274,9 @@ SqlSkills:
   Topic: Shrink
   Source: asmi-troubleshooter-package/Shrink.md
   Prompts:
-  - MI Shrink
-  - Managed Instance Shrink
+  - MI restore request status by server
+  - MonSQLSystemHealth TIMESTAMP LogicalServerName message
+  - Check MonSQLSystemHealth message
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3131,8 +3295,9 @@ SqlSkills:
   Topic: Shrink
   Source: asmi-troubleshooter-package/Shrink.md
   Prompts:
-  - MI Shrink
-  - Managed Instance Shrink
+  - MI dump and crash analysis
+  - MonSqlDumperActivity TargetLogicalServerName DumpUID
+  - Check MonSqlDumperActivity TargetLogicalServerName DumpUID
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3147,8 +3312,9 @@ SqlSkills:
   Topic: Shrink
   Source: asmi-troubleshooter-package/Shrink.md
   Prompts:
-  - MI Shrink
-  - Managed Instance Shrink
+  - MI resource usage analysis by server
+  - AlrSQLErrorsReported LogicalServerName error_number
+  - Check AlrSQLErrorsReported error_number state
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3167,13 +3333,14 @@ SqlSkills:
   Topic: Storage (MonSQLXStore
   Source: asmi-troubleshooter-package/Storage (MonSQLXStore.md
   Prompts:
-  - MI Storage (MonSQLXStore
-  - Managed Instance Storage (MonSQLXStore
+  - MI storage usage and size by server
+  - MonManagementOperations LogicalServerName event TIMESTAMP
+  - Check MonManagementOperations event operation_type
   CustomizedParameters:
   - ServerName
   - DatabaseName
   KustoQueries:
-  - TableName: MonSQLXStore
+  - TableName: MonManagementOperations
     ExecutedQuery: 'MonSQLXStore| where LogicalServerName =~ "{ServerName}"| where event == "xio_failed_request" | where TIMESTAMP > datetime(2024-02-01 15:13:14.8733824)| project TIMESTAMP,LogicalServerName,event,file_path,
       mapped_errorcode,request_type,http_errorcode,request_id, error_responselet SingleCluster=(clstr: string) {cluster(clstr).database(''sqlazure1'').MonManagementOperations| where operation_type == "AlterFileManagedDatabase"|
       extend MaxFileSizeInKb = extract("<MaxFileSizesKb><string>([0-9]+)</string>", 1, operation_parameters)| extend FileSizeInKb = extract("<FileSizesKb><string>([0-9]+)</string>", 1, operation_parameters)|
@@ -3184,8 +3351,9 @@ SqlSkills:
   Topic: Storage (MonSQLXStore
   Source: asmi-troubleshooter-package/Storage (MonSQLXStore.md
   Prompts:
-  - MI Storage (MonSQLXStore
-  - Managed Instance Storage (MonSQLXStore
+  - MI storage usage and size by server
+  - MonSQLXStore LogicalServerName event TIMESTAMP
+  - Check MonSQLXStore event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3202,8 +3370,9 @@ SqlSkills:
   Topic: Storage (MonSQLXStore
   Source: asmi-troubleshooter-package/Storage (MonSQLXStore.md
   Prompts:
-  - MI Storage (MonSQLXStore
-  - Managed Instance Storage (MonSQLXStore
+  - MI storage usage and size
+  - MonManagementOperations operation_type MaxFileSizeInKb
+  - Check MonManagementOperations operation_type MaxFileSizeInKb
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3218,8 +3387,9 @@ SqlSkills:
   Topic: Storage (MonSQLXStore
   Source: asmi-troubleshooter-package/Storage (MonSQLXStore.md
   Prompts:
-  - MI Storage (MonSQLXStore
-  - Managed Instance Storage (MonSQLXStore
+  - MI storage usage and size by server
+  - MonSQLXStore LogicalServerName TIMESTAMP
+  - Investigate storage growth
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3234,8 +3404,9 @@ SqlSkills:
   Topic: Storage (MonSQLXStore
   Source: asmi-troubleshooter-package/Storage (MonSQLXStore.md
   Prompts:
-  - MI Storage (MonSQLXStore
-  - Managed Instance Storage (MonSQLXStore
+  - MI storage usage and size by node
+  - MonSQLXStore originalEventTimestamp AppName event
+  - Check MonSQLXStore originalEventTimestamp AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3254,8 +3425,9 @@ SqlSkills:
   Topic: Storage (MonSQLXStore
   Source: asmi-troubleshooter-package/Storage (MonSQLXStore.md
   Prompts:
-  - MI Storage (MonSQLXStore
-  - Managed Instance Storage (MonSQLXStore
+  - MI storage usage and size
+  - MonSQLXStore TIMESTAMP
+  - Investigate storage growth
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3276,8 +3448,9 @@ SqlSkills:
   Topic: TempDb
   Source: asmi-troubleshooter-package/TempDb.md
   Prompts:
-  - MI TempDb
-  - Managed Instance TempDb
+  - MI tempdb usage analysis by node
+  - MonDmTempDbFileSpaceUsage TIMESTAMP AppName
+  - Check MonDmTempDbFileSpaceUsage AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3295,8 +3468,9 @@ SqlSkills:
   Topic: TempDb
   Source: asmi-troubleshooter-package/TempDb.md
   Prompts:
-  - MI TempDb
-  - Managed Instance TempDb
+  - MI tempdb usage analysis
+  - MonDmIoVirtualFileStats AppName
+  - Check MonDmIoVirtualFileStats AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3309,8 +3483,9 @@ SqlSkills:
   Topic: TempDb
   Source: asmi-troubleshooter-package/TempDb.md
   Prompts:
-  - MI TempDb
-  - Managed Instance TempDb
+  - MI tempdb usage analysis
+  - MonDmIoVirtualFileStats AppName
+  - Check MonDmIoVirtualFileStats AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3327,8 +3502,9 @@ SqlSkills:
   Topic: PVS
   Source: asmi-troubleshooter-package/PVS.md
   Prompts:
-  - MI PVS
-  - Managed Instance PVS
+  - MI wait stats analysis
+  - MonSqlTransactions AppName database_id
+  - Check MonSqlTransactions AppName database_id
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3347,8 +3523,9 @@ SqlSkills:
   Topic: PVS
   Source: asmi-troubleshooter-package/PVS.md
   Prompts:
-  - MI PVS
-  - Managed Instance PVS
+  - MI wait stats analysis
+  - MonSqlTransactions AppName TIMESTAMP
+  - Check MonSqlTransactions AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3369,8 +3546,9 @@ SqlSkills:
   Topic: PVS
   Source: asmi-troubleshooter-package/PVS.md
   Prompts:
-  - MI PVS
-  - Managed Instance PVS
+  - MI wait stats analysis by server
+  - MonSqlRgHistory AppName database_id TIMESTAMP
+  - Check MonSqlRgHistory AppName database_id
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3391,8 +3569,9 @@ SqlSkills:
   Topic: PVS
   Source: asmi-troubleshooter-package/PVS.md
   Prompts:
-  - MI PVS
-  - Managed Instance PVS
+  - MI restore request status by server
+  - MonDmIoVirtualFileStats TIMESTAMP LogicalServerName
+  - Check MonDmIoVirtualFileStats database_id AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3409,8 +3588,9 @@ SqlSkills:
   Topic: PVS
   Source: asmi-troubleshooter-package/PVS.md
   Prompts:
-  - MI PVS
-  - Managed Instance PVS
+  - MI resource usage analysis
+  - MonResourcePoolStats
+  - Investigate resource pressure
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3421,8 +3601,9 @@ SqlSkills:
   Topic: Performance Counter + Alias ODBC failure
   Source: asmi-troubleshooter-package/Performance Counter + Alias ODBC failure.md
   Prompts:
-  - MI Performance Counter + Alias ODBC failure
-  - Managed Instance Performance Counter + Alias ODBC failure
+  - MI memory pressure and OOM analysis by node
+  - MonCounterOneMinute TIMESTAMP ClusterName NodeName
+  - Check MonCounterOneMinute ClusterName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3449,8 +3630,9 @@ SqlSkills:
   Topic: Performance Counter + Alias ODBC failure
   Source: asmi-troubleshooter-package/Performance Counter + Alias ODBC failure.md
   Prompts:
-  - MI Performance Counter + Alias ODBC failure
-  - Managed Instance Performance Counter + Alias ODBC failure
+  - MI login and connection errors
+  - MonRedirector TIMESTAMP ClusterName event
+  - Check MonRedirector ClusterName event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3475,8 +3657,9 @@ SqlSkills:
   Topic: Open transaction (MonDmTranActiveTransactions
   Source: asmi-troubleshooter-package/Open transaction (MonDmTranActiveTransactions.md
   Prompts:
-  - MI Open transaction (MonDmTranActiveTransactions
-  - Managed Instance Open transaction (MonDmTranActiveTransactions
+  - MI wait stats analysis
+  - MonDmTranActiveTransactions AppName TIMESTAMP
+  - Check MonDmTranActiveTransactions AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3499,8 +3682,9 @@ SqlSkills:
   Topic: Resource Status
   Source: asmi-troubleshooter-package/Resource Status.md
   Prompts:
-  - MI Resource Status
-  - Managed Instance Resource Status
+  - MI resource usage analysis by server
+  - MonDmRealTimeResourceStats server_name TIMESTAMP
+  - Investigate resource pressure
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3515,8 +3699,9 @@ SqlSkills:
   Topic: Resource Status
   Source: asmi-troubleshooter-package/Resource Status.md
   Prompts:
-  - MI Resource Status
-  - Managed Instance Resource Status
+  - MI resource usage analysis by server
+  - MonManagedInstanceResourceStats LogicalServerName TIMESTAMP
+  - Investigate resource pressure
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3531,8 +3716,9 @@ SqlSkills:
   Topic: Node-wide info
   Source: asmi-troubleshooter-package/Node-wide info.md
   Prompts:
-  - MI Node-wide info
-  - Managed Instance Node-wide info
+  - MI restore request status
+  - MonCounterOneMinute TIMESTAMP
+  - Investigate restore progress
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3545,8 +3731,9 @@ SqlSkills:
   Topic: Node-wide info
   Source: asmi-troubleshooter-package/Node-wide info.md
   Prompts:
-  - MI Node-wide info
-  - Managed Instance Node-wide info
+  - MI dump and crash analysis
+  - MonSystemEventLogErrors TIMESTAMP
+  - Investigate crash dumps
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3559,8 +3746,9 @@ SqlSkills:
   Topic: Node-wide info
   Source: asmi-troubleshooter-package/Node-wide info.md
   Prompts:
-  - MI Node-wide info
-  - Managed Instance Node-wide info
+  - MI dump and crash analysis
+  - MonAppEventLogErrors TIMESTAMP
+  - Investigate crash dumps
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3573,8 +3761,9 @@ SqlSkills:
   Topic: MonQueryProcessing(Statistic & Index create & drop
   Source: asmi-troubleshooter-package/MonQueryProcessing(Statistic & Index create & drop.md
   Prompts:
-  - MI MonQueryProcessing(Statistic & Index create & drop
-  - Managed Instance MonQueryProcessing(Statistic & Index create & drop
+  - MI wait stats analysis by server
+  - MonQueryProcessing event LogicalServerName operation_type
+  - Check MonQueryProcessing event operation_type
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3597,8 +3786,9 @@ SqlSkills:
   Topic: MonQueryProcessing(Statistic & Index create & drop
   Source: asmi-troubleshooter-package/MonQueryProcessing(Statistic & Index create & drop.md
   Prompts:
-  - MI MonQueryProcessing(Statistic & Index create & drop
-  - Managed Instance MonQueryProcessing(Statistic & Index create & drop
+  - MI wait stats analysis by server
+  - MonQueryProcessing originalEventTimestamp event
+  - Check MonQueryProcessing originalEventTimestamp event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3611,8 +3801,9 @@ SqlSkills:
   Topic: MonQueryProcessing(Statistic & Index create & drop
   Source: asmi-troubleshooter-package/MonQueryProcessing(Statistic & Index create & drop.md
   Prompts:
-  - MI MonQueryProcessing(Statistic & Index create & drop
-  - Managed Instance MonQueryProcessing(Statistic & Index create & drop
+  - MI wait stats analysis
+  - MonQueryProcessing originalEventTimestamp event
+  - Check MonQueryProcessing originalEventTimestamp event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3631,8 +3822,9 @@ SqlSkills:
   Topic: 1.-Managed-Instance-network-throughput-saturated-_
   Source: TSG-SQL-MI-Performance/content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/1.-Managed-Instance-network-throughput-saturated-_.ipynb
   Prompts:
-  - MI 1.-Managed-Instance-network-throughput-saturated-_
-  - Managed Instance 1.-Managed-Instance-network-throughput-saturated-_
+  - MI connectivity and networking by server
+  - MonDmRealTimeResourceStats slo_name LogicalServerName
+  - Check MonDmRealTimeResourceStats slo_name NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3645,13 +3837,14 @@ SqlSkills:
   Topic: 1.-Managed-Instance-network-throughput-saturated-_
   Source: TSG-SQL-MI-Performance/content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/1.-Managed-Instance-network-throughput-saturated-_.ipynb
   Prompts:
-  - MI 1.-Managed-Instance-network-throughput-saturated-_
-  - Managed Instance 1.-Managed-Instance-network-throughput-saturated-_
+  - MI connectivity and networking by server
+  - MonCounterOneMinute CounterName slo_name
+  - Check MonCounterOneMinute CounterName slo_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
   KustoQueries:
-  - TableName: MonDmRealTimeResourceStats
+  - TableName: MonCounterOneMinute
     ExecutedQuery: "let TotalNetworkThroughput = MonCounterOneMinute  \n| where FilterFunc (TIMESTAMP, ago(QueryTimeWindow), false, '', ClusterName, ClusterNameParam, NodeName)  \n| where CounterName startswith\
       \ '[Network](file://Network) Interface(Microsoft Hyper-V' and CounterName endswith '[Bytes](file://Bytes) Received/sec'  \n| summarize avg(CounterValue) by ClusterName, NodeName  \n| extend AvgTotalNetworkThroughputMBPerS\
       \ = avg_CounterValue / 1024. / 1024 // the counters get reported as total bytes per second  \n| join kind=inner (  \nMonDmRealTimeResourceStats  \n| where FilterFunc (TIMESTAMP, ago(QueryTimeWindow),\
@@ -3665,13 +3858,14 @@ SqlSkills:
   Topic: 2.-Managed-Instance-log-growth-in-danger-of-fillin
   Source: TSG-SQL-MI-Performance/content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/2.-Managed-Instance-log-growth-in-danger-of-fillin.ipynb
   Prompts:
-  - MI 2.-Managed-Instance-log-growth-in-danger-of-fillin
-  - Managed Instance 2.-Managed-Instance-log-growth-in-danger-of-fillin
+  - MI connectivity and networking by server
+  - MonCounterOneMinute CounterName slo_name
+  - Check MonCounterOneMinute CounterName slo_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
   KustoQueries:
-  - TableName: MonDmRealTimeResourceStats
+  - TableName: MonCounterOneMinute
     ExecutedQuery: "let TotalNetworkThroughput = MonCounterOneMinute  \n| where FilterFunc (TIMESTAMP, ago(QueryTimeWindow), false, '', ClusterName, ClusterNameParam, NodeName)  \n| where CounterName startswith\
       \ '[Network](file://Network) Interface(Microsoft Hyper-V' and CounterName endswith '[Bytes](file://Bytes) Received/sec'  \n| summarize avg(CounterValue) by ClusterName, NodeName  \n| extend AvgTotalNetworkThroughputMBPerS\
       \ = avg_CounterValue / 1024. / 1024 // the counters get reported as total bytes per second  \n| join kind=inner (  \nMonDmRealTimeResourceStats  \n| where FilterFunc (TIMESTAMP, ago(QueryTimeWindow),\
@@ -3683,8 +3877,9 @@ SqlSkills:
   Topic: 2.-Managed-Instance-log-growth-in-danger-of-fillin
   Source: TSG-SQL-MI-Performance/content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/2.-Managed-Instance-log-growth-in-danger-of-fillin.ipynb
   Prompts:
-  - MI 2.-Managed-Instance-log-growth-in-danger-of-fillin
-  - Managed Instance 2.-Managed-Instance-log-growth-in-danger-of-fillin
+  - MI backup status by backup type by database
+  - MonBackup package event_type backup_type Full
+  - Check package Full
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3699,8 +3894,9 @@ SqlSkills:
   Topic: 2.-Managed-Instance-log-growth-in-danger-of-fillin
   Source: TSG-SQL-MI-Performance/content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/2.-Managed-Instance-log-growth-in-danger-of-fillin.ipynb
   Prompts:
-  - MI 2.-Managed-Instance-log-growth-in-danger-of-fillin
-  - Managed Instance 2.-Managed-Instance-log-growth-in-danger-of-fillin
+  - MI backup status and duration by server
+  - MonSqlRgHistory event TIMESTAMP ReadThroughput
+  - Check MonSqlRgHistory event ReadThroughput
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3717,8 +3913,9 @@ SqlSkills:
   Topic: 2.-Managed-Instance-log-growth-in-danger-of-fillin
   Source: TSG-SQL-MI-Performance/content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/2.-Managed-Instance-log-growth-in-danger-of-fillin.ipynb
   Prompts:
-  - MI 2.-Managed-Instance-log-growth-in-danger-of-fillin
-  - Managed Instance 2.-Managed-Instance-log-growth-in-danger-of-fillin
+  - MI backup history and status by server
+  - MonSQLXStoreIOStats event file_path TIMESTAMP
+  - Check MonSQLXStoreIOStats event file_path
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3735,8 +3932,9 @@ SqlSkills:
   Topic: 2.-Managed-Instance-log-growth-in-danger-of-fillin
   Source: TSG-SQL-MI-Performance/content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/2.-Managed-Instance-log-growth-in-danger-of-fillin.ipynb
   Prompts:
-  - MI 2.-Managed-Instance-log-growth-in-danger-of-fillin
-  - Managed Instance 2.-Managed-Instance-log-growth-in-danger-of-fillin
+  - MI restore request status by server
+  - MonDmIoVirtualFileStats type_desc DatabaseSizeUsedMB
+  - Check MonDmIoVirtualFileStats type_desc DatabaseSizeUsedMB
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3750,8 +3948,9 @@ SqlSkills:
   Topic: 2.-Managed-Instance-log-growth-in-danger-of-fillin
   Source: TSG-SQL-MI-Performance/content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/2.-Managed-Instance-log-growth-in-danger-of-fillin.ipynb
   Prompts:
-  - MI 2.-Managed-Instance-log-growth-in-danger-of-fillin
-  - Managed Instance 2.-Managed-Instance-log-growth-in-danger-of-fillin
+  - MI storage usage and size by server
+  - MonDmIoVirtualFileStats type_desc LogSizeUsedMB
+  - Check MonDmIoVirtualFileStats type_desc LogSizeUsedMB
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3767,8 +3966,9 @@ SqlSkills:
   Topic: 2.-Managed-Instance-log-growth-in-danger-of-fillin
   Source: TSG-SQL-MI-Performance/content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/2.-Managed-Instance-log-growth-in-danger-of-fillin.ipynb
   Prompts:
-  - MI 2.-Managed-Instance-log-growth-in-danger-of-fillin
-  - Managed Instance 2.-Managed-Instance-log-growth-in-danger-of-fillin
+  - MI resource usage analysis by server
+  - MonDmRealTimeResourceStats slo_name count_ LogicalServerName
+  - Check MonDmRealTimeResourceStats slo_name count_
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3782,8 +3982,9 @@ SqlSkills:
   Topic: SOPCL00193-CloudLifter-High-disk-usage-detection
   Source: TSG-SQL-MI-Performance/content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/SOPCL00193-CloudLifter-High-disk-usage-detection.ipynb
   Prompts:
-  - MI SOPCL00193-CloudLifter-High-disk-usage-detection
-  - Managed Instance SOPCL00193-CloudLifter-High-disk-usage-detection
+  - MI resource usage analysis by node
+  - MonRgLoad event avg_drive_usage_percentage drive_name
+  - Check MonRgLoad event avg_drive_usage_percentage
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3799,8 +4000,9 @@ SqlSkills:
   Topic: SOPCL00193-CloudLifter-High-disk-usage-detection
   Source: TSG-SQL-MI-Performance/content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/SOPCL00193-CloudLifter-High-disk-usage-detection.ipynb
   Prompts:
-  - MI SOPCL00193-CloudLifter-High-disk-usage-detection
-  - Managed Instance SOPCL00193-CloudLifter-High-disk-usage-detection
+  - MI resource usage analysis by node
+  - MonRgLoad event drive_name ClusterName
+  - Check MonRgLoad event drive_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3813,8 +4015,9 @@ SqlSkills:
   Topic: SOPCL00193-CloudLifter-High-disk-usage-detection
   Source: TSG-SQL-MI-Performance/content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/SOPCL00193-CloudLifter-High-disk-usage-detection.ipynb
   Prompts:
-  - MI SOPCL00193-CloudLifter-High-disk-usage-detection
-  - Managed Instance SOPCL00193-CloudLifter-High-disk-usage-detection
+  - MI tempdb usage analysis by node
+  - MonDmIoVirtualFileStats TIMESTAMP ClusterName NodeName
+  - Check MonDmIoVirtualFileStats ClusterName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3826,8 +4029,9 @@ SqlSkills:
   Topic: TSGCL0144-Latch-timeouts-on-GP-instance
   Source: TSG-SQL-MI-Performance/content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/TSGCL0144-Latch-timeouts-on-GP-instance.ipynb
   Prompts:
-  - MI TSGCL0144-Latch-timeouts-on-GP-instance
-  - Managed Instance TSGCL0144-Latch-timeouts-on-GP-instance
+  - MI restore request status
+  - MonSQLSystemHealth error_id process_id TIMESTAMP
+  - Check MonSQLSystemHealth error_id process_id
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3838,8 +4042,9 @@ SqlSkills:
   Topic: TSGCL0144-Latch-timeouts-on-GP-instance
   Source: TSG-SQL-MI-Performance/content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/TSGCL0144-Latch-timeouts-on-GP-instance.ipynb
   Prompts:
-  - MI TSGCL0144-Latch-timeouts-on-GP-instance
-  - Managed Instance TSGCL0144-Latch-timeouts-on-GP-instance
+  - MI restore request status by database
+  - MonAnalyticsDBSnapshot service_level_objective AppName
+  - Check MonAnalyticsDBSnapshot service_level_objective AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3853,8 +4058,9 @@ SqlSkills:
   Topic: TSGCL0144-Latch-timeouts-on-GP-instance
   Source: TSG-SQL-MI-Performance/content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/TSGCL0144-Latch-timeouts-on-GP-instance.ipynb
   Prompts:
-  - MI TSGCL0144-Latch-timeouts-on-GP-instance
-  - Managed Instance TSGCL0144-Latch-timeouts-on-GP-instance
+  - MI storage usage and size
+  - MonSQLXStore AppName file_path
+  - Check MonSQLXStore AppName file_path
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3866,8 +4072,9 @@ SqlSkills:
   Topic: TSGCL0144-Latch-timeouts-on-GP-instance
   Source: TSG-SQL-MI-Performance/content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/TSGCL0144-Latch-timeouts-on-GP-instance.ipynb
   Prompts:
-  - MI TSGCL0144-Latch-timeouts-on-GP-instance
-  - Managed Instance TSGCL0144-Latch-timeouts-on-GP-instance
+  - MI storage usage and size
+  - MonSQLXStore AppName file_path event
+  - Check MonSQLXStore AppName file_path
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3879,8 +4086,9 @@ SqlSkills:
   Topic: TSGCL0144-Latch-timeouts-on-GP-instance
   Source: TSG-SQL-MI-Performance/content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/TSGCL0144-Latch-timeouts-on-GP-instance.ipynb
   Prompts:
-  - MI TSGCL0144-Latch-timeouts-on-GP-instance
-  - Managed Instance TSGCL0144-Latch-timeouts-on-GP-instance
+  - MI storage usage and size by server
+  - MonSQLXStoreIOStats LogicalServerName event file_path
+  - Check MonSQLXStoreIOStats event file_path
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3892,8 +4100,9 @@ SqlSkills:
   Topic: TSGCL0144-Latch-timeouts-on-GP-instance
   Source: TSG-SQL-MI-Performance/content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/TSGCL0144-Latch-timeouts-on-GP-instance.ipynb
   Prompts:
-  - MI TSGCL0144-Latch-timeouts-on-GP-instance
-  - Managed Instance TSGCL0144-Latch-timeouts-on-GP-instance
+  - MI restore request status
+  - MonDmIoVirtualFileStats database_id type_desc db_name
+  - Check MonDmIoVirtualFileStats database_id type_desc
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3905,8 +4114,9 @@ SqlSkills:
   Topic: TSGCL0144-Latch-timeouts-on-GP-instance
   Source: TSG-SQL-MI-Performance/content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/TSGCL0144-Latch-timeouts-on-GP-instance.ipynb
   Prompts:
-  - MI TSGCL0144-Latch-timeouts-on-GP-instance
-  - Managed Instance TSGCL0144-Latch-timeouts-on-GP-instance
+  - MI resource usage analysis by server
+  - MonDmRealTimeResourceStats LogicalServerName event
+  - Check MonDmRealTimeResourceStats event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3920,8 +4130,9 @@ SqlSkills:
   Topic: TSGCL0144-Latch-timeouts-on-GP-instance
   Source: TSG-SQL-MI-Performance/content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/TSGCL0144-Latch-timeouts-on-GP-instance.ipynb
   Prompts:
-  - MI TSGCL0144-Latch-timeouts-on-GP-instance
-  - Managed Instance TSGCL0144-Latch-timeouts-on-GP-instance
+  - MI backup status by backup type by database
+  - MonBackup package event_type backup_type Log
+  - Check package Log
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3934,8 +4145,9 @@ SqlSkills:
   Topic: TSGCL0144-Latch-timeouts-on-GP-instance
   Source: TSG-SQL-MI-Performance/content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/TSGCL0144-Latch-timeouts-on-GP-instance.ipynb
   Prompts:
-  - MI TSGCL0144-Latch-timeouts-on-GP-instance
-  - Managed Instance TSGCL0144-Latch-timeouts-on-GP-instance
+  - MI backup history and status by server
+  - MonSqlRgHistory LogicalServerName event pool_name
+  - Check MonSqlRgHistory event pool_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3947,8 +4159,9 @@ SqlSkills:
   Topic: TSGCL0156-SVM-Network-Throughput-Saturation
   Source: TSG-SQL-MI-Performance/content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/TSGCL0156-SVM-Network-Throughput-Saturation.ipynb
   Prompts:
-  - MI TSGCL0156-SVM-Network-Throughput-Saturation
-  - Managed Instance TSGCL0156-SVM-Network-Throughput-Saturation
+  - MI connectivity and networking by server
+  - MonManagedInstanceResourceStats TIMESTAMP ClusterName
+  - Check MonManagedInstanceResourceStats ClusterName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3966,8 +4179,9 @@ SqlSkills:
   Topic: TSGCL0156-SVM-Network-Throughput-Saturation
   Source: TSG-SQL-MI-Performance/content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/TSGCL0156-SVM-Network-Throughput-Saturation.ipynb
   Prompts:
-  - MI TSGCL0156-SVM-Network-Throughput-Saturation
-  - Managed Instance TSGCL0156-SVM-Network-Throughput-Saturation
+  - MI connectivity and networking by server
+  - MonDmRealTimeResourceStats LogicalServerName CounterName
+  - Check MonDmRealTimeResourceStats CounterName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3981,8 +4195,9 @@ SqlSkills:
   Topic: TSGCL0156-SVM-Network-Throughput-Saturation
   Source: TSG-SQL-MI-Performance/content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/TSGCL0156-SVM-Network-Throughput-Saturation.ipynb
   Prompts:
-  - MI TSGCL0156-SVM-Network-Throughput-Saturation
-  - Managed Instance TSGCL0156-SVM-Network-Throughput-Saturation
+  - MI connectivity and networking by database
+  - MonBackup TIMESTAMP LogicalServerName package Full
+  - Check TIMESTAMP Full
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3996,8 +4211,9 @@ SqlSkills:
   Topic: TSGCL0156-SVM-Network-Throughput-Saturation
   Source: TSG-SQL-MI-Performance/content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/TSGCL0156-SVM-Network-Throughput-Saturation.ipynb
   Prompts:
-  - MI TSGCL0156-SVM-Network-Throughput-Saturation
-  - Managed Instance TSGCL0156-SVM-Network-Throughput-Saturation
+  - MI connectivity and networking by server
+  - MonSqlRgHistory LogicalServerName event read_throughput
+  - Check MonSqlRgHistory event read_throughput
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4010,8 +4226,9 @@ SqlSkills:
   Topic: TSGCL0156-SVM-Network-Throughput-Saturation
   Source: TSG-SQL-MI-Performance/content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/TSGCL0156-SVM-Network-Throughput-Saturation.ipynb
   Prompts:
-  - MI TSGCL0156-SVM-Network-Throughput-Saturation
-  - Managed Instance TSGCL0156-SVM-Network-Throughput-Saturation
+  - MI connectivity and networking by server
+  - MonSQLXStoreIOStats LogicalServerName event file_path
+  - Check MonSQLXStoreIOStats event file_path
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4025,8 +4242,9 @@ SqlSkills:
   Topic: TSGCL0156-SVM-Network-Throughput-Saturation
   Source: TSG-SQL-MI-Performance/content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/TSGCL0156-SVM-Network-Throughput-Saturation.ipynb
   Prompts:
-  - MI TSGCL0156-SVM-Network-Throughput-Saturation
-  - Managed Instance TSGCL0156-SVM-Network-Throughput-Saturation
+  - MI connectivity and networking by server
+  - MonDmIoVirtualFileStats TIMESTAMP LogicalServerName
+  - Check MonDmIoVirtualFileStats type_desc DatabaseSizeUsedMB
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4039,8 +4257,9 @@ SqlSkills:
   Topic: TSGCL0156-SVM-Network-Throughput-Saturation
   Source: TSG-SQL-MI-Performance/content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/TSGCL0156-SVM-Network-Throughput-Saturation.ipynb
   Prompts:
-  - MI TSGCL0156-SVM-Network-Throughput-Saturation
-  - Managed Instance TSGCL0156-SVM-Network-Throughput-Saturation
+  - MI connectivity and networking by server
+  - MonDmIoVirtualFileStats TIMESTAMP LogicalServerName
+  - Check MonDmIoVirtualFileStats type_desc LogSizeUsedMB
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4053,8 +4272,9 @@ SqlSkills:
   Topic: TSGCL0156-SVM-Network-Throughput-Saturation
   Source: TSG-SQL-MI-Performance/content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/TSGCL0156-SVM-Network-Throughput-Saturation.ipynb
   Prompts:
-  - MI TSGCL0156-SVM-Network-Throughput-Saturation
-  - Managed Instance TSGCL0156-SVM-Network-Throughput-Saturation
+  - MI connectivity and networking by server
+  - MonManagedInstanceResourceStats LogicalServerName
+  - Check MonManagedInstanceResourceStats storage_space_used_mb
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4066,8 +4286,9 @@ SqlSkills:
   Topic: TSGCL0167-CloudLifter-Latch-timeout
   Source: TSG-SQL-MI-Performance/content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/TSGCL0167-CloudLifter-Latch-timeout.ipynb
   Prompts:
-  - MI TSGCL0167-CloudLifter-Latch-timeout
-  - Managed Instance TSGCL0167-CloudLifter-Latch-timeout
+  - MI restore request status by server
+  - MonSQLSystemHealth TIMESTAMP AppTypeName error_id
+  - Check MonSQLSystemHealth AppTypeName error_id
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4078,8 +4299,9 @@ SqlSkills:
   Topic: TSGCL0167-CloudLifter-Latch-timeout
   Source: TSG-SQL-MI-Performance/content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/TSGCL0167-CloudLifter-Latch-timeout.ipynb
   Prompts:
-  - MI TSGCL0167-CloudLifter-Latch-timeout
-  - Managed Instance TSGCL0167-CloudLifter-Latch-timeout
+  - MI storage usage and size by server
+  - MonSQLXStore TIMESTAMP LogicalServerName file_path
+  - Check MonSQLXStore file_path event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4092,8 +4314,9 @@ SqlSkills:
   Topic: TSGCL0167-CloudLifter-Latch-timeout
   Source: TSG-SQL-MI-Performance/content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/TSGCL0167-CloudLifter-Latch-timeout.ipynb
   Prompts:
-  - MI TSGCL0167-CloudLifter-Latch-timeout
-  - Managed Instance TSGCL0167-CloudLifter-Latch-timeout
+  - MI storage usage and size by server
+  - MonSQLXStore TIMESTAMP LogicalServerName file_path
+  - Check MonSQLXStore file_path event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4106,8 +4329,9 @@ SqlSkills:
   Topic: TSGCL0167-CloudLifter-Latch-timeout
   Source: TSG-SQL-MI-Performance/content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/TSGCL0167-CloudLifter-Latch-timeout.ipynb
   Prompts:
-  - MI TSGCL0167-CloudLifter-Latch-timeout
-  - Managed Instance TSGCL0167-CloudLifter-Latch-timeout
+  - MI storage usage and size
+  - MonSQLXStoreIOStats event file_path IOPS_W
+  - Check MonSQLXStoreIOStats event file_path
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4122,8 +4346,9 @@ SqlSkills:
   Topic: TSGCL0167-CloudLifter-Latch-timeout
   Source: TSG-SQL-MI-Performance/content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/TSGCL0167-CloudLifter-Latch-timeout.ipynb
   Prompts:
-  - MI TSGCL0167-CloudLifter-Latch-timeout
-  - Managed Instance TSGCL0167-CloudLifter-Latch-timeout
+  - MI resource usage analysis by server
+  - MonSqlRgHistory TIMESTAMP AppTypeName LogicalServerName
+  - Check MonSqlRgHistory AppTypeName event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4136,8 +4361,9 @@ SqlSkills:
   Topic: TSGCL0167-CloudLifter-Latch-timeout
   Source: TSG-SQL-MI-Performance/content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/TSGCL0167-CloudLifter-Latch-timeout.ipynb
   Prompts:
-  - MI TSGCL0167-CloudLifter-Latch-timeout
-  - Managed Instance TSGCL0167-CloudLifter-Latch-timeout
+  - MI resource usage analysis by server
+  - MonSqlRgHistory TIMESTAMP AppTypeName LogicalServerName
+  - Check MonSqlRgHistory AppTypeName event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4150,8 +4376,9 @@ SqlSkills:
   Topic: TSGCL0258-High-disk-usage-due-to-stale-tempdb-file
   Source: TSG-SQL-MI-Performance/content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/TSGCL0258-High-disk-usage-due-to-stale-tempdb-file.ipynb
   Prompts:
-  - MI TSGCL0258-High-disk-usage-due-to-stale-tempdb-file
-  - Managed Instance TSGCL0258-High-disk-usage-due-to-stale-tempdb-file
+  - MI tempdb usage analysis by node
+  - MonRgManager TIMESTAMP ClusterName NodeName
+  - Check MonRgManager ClusterName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4164,8 +4391,9 @@ SqlSkills:
   Topic: TSGCL0258-High-disk-usage-due-to-stale-tempdb-file
   Source: TSG-SQL-MI-Performance/content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/TSGCL0258-High-disk-usage-due-to-stale-tempdb-file.ipynb
   Prompts:
-  - MI TSGCL0258-High-disk-usage-due-to-stale-tempdb-file
-  - Managed Instance TSGCL0258-High-disk-usage-due-to-stale-tempdb-file
+  - MI tempdb usage analysis by node
+  - MonRgManager TIMESTAMP ClusterName NodeName
+  - Check MonRgManager ClusterName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4179,8 +4407,9 @@ SqlSkills:
   Topic: TSGCL0258-High-disk-usage-due-to-stale-tempdb-file
   Source: TSG-SQL-MI-Performance/content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/TSGCL0258-High-disk-usage-due-to-stale-tempdb-file.ipynb
   Prompts:
-  - MI TSGCL0258-High-disk-usage-due-to-stale-tempdb-file
-  - Managed Instance TSGCL0258-High-disk-usage-due-to-stale-tempdb-file
+  - MI tempdb usage analysis by server
+  - MonCounterFiveMinute usage_treshold appFolderCount
+  - Check MonCounterFiveMinute usage_treshold appFolderCount
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4391,8 +4620,9 @@ SqlSkills:
   Topic: TSGCL0270-GP-Log-Rates-Mitigation-options-_MIPerf2
   Source: TSG-SQL-MI-Performance/content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/TSGCL0270-GP-Log-Rates-Mitigation-options-_MIPerf2.ipynb
   Prompts:
-  - MI TSGCL0270-GP-Log-Rates-Mitigation-options-_MIPerf2
-  - Managed Instance TSGCL0270-GP-Log-Rates-Mitigation-options-_MIPerf2
+  - MI backup history and status by server
+  - MonSQLXStoreIOStats event LogicalServerName TIMESTAMP
+  - Check MonSQLXStoreIOStats event file_path
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4406,8 +4636,9 @@ SqlSkills:
   Topic: TSGCL0270-GP-Log-Rates-Mitigation-options-_MIPerf2
   Source: TSG-SQL-MI-Performance/content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/TSGCL0270-GP-Log-Rates-Mitigation-options-_MIPerf2.ipynb
   Prompts:
-  - MI TSGCL0270-GP-Log-Rates-Mitigation-options-_MIPerf2
-  - Managed Instance TSGCL0270-GP-Log-Rates-Mitigation-options-_MIPerf2
+  - MI backup status and duration by server
+  - MonBackup LogicalServerName TIMESTAMP event
+  - Check MonBackup event event_type
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4421,8 +4652,9 @@ SqlSkills:
   Topic: TSGCL0270-GP-Log-Rates-Mitigation-options-_MIPerf2
   Source: TSG-SQL-MI-Performance/content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/TSGCL0270-GP-Log-Rates-Mitigation-options-_MIPerf2.ipynb
   Prompts:
-  - MI TSGCL0270-GP-Log-Rates-Mitigation-options-_MIPerf2
-  - Managed Instance TSGCL0270-GP-Log-Rates-Mitigation-options-_MIPerf2
+  - MI wait stats analysis by server
+  - MonSQLXStoreIOStats event LogicalServerName TIMESTAMP
+  - Check MonSQLXStoreIOStats event file_path
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4436,8 +4668,9 @@ SqlSkills:
   Topic: TSGCL0271-Tempdb-file-layout-customization-issues
   Source: TSG-SQL-MI-Performance/content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/TSGCL0271-Tempdb-file-layout-customization-issues.ipynb
   Prompts:
-  - MI TSGCL0271-Tempdb-file-layout-customization-issues
-  - Managed Instance TSGCL0271-Tempdb-file-layout-customization-issues
+  - MI tempdb usage analysis
+  - MonManagementOperations operation_type operation_parameters
+  - Check MonManagementOperations operation_type
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4449,8 +4682,9 @@ SqlSkills:
   Topic: TSGCLHE003-Shared_Disk_Owner_Node_Down
   Source: TSG-SQL-MI-Performance/content/Hermes/TSGCLHE003-Shared_Disk_Owner_Node_Down.md
   Prompts:
-  - MI TSGCLHE003-Shared_Disk_Owner_Node_Down
-  - Managed Instance TSGCLHE003-Shared_Disk_Owner_Node_Down
+  - MI resource usage analysis
+  - MonRgManager TIMESTAMP ClusterName NodeRole
+  - Check MonRgManager ClusterName NodeRole
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4479,8 +4713,9 @@ SqlSkills:
   Topic: TSGCLHE004-Broken_Esan_Volume_Group_Endpoint
   Source: TSG-SQL-MI-Performance/content/Hermes/TSGCLHE004-Broken_Esan_Volume_Group_Endpoint.md
   Prompts:
-  - MI TSGCLHE004-Broken_Esan_Volume_Group_Endpoint
-  - Managed Instance TSGCLHE004-Broken_Esan_Volume_Group_Endpoint
+  - MI login and connection errors
+  - MonSQLSystemHealth originalEventTimestamp instance_rg_size
+  - Check MonSQLSystemHealth originalEventTimestamp
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4513,8 +4748,9 @@ SqlSkills:
   Topic: TSGCLHE004-Broken_Esan_Volume_Group_Endpoint
   Source: TSG-SQL-MI-Performance/content/Hermes/TSGCLHE004-Broken_Esan_Volume_Group_Endpoint.md
   Prompts:
-  - MI TSGCLHE004-Broken_Esan_Volume_Group_Endpoint
-  - Managed Instance TSGCLHE004-Broken_Esan_Volume_Group_Endpoint
+  - MI login and connection errors
+  - MonRgManager originalEventTimestamp event message
+  - Check MonRgManager originalEventTimestamp event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4539,8 +4775,9 @@ SqlSkills:
   Topic: TSGCLHE004-Broken_Esan_Volume_Group_Endpoint
   Source: TSG-SQL-MI-Performance/content/Hermes/TSGCLHE004-Broken_Esan_Volume_Group_Endpoint.md
   Prompts:
-  - MI TSGCLHE004-Broken_Esan_Volume_Group_Endpoint
-  - Managed Instance TSGCLHE004-Broken_Esan_Volume_Group_Endpoint
+  - MI login and connection errors
+  - MonRgManager originalEventTimestamp event message
+  - Check MonRgManager originalEventTimestamp event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4563,8 +4800,9 @@ SqlSkills:
   Topic: TSGCLHE004-Broken_Esan_Volume_Group_Endpoint
   Source: TSG-SQL-MI-Performance/content/Hermes/TSGCLHE004-Broken_Esan_Volume_Group_Endpoint.md
   Prompts:
-  - MI TSGCLHE004-Broken_Esan_Volume_Group_Endpoint
-  - Managed Instance TSGCLHE004-Broken_Esan_Volume_Group_Endpoint
+  - MI login and connection errors
+  - Unknown FailedConnectCnt
+  - Check Unknown FailedConnectCnt
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4577,8 +4815,9 @@ SqlSkills:
   Topic: TSGCLHE004-Broken_Esan_Volume_Group_Endpoint
   Source: TSG-SQL-MI-Performance/content/Hermes/TSGCLHE004-Broken_Esan_Volume_Group_Endpoint.md
   Prompts:
-  - MI TSGCLHE004-Broken_Esan_Volume_Group_Endpoint
-  - Managed Instance TSGCLHE004-Broken_Esan_Volume_Group_Endpoint
+  - MI login and connection errors
+  - Unknown SuccessConnectTs
+  - Check Unknown SuccessConnectTs
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4595,8 +4834,9 @@ SqlSkills:
   Topic: TSGCLHE004-Broken_Esan_Volume_Group_Endpoint
   Source: TSG-SQL-MI-Performance/content/Hermes/TSGCLHE004-Broken_Esan_Volume_Group_Endpoint.md
   Prompts:
-  - MI TSGCLHE004-Broken_Esan_Volume_Group_Endpoint
-  - Managed Instance TSGCLHE004-Broken_Esan_Volume_Group_Endpoint
+  - MI connectivity and networking
+  - Unknown
+  - Investigate connectivity errors
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4609,8 +4849,9 @@ SqlSkills:
   Topic: TSGCLHE005-Stuck_Database_Drop_Hermes_Drive_Path_Mismatch
   Source: TSG-SQL-MI-Performance/content/Hermes/TSGCLHE005-Stuck_Database_Drop_Hermes_Drive_Path_Mismatch.md
   Prompts:
-  - MI TSGCLHE005-Stuck_Database_Drop_Hermes_Drive_Path_Mismatch
-  - Managed Instance TSGCLHE005-Stuck_Database_Drop_Hermes_Drive_Path_Mismatch
+  - MI tsgclhe005-stuck_database_drop_hermes_drive_path_mismatch
+  - MonManagedInstanceInfo TIMESTAMP logical_server_name
+  - Check MonManagedInstanceInfo ClusterName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4627,8 +4868,9 @@ SqlSkills:
   Topic: TSGCLHE005-Stuck_Database_Drop_Hermes_Drive_Path_Mismatch
   Source: TSG-SQL-MI-Performance/content/Hermes/TSGCLHE005-Stuck_Database_Drop_Hermes_Drive_Path_Mismatch.md
   Prompts:
-  - MI TSGCLHE005-Stuck_Database_Drop_Hermes_Drive_Path_Mismatch
-  - Managed Instance TSGCLHE005-Stuck_Database_Drop_Hermes_Drive_Path_Mismatch
+  - MI connectivity and networking by node
+  - MonNodeAgentEvents TIMESTAMP NodeName message
+  - Check MonNodeAgentEvents NodeName message
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4649,8 +4891,9 @@ SqlSkills:
   Topic: TSGCLHE005-Stuck_Database_Drop_Hermes_Drive_Path_Mismatch
   Source: TSG-SQL-MI-Performance/content/Hermes/TSGCLHE005-Stuck_Database_Drop_Hermes_Drive_Path_Mismatch.md
   Prompts:
-  - MI TSGCLHE005-Stuck_Database_Drop_Hermes_Drive_Path_Mismatch
-  - Managed Instance TSGCLHE005-Stuck_Database_Drop_Hermes_Drive_Path_Mismatch
+  - MI restore request status by node
+  - MonCounterOneMinute ClusterName NodeName CounterName
+  - Check MonCounterOneMinute ClusterName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4679,8 +4922,9 @@ SqlSkills:
   Topic: TSGCLHE005-Stuck_Database_Drop_Hermes_Drive_Path_Mismatch
   Source: TSG-SQL-MI-Performance/content/Hermes/TSGCLHE005-Stuck_Database_Drop_Hermes_Drive_Path_Mismatch.md
   Prompts:
-  - MI TSGCLHE005-Stuck_Database_Drop_Hermes_Drive_Path_Mismatch
-  - Managed Instance TSGCLHE005-Stuck_Database_Drop_Hermes_Drive_Path_Mismatch
+  - MI wait stats analysis
+  - MonSqlRgHistory TIMESTAMP AppName event
+  - Check MonSqlRgHistory AppName event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4707,8 +4951,8 @@ SqlSkills:
   Topic: TSG-Apply_config_overrides_to_many_(spartan)_instances
   Source: TSG-SQL-MI-Performance/content/sql_cloud_lifter_notebook/TSG-Apply_config_overrides_to_many_(spartan)_instances.md
   Prompts:
-  - MI TSG-Apply_config_overrides_to_many_(spartan)_instances
-  - Managed Instance TSG-Apply_config_overrides_to_many_(spartan)_instances
+  - MI tsg-apply_config_overrides_to_many_(spartan)_instances
+  - Unknown
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4729,8 +4973,9 @@ SqlSkills:
   Topic: TSG-Apply_config_overrides_to_many_(spartan)_instances
   Source: TSG-SQL-MI-Performance/content/sql_cloud_lifter_notebook/TSG-Apply_config_overrides_to_many_(spartan)_instances.md
   Prompts:
-  - MI TSG-Apply_config_overrides_to_many_(spartan)_instances
-  - Managed Instance TSG-Apply_config_overrides_to_many_(spartan)_instances
+  - MI resource usage analysis
+  - MonDmRealTimeResourceStats
+  - Investigate resource pressure
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4743,8 +4988,9 @@ SqlSkills:
   Topic: TSG-Increase-SQL-MI-reserved-storage-on-the-fly
   Source: TSG-SQL-MI-Performance/content/sql_cloud_lifter_notebook/TSG-Increase-SQL-MI-reserved-storage-on-the-fly.md
   Prompts:
-  - MI TSG-Increase-SQL-MI-reserved-storage-on-the-fly
-  - Managed Instance TSG-Increase-SQL-MI-reserved-storage-on-the-fly
+  - MI storage usage and size by server
+  - MonManagedInstanceResourceStats TIMESTAMP LogicalServerName
+  - Check MonManagedInstanceResourceStats storage_space_used_mb
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4763,8 +5009,9 @@ SqlSkills:
   Topic: TSG-Increase-SQL-MI-reserved-storage-on-the-fly
   Source: TSG-SQL-MI-Performance/content/sql_cloud_lifter_notebook/TSG-Increase-SQL-MI-reserved-storage-on-the-fly.md
   Prompts:
-  - MI TSG-Increase-SQL-MI-reserved-storage-on-the-fly
-  - Managed Instance TSG-Increase-SQL-MI-reserved-storage-on-the-fly
+  - MI storage usage and size
+  - MonManagedServers name edition TIMESTAMP
+  - Check MonManagedServers name edition
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4781,8 +5028,9 @@ SqlSkills:
   Topic: TSG-Increase-SQL-MI-reserved-storage-on-the-fly
   Source: TSG-SQL-MI-Performance/content/sql_cloud_lifter_notebook/TSG-Increase-SQL-MI-reserved-storage-on-the-fly.md
   Prompts:
-  - MI TSG-Increase-SQL-MI-reserved-storage-on-the-fly
-  - Managed Instance TSG-Increase-SQL-MI-reserved-storage-on-the-fly
+  - MI storage usage and size by node
+  - MonCounterOneMinute TIMESTAMP ClusterName NodeName
+  - Check MonCounterOneMinute ClusterName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4805,8 +5053,9 @@ SqlSkills:
   Topic: TSG-Increase-SQL-MI-reserved-storage-on-the-fly
   Source: TSG-SQL-MI-Performance/content/sql_cloud_lifter_notebook/TSG-Increase-SQL-MI-reserved-storage-on-the-fly.md
   Prompts:
-  - MI TSG-Increase-SQL-MI-reserved-storage-on-the-fly
-  - Managed Instance TSG-Increase-SQL-MI-reserved-storage-on-the-fly
+  - MI storage usage and size by server
+  - MonSqlRgHistory TIMESTAMP LogicalServerName event
+  - Check MonSqlRgHistory event file_path
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4829,8 +5078,9 @@ SqlSkills:
   Topic: TSG-Increase-SQL-MI-reserved-storage-on-the-fly
   Source: TSG-SQL-MI-Performance/content/sql_cloud_lifter_notebook/TSG-Increase-SQL-MI-reserved-storage-on-the-fly.md
   Prompts:
-  - MI TSG-Increase-SQL-MI-reserved-storage-on-the-fly
-  - Managed Instance TSG-Increase-SQL-MI-reserved-storage-on-the-fly
+  - MI storage usage and size by node
+  - MonCounterOneMinute TIMESTAMP ClusterName NodeName
+  - Check MonCounterOneMinute ClusterName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4853,8 +5103,9 @@ SqlSkills:
   Topic: TSG-Increase-SQL-MI-reserved-storage-on-the-fly
   Source: TSG-SQL-MI-Performance/content/sql_cloud_lifter_notebook/TSG-Increase-SQL-MI-reserved-storage-on-the-fly.md
   Prompts:
-  - MI TSG-Increase-SQL-MI-reserved-storage-on-the-fly
-  - Managed Instance TSG-Increase-SQL-MI-reserved-storage-on-the-fly
+  - MI storage usage and size by server
+  - MonManagedInstanceResourceStats TIMESTAMP LogicalServerName
+  - Check MonManagedInstanceResourceStats storage_space_used_mb
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4873,8 +5124,9 @@ SqlSkills:
   Topic: TSG-PLATVLDT-ErrorNode-DiskWatchdog-FullDisk
   Source: TSG-SQL-MI-Performance/content/sql_cloud_lifter_notebook/TSG-PLATVLDT-ErrorNode-DiskWatchdog-FullDisk.md
   Prompts:
-  - MI TSG-PLATVLDT-ErrorNode-DiskWatchdog-FullDisk
-  - Managed Instance TSG-PLATVLDT-ErrorNode-DiskWatchdog-FullDisk
+  - MI resource usage analysis by node
+  - MonRgLoad ClusterName NodeName event
+  - Check MonRgLoad ClusterName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4909,8 +5161,9 @@ SqlSkills:
   Topic: TSG-PLATVLDT-ErrorNode-DiskWatchdog-FullDisk
   Source: TSG-SQL-MI-Performance/content/sql_cloud_lifter_notebook/TSG-PLATVLDT-ErrorNode-DiskWatchdog-FullDisk.md
   Prompts:
-  - MI TSG-PLATVLDT-ErrorNode-DiskWatchdog-FullDisk
-  - Managed Instance TSG-PLATVLDT-ErrorNode-DiskWatchdog-FullDisk
+  - MI resource usage analysis by node
+  - MonRgLoad ClusterName NodeName event
+  - Check MonRgLoad ClusterName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4947,8 +5200,9 @@ SqlSkills:
   Topic: TSG-PLATVLDT-ErrorNode-DiskWatchdog-FullDisk
   Source: TSG-SQL-MI-Performance/content/sql_cloud_lifter_notebook/TSG-PLATVLDT-ErrorNode-DiskWatchdog-FullDisk.md
   Prompts:
-  - MI TSG-PLATVLDT-ErrorNode-DiskWatchdog-FullDisk
-  - Managed Instance TSG-PLATVLDT-ErrorNode-DiskWatchdog-FullDisk
+  - MI resource usage analysis by node
+  - MonRgLoad ClusterName NodeName event
+  - Check MonRgLoad ClusterName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -4991,8 +5245,9 @@ SqlSkills:
   Topic: TSG-PLATVLDT-ErrorNode-DiskWatchdog-FullDisk
   Source: TSG-SQL-MI-Performance/content/sql_cloud_lifter_notebook/TSG-PLATVLDT-ErrorNode-DiskWatchdog-FullDisk.md
   Prompts:
-  - MI TSG-PLATVLDT-ErrorNode-DiskWatchdog-FullDisk
-  - Managed Instance TSG-PLATVLDT-ErrorNode-DiskWatchdog-FullDisk
+  - MI restore request status by node
+  - MonSQLSystemHealth ClusterName NodeName AppName
+  - Check MonSQLSystemHealth ClusterName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5031,8 +5286,9 @@ SqlSkills:
   Topic: TSG-PLATVLDT-ErrorNode-DiskWatchdog-FullDisk
   Source: TSG-SQL-MI-Performance/content/sql_cloud_lifter_notebook/TSG-PLATVLDT-ErrorNode-DiskWatchdog-FullDisk.md
   Prompts:
-  - MI TSG-PLATVLDT-ErrorNode-DiskWatchdog-FullDisk
-  - Managed Instance TSG-PLATVLDT-ErrorNode-DiskWatchdog-FullDisk
+  - MI resource usage analysis by node
+  - MonSqlRgHistory ClusterName NodeName event
+  - Check MonSqlRgHistory ClusterName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5065,8 +5321,9 @@ SqlSkills:
   Topic: TSG-PLATVLDT-ErrorNode-DiskWatchdog-FullDisk
   Source: TSG-SQL-MI-Performance/content/sql_cloud_lifter_notebook/TSG-PLATVLDT-ErrorNode-DiskWatchdog-FullDisk.md
   Prompts:
-  - MI TSG-PLATVLDT-ErrorNode-DiskWatchdog-FullDisk
-  - Managed Instance TSG-PLATVLDT-ErrorNode-DiskWatchdog-FullDisk
+  - MI resource usage analysis by node
+  - MonSqlRgHistory ClusterName NodeName event
+  - Check MonSqlRgHistory ClusterName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5099,8 +5356,9 @@ SqlSkills:
   Topic: TSG-Shrink_a_database_file
   Source: TSG-SQL-MI-Performance/content/sql_cloud_lifter_notebook/TSG-Shrink_a_database_file.md
   Prompts:
-  - MI TSG-Shrink_a_database_file
-  - Managed Instance TSG-Shrink_a_database_file
+  - MI wait stats analysis
+  - MonSqlRgHistory
+  - Investigate wait bottlenecks
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5113,8 +5371,9 @@ SqlSkills:
   Topic: TSG-Shrink_files_for_all_Elastic_Pool_databases
   Source: TSG-SQL-MI-Performance/content/sql_cloud_lifter_notebook/TSG-Shrink_files_for_all_Elastic_Pool_databases.md
   Prompts:
-  - MI TSG-Shrink_files_for_all_Elastic_Pool_databases
-  - Managed Instance TSG-Shrink_files_for_all_Elastic_Pool_databases
+  - MI resource usage analysis
+  - MonSqlRgHistory
+  - Investigate resource pressure
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5131,8 +5390,9 @@ SqlSkills:
   Topic: TSGCL0279-Hermes-Managed-server-encountered-a-stuck-upsert-operation
   Source: TSG-SQL-MI-Performance/content/sql_cloud_lifter_notebook/TSGCL0279-Hermes-Managed-server-encountered-a-stuck-upsert-operation.md
   Prompts:
-  - MI TSGCL0279-Hermes-Managed-server-encountered-a-stuck-upsert-operation
-  - Managed Instance TSGCL0279-Hermes-Managed-server-encountered-a-stuck-upsert-operation
+  - MI restore request status
+  - MonManagement TIMESTAMP event operation_type
+  - Check MonManagement event operation_type
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5153,8 +5413,9 @@ SqlSkills:
   Topic: TSGCL0279-Hermes-Managed-server-encountered-a-stuck-upsert-operation
   Source: TSG-SQL-MI-Performance/content/sql_cloud_lifter_notebook/TSGCL0279-Hermes-Managed-server-encountered-a-stuck-upsert-operation.md
   Prompts:
-  - MI TSGCL0279-Hermes-Managed-server-encountered-a-stuck-upsert-operation
-  - Managed Instance TSGCL0279-Hermes-Managed-server-encountered-a-stuck-upsert-operation
+  - MI restore request status
+  - MonManagement TIMESTAMP event operation_type
+  - Check MonManagement event operation_type
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5173,8 +5434,9 @@ SqlSkills:
   Topic: TSGCL0279-Hermes-Managed-server-encountered-a-stuck-upsert-operation
   Source: TSG-SQL-MI-Performance/content/sql_cloud_lifter_notebook/TSGCL0279-Hermes-Managed-server-encountered-a-stuck-upsert-operation.md
   Prompts:
-  - MI TSGCL0279-Hermes-Managed-server-encountered-a-stuck-upsert-operation
-  - Managed Instance TSGCL0279-Hermes-Managed-server-encountered-a-stuck-upsert-operation
+  - MI resource usage analysis by node
+  - MonNodeAgentEvents TIMESTAMP ClusterName message
+  - Check MonNodeAgentEvents ClusterName message
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5195,8 +5457,9 @@ SqlSkills:
   Topic: TSGCLPerfScale002_Hekaton_memory_leak_detected
   Source: TSG-SQL-MI-Performance/content/sql_cloud_lifter_notebook/TSGCLPerfScale002_Hekaton_memory_leak_detected.md
   Prompts:
-  - MI TSGCLPerfScale002_Hekaton_memory_leak_detected
-  - Managed Instance TSGCLPerfScale002_Hekaton_memory_leak_detected
+  - MI memory pressure and OOM analysis by server
+  - MonDmRealTimeResourceStats _type LogicalServerName NodeName
+  - Check MonDmRealTimeResourceStats _type NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5238,8 +5501,9 @@ SqlSkills:
   Topic: TSGCLPerfScale002_Hekaton_memory_leak_detected
   Source: TSG-SQL-MI-Performance/content/sql_cloud_lifter_notebook/TSGCLPerfScale002_Hekaton_memory_leak_detected.md
   Prompts:
-  - MI TSGCLPerfScale002_Hekaton_memory_leak_detected
-  - Managed Instance TSGCLPerfScale002_Hekaton_memory_leak_detected
+  - MI memory pressure and OOM analysis by server
+  - MonSqlRgHistory LogicalServerName _name _memory
+  - Check MonSqlRgHistory _name _memory
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -5264,8 +5528,9 @@ SqlSkills:
   Topic: TSGCLPerfScale002_Hekaton_memory_leak_detected
   Source: TSG-SQL-MI-Performance/content/sql_cloud_lifter_notebook/TSGCLPerfScale002_Hekaton_memory_leak_detected.md
   Prompts:
-  - MI TSGCLPerfScale002_Hekaton_memory_leak_detected
-  - Managed Instance TSGCLPerfScale002_Hekaton_memory_leak_detected
+  - MI memory pressure and OOM analysis by server
+  - MonSqlRgHistory LogicalServerName _name _memory
+  - Check MonSqlRgHistory _name _memory
   CustomizedParameters:
   - ServerName
   - DatabaseName

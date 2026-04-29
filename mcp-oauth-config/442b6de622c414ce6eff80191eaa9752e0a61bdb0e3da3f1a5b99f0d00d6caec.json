@@ -1,0 +1,9 @@
+{
+  "serverUrl": "https://sql-dri-copilot-prod.azurewebsites.net/mcp",
+  "authorizationServerUrl": "https://login.microsoftonline.com/72f988bf-86f1-41af-91ab-2d7cd011db47/v2.0",
+  "clientId": "aebc6443-996d-45c2-90f0-388ff96faa56",
+  "redirectUri": "http://127.0.0.1:50666/",
+  "resourceUrl": "https://sql-dri-copilot-prod.azurewebsites.net/mcp",
+  "issuedAt": 1777453178,
+  "isStatic": false
+}

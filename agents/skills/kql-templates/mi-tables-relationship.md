@@ -123,6 +123,66 @@ erDiagram
         long execution_count "Exec count"
     }
 
+    MonTranReplTraces {
+        string LogicalServerName FK "MI server"
+        string logical_database_name FK "DB name"
+        string logical_database_guid UK "DB GUID"
+        string AppName "Worker app / dispatcher"
+        string event "Replication event"
+        long agent_id "Replication agent ID"
+    }
+
+    MonLogReaderTraces {
+        string LogicalServerName FK "MI server"
+        string logical_database_name FK "DB name"
+        string logical_database_guid UK "DB GUID"
+        long phase_number "Log-reader phase"
+        string event "Session / phase event"
+        string wait_stats "Wait breakdown"
+    }
+
+    MonCDCTraces {
+        string LogicalServerName FK "MI server"
+        string logical_database_name FK "DB name"
+        string logical_database_guid UK "DB GUID"
+        string physical_database_guid "Physical DB GUID"
+        string event "CDC event"
+        long latency "CDC latency"
+    }
+
+    MonCTTraces {
+        string LogicalServerName FK "MI server"
+        string logical_database_name FK "DB name"
+        string logical_database_guid UK "DB GUID"
+        string physical_database_guid "Physical DB GUID"
+        string event "CT cleanup event"
+        long rows_in_delay "Backlog rows"
+    }
+
+    MonManagedDatabaseInfo {
+        string LogicalServerName FK "MI server"
+        string managed_database_id FK "Managed DB GUID"
+        long sql_database_id "SQL database ID"
+        string collation_name "Database collation"
+        long compatibility_level "Compat level"
+    }
+
+    MonSqlAgent {
+        string LogicalServerName FK "MI server"
+        string AppName "Worker app / SQL Agent host"
+        long resource_id "Resource marker"
+        string message_type "Message severity"
+        string message "Agent output"
+    }
+
+    AlrWinFabHealthDeployedAppEvent {
+        string LogicalServerName FK "MI server"
+        string ApplicationName "Service Fabric app"
+        string HealthState "Health state"
+        string SourceId "Alert source"
+        string Description "Crash / health description"
+    }
+
     %% === Relationships ===
 
     MonManagedServers ||--o{ MonManagedDatabases : "managed_server_id"
@@ -134,15 +194,30 @@ erDiagram
     MonManagedServers ||--o{ MonLogin : "name = logical_server_name"
     MonManagedServers ||--o{ MonManagement : "name ~ LogicalServerName"
     MonManagedServers ||--o{ MonBackup : "name = logical_server_name"
+    MonManagedServers ||--o{ MonTranReplTraces : "name = LogicalServerName"
+    MonManagedServers ||--o{ MonLogReaderTraces : "name = LogicalServerName"
+    MonManagedServers ||--o{ MonCDCTraces : "name = LogicalServerName"
+    MonManagedServers ||--o{ MonCTTraces : "name = LogicalServerName"
+    MonManagedServers ||--o{ MonManagedDatabaseInfo : "name = LogicalServerName"
+    MonManagedServers ||--o{ MonSqlAgent : "name ~ LogicalServerName"
+    MonManagedServers ||--o{ AlrWinFabHealthDeployedAppEvent : "name ~ LogicalServerName"
 
     MonManagedDatabases ||--o{ MonDmRealTimeResourceStats : "managed_database_name = database_name"
     MonManagedDatabases ||--o{ MonDmCloudDatabaseWaitStats : "managed_database_name = database_name"
     MonManagedDatabases ||--o{ MonWiQdsExecStats : "managed_database_name = database_name"
     MonManagedDatabases ||--o{ MonBackup : "managed_database_name = logical_database_name"
+    MonManagedDatabases ||--o{ MonTranReplTraces : "managed_database_name = logical_database_name"
+    MonManagedDatabases ||--o{ MonLogReaderTraces : "managed_database_name = logical_database_name"
+    MonManagedDatabases ||--o{ MonCDCTraces : "managed_database_name = logical_database_name"
+    MonManagedDatabases ||--o{ MonCTTraces : "managed_database_name = logical_database_name"
+    MonManagedDatabases ||--o{ MonManagedDatabaseInfo : "managed_database_id"
     MonManagedDatabases ||--o| MonGeoDRFailoverGroups : "failover_group_id"
 
     MonGeoDRFailoverGroups ||--o{ MonDbSeedTraces : "partner_server_name = LogicalServerName (on secondary)"
     MonAnalyticsDBSnapshot ||--o| MonGeoDRFailoverGroups : "failover_group_id"
+    MonSqlAgent ||--o{ MonTranReplTraces : "AppName = AppName"
+    MonManagedDatabaseInfo ||--o{ MonCDCTraces : "LogicalServerName + DB GUID context"
+    MonManagedDatabaseInfo ||--o{ MonCTTraces : "Managed DB / SQL DB metadata"
 ```
 
 ## Join Key Summary
@@ -166,6 +241,13 @@ All tables connect through the MI server name, but the column name varies:
 | MonDmCloudDatabaseWaitStats | `server_name` | |
 | MonWiQdsExecStats | `server_name` | |
 | MonDbSeedTraces | `LogicalServerName` | Common column |
+| MonTranReplTraces | `LogicalServerName` | Replication agent and dispatcher traces |
+| MonLogReaderTraces | `LogicalServerName` | Log-reader telemetry |
+| MonCDCTraces | `LogicalServerName` | CDC capture telemetry |
+| MonCTTraces | `LogicalServerName` | Change-tracking cleanup telemetry |
+| MonManagedDatabaseInfo | `LogicalServerName` | Metadata snapshot used for collation / DB identity |
+| MonSqlAgent | `LogicalServerName` | SQL Agent worker telemetry; also keyed by `AppName` |
+| AlrWinFabHealthDeployedAppEvent | `LogicalServerName` | Service Fabric app-health alerts |
 
 ### Database Dimension
 | Table | Join Column | Notes |
@@ -178,6 +260,11 @@ All tables connect through the MI server name, but the column name varies:
 | MonWiQdsExecStats | `database_name` | |
 | MonLogin | `database_name` | |
 | AlrSQLErrorsReported | `database_name` | Also has `database_id` |
+| MonTranReplTraces | `logical_database_name` | Also has `logical_database_guid` and `db_id` |
+| MonLogReaderTraces | `logical_database_name` | Also has `logical_database_guid` |
+| MonCDCTraces | `logical_database_name` | Also has `logical_database_guid`, `logical_database_id`, `physical_database_guid` |
+| MonCTTraces | `logical_database_name` | Also has `logical_database_guid`, `database_id`, `physical_database_guid` |
+| MonManagedDatabaseInfo | `managed_database_id` | Best GUID join back to `MonManagedDatabases` |
 
 ### FOG Dimension
 | Table | Join Column | Notes |
@@ -194,6 +281,20 @@ All tables connect through the MI server name, but the column name varies:
 | All tables | `ClusterName` | Tenant ring |
 | MonManagedServers | `physical_instance_name` | SQL instance name |
 | MonManagedServers | `private_cluster_tenant_ring_name` | Maps to ClusterName |
+| MonSqlAgent | `AppName` | SQL Agent process host / worker app |
+| MonTranReplTraces | `AppName` | Dispatcher or replication agent worker |
+| AlrWinFabHealthDeployedAppEvent | `ApplicationName` | Service Fabric application identity |
+
+### Replication-Specific Join Keys
+| Table | Join Keys | Notes |
+|-------|-----------|-------|
+| MonTranReplTraces | `LogicalServerName`, `logical_database_name`, `logical_database_guid`, `AppName`, `agent_id` | Core transactional replication stream; `AppName` links to SQL Agent / worker process context. |
+| MonLogReaderTraces | `LogicalServerName`, `logical_database_name`, `logical_database_guid`, `phase_number` | Best table for phase-by-phase log-reader analysis. |
+| MonCDCTraces | `LogicalServerName`, `logical_database_name`, `logical_database_guid`, `physical_database_guid`, `job_id` | CDC capture / cleanup / error correlation. |
+| MonCTTraces | `LogicalServerName`, `logical_database_name`, `logical_database_guid`, `physical_database_guid`, `cleanup_id` | CT cleanup and backlog analysis. |
+| MonManagedDatabaseInfo | `LogicalServerName`, `managed_database_id`, `sql_database_id` | Metadata bridge for collation, compatibility, and DB identity. |
+| MonSqlAgent | `LogicalServerName`, `AppName`, `resource_id` | Agent host events and job output. |
+| AlrWinFabHealthDeployedAppEvent | `LogicalServerName`, `ApplicationName`, `Description` | Service Fabric health/crash alerts for SQL Agent or worker processes. |
 
 ---
 
@@ -236,4 +337,13 @@ MonLogin (login success/failure, timing, client info)
   → AlrSQLErrorsReported (SQL errors for failed logins)
     → MonGeoDRFailoverGroups (if connecting via FOG endpoint)
       → MonManagedServers (proxy_override, dns_zone)
+```
+
+### 6. Replication / CDC / CT Investigation
+```
+MonTranReplTraces (replication agent / dispatcher symptoms)
+  → MonSqlAgent (agent host restarts, job output, resource_id)
+    → MonLogReaderTraces (repldone / logscan phases, wait_stats)
+      → MonCDCTraces or MonCTTraces (capture / cleanup backlog by database GUID)
+        → MonManagedDatabaseInfo + MonManagedDatabases (managed DB identity, collation, compatibility)
 ```

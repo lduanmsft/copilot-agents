@@ -1,0 +1,629 @@
+SqlSkills:
+- id: MI-replication-1
+  Topic: TSGTRCL00001-Introduction-to-TranRepl-investigation
+  Source: TSG-SQL-MI-TransactionalReplication/TransactionalReplication/TSGTRCL00001-Introduction-to-TranRepl-investigation.md
+  Prompts:
+  - MI transactional replication telemetry for repl distribution status
+  - MonTranReplTraces LogicalServerName event ServerName repl_distribution_status
+  - Troubleshoot transactional replication failures
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonTranReplTraces
+    ExecutedQuery: 'MonTranReplTraces
+
+      | where TIMESTAMP > ago(1h)
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where event == "repl_distribution_status"
+
+      | take 50'
+- id: MI-replication-2
+  Topic: TSGTRCL00022-LogNearFull-LogFull-due-to-REPLICATION-on-MI
+  Source: TSG-SQL-MI-TransactionalReplication/TransactionalReplication/TSGTRCL00022-LogNearFull-LogFull-due-to-REPLICATION-on-MI.md
+  Prompts:
+  - MI database metadata telemetry by LogicalServerName, fileid
+  - MonDatabaseMetadata LogicalServerName fileid table_name sysprufiles
+  - Troubleshoot log full due to replication
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDatabaseMetadata
+    ExecutedQuery: 'MonDatabaseMetadata
+
+      | where table_name contains ''sysprufiles''
+
+      | where LogicalServerName =~ ''{ServerName}''
+
+      | where logical_database_guid contains ''<DATABASE_ID>''
+
+      | where fileid == 2
+
+      | summarize arg_max(PreciseTimeStamp, *) by fileid, pname, lname'
+- id: MI-replication-3
+  Topic: TSGTRCL00022-LogNearFull-LogFull-due-to-REPLICATION-on-MI
+  Source: TSG-SQL-MI-TransactionalReplication/TransactionalReplication/TSGTRCL00022-LogNearFull-LogFull-due-to-REPLICATION-on-MI.md
+  Prompts:
+  - MI SQL system health telemetry by LogicalServerName, message
+  - MonSQLSystemHealth LogicalServerName message sql_instance_name ServerName
+  - Troubleshoot log full due to replication
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where AppName == "<sql_instance_name>"
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where message contains "18805"
+
+      | where TIMESTAMP > ago(1d)
+
+      | project TIMESTAMP, message'
+- id: MI-replication-4
+  Topic: TSGTRCL00022-LogNearFull-LogFull-due-to-REPLICATION-on-MI
+  Source: TSG-SQL-MI-TransactionalReplication/TransactionalReplication/TSGTRCL00022-LogNearFull-LogFull-due-to-REPLICATION-on-MI.md
+  Prompts:
+  - MI CDC capture telemetry trend by LogicalServerName, logical_database_name
+  - MonCDCTraces LogicalServerName logical_database_name latency file_path
+  - Troubleshoot replication latency
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCDCTraces
+    ExecutedQuery: 'MonCDCTraces
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where logical_database_name =~ "{DatabaseName}"
+
+      | where originalEventTimestamp > ago(3d)
+
+      | summarize cdc_latency = max(latency)
+
+      by bin(originalEventTimestamp, 1h)
+
+      | join kind=fullouter (
+
+      MonSQLXStoreIOStats
+
+      | where originalEventTimestamp > ago(3d)
+
+      | where file_path contains "<logical_database_id>" and file_path contains ".ldf"
+
+      | project originalEventTimestamp, total_write_bytes
+
+      | summarize total_log_writes_gb = sum(total_write_bytes / 1024.0 / 1024.0 / 1024.0)
+
+      by bin(originalEventTimestamp, 1h)
+
+      ) on originalEventTimestamp | project-away originalEventTimestamp1
+
+      | render timechart'
+- id: MI-replication-5
+  Topic: TSGTRCL00022-LogNearFull-LogFull-due-to-REPLICATION-on-MI
+  Source: TSG-SQL-MI-TransactionalReplication/TransactionalReplication/TSGTRCL00022-LogNearFull-LogFull-due-to-REPLICATION-on-MI.md
+  Prompts:
+  - MI CDC capture telemetry counts for cdc session
+  - MonCDCTraces LogicalServerName logical_database_name event day
+  - Troubleshoot log full due to replication
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCDCTraces
+    ExecutedQuery: 'MonCDCTraces
+
+      | where TIMESTAMP > ago(7d)
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where logical_database_name =~ "{DatabaseName}"
+
+      | where event == "cdc_session"
+
+      | extend day = bin(TIMESTAMP, 1d)
+
+      | summarize count(), min(TIMESTAMP), max(TIMESTAMP) by day'
+- id: MI-replication-6
+  Topic: TSGTRCL00024-ReplDispatcher-All-pipe-instances-are-busy
+  Source: TSG-SQL-MI-TransactionalReplication/TransactionalReplication/TSGTRCL00024-ReplDispatcher-All-pipe-instances-are-busy.md
+  Prompts:
+  - MI SQL Agent job telemetry by LogicalServerName, Worker
+  - MonSqlAgent LogicalServerName Worker CL message
+  - Troubleshoot replication lag
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlAgent
+    ExecutedQuery: 'MonSqlAgent
+
+      | where TIMESTAMP > ago(1d)
+
+      | where AppTypeName startswith "Worker.CL"
+
+      | where message contains "Failed to set replDispatcher handle: All pipe instances are busy."
+
+      | where LogicalServerName =~ "{ServerName}"'
+- id: MI-replication-7
+  Topic: TSGTRCL00025-Errors-occured-during-Replication-Dispatcher-execution
+  Source: TSG-SQL-MI-TransactionalReplication/TransactionalReplication/TSGTRCL00025-Errors-occured-during-Replication-Dispatcher-execution.md
+  Prompts:
+  - MI transactional replication telemetry for repl dispatcher troubleshoot / ERROR
+  - MonTranReplTraces LogicalServerName event message_type exception_message
+  - Troubleshoot transactional replication issues
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonTranReplTraces
+    ExecutedQuery: 'MonTranReplTraces
+
+      | where AppName == "<ApplicationName>"
+
+      | where (event == "repl_dispatcher_troubleshoot" and message_type == "ERROR") or (event == "repl_dispatcher_error")
+
+      | where exception_message !contains "Pipe is broken." and exception_message !contains "Cannot access a closed pipe" and exception_message !contains "handle
+      has been closed"
+
+      | summarize by LogicalServerName, exception_message'
+- id: MI-replication-8
+  Topic: TSGTRCL00025-Errors-occured-during-Replication-Dispatcher-execution
+  Source: TSG-SQL-MI-TransactionalReplication/TransactionalReplication/TSGTRCL00025-Errors-occured-during-Replication-Dispatcher-execution.md
+  Prompts:
+  - MI transactional replication telemetry by details, ApplicationName
+  - MonTranReplTraces details ApplicationName ReplDispatcherMaximumConcurrentRequests
+  - Troubleshoot transactional replication issues
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonTranReplTraces
+    ExecutedQuery: 'MonTranReplTraces
+
+      | where AppName == "<ApplicationName>"
+
+      | where details contains "ReplDispatcherMaximumConcurrentRequests"
+
+      | project details
+
+      | take 1'
+- id: MI-replication-9
+  Topic: TSGTRCL00025-Errors-occured-during-Replication-Dispatcher-execution
+  Source: TSG-SQL-MI-TransactionalReplication/TransactionalReplication/TSGTRCL00025-Errors-occured-during-Replication-Dispatcher-execution.md
+  Prompts:
+  - MI transactional replication telemetry counts for repl distribution status
+  - MonTranReplTraces LogicalServerName event agent_id ApplicationName
+  - Troubleshoot transactional replication issues
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonTranReplTraces
+    ExecutedQuery: 'MonTranReplTraces
+
+      | where AppName == "<ApplicationName>"
+
+      | where event in ("repl_distribution_status")
+
+      | summarize count() by LogicalServerName, ClusterName, event, agent_id
+
+      | summarize count() by LogicalServerName, ClusterName'
+- id: MI-replication-10
+  Topic: TSGTRCL00025-Errors-occured-during-Replication-Dispatcher-execution
+  Source: TSG-SQL-MI-TransactionalReplication/TransactionalReplication/TSGTRCL00025-Errors-occured-during-Replication-Dispatcher-execution.md
+  Prompts:
+  - MI SQL Agent job telemetry by message, All
+  - MonSqlAgent message All pipe instances
+  - Troubleshoot replication lag
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlAgent
+    ExecutedQuery: 'MonSqlAgent
+
+      | where TIMESTAMP > ago(1d)
+
+      | where message contains "All pipe instances are busy" and message contains "ReplDispatcher"
+
+      | where AppName == "ApplicationName"
+
+      |summarize max(originalEventTimestamp) by ClusterName, NodeName, AppName
+
+      | extend Kill_Sql_Satelite = strcat("Get-FabricNode -NodeClusterName ",ClusterName," -NodeName ",NodeName," | Kill-Process -ProcessName ReplDispatcherHost.exe
+      -ApplicationNameUri fabric:/Worker.CL/",AppName)'
+- id: MI-replication-11
+  Topic: TSGTRCL00026-MSSQL_REPL21100-errors-during-execution-of-distribution-agent
+  Source: TSG-SQL-MI-TransactionalReplication/TransactionalReplication/TSGTRCL00026-MSSQL_REPL21100-errors-during-execution-of-distribution-agent.md
+  Prompts:
+  - MI transactional replication telemetry for error 21100
+  - MonTranReplTraces LogicalServerName error_code ServerName
+  - Troubleshoot transactional replication failures
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonTranReplTraces
+    ExecutedQuery: 'MonTranReplTraces
+
+      | where TIMESTAMP > ago(1h)
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where error_code == 21100
+
+      | count'
+- id: MI-replication-12
+  Topic: TSGTRCL00029-ReplAgentUser
+  Source: TSG-SQL-MI-TransactionalReplication/TransactionalReplication/TSGTRCL00029-ReplAgentUser.md
+  Prompts:
+  - MI SQL Agent job telemetry counts by LogicalServerName, resource_id
+  - MonSqlAgent LogicalServerName resource_id restart_48h
+  - Troubleshoot replication lag
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlAgent
+    ExecutedQuery: 'MonSqlAgent
+
+      | where AppName == "<AppName>"
+
+      | where resource_id == 94
+
+      | where TIMESTAMP > now(-48h)
+
+      | summarize restart_48h = count()-1 by LogicalServerName, AppName, NodeName, ClusterName'
+- id: MI-replication-13
+  Topic: TSGTRCL00029-ReplAgentUser
+  Source: TSG-SQL-MI-TransactionalReplication/TransactionalReplication/TSGTRCL00029-ReplAgentUser.md
+  Prompts:
+  - MI deployed application event alerts counts by Description, cluster_name
+  - AlrWinFabHealthDeployedAppEvent Description cluster_name exited with
+  - Troubleshoot replication lag
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: AlrWinFabHealthDeployedAppEvent
+    ExecutedQuery: 'AlrWinFabHealthDeployedAppEvent
+
+      | where ClusterName contains "<cluster_name>"
+
+      | where Description contains "exited with code 0xC0000374" and Description contains "sqlagent.exe"
+
+      | summarize count() by ApplicationName'
+- id: MI-replication-14
+  Topic: TSGTRCL00029-ReplAgentUser
+  Source: TSG-SQL-MI-TransactionalReplication/TransactionalReplication/TSGTRCL00029-ReplAgentUser.md
+  Prompts:
+  - MI HADR replica state telemetry by LogicalServerName, command
+  - MonDmDbHadrReplicaStates LogicalServerName command managed_server_1 managed_server_2
+  - Troubleshoot replication lag
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmDbHadrReplicaStates
+    ExecutedQuery: 'MonDmDbHadrReplicaStates
+
+      | where TIMESTAMP > ago(30min)
+
+      | where LogicalServerName in ("<managed_server_1>", "<managed_server_2>")
+
+      | where is_local == 1
+
+      | extend command = strcat(''Get-FabricNode -NodeName '', NodeName, '' -NodeClusterName '', ClusterName, '' | Kill-Process -ProcessName sqlservr.exe -ApplicationNameUri
+      fabric:/Worker.CL.WCOW.SQL22/'', AppName, '' -ForceActionOnProtectedCustomers "Planned restarts"'')
+
+      | summarize by LogicalServerName, NodeName, is_primary_replica, ClusterName, AppName, command
+
+      | order by LogicalServerName'
+- id: MI-replication-15
+  Topic: TSGTRCL00030-The-target-principal-name-is-incorrect-error
+  Source: TSG-SQL-MI-TransactionalReplication/TransactionalReplication/TSGTRCL00030-The-target-principal-name-is-incorrect-error.md
+  Prompts:
+  - MI transactional replication telemetry counts for error -2146893022
+  - MonTranReplTraces LogicalServerName error_code code_package_version clstr
+  - Troubleshoot target principal name errors
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonTranReplTraces
+    ExecutedQuery: 'let SingleCluster = (clstr: string)
+
+      cluster(clstr).database(''sqlazure1'').MonTranReplTraces
+
+      | where TIMESTAMP > ago(3d)
+
+      | where error_code == -2146893022
+
+      | summarize count(), min(TIMESTAMP), max(TIMESTAMP) by ClusterName, AppName, code_package_version, NodeName, LogicalServerName
+
+      };
+
+      _ExecuteForProdAndStageClusters'
+- id: MI-replication-16
+  Topic: TSGTRCL00032-Syscommittab-cleanup-is-slow-or-blocked
+  Source: TSG-SQL-MI-TransactionalReplication/TransactionalReplication/TSGTRCL00032-Syscommittab-cleanup-is-slow-or-blocked.md
+  Prompts:
+  - MI change tracking cleanup telemetry trend for syscommittab cleanup alert
+  - MonCTTraces LogicalServerName logical_database_name event rows_in_delay
+  - Troubleshoot cleanup backlog
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCTTraces
+    ExecutedQuery: 'MonCTTraces
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where event == ''syscommittab_cleanup_alert''
+
+      | where logical_database_name =~ "{DatabaseName}"
+
+      | project originalEventTimestamp, rows_in_delay
+
+      | render timechart'
+- id: MI-replication-17
+  Topic: TSGTRCL00036-Replication-Agent-Failures-Due-To-SQL-Agent-Memory-Leak
+  Source: TSG-SQL-MI-TransactionalReplication/TransactionalReplication/TSGTRCL00036-Replication-Agent-Failures-Due-To-SQL-Agent-Memory-Leak.md
+  Prompts:
+  - MI resource governor load telemetry trend by event, memory_load
+  - MonRgLoad event memory_load application_name App
+  - Troubleshoot replication lag
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRgLoad
+    ExecutedQuery: 'MonRgLoad
+
+      | where application_name contains "<App Name>"
+
+      | where TIMESTAMP >= now(-30d)
+
+      | where event contains "instance_load" and code_package_name == "SqlAgent"
+
+      | where memory_load > 100
+
+      | summarize max(memory_load), min(memory_load) by bin(TIMESTAMP, 10min)
+
+      | render timechart'
+- id: MI-replication-18
+  Topic: TSGTRCL00041-The-login-is-from-an-untrusted-domain
+  Source: TSG-SQL-MI-TransactionalReplication/TransactionalReplication/TSGTRCL00041-The-login-is-from-an-untrusted-domain.md
+  Prompts:
+  - MI SQL system health telemetry by LogicalServerName, ServerName
+  - MonSQLSystemHealth LogicalServerName ServerName message The
+  - Troubleshoot replAgentUser authentication failures
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where TIMESTAMP > ago(3d)
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where message contains "The login is from an untrusted domain and cannot be used with Integrated authentication"'
+- id: MI-replication-19
+  Topic: TSGTRCL00043-Snapshot_Distribution-agent-Failed-to-decrypt-Azure-storage-key
+  Source: TSG-SQL-MI-TransactionalReplication/TransactionalReplication/TSGTRCL00043-Snapshot_Distribution-agent-Failed-to-decrypt-Azure-storage-key.md
+  Prompts:
+  - MI managed database metadata by LogicalServerName, collation_name
+  - MonManagedDatabaseInfo LogicalServerName collation_name Worker CL
+  - Troubleshoot Azure storage key decryption failures
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedDatabaseInfo
+    ExecutedQuery: 'MonManagedDatabaseInfo
+
+      | where TIMESTAMP > ago(1h)
+
+      | where AppTypeName contains "Worker.CL"
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | project LogicalServerName, collation_name
+
+      | take 1'
+- id: MI-replication-20
+  Topic: TSGTRCL00043-Snapshot_Distribution-agent-Failed-to-decrypt-Azure-storage-key
+  Source: TSG-SQL-MI-TransactionalReplication/TransactionalReplication/TSGTRCL00043-Snapshot_Distribution-agent-Failed-to-decrypt-Azure-storage-key.md
+  Prompts:
+  - MI transactional replication telemetry by LogicalServerName, code_package_version
+  - MonTranReplTraces LogicalServerName code_package_version ServerName
+  - Troubleshoot Azure storage key decryption failures
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonTranReplTraces
+    ExecutedQuery: 'MonTranReplTraces
+
+      | where TIMESTAMP > ago(1h)
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | project TIMESTAMP, LogicalServerName, code_package_version
+
+      | top 1 by TIMESTAMP'
+- id: MI-replication-21
+  Topic: TSGTRCL00043-Snapshot_Distribution-agent-Failed-to-decrypt-Azure-storage-key
+  Source: TSG-SQL-MI-TransactionalReplication/TransactionalReplication/TSGTRCL00043-Snapshot_Distribution-agent-Failed-to-decrypt-Azure-storage-key.md
+  Prompts:
+  - MI SQL error alert telemetry for error 2812
+  - AlrSQLErrorsReported LogicalServerName error_number ServerName Could
+  - Troubleshoot Azure storage key decryption failures
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: AlrSQLErrorsReported
+    ExecutedQuery: 'AlrSQLErrorsReported
+
+      | where TIMESTAMP > ago(1h)
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where error_number == "2812" // Could not find stored procedure ''%.*ls''.
+
+      | top 1 by TIMESTAMP'
+- id: MI-replication-22
+  Topic: TSGTRCL00043-Snapshot_Distribution-agent-Failed-to-decrypt-Azure-storage-key
+  Source: TSG-SQL-MI-TransactionalReplication/TransactionalReplication/TSGTRCL00043-Snapshot_Distribution-agent-Failed-to-decrypt-Azure-storage-key.md
+  Prompts:
+  - MI real-time database resource telemetry by LogicalServerName, ServerName
+  - MonDmRealTimeResourceStats LogicalServerName ServerName
+  - Troubleshoot Azure storage key decryption failures
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmRealTimeResourceStats
+    ExecutedQuery: 'MonDmRealTimeResourceStats
+
+      | where TIMESTAMP > ago(1h)
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | top 1 by TIMESTAMP
+
+      | project TIMESTAMP, LogicalServerName, NodeName, ClusterName, AppTypeName, AppName'
+- id: MI-replication-23
+  Topic: TSGTRCL00043-Snapshot_Distribution-agent-Failed-to-decrypt-Azure-storage-key
+  Source: TSG-SQL-MI-TransactionalReplication/TransactionalReplication/TSGTRCL00043-Snapshot_Distribution-agent-Failed-to-decrypt-Azure-storage-key.md
+  Prompts:
+  - MI SQL error alert telemetry for error 2812
+  - AlrSQLErrorsReported LogicalServerName error_number ServerName Could
+  - Troubleshoot Azure storage key decryption failures
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: AlrSQLErrorsReported
+    ExecutedQuery: 'AlrSQLErrorsReported
+
+      | where TIMESTAMP > ago(1h)
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where error_number == "2812" // Could not find stored procedure ''%.*ls''.'
+- id: MI-replication-24
+  Topic: TSGTRCL00044-CDC-Capture-Job-Not-Running-After-Geo-Failover-on-SQL-Managed-Instance
+  Source: TSG-SQL-MI-TransactionalReplication/TransactionalReplication/TSGTRCL00044-CDC-Capture-Job-Not-Running-After-Geo-Failover-on-SQL-Managed-Instance.md
+  Prompts:
+  - MI real-time database resource telemetry by LogicalServerName, logical_database_name
+  - MonDmRealTimeResourceStats LogicalServerName logical_database_name replica_role block
+  - Troubleshoot CDC capture issues
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmRealTimeResourceStats
+    ExecutedQuery: 'MonDmRealTimeResourceStats
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where logical_database_name =~ "{DatabaseName}"
+
+      | where replica_role == 0
+
+      | where TIMESTAMP > ago(30d)
+
+      | sort by TIMESTAMP asc
+
+      | extend gap = iff(TIMESTAMP - prev(TIMESTAMP) > 1h, 1, 0)
+
+      | extend block = row_cumsum(gap)
+
+      | summarize primary_from=min(TIMESTAMP), primary_to=max(TIMESTAMP) by block
+
+      | project-away block'
+- id: MI-replication-25
+  Topic: TSGTRCL00044-CDC-Capture-Job-Not-Running-After-Geo-Failover-on-SQL-Managed-Instance
+  Source: TSG-SQL-MI-TransactionalReplication/TransactionalReplication/TSGTRCL00044-CDC-Capture-Job-Not-Running-After-Geo-Failover-on-SQL-Managed-Instance.md
+  Prompts:
+  - MI CDC capture telemetry counts for cdc session / cdc job
+  - MonCDCTraces LogicalServerName logical_database_name event ServerName
+  - Troubleshoot CDC capture issues
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCDCTraces
+    ExecutedQuery: 'MonCDCTraces
+
+      | where TIMESTAMP > ago(7d)
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where logical_database_name =~ "{DatabaseName}"
+
+      | where event in ("cdc_session", "cdc_job", "cdc_error")
+
+      | summarize count() by event, bin(TIMESTAMP, 1d)
+
+      | sort by TIMESTAMP asc'
+- id: MI-replication-26
+  Topic: TSGTRCL00044-CDC-Capture-Job-Not-Running-After-Geo-Failover-on-SQL-Managed-Instance
+  Source: TSG-SQL-MI-TransactionalReplication/TransactionalReplication/TSGTRCL00044-CDC-Capture-Job-Not-Running-After-Geo-Failover-on-SQL-Managed-Instance.md
+  Prompts:
+  - MI SQL Agent job telemetry by LogicalServerName, message_type
+  - MonSqlAgent LogicalServerName message_type message ServerName
+  - Troubleshoot replication lag
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlAgent
+    ExecutedQuery: 'MonSqlAgent
+
+      | where TIMESTAMP > ago(14d)
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where message contains "<hex_job_id>"
+
+      | project TIMESTAMP, message_type, message
+
+      | sort by TIMESTAMP asc'
+- id: MI-replication-27
+  Topic: TSGTRCL00044-CDC-Capture-Job-Not-Running-After-Geo-Failover-on-SQL-Managed-Instance
+  Source: TSG-SQL-MI-TransactionalReplication/TransactionalReplication/TSGTRCL00044-CDC-Capture-Job-Not-Running-After-Geo-Failover-on-SQL-Managed-Instance.md
+  Prompts:
+  - MI CDC capture telemetry counts for cdc session
+  - MonCDCTraces LogicalServerName logical_database_name event ServerName
+  - Troubleshoot CDC capture issues
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCDCTraces
+    ExecutedQuery: 'MonCDCTraces
+
+      | where TIMESTAMP > ago(1h)
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where logical_database_name =~ "{DatabaseName}"
+
+      | where event == "cdc_session"
+
+      | summarize count() by bin(TIMESTAMP, 10m)'

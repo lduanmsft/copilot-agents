@@ -3,8 +3,9 @@ SqlSkills:
   Topic: MI info, VC info (MonManagedServer
   Source: asmi-troubleshooter-package/MI info, VC info (MonManagedServer.md
   Prompts:
-  - MI MI info, VC info (MonManagedServer
-  - Managed Instance MI info, VC info (MonManagedServer
+  - MI restore request status
+  - MonManagedServers
+  - Investigate restore progress
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -17,8 +18,9 @@ SqlSkills:
   Topic: MI info, VC info (MonManagedServer
   Source: asmi-troubleshooter-package/MI info, VC info (MonManagedServer.md
   Prompts:
-  - MI MI info, VC info (MonManagedServer
-  - Managed Instance MI info, VC info (MonManagedServer
+  - MI restore request status
+  - MonManagedServers name managed_server_id TIMESTAMP
+  - Check MonManagedServers name managed_server_id
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -35,8 +37,9 @@ SqlSkills:
   Topic: MI info, VC info (MonManagedServer
   Source: asmi-troubleshooter-package/MI info, VC info (MonManagedServer.md
   Prompts:
-  - MI MI info, VC info (MonManagedServer
-  - Managed Instance MI info, VC info (MonManagedServer
+  - MI connectivity and networking
+  - MonPrivateClusters
+  - Investigate connectivity errors
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -47,8 +50,9 @@ SqlSkills:
   Topic: MI info, VC info (MonManagedServer
   Source: asmi-troubleshooter-package/MI info, VC info (MonManagedServer.md
   Prompts:
-  - MI MI info, VC info (MonManagedServer
-  - Managed Instance MI info, VC info (MonManagedServer
+  - MI restore request status
+  - MonManagedServers name private_cluster_id managed_server_id
+  - Check MonManagedServers name private_cluster_id
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -69,8 +73,9 @@ SqlSkills:
   Topic: MI info, VC info (MonManagedServer
   Source: asmi-troubleshooter-package/MI info, VC info (MonManagedServer.md
   Prompts:
-  - MI MI info, VC info (MonManagedServer
-  - Managed Instance MI info, VC info (MonManagedServer
+  - MI restore request status
+  - MonManagedServers TIMESTAMP
+  - Investigate restore progress
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -83,8 +88,9 @@ SqlSkills:
   Topic: MI info, VC info (MonManagedServer
   Source: asmi-troubleshooter-package/MI info, VC info (MonManagedServer.md
   Prompts:
-  - MI MI info, VC info (MonManagedServer
-  - Managed Instance MI info, VC info (MonManagedServer
+  - MI restore request status
+  - MonManagedServers name
+  - Check MonManagedServers name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -97,8 +103,9 @@ SqlSkills:
   Topic: MI info, VC info (MonManagedServer
   Source: asmi-troubleshooter-package/MI info, VC info (MonManagedServer.md
   Prompts:
-  - MI MI info, VC info (MonManagedServer
-  - Managed Instance MI info, VC info (MonManagedServer
+  - MI restore request status
+  - MonManagedServers private_cluster_tenant_ring_name
+  - Check MonManagedServers private_cluster_tenant_ring_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -111,8 +118,9 @@ SqlSkills:
   Topic: DB info (MonManagedDatabases
   Source: asmi-troubleshooter-package/DB info (MonManagedDatabases.md
   Prompts:
-  - MI DB info (MonManagedDatabases
-  - Managed Instance DB info (MonManagedDatabases
+  - MI restore request status
+  - MonManagedDatabases PreciseTimeStamp managed_server_id
+  - Check MonManagedDatabases managed_server_id
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -139,8 +147,9 @@ SqlSkills:
   Topic: DB info (MonManagedDatabases
   Source: asmi-troubleshooter-package/DB info (MonManagedDatabases.md
   Prompts:
-  - MI DB info (MonManagedDatabases
-  - Managed Instance DB info (MonManagedDatabases
+  - MI restore request status
+  - MonManagedServers managed_server_id state TIMESTAMP
+  - Check MonManagedServers managed_server_id state
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -157,8 +166,9 @@ SqlSkills:
   Topic: Get database id
   Source: asmi-troubleshooter-package/Get database id.md
   Prompts:
-  - MI Get database id
-  - Managed Instance Get database id
+  - MI restore request status
+  - MonAnalyticsDBSnapshot TIMESTAMP
+  - Investigate restore progress
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -171,8 +181,9 @@ SqlSkills:
   Topic: Get database id
   Source: asmi-troubleshooter-package/Get database id.md
   Prompts:
-  - MI Get database id
-  - Managed Instance Get database id
+  - MI restore request status by server
+  - MonAnalyticsDBSnapshot TIMESTAMP LogicalServerName
+  - Investigate restore progress
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -199,8 +210,9 @@ SqlSkills:
   Topic: Get database id
   Source: asmi-troubleshooter-package/Get database id.md
   Prompts:
-  - MI Get database id
-  - Managed Instance Get database id
+  - MI restore request status
+  - MonAnalyticsDBSnapshot
+  - Investigate restore progress
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -219,8 +231,9 @@ SqlSkills:
   Topic: Database Options (MonDatabaseMetadata
   Source: asmi-troubleshooter-package/Database Options (MonDatabaseMetadata.md
   Prompts:
-  - MI Database Options (MonDatabaseMetadata
-  - Managed Instance Database Options (MonDatabaseMetadata
+  - MI restore request status
+  - MonDatabaseMetadata
+  - Investigate restore progress
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -233,8 +246,9 @@ SqlSkills:
   Topic: Database Options (MonDatabaseMetadata
   Source: asmi-troubleshooter-package/Database Options (MonDatabaseMetadata.md
   Prompts:
-  - MI Database Options (MonDatabaseMetadata
-  - Managed Instance Database Options (MonDatabaseMetadata
+  - MI restore request status by server
+  - MonDatabaseMetadata TIMESTAMP LogicalServerName
+  - Check MonDatabaseMetadata is_parameterization_forced status2
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -259,8 +273,9 @@ SqlSkills:
   Topic: Billing
   Source: asmi-troubleshooter-package/Billing.md
   Prompts:
-  - MI Billing
-  - Managed Instance Billing
+  - MI restore request status by server
+  - MonDwBilling AppName TIMESTAMP billing_metric_name
+  - Check MonDwBilling AppName billing_metric_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -273,8 +288,9 @@ SqlSkills:
   Topic: Billing
   Source: asmi-troubleshooter-package/Billing.md
   Prompts:
-  - MI Billing
-  - Managed Instance Billing
+  - MI restore request status
+  - MonDwBilling AppName TIMESTAMP
+  - Check MonDwBilling AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -289,8 +305,9 @@ SqlSkills:
   Topic: Billing
   Source: asmi-troubleshooter-package/Billing.md
   Prompts:
-  - MI Billing
-  - Managed Instance Billing
+  - MI backup history and status by server
+  - MonDmRealTimeResourceStats TIMESTAMP LogicalServerName
+  - Check MonDmRealTimeResourceStats AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -320,8 +337,9 @@ SqlSkills:
   Topic: Billing
   Source: asmi-troubleshooter-package/Billing.md
   Prompts:
-  - MI Billing
-  - Managed Instance Billing
+  - MI restore request status
+  - MonDwBilling TIMESTAMP AppName
+  - Check MonDwBilling AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -336,8 +354,9 @@ SqlSkills:
   Topic: Billing
   Source: asmi-troubleshooter-package/Billing.md
   Prompts:
-  - MI Billing
-  - Managed Instance Billing
+  - MI backup history and status by server
+  - MonBillingBackupDatabaseSize size_bytes SubscriptionId
+  - Check MonBillingBackupDatabaseSize size_bytes SubscriptionId
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -350,8 +369,9 @@ SqlSkills:
   Topic: Billing
   Source: asmi-troubleshooter-package/Billing.md
   Prompts:
-  - MI Billing
-  - Managed Instance Billing
+  - MI backup history and status by server
+  - MonBillingSnapshotSize size_bytes SubscriptionId backup_time
+  - Check MonBillingSnapshotSize size_bytes SubscriptionId
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -364,8 +384,9 @@ SqlSkills:
   Topic: Billing
   Source: asmi-troubleshooter-package/Billing.md
   Prompts:
-  - MI Billing
-  - Managed Instance Billing
+  - MI restore request status by server
+  - MonBillingGeoSnapshotSize size_bytes SubscriptionId
+  - Check MonBillingGeoSnapshotSize size_bytes SubscriptionId
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -378,8 +399,9 @@ SqlSkills:
   Topic: Governance, Quota
   Source: asmi-troubleshooter-package/Governance, Quota.md
   Prompts:
-  - MI Governance, Quota
-  - Managed Instance Governance, Quota
+  - MI restore request status
+  - MonDmIoVirtualFileStats
+  - Investigate restore progress
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -390,8 +412,9 @@ SqlSkills:
   Topic: Governance, Quota
   Source: asmi-troubleshooter-package/Governance, Quota.md
   Prompts:
-  - MI Governance, Quota
-  - Managed Instance Governance, Quota
+  - MI resource usage analysis
+  - MonDmDbResourceGovernance AppName
+  - Check MonDmDbResourceGovernance AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -404,8 +427,9 @@ SqlSkills:
   Topic: Governance, Quota
   Source: asmi-troubleshooter-package/Governance, Quota.md
   Prompts:
-  - MI Governance, Quota
-  - Managed Instance Governance, Quota
+  - MI resource usage analysis
+  - MonDmRealTimeResourceStats
+  - Investigate resource pressure
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -416,8 +440,9 @@ SqlSkills:
   Topic: MonManagement - most used
   Source: asmi-troubleshooter-package/MonManagement - most used.md
   Prompts:
-  - MI MonManagement - most used
-  - Managed Instance MonManagement - most used
+  - MI restore request status
+  - MonManagement TIMESTAMP
+  - Investigate restore progress
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -430,8 +455,9 @@ SqlSkills:
   Topic: MonManagement - most used
   Source: asmi-troubleshooter-package/MonManagement - most used.md
   Prompts:
-  - MI MonManagement - most used
-  - Managed Instance MonManagement - most used
+  - MI restore request status
+  - MonManagement TIMESTAMP request_id state_machine_type
+  - Check MonManagement request_id state_machine_type
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -449,8 +475,9 @@ SqlSkills:
   Topic: Audit
   Source: asmi-troubleshooter-package/Audit.md
   Prompts:
-  - MI Audit
-  - Managed Instance Audit
+  - MI resource usage analysis by server
+  - MonAuditSessionStatus TIMESTAMP LogicalServerName audit_name
+  - Check MonAuditSessionStatus audit_name status
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -473,8 +500,9 @@ SqlSkills:
   Topic: Audit
   Source: asmi-troubleshooter-package/Audit.md
   Prompts:
-  - MI Audit
-  - Managed Instance Audit
+  - MI audit analysis by server
+  - MonAuditOperational audit_name logical_server_name event
+  - Check MonAuditOperational audit_name event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -491,8 +519,9 @@ SqlSkills:
   Topic: Audit
   Source: asmi-troubleshooter-package/Audit.md
   Prompts:
-  - MI Audit
-  - Managed Instance Audit
+  - MI audit analysis
+  - MonAuditOperationalTelemetry audit_name
+  - Check MonAuditOperationalTelemetry audit_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -507,8 +536,9 @@ SqlSkills:
   Topic: Audit
   Source: asmi-troubleshooter-package/Audit.md
   Prompts:
-  - MI Audit
-  - Managed Instance Audit
+  - MI audit analysis
+  - MonAuditRuntimeTelemetry audit_name fired_events_count
+  - Check MonAuditRuntimeTelemetry audit_name fired_events_count
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -525,8 +555,9 @@ SqlSkills:
   Topic: Audit
   Source: asmi-troubleshooter-package/Audit.md
   Prompts:
-  - MI Audit
-  - Managed Instance Audit
+  - MI restore request status by server
+  - MonDatabaseMetadata LogicalServerName table_name class
+  - Check MonDatabaseMetadata table_name class
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -545,8 +576,9 @@ SqlSkills:
   Topic: Audit
   Source: asmi-troubleshooter-package/Audit.md
   Prompts:
-  - MI Audit
-  - Managed Instance Audit
+  - MI restore request status
+  - MonSQLSystemHealth AppName message TIMESTAMP
+  - Check MonSQLSystemHealth AppName message
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -565,8 +597,9 @@ SqlSkills:
   Topic: Audit
   Source: asmi-troubleshooter-package/Audit.md
   Prompts:
-  - MI Audit
-  - Managed Instance Audit
+  - MI resource usage analysis by database
+  - MonAuditSessionStatus TIMESTAMP LogicalServerName status
+  - Check MonAuditSessionStatus status logical_database_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -585,8 +618,9 @@ SqlSkills:
   Topic: Audit
   Source: asmi-troubleshooter-package/Audit.md
   Prompts:
-  - MI Audit
-  - Managed Instance Audit
+  - MI audit analysis by node
+  - Unknown TIMESTAMP NodeName
+  - Check Unknown NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -601,8 +635,9 @@ SqlSkills:
   Topic: Audit
   Source: asmi-troubleshooter-package/Audit.md
   Prompts:
-  - MI Audit
-  - Managed Instance Audit
+  - MI resource usage analysis by server
+  - MonAuditSessionStatus TIMESTAMP LogicalServerName audit_name
+  - Check MonAuditSessionStatus audit_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -623,8 +658,9 @@ SqlSkills:
   Topic: Audit
   Source: asmi-troubleshooter-package/Audit.md
   Prompts:
-  - MI Audit
-  - Managed Instance Audit
+  - MI resource usage analysis by database
+  - MonAuditSessionStatus LogicalServerName TIMESTAMP
+  - Check MonAuditSessionStatus logical_database_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -641,8 +677,9 @@ SqlSkills:
   Topic: How to find MI located Subscription ID and attach in ASC_
   Source: asmi-troubleshooter-package/How to find MI located Subscription ID and attach in ASC_.md
   Prompts:
-  - MI How to find MI located Subscription ID and attach in ASC_
-  - Managed Instance How to find MI located Subscription ID and attach in ASC_
+  - MI restore request status
+  - MonManagedServers name managed_server_id TIMESTAMP
+  - Check MonManagedServers name managed_server_id
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -659,8 +696,9 @@ SqlSkills:
   Topic: How to find MI located Subscription ID and attach in ASC_
   Source: asmi-troubleshooter-package/How to find MI located Subscription ID and attach in ASC_.md
   Prompts:
-  - MI How to find MI located Subscription ID and attach in ASC_
-  - Managed Instance How to find MI located Subscription ID and attach in ASC_
+  - MI connectivity and networking
+  - MonPrivateClusters
+  - Investigate connectivity errors
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -671,8 +709,9 @@ SqlSkills:
   Topic: Query All Cluster
   Source: asmi-troubleshooter-package/Query All Cluster.md
   Prompts:
-  - MI Query All Cluster
-  - Managed Instance Query All Cluster
+  - MI restore request status
+  - MonManagement event operation_type api_version
+  - Check MonManagement event operation_type
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -691,8 +730,9 @@ SqlSkills:
   Topic: Tips with ADF team
   Source: asmi-troubleshooter-package/Tips with ADF team.md
   Prompts:
-  - MI Tips with ADF team
-  - Managed Instance Tips with ADF team
+  - MI login and connection errors by server
+  - MonLogin logical_server_name
+  - Investigate login failures
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -707,8 +747,9 @@ SqlSkills:
   Topic: Tips with ARM team for failed operation
   Source: asmi-troubleshooter-package/Tips with ARM team for failed operation.md
   Prompts:
-  - MI Tips with ARM team for failed operation
-  - Managed Instance Tips with ARM team for failed operation
+  - MI resource usage analysis
+  - MonManagementResourceProvider request_url correlation_id
+  - Check MonManagementResourceProvider request_url
   CustomizedParameters:
   - ServerName
   - DatabaseName

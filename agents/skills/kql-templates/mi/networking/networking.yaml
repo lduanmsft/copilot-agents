@@ -3,8 +3,9 @@ SqlSkills:
   Topic: Gateway issue
   Source: asmi-troubleshooter-package/Gateway issue.md
   Prompts:
-  - MI Gateway issue
-  - Managed Instance Gateway issue
+  - MI login and connection errors by server
+  - MonLogin event logical_server_name is_success
+  - Check MonLogin event is_success
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -26,8 +27,9 @@ SqlSkills:
   Topic: Gateway issue
   Source: asmi-troubleshooter-package/Gateway issue.md
   Prompts:
-  - MI Gateway issue
-  - Managed Instance Gateway issue
+  - MI login and connection errors
+  - MonRedirector ClusterName
+  - Check MonRedirector ClusterName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -46,8 +48,9 @@ SqlSkills:
   Topic: Gateway issue
   Source: asmi-troubleshooter-package/Gateway issue.md
   Prompts:
-  - MI Gateway issue
-  - Managed Instance Gateway issue
+  - MI login and connection errors
+  - MonRedirector TIMESTAMP ClusterName
+  - Check MonRedirector ClusterName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -62,8 +65,9 @@ SqlSkills:
   Topic: Gateway issue
   Source: asmi-troubleshooter-package/Gateway issue.md
   Prompts:
-  - MI Gateway issue
-  - Managed Instance Gateway issue
+  - MI login and connection errors by server
+  - MonLogin originalEventTimestamp ClusterName event
+  - Check MonLogin originalEventTimestamp ClusterName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -90,8 +94,9 @@ SqlSkills:
   Topic: Gateway issue
   Source: asmi-troubleshooter-package/Gateway issue.md
   Prompts:
-  - MI Gateway issue
-  - Managed Instance Gateway issue
+  - MI restore request status
+  - MonCounterOneMinute ClusterName
+  - Check MonCounterOneMinute ClusterName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -104,8 +109,9 @@ SqlSkills:
   Topic: Gateway issue
   Source: asmi-troubleshooter-package/Gateway issue.md
   Prompts:
-  - MI Gateway issue
-  - Managed Instance Gateway issue
+  - MI resource usage analysis
+  - MonRgLoad originalEventTimestamp originalEventTimestampFrom
+  - Check MonRgLoad originalEventTimestamp
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -120,8 +126,9 @@ SqlSkills:
   Topic: Proxy error 40613 v.s. 42127
   Source: asmi-troubleshooter-package/Proxy error 40613 v.s. 42127.md
   Prompts:
-  - MI Proxy error 40613 v.s. 42127
-  - Managed Instance Proxy error 40613 v.s. 42127
+  - MI login and connection errors
+  - MonLogin originalEventTimestamp connection_id action
+  - Check MonLogin originalEventTimestamp connection_id
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -138,8 +145,9 @@ SqlSkills:
   Topic: Proxy or Redirect
   Source: asmi-troubleshooter-package/Proxy or Redirect.md
   Prompts:
-  - MI Proxy or Redirect
-  - Managed Instance Proxy or Redirect
+  - MI login and connection errors
+  - MonLogin TIMESTAMP
+  - Investigate login failures
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -160,8 +168,9 @@ SqlSkills:
   Topic: Proxy or Redirect
   Source: asmi-troubleshooter-package/Proxy or Redirect.md
   Prompts:
-  - MI Proxy or Redirect
-  - Managed Instance Proxy or Redirect
+  - MI login and connection errors by server
+  - MonLogin logical_server_name event NodeName
+  - Check MonLogin event NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -188,8 +197,9 @@ SqlSkills:
   Topic: Proxy or Redirect
   Source: asmi-troubleshooter-package/Proxy or Redirect.md
   Prompts:
-  - MI Proxy or Redirect
-  - Managed Instance Proxy or Redirect
+  - MI login and connection errors
+  - MonLogin originalEventTimestamp fedauth_adal_workflow
+  - Check MonLogin originalEventTimestamp fedauth_adal_workflow
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -218,8 +228,9 @@ SqlSkills:
   Topic: Proxy or Redirect
   Source: asmi-troubleshooter-package/Proxy or Redirect.md
   Prompts:
-  - MI Proxy or Redirect
-  - Managed Instance Proxy or Redirect
+  - MI login and connection errors
+  - MonFedAuthTicketService originalEventTimestamp event
+  - Check MonFedAuthTicketService originalEventTimestamp event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -236,8 +247,9 @@ SqlSkills:
   Topic: AAD authentication
   Source: asmi-troubleshooter-package/AAD authentication.md
   Prompts:
-  - MI AAD authentication
-  - Managed Instance AAD authentication
+  - MI login and connection errors
+  - MonLogin TIMESTAMP
+  - Investigate login failures
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -250,8 +262,9 @@ SqlSkills:
   Topic: AAD authentication
   Source: asmi-troubleshooter-package/AAD authentication.md
   Prompts:
-  - MI AAD authentication
-  - Managed Instance AAD authentication
+  - MI login and connection errors
+  - MonLogin originalEventTimestamp fedauth_adal_workflow
+  - Check MonLogin originalEventTimestamp fedauth_adal_workflow
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -280,8 +293,9 @@ SqlSkills:
   Topic: AAD authentication
   Source: asmi-troubleshooter-package/AAD authentication.md
   Prompts:
-  - MI AAD authentication
-  - Managed Instance AAD authentication
+  - MI login and connection errors
+  - MonFedAuthTicketService originalEventTimestamp event
+  - Check MonFedAuthTicketService originalEventTimestamp event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -298,8 +312,9 @@ SqlSkills:
   Topic: AAD authentication
   Source: asmi-troubleshooter-package/AAD authentication.md
   Prompts:
-  - MI AAD authentication
-  - Managed Instance AAD authentication
+  - MI aad authentication analysis by server
+  - MonAzureActivDirService logical_server_name NodeName AppName
+  - Check MonAzureActivDirService NodeName AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -316,8 +331,9 @@ SqlSkills:
   Topic: MonLogin - most used
   Source: asmi-troubleshooter-package/MonLogin - most used.md
   Prompts:
-  - MI MonLogin - most used
-  - Managed Instance MonLogin - most used
+  - MI login and connection errors by server
+  - MonLogin LogicalServerName
+  - Investigate login failures
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -332,8 +348,9 @@ SqlSkills:
   Topic: MonLogin - most used
   Source: asmi-troubleshooter-package/MonLogin - most used.md
   Prompts:
-  - MI MonLogin - most used
-  - Managed Instance MonLogin - most used
+  - MI login and connection errors by server
+  - MonLogin event logical_server_name is_success
+  - Check MonLogin event is_success
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -355,8 +372,9 @@ SqlSkills:
   Topic: MonLogin - most used
   Source: asmi-troubleshooter-package/MonLogin - most used.md
   Prompts:
-  - MI MonLogin - most used
-  - Managed Instance MonLogin - most used
+  - MI login and connection errors by server
+  - MonLogin originalEventTimestamp LogicalServerName event
+  - Check MonLogin originalEventTimestamp event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -376,8 +394,9 @@ SqlSkills:
   Topic: Tips with Azure Network team
   Source: asmi-troubleshooter-package/Tips with Azure Network team.md
   Prompts:
-  - MI Tips with Azure Network team
-  - Managed Instance Tips with Azure Network team
+  - MI connectivity and networking
+  - MonCapacityTenantSnapshot TIMESTAMP tenant_ring_name
+  - Check MonCapacityTenantSnapshot tenant_ring_name tenant_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -396,8 +415,9 @@ SqlSkills:
   Topic: Linked Server
   Source: asmi-troubleshooter-package/Linked Server.md
   Prompts:
-  - MI Linked Server
-  - Managed Instance Linked Server
+  - MI login and connection errors by server
+  - MonLinkedServerInfo LogicalServerName linked_server_name
+  - Check MonLinkedServerInfo linked_server_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -416,8 +436,9 @@ SqlSkills:
   Topic: Distributed Transaction _ DTC
   Source: asmi-troubleshooter-package/Distributed Transaction _ DTC.md
   Prompts:
-  - MI Distributed Transaction _ DTC
-  - Managed Instance Distributed Transaction _ DTC
+  - MI restore request status
+  - MonManagementOperations originalEventTimestamp
+  - Check MonManagementOperations originalEventTimestamp
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -442,8 +463,9 @@ SqlSkills:
   Topic: gateway-throttling-analysis
   Source: TSG-SQL-MI-Networking/content/analysis/gateway-throttling-analysis.md
   Prompts:
-  - MI gateway-throttling-analysis
-  - Managed Instance gateway-throttling-analysis
+  - MI login and connection errors
+  - AlrLogin
+  - Investigate login failures
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -464,8 +486,9 @@ SqlSkills:
   Topic: initial-investigation-steps-for-connectivity
   Source: TSG-SQL-MI-Networking/content/connectivity/initial-investigation-steps-for-connectivity.md
   Prompts:
-  - MI initial-investigation-steps-for-connectivity
-  - Managed Instance initial-investigation-steps-for-connectivity
+  - MI connectivity and networking by server
+  - MonLogin ClusterName event error
+  - Check MonLogin ClusterName event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -496,8 +519,9 @@ SqlSkills:
   Topic: initial-investigation-steps-for-connectivity
   Source: TSG-SQL-MI-Networking/content/connectivity/initial-investigation-steps-for-connectivity.md
   Prompts:
-  - MI initial-investigation-steps-for-connectivity
-  - Managed Instance initial-investigation-steps-for-connectivity
+  - MI connectivity and networking by node
+  - MonCounterOneMinute TIMESTAMP ClusterName NodeName
+  - Check MonCounterOneMinute ClusterName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -524,8 +548,9 @@ SqlSkills:
   Topic: initial-investigation-steps-for-connectivity
   Source: TSG-SQL-MI-Networking/content/connectivity/initial-investigation-steps-for-connectivity.md
   Prompts:
-  - MI initial-investigation-steps-for-connectivity
-  - Managed Instance initial-investigation-steps-for-connectivity
+  - MI connectivity and networking
+  - MonLogin originalEventTimestamp ClusterName event
+  - Check MonLogin originalEventTimestamp ClusterName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -546,8 +571,9 @@ SqlSkills:
   Topic: initial-investigation-steps-for-connectivity
   Source: TSG-SQL-MI-Networking/content/connectivity/initial-investigation-steps-for-connectivity.md
   Prompts:
-  - MI initial-investigation-steps-for-connectivity
-  - Managed Instance initial-investigation-steps-for-connectivity
+  - MI connectivity and networking by node
+  - MonLogin originalEventTimestamp ClusterName AppTypeName
+  - Check MonLogin originalEventTimestamp ClusterName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -566,8 +592,9 @@ SqlSkills:
   Topic: initial-investigation-steps-for-connectivity
   Source: TSG-SQL-MI-Networking/content/connectivity/initial-investigation-steps-for-connectivity.md
   Prompts:
-  - MI initial-investigation-steps-for-connectivity
-  - Managed Instance initial-investigation-steps-for-connectivity
+  - MI connectivity and networking by node
+  - MonCounterOneMinute TIMESTAMP ClusterName NodeName
+  - Check MonCounterOneMinute ClusterName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -588,8 +615,9 @@ SqlSkills:
   Topic: investigate-problems-on-gateway
   Source: TSG-SQL-MI-Networking/content/connectivity/investigate-problems-on-gateway.md
   Prompts:
-  - MI investigate-problems-on-gateway
-  - Managed Instance investigate-problems-on-gateway
+  - MI login and connection errors by server
+  - MonLogin ClusterName event error
+  - Check MonLogin ClusterName event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -620,8 +648,9 @@ SqlSkills:
   Topic: investigate-problems-on-gateway
   Source: TSG-SQL-MI-Networking/content/connectivity/investigate-problems-on-gateway.md
   Prompts:
-  - MI investigate-problems-on-gateway
-  - Managed Instance investigate-problems-on-gateway
+  - MI login and connection errors by server
+  - MonLogin ClusterName event error
+  - Check MonLogin ClusterName event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -656,8 +685,9 @@ SqlSkills:
   Topic: investigate-problems-on-gateway
   Source: TSG-SQL-MI-Networking/content/connectivity/investigate-problems-on-gateway.md
   Prompts:
-  - MI investigate-problems-on-gateway
-  - Managed Instance investigate-problems-on-gateway
+  - MI login and connection errors by node
+  - MonLogin ClusterName event error
+  - Check MonLogin ClusterName event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -688,8 +718,9 @@ SqlSkills:
   Topic: investigate-problems-on-gateway
   Source: TSG-SQL-MI-Networking/content/connectivity/investigate-problems-on-gateway.md
   Prompts:
-  - MI investigate-problems-on-gateway
-  - Managed Instance investigate-problems-on-gateway
+  - MI login and connection errors
+  - MonLogin ClusterName AppTypeName error
+  - Check MonLogin ClusterName AppTypeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -720,8 +751,9 @@ SqlSkills:
   Topic: investigate-problems-on-gateway
   Source: TSG-SQL-MI-Networking/content/connectivity/investigate-problems-on-gateway.md
   Prompts:
-  - MI investigate-problems-on-gateway
-  - Managed Instance investigate-problems-on-gateway
+  - MI login and connection errors
+  - MonLogin ClusterName error AppTypeName
+  - Check MonLogin ClusterName error
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -750,8 +782,9 @@ SqlSkills:
   Topic: investigate-problems-on-gateway
   Source: TSG-SQL-MI-Networking/content/connectivity/investigate-problems-on-gateway.md
   Prompts:
-  - MI investigate-problems-on-gateway
-  - Managed Instance investigate-problems-on-gateway
+  - MI login and connection errors by server
+  - MonLogin ClusterName error logical_server_name
+  - Check MonLogin ClusterName error
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -780,8 +813,9 @@ SqlSkills:
   Topic: investigate-problems-on-gateway
   Source: TSG-SQL-MI-Networking/content/connectivity/investigate-problems-on-gateway.md
   Prompts:
-  - MI investigate-problems-on-gateway
-  - Managed Instance investigate-problems-on-gateway
+  - MI login and connection errors by server
+  - MonLogin ClusterName AppTypeName logical_server_name
+  - Check MonLogin ClusterName AppTypeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -818,8 +852,9 @@ SqlSkills:
   Topic: investigate-problems-on-gateway
   Source: TSG-SQL-MI-Networking/content/connectivity/investigate-problems-on-gateway.md
   Prompts:
-  - MI investigate-problems-on-gateway
-  - Managed Instance investigate-problems-on-gateway
+  - MI instance CPU and memory stats by node
+  - MonCounterOneMinute ClusterName NodeName CounterName
+  - Check MonCounterOneMinute ClusterName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -848,8 +883,9 @@ SqlSkills:
   Topic: investigate-problems-on-gateway
   Source: TSG-SQL-MI-Networking/content/connectivity/investigate-problems-on-gateway.md
   Prompts:
-  - MI investigate-problems-on-gateway
-  - Managed Instance investigate-problems-on-gateway
+  - MI login and connection errors
+  - MonLogin ClusterName AppTypeName event
+  - Check MonLogin ClusterName AppTypeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -878,8 +914,9 @@ SqlSkills:
   Topic: investigate-problems-on-gateway
   Source: TSG-SQL-MI-Networking/content/connectivity/investigate-problems-on-gateway.md
   Prompts:
-  - MI investigate-problems-on-gateway
-  - Managed Instance investigate-problems-on-gateway
+  - MI login and connection errors
+  - MonLogin ClusterName AppTypeName event
+  - Check MonLogin ClusterName AppTypeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -908,8 +945,9 @@ SqlSkills:
   Topic: tsgminw1001-backend-node-is-rejecting-connections
   Source: TSG-SQL-MI-Networking/content/connectivity/tsgminw1001-backend-node-is-rejecting-connections.md
   Prompts:
-  - MI tsgminw1001-backend-node-is-rejecting-connections
-  - Managed Instance tsgminw1001-backend-node-is-rejecting-connections
+  - MI connectivity and networking by node
+  - MonCounterOneMinute TIMESTAMP ClusterName NodeName
+  - Check MonCounterOneMinute ClusterName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -936,8 +974,9 @@ SqlSkills:
   Topic: tsgminw1003-missing-metrics-found-on-node
   Source: TSG-SQL-MI-Networking/content/connectivity/tsgminw1003-missing-metrics-found-on-node.md
   Prompts:
-  - MI tsgminw1003-missing-metrics-found-on-node
-  - Managed Instance tsgminw1003-missing-metrics-found-on-node
+  - MI resource usage analysis
+  - AlrMetricsForLogsToMetricsV1 TIMESTAMP ClusterName
+  - Check AlrMetricsForLogsToMetricsV1 ClusterName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -960,8 +999,9 @@ SqlSkills:
   Topic: tsgminw1004-gateway-connections-stuck
   Source: TSG-SQL-MI-Networking/content/connectivity/tsgminw1004-gateway-connections-stuck.md
   Prompts:
-  - MI tsgminw1004-gateway-connections-stuck
-  - Managed Instance tsgminw1004-gateway-connections-stuck
+  - MI connectivity and networking
+  - MonLogin originalEventTimestamp ClusterName AppTypeName
+  - Check MonLogin originalEventTimestamp ClusterName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -994,8 +1034,9 @@ SqlSkills:
   Topic: tsgminw1007-pcc-connectivity-drop
   Source: TSG-SQL-MI-Networking/content/connectivity/tsgminw1007-pcc-connectivity-drop.md
   Prompts:
-  - MI tsgminw1007-pcc-connectivity-drop
-  - Managed Instance tsgminw1007-pcc-connectivity-drop
+  - MI connectivity and networking by server
+  - MonLogin originalEventTimestamp logical_server_name event
+  - Check MonLogin originalEventTimestamp event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1016,8 +1057,9 @@ SqlSkills:
   Topic: tsgminw1010-high-cpu-sql-cert-validation
   Source: TSG-SQL-MI-Networking/content/connectivity/tsgminw1010-high-cpu-sql-cert-validation.md
   Prompts:
-  - MI tsgminw1010-high-cpu-sql-cert-validation
-  - Managed Instance tsgminw1010-high-cpu-sql-cert-validation
+  - MI instance CPU and memory stats by node
+  - MonRgLoad TIMESTAMP ClusterName NodeName
+  - Check MonRgLoad ClusterName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1042,8 +1084,9 @@ SqlSkills:
   Topic: tsgminw1010-high-cpu-sql-cert-validation
   Source: TSG-SQL-MI-Networking/content/connectivity/tsgminw1010-high-cpu-sql-cert-validation.md
   Prompts:
-  - MI tsgminw1010-high-cpu-sql-cert-validation
-  - Managed Instance tsgminw1010-high-cpu-sql-cert-validation
+  - MI instance CPU and memory stats by server
+  - MonLogin originalEventTimestamp ClusterName
+  - Check MonLogin originalEventTimestamp ClusterName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1066,8 +1109,9 @@ SqlSkills:
   Topic: tsgminw1013-network-monitoring-private-lb-unreachable
   Source: TSG-SQL-MI-Networking/content/connectivity/tsgminw1013-network-monitoring-private-lb-unreachable.md
   Prompts:
-  - MI tsgminw1013-network-monitoring-private-lb-unreachable
-  - Managed Instance tsgminw1013-network-monitoring-private-lb-unreachable
+  - MI connectivity and networking
+  - MonNetworkMonitoring event is_public port
+  - Check MonNetworkMonitoring event is_public
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1090,8 +1134,9 @@ SqlSkills:
   Topic: tsgminw1013-network-monitoring-private-lb-unreachable
   Source: TSG-SQL-MI-Networking/content/connectivity/tsgminw1013-network-monitoring-private-lb-unreachable.md
   Prompts:
-  - MI tsgminw1013-network-monitoring-private-lb-unreachable
-  - Managed Instance tsgminw1013-network-monitoring-private-lb-unreachable
+  - MI connectivity and networking
+  - MonManagedServerInstances
+  - Investigate connectivity errors
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1108,8 +1153,9 @@ SqlSkills:
   Topic: tsgminw1013-network-monitoring-private-lb-unreachable
   Source: TSG-SQL-MI-Networking/content/connectivity/tsgminw1013-network-monitoring-private-lb-unreachable.md
   Prompts:
-  - MI tsgminw1013-network-monitoring-private-lb-unreachable
-  - Managed Instance tsgminw1013-network-monitoring-private-lb-unreachable
+  - MI connectivity and networking
+  - MonManagedServers
+  - Investigate connectivity errors
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1126,8 +1172,9 @@ SqlSkills:
   Topic: tsgminw1005-aia-gateway-aliasdb-connectivity-troubleshooting
   Source: TSG-SQL-MI-Networking/content/connectivity/Deprecated/tsgminw1005-aia-gateway-aliasdb-connectivity-troubleshooting.md
   Prompts:
-  - MI tsgminw1005-aia-gateway-aliasdb-connectivity-troubleshooting
-  - Managed Instance tsgminw1005-aia-gateway-aliasdb-connectivity-troubleshooting
+  - MI connectivity and networking by node
+  - MonCounterOneMinute TIMESTAMP ClusterName NodeName
+  - Check MonCounterOneMinute ClusterName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1158,8 +1205,9 @@ SqlSkills:
   Topic: tsgminw1014-network-monitoring-mi-endpoints
   Source: TSG-SQL-MI-Networking/content/connectivity/Deprecated/tsgminw1014-network-monitoring-mi-endpoints.md
   Prompts:
-  - MI tsgminw1014-network-monitoring-mi-endpoints
-  - Managed Instance tsgminw1014-network-monitoring-mi-endpoints
+  - MI connectivity and networking
+  - MonNetworkMonitoring event TIMESTAMP
+  - Check MonNetworkMonitoring event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1176,8 +1224,9 @@ SqlSkills:
   Topic: tsgminw1014-network-monitoring-mi-endpoints
   Source: TSG-SQL-MI-Networking/content/connectivity/Deprecated/tsgminw1014-network-monitoring-mi-endpoints.md
   Prompts:
-  - MI tsgminw1014-network-monitoring-mi-endpoints
-  - Managed Instance tsgminw1014-network-monitoring-mi-endpoints
+  - MI connectivity and networking
+  - MonManagedServerInstances app_name
+  - Check MonManagedServerInstances app_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1196,8 +1245,9 @@ SqlSkills:
   Topic: tsgminw1014-network-monitoring-mi-endpoints
   Source: TSG-SQL-MI-Networking/content/connectivity/Deprecated/tsgminw1014-network-monitoring-mi-endpoints.md
   Prompts:
-  - MI tsgminw1014-network-monitoring-mi-endpoints
-  - Managed Instance tsgminw1014-network-monitoring-mi-endpoints
+  - MI connectivity and networking
+  - MonManagedServers fabric_application_uri tenant_ring_name
+  - Check MonManagedServers fabric_application_uri
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1214,8 +1264,9 @@ SqlSkills:
   Topic: tsgminw1015-connectivity-success-monitoring
   Source: TSG-SQL-MI-Networking/content/connectivity/Deprecated/tsgminw1015-connectivity-success-monitoring.md
   Prompts:
-  - MI tsgminw1015-connectivity-success-monitoring
-  - Managed Instance tsgminw1015-connectivity-success-monitoring
+  - MI connectivity and networking
+  - MonManagedServers TIMESTAMP name
+  - Check MonManagedServers name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1240,8 +1291,9 @@ SqlSkills:
   Topic: tsgminw1015-connectivity-success-monitoring
   Source: TSG-SQL-MI-Networking/content/connectivity/Deprecated/tsgminw1015-connectivity-success-monitoring.md
   Prompts:
-  - MI tsgminw1015-connectivity-success-monitoring
-  - Managed Instance tsgminw1015-connectivity-success-monitoring
+  - MI connectivity and networking
+  - MonLogin TIMESTAMP ClusterName
+  - Check MonLogin ClusterName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1258,8 +1310,9 @@ SqlSkills:
   Topic: tsgminw1016-long-gateway-startup
   Source: TSG-SQL-MI-Networking/content/connectivity/Deprecated/tsgminw1016-long-gateway-startup.md
   Prompts:
-  - MI tsgminw1016-long-gateway-startup
-  - Managed Instance tsgminw1016-long-gateway-startup
+  - MI login and connection errors by node
+  - MonRedirector TIMESTAMP AppName text
+  - Check MonRedirector AppName text
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1282,8 +1335,9 @@ SqlSkills:
   Topic: container-dependency-applications-and-creation-workflow
   Source: TSG-SQL-MI-Networking/content/containers/container-dependency-applications-and-creation-workflow.md
   Prompts:
-  - MI container-dependency-applications-and-creation-workflow
-  - Managed Instance container-dependency-applications-and-creation-workflow
+  - MI resource usage analysis by node
+  - Unknown ClusterName NodeName EventType
+  - Check Unknown ClusterName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1308,8 +1362,9 @@ SqlSkills:
   Topic: container-dependency-applications-and-creation-workflow
   Source: TSG-SQL-MI-Networking/content/containers/container-dependency-applications-and-creation-workflow.md
   Prompts:
-  - MI container-dependency-applications-and-creation-workflow
-  - Managed Instance container-dependency-applications-and-creation-workflow
+  - MI resource usage analysis
+  - Unknown ClusterName Text EventType
+  - Check Unknown ClusterName Text
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1330,8 +1385,9 @@ SqlSkills:
   Topic: container-dependency-applications-and-creation-workflow
   Source: TSG-SQL-MI-Networking/content/containers/container-dependency-applications-and-creation-workflow.md
   Prompts:
-  - MI container-dependency-applications-and-creation-workflow
-  - Managed Instance container-dependency-applications-and-creation-workflow
+  - MI resource usage analysis
+  - Unknown Timestamp Role Raw
+  - Check Unknown Role Raw
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1364,8 +1420,9 @@ SqlSkills:
   Topic: container-dependency-applications-and-creation-workflow
   Source: TSG-SQL-MI-Networking/content/containers/container-dependency-applications-and-creation-workflow.md
   Prompts:
-  - MI container-dependency-applications-and-creation-workflow
-  - Managed Instance container-dependency-applications-and-creation-workflow
+  - MI storage usage and size by node
+  - MonContainerShare PreciseTimeStamp ClusterName NodeName
+  - Check MonContainerShare ClusterName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1384,8 +1441,9 @@ SqlSkills:
   Topic: initial-investigation-steps-for-containers
   Source: TSG-SQL-MI-Networking/content/containers/initial-investigation-steps-for-containers.md
   Prompts:
-  - MI initial-investigation-steps-for-containers
-  - Managed Instance initial-investigation-steps-for-containers
+  - MI resource usage analysis by node
+  - Unknown ClusterName NodeName EventType
+  - Check Unknown ClusterName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1410,8 +1468,9 @@ SqlSkills:
   Topic: tsgminw2001-containerd-issue-service-not-running
   Source: TSG-SQL-MI-Networking/content/containers/tsgminw2001-containerd-issue-service-not-running.md
   Prompts:
-  - MI tsgminw2001-containerd-issue-service-not-running
-  - Managed Instance tsgminw2001-containerd-issue-service-not-running
+  - MI login and connection errors by node
+  - Unknown TIMESTAMP TaskName Text
+  - Check Unknown TaskName Text
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1432,8 +1491,9 @@ SqlSkills:
   Topic: tsgminw2001-containerd-issue-service-not-running
   Source: TSG-SQL-MI-Networking/content/containers/tsgminw2001-containerd-issue-service-not-running.md
   Prompts:
-  - MI tsgminw2001-containerd-issue-service-not-running
-  - Managed Instance tsgminw2001-containerd-issue-service-not-running
+  - MI connectivity and networking
+  - AlrWinFabHealthNodeEvent PreciseTimeStamp Property
+  - Check AlrWinFabHealthNodeEvent Property Description
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1456,8 +1516,9 @@ SqlSkills:
   Topic: tsgminw2002-high-osdrive-usage-detected
   Source: TSG-SQL-MI-Networking/content/containers/tsgminw2002-high-osdrive-usage-detected.md
   Prompts:
-  - MI tsgminw2002-high-osdrive-usage-detected
-  - Managed Instance tsgminw2002-high-osdrive-usage-detected
+  - MI resource usage analysis
+  - MonRgLoad TIMESTAMP event ClusterName
+  - Check MonRgLoad event ClusterName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1480,8 +1541,9 @@ SqlSkills:
   Topic: tsgminw2005-missing-nc-vfp-rules
   Source: TSG-SQL-MI-Networking/content/containers/tsgminw2005-missing-nc-vfp-rules.md
   Prompts:
-  - MI tsgminw2005-missing-nc-vfp-rules
-  - Managed Instance tsgminw2005-missing-nc-vfp-rules
+  - MI tsgminw2005-missing-nc-vfp-rules analysis
+  - Unknown TIMESTAMP NodeId Message Failed
+  - Check TIMESTAMP Failed
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1498,8 +1560,9 @@ SqlSkills:
   Topic: tsgminw2005-missing-nc-vfp-rules
   Source: TSG-SQL-MI-Networking/content/containers/tsgminw2005-missing-nc-vfp-rules.md
   Prompts:
-  - MI tsgminw2005-missing-nc-vfp-rules
-  - Managed Instance tsgminw2005-missing-nc-vfp-rules
+  - MI tsgminw2005-missing-nc-vfp-rules analysis
+  - Unknown TIMESTAMP NodeId ErrorId
+  - Check Unknown NodeId ErrorId
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1520,8 +1583,9 @@ SqlSkills:
   Topic: tsgminw2005-missing-nc-vfp-rules
   Source: TSG-SQL-MI-Networking/content/containers/tsgminw2005-missing-nc-vfp-rules.md
   Prompts:
-  - MI tsgminw2005-missing-nc-vfp-rules
-  - Managed Instance tsgminw2005-missing-nc-vfp-rules
+  - MI tsgminw2005-missing-nc-vfp-rules analysis
+  - Unknown TIMESTAMP NodeId ErrorId
+  - Check Unknown NodeId ErrorId
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1542,8 +1606,9 @@ SqlSkills:
   Topic: tsgminw2005-missing-nc-vfp-rules
   Source: TSG-SQL-MI-Networking/content/containers/tsgminw2005-missing-nc-vfp-rules.md
   Prompts:
-  - MI tsgminw2005-missing-nc-vfp-rules
-  - Managed Instance tsgminw2005-missing-nc-vfp-rules
+  - MI tsgminw2005-missing-nc-vfp-rules analysis
+  - Unknown TIMESTAMP NodeId Message
+  - Check Unknown NodeId Message
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1564,8 +1629,9 @@ SqlSkills:
   Topic: tsgminw2006-leaked-pod
   Source: TSG-SQL-MI-Networking/content/containers/tsgminw2006-leaked-pod.md
   Prompts:
-  - MI tsgminw2006-leaked-pod
-  - Managed Instance tsgminw2006-leaked-pod
+  - MI connectivity and networking by node
+  - Unknown TIMESTAMP ClusterName NodeName
+  - Check Unknown ClusterName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1592,8 +1658,9 @@ SqlSkills:
   Topic: tsgminw2006-leaked-pod
   Source: TSG-SQL-MI-Networking/content/containers/tsgminw2006-leaked-pod.md
   Prompts:
-  - MI tsgminw2006-leaked-pod
-  - Managed Instance tsgminw2006-leaked-pod
+  - MI connectivity and networking by node
+  - Unknown TIMESTAMP ClusterName NodeName
+  - Check Unknown ClusterName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1620,8 +1687,9 @@ SqlSkills:
   Topic: tsgminw2007-containershareutil-out-of-memory-due-to-large-crl
   Source: TSG-SQL-MI-Networking/content/containers/tsgminw2007-containershareutil-out-of-memory-due-to-large-crl.md
   Prompts:
-  - MI tsgminw2007-containershareutil-out-of-memory-due-to-large-crl
-  - Managed Instance tsgminw2007-containershareutil-out-of-memory-due-to-large-crl
+  - MI memory pressure and OOM analysis by node
+  - MonContainerShare TIMESTAMP ClusterName NodeName
+  - Check MonContainerShare ClusterName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1650,8 +1718,9 @@ SqlSkills:
   Topic: tsgminw2007-containershareutil-out-of-memory-due-to-large-crl
   Source: TSG-SQL-MI-Networking/content/containers/tsgminw2007-containershareutil-out-of-memory-due-to-large-crl.md
   Prompts:
-  - MI tsgminw2007-containershareutil-out-of-memory-due-to-large-crl
-  - Managed Instance tsgminw2007-containershareutil-out-of-memory-due-to-large-crl
+  - MI memory pressure and OOM analysis by node
+  - MonContainerShare TIMESTAMP ClusterName NodeName
+  - Check MonContainerShare ClusterName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1680,8 +1749,9 @@ SqlSkills:
   Topic: tsgminw2009-leaked-container
   Source: TSG-SQL-MI-Networking/content/containers/tsgminw2009-leaked-container.md
   Prompts:
-  - MI tsgminw2009-leaked-container
-  - Managed Instance tsgminw2009-leaked-container
+  - MI resource usage analysis
+  - AlrWinFabHealthApplicationState TIMESTAMP ApplicationName
+  - Check AlrWinFabHealthApplicationState ApplicationName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1704,8 +1774,9 @@ SqlSkills:
   Topic: tsgminw2009-leaked-container
   Source: TSG-SQL-MI-Networking/content/containers/tsgminw2009-leaked-container.md
   Prompts:
-  - MI tsgminw2009-leaked-container
-  - Managed Instance tsgminw2009-leaked-container
+  - MI replica health and role
+  - AlrWinFabHealthPartitionEvent TIMESTAMP HealthState
+  - Check AlrWinFabHealthPartitionEvent HealthState ServiceName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1732,8 +1803,9 @@ SqlSkills:
   Topic: tsgminw2009-leaked-container
   Source: TSG-SQL-MI-Networking/content/containers/tsgminw2009-leaked-container.md
   Prompts:
-  - MI tsgminw2009-leaked-container
-  - Managed Instance tsgminw2009-leaked-container
+  - MI restore request status
+  - MonNodeTraceETW TIMESTAMP packageName ClusterName
+  - Check MonNodeTraceETW packageName ClusterName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1760,8 +1832,9 @@ SqlSkills:
   Topic: tsgminw2010-hcn-create-endpoint-failed
   Source: TSG-SQL-MI-Networking/content/containers/tsgminw2010-hcn-create-endpoint-failed.md
   Prompts:
-  - MI tsgminw2010-hcn-create-endpoint-failed
-  - Managed Instance tsgminw2010-hcn-create-endpoint-failed
+  - MI connectivity and networking by node
+  - Unknown Text TIMESTAMP TaskName
+  - Check Unknown Text TaskName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1784,8 +1857,9 @@ SqlSkills:
   Topic: tsgminw2011-dnc-could-not-get-primary-ip-endpoint
   Source: TSG-SQL-MI-Networking/content/containers/tsgminw2011-dnc-could-not-get-primary-ip-endpoint.md
   Prompts:
-  - MI tsgminw2011-dnc-could-not-get-primary-ip-endpoint
-  - Managed Instance tsgminw2011-dnc-could-not-get-primary-ip-endpoint
+  - MI resource usage analysis
+  - Unknown ClusterName TIMESTAMP EventType
+  - Check Unknown ClusterName EventType
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1802,8 +1876,9 @@ SqlSkills:
   Topic: tsgminw2011-dnc-could-not-get-primary-ip-endpoint
   Source: TSG-SQL-MI-Networking/content/containers/tsgminw2011-dnc-could-not-get-primary-ip-endpoint.md
   Prompts:
-  - MI tsgminw2011-dnc-could-not-get-primary-ip-endpoint
-  - Managed Instance tsgminw2011-dnc-could-not-get-primary-ip-endpoint
+  - MI connectivity and networking by node
+  - Unknown TIMESTAMP ClusterName EventType
+  - Check Unknown ClusterName EventType
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1827,8 +1902,9 @@ SqlSkills:
   Topic: tsgminw2011-dnc-could-not-get-primary-ip-endpoint
   Source: TSG-SQL-MI-Networking/content/containers/tsgminw2011-dnc-could-not-get-primary-ip-endpoint.md
   Prompts:
-  - MI tsgminw2011-dnc-could-not-get-primary-ip-endpoint
-  - Managed Instance tsgminw2011-dnc-could-not-get-primary-ip-endpoint
+  - MI connectivity and networking by node
+  - MonNodeAgentEvents PreciseTimeStamp ClusterName event
+  - Check MonNodeAgentEvents ClusterName event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1852,8 +1928,9 @@ SqlSkills:
   Topic: tsgminw2014-restart-csu-host-stuck-update-slo
   Source: TSG-SQL-MI-Networking/content/containers/tsgminw2014-restart-csu-host-stuck-update-slo.md
   Prompts:
-  - MI tsgminw2014-restart-csu-host-stuck-update-slo
-  - Managed Instance tsgminw2014-restart-csu-host-stuck-update-slo
+  - MI storage usage and size
+  - MonManagement TIMESTAMP state_machine_type state
+  - Check MonManagement state_machine_type state
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1876,8 +1953,9 @@ SqlSkills:
   Topic: tsgminw2014-restart-csu-host-stuck-update-slo
   Source: TSG-SQL-MI-Networking/content/containers/tsgminw2014-restart-csu-host-stuck-update-slo.md
   Prompts:
-  - MI tsgminw2014-restart-csu-host-stuck-update-slo
-  - Managed Instance tsgminw2014-restart-csu-host-stuck-update-slo
+  - MI restore request status
+  - MonManagementOperations request_id ServerName
+  - Check MonManagementOperations request_id ServerName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1900,8 +1978,9 @@ SqlSkills:
   Topic: tsgminw2014-restart-csu-host-stuck-update-slo
   Source: TSG-SQL-MI-Networking/content/containers/tsgminw2014-restart-csu-host-stuck-update-slo.md
   Prompts:
-  - MI tsgminw2014-restart-csu-host-stuck-update-slo
-  - Managed Instance tsgminw2014-restart-csu-host-stuck-update-slo
+  - MI connectivity and networking
+  - MonChangeManagedServerInstanceReqs request_id PropertyName
+  - Check MonChangeManagedServerInstanceReqs request_id
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1928,8 +2007,9 @@ SqlSkills:
   Topic: tsgminw2003-apipa-removed-on-hns-restart
   Source: TSG-SQL-MI-Networking/content/containers/Deprecated/tsgminw2003-apipa-removed-on-hns-restart.md
   Prompts:
-  - MI tsgminw2003-apipa-removed-on-hns-restart
-  - Managed Instance tsgminw2003-apipa-removed-on-hns-restart
+  - MI connectivity and networking by node
+  - MonSQLSystemHealth TIMESTAMP TaskName EventType
+  - Check MonSQLSystemHealth TaskName EventType
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1970,8 +2050,9 @@ SqlSkills:
   Topic: tsgminw2003-apipa-removed-on-hns-restart
   Source: TSG-SQL-MI-Networking/content/containers/Deprecated/tsgminw2003-apipa-removed-on-hns-restart.md
   Prompts:
-  - MI tsgminw2003-apipa-removed-on-hns-restart
-  - Managed Instance tsgminw2003-apipa-removed-on-hns-restart
+  - MI rollout and upgrade status
+  - MonFabricClusters TIMESTAMP name tenant_ring_name
+  - Check MonFabricClusters name tenant_ring_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2014,8 +2095,9 @@ SqlSkills:
   Topic: tsgminw2015-mds-agent-launcher-memory-leak
   Source: TSG-SQL-MI-Networking/content/containers/Deprecated/tsgminw2015-mds-agent-launcher-memory-leak.md
   Prompts:
-  - MI tsgminw2015-mds-agent-launcher-memory-leak
-  - Managed Instance tsgminw2015-mds-agent-launcher-memory-leak
+  - MI memory pressure and OOM analysis by node
+  - MonRgLoad NodeName TIMESTAMP event
+  - Check MonRgLoad NodeName event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2040,8 +2122,9 @@ SqlSkills:
   Topic: check-dns-configuration-on-vnet
   Source: TSG-SQL-MI-Networking/content/how-to/check-dns-configuration-on-vnet.md
   Prompts:
-  - MI check-dns-configuration-on-vnet
-  - Managed Instance check-dns-configuration-on-vnet
+  - MI resource usage analysis
+  - MonPrivateClusters tenant_ring_name vnet_resource_guid
+  - Check MonPrivateClusters tenant_ring_name vnet_resource_guid
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2060,8 +2143,9 @@ SqlSkills:
   Topic: find-host-node-details
   Source: TSG-SQL-MI-Networking/content/how-to/find-host-node-details.md
   Prompts:
-  - MI find-host-node-details
-  - Managed Instance find-host-node-details
+  - MI resource usage analysis
+  - MonFabricClusters name HostSubscriptionId
+  - Check MonFabricClusters name HostSubscriptionId
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2080,8 +2164,9 @@ SqlSkills:
   Topic: find-host-node-details
   Source: TSG-SQL-MI-Networking/content/how-to/find-host-node-details.md
   Prompts:
-  - MI find-host-node-details
-  - Managed Instance find-host-node-details
+  - MI find-host-node-details analysis
+  - Unknown infraSubscriptionId TIMESTAMP RegionFriendlyName
+  - Check Unknown infraSubscriptionId RegionFriendlyName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2102,8 +2187,9 @@ SqlSkills:
   Topic: find-host-node-details
   Source: TSG-SQL-MI-Networking/content/how-to/find-host-node-details.md
   Prompts:
-  - MI find-host-node-details
-  - Managed Instance find-host-node-details
+  - MI resource usage analysis
+  - MonPrivateClusters tenant_ring_name ClusterName VnetID
+  - Check MonPrivateClusters tenant_ring_name ClusterName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2122,8 +2208,9 @@ SqlSkills:
   Topic: find-host-node-details
   Source: TSG-SQL-MI-Networking/content/how-to/find-host-node-details.md
   Prompts:
-  - MI find-host-node-details
-  - Managed Instance find-host-node-details
+  - MI resource usage analysis
+  - MonFabricClusters name HostSubscriptionId
+  - Check MonFabricClusters name HostSubscriptionId
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2144,8 +2231,9 @@ SqlSkills:
   Topic: find-host-node-details
   Source: TSG-SQL-MI-Networking/content/how-to/find-host-node-details.md
   Prompts:
-  - MI find-host-node-details
-  - Managed Instance find-host-node-details
+  - MI resource usage analysis
+  - MonPrivateClusters ClusterName tenant_ring_name VnetID
+  - Check MonPrivateClusters ClusterName tenant_ring_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2166,8 +2254,9 @@ SqlSkills:
   Topic: how-to-investigate-NMAgent
   Source: TSG-SQL-MI-Networking/content/how-to/how-to-investigate-NMAgent.md
   Prompts:
-  - MI how-to-investigate-NMAgent
-  - Managed Instance how-to-investigate-NMAgent
+  - MI how-to-investigate-nmagent analysis
+  - Unknown TIMESTAMP NodeId ErrorMessage
+  - Check Unknown NodeId ErrorMessage
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2184,8 +2273,9 @@ SqlSkills:
   Topic: how-to-investigate-NMAgent
   Source: TSG-SQL-MI-Networking/content/how-to/how-to-investigate-NMAgent.md
   Prompts:
-  - MI how-to-investigate-NMAgent
-  - Managed Instance how-to-investigate-NMAgent
+  - MI how-to-investigate-nmagent analysis
+  - Unknown TIMESTAMP NodeId ErrorMessage
+  - Check Unknown NodeId ErrorMessage
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2202,8 +2292,9 @@ SqlSkills:
   Topic: how-to-investigate-NMAgent
   Source: TSG-SQL-MI-Networking/content/how-to/how-to-investigate-NMAgent.md
   Prompts:
-  - MI how-to-investigate-NMAgent
-  - Managed Instance how-to-investigate-NMAgent
+  - MI resource usage analysis
+  - MonFabricClusters name HostSubscriptionId
+  - Check MonFabricClusters name HostSubscriptionId
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2226,8 +2317,9 @@ SqlSkills:
   Topic: troubleshooting-finite-state-machines
   Source: TSG-SQL-MI-Networking/content/how-to/troubleshooting-finite-state-machines.md
   Prompts:
-  - MI troubleshooting-finite-state-machines
-  - Managed Instance troubleshooting-finite-state-machines
+  - MI restore request status
+  - MonManagement request_id state_machine_type action
+  - Check MonManagement request_id state_machine_type
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2247,8 +2339,9 @@ SqlSkills:
   Topic: initial-investigation-steps-for-networking
   Source: TSG-SQL-MI-Networking/content/networking/initial-investigation-steps-for-networking.md
   Prompts:
-  - MI initial-investigation-steps-for-networking
-  - Managed Instance initial-investigation-steps-for-networking
+  - MI connectivity and networking
+  - MonManagement event request_uri Operation
+  - Check MonManagement event request_uri
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2275,8 +2368,9 @@ SqlSkills:
   Topic: initial-investigation-steps-for-networking
   Source: TSG-SQL-MI-Networking/content/networking/initial-investigation-steps-for-networking.md
   Prompts:
-  - MI initial-investigation-steps-for-networking
-  - Managed Instance initial-investigation-steps-for-networking
+  - MI connectivity and networking
+  - Unknown SubscriptionId TIMESTAMP ResourceType
+  - Check Unknown SubscriptionId ResourceType
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2293,8 +2387,9 @@ SqlSkills:
   Topic: tsgminw3004-failed-to-create-containerd-task
   Source: TSG-SQL-MI-Networking/content/networking/tsgminw3004-failed-to-create-containerd-task.md
   Prompts:
-  - MI tsgminw3004-failed-to-create-containerd-task
-  - Managed Instance tsgminw3004-failed-to-create-containerd-task
+  - MI resource usage analysis
+  - Unknown ClusterName EventType
+  - Check Unknown ClusterName EventType
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2315,8 +2410,9 @@ SqlSkills:
   Topic: tsgminw3006-troubleshooting-crl-issues
   Source: TSG-SQL-MI-Networking/content/networking/tsgminw3006-troubleshooting-crl-issues.md
   Prompts:
-  - MI tsgminw3006-troubleshooting-crl-issues
-  - Managed Instance tsgminw3006-troubleshooting-crl-issues
+  - MI connectivity and networking by node
+  - MonPrivateClusters TIMESTAMP state event
+  - Check MonPrivateClusters state event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2369,8 +2465,9 @@ SqlSkills:
   Topic: tsgminw3006-troubleshooting-crl-issues
   Source: TSG-SQL-MI-Networking/content/networking/tsgminw3006-troubleshooting-crl-issues.md
   Prompts:
-  - MI tsgminw3006-troubleshooting-crl-issues
-  - Managed Instance tsgminw3006-troubleshooting-crl-issues
+  - MI connectivity and networking
+  - AlrWinFabHealthNodeEvent TIMESTAMP ClusterName
+  - Check AlrWinFabHealthNodeEvent ClusterName NodeEntityName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2395,8 +2492,9 @@ SqlSkills:
   Topic: tsgminw3006-troubleshooting-crl-issues
   Source: TSG-SQL-MI-Networking/content/networking/tsgminw3006-troubleshooting-crl-issues.md
   Prompts:
-  - MI tsgminw3006-troubleshooting-crl-issues
-  - Managed Instance tsgminw3006-troubleshooting-crl-issues
+  - MI storage usage and size by node
+  - MonMachineLocalWatchdog TIMESTAMP ClusterName NodeName
+  - Check MonMachineLocalWatchdog ClusterName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2419,8 +2517,9 @@ SqlSkills:
   Topic: tsgminw3006-troubleshooting-crl-issues
   Source: TSG-SQL-MI-Networking/content/networking/tsgminw3006-troubleshooting-crl-issues.md
   Prompts:
-  - MI tsgminw3006-troubleshooting-crl-issues
-  - Managed Instance tsgminw3006-troubleshooting-crl-issues
+  - MI connectivity and networking by node
+  - MonClusterLoad TIMESTAMP ClusterName node_name
+  - Check MonClusterLoad ClusterName node_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2441,8 +2540,9 @@ SqlSkills:
   Topic: tsgminw3006-troubleshooting-crl-issues
   Source: TSG-SQL-MI-Networking/content/networking/tsgminw3006-troubleshooting-crl-issues.md
   Prompts:
-  - MI tsgminw3006-troubleshooting-crl-issues
-  - Managed Instance tsgminw3006-troubleshooting-crl-issues
+  - MI connectivity and networking
+  - AlrWinFabHealthNodeEvent TIMESTAMP ClusterName
+  - Check AlrWinFabHealthNodeEvent ClusterName NodeEntityName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2465,8 +2565,9 @@ SqlSkills:
   Topic: tsgminw3009-cluster-certificate-expired
   Source: TSG-SQL-MI-Networking/content/networking/tsgminw3009-cluster-certificate-expired.md
   Prompts:
-  - MI tsgminw3009-cluster-certificate-expired
-  - Managed Instance tsgminw3009-cluster-certificate-expired
+  - MI login and connection errors by server
+  - MonLogin TIMESTAMP event AppTypeName
+  - Check MonLogin event AppTypeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2523,8 +2624,9 @@ SqlSkills:
   Topic: tsgminw3009-cluster-certificate-expired
   Source: TSG-SQL-MI-Networking/content/networking/tsgminw3009-cluster-certificate-expired.md
   Prompts:
-  - MI tsgminw3009-cluster-certificate-expired
-  - Managed Instance tsgminw3009-cluster-certificate-expired
+  - MI restore request status
+  - MonManagedServers TIMESTAMP private_cluster_tenant_ring_name
+  - Check MonManagedServers private_cluster_tenant_ring_name
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2549,8 +2651,9 @@ SqlSkills:
   Topic: tsgminw3012-GatewayCloudLifterCertificate-expired
   Source: TSG-SQL-MI-Networking/content/networking/tsgminw3012-GatewayCloudLifterCertificate-expired.md
   Prompts:
-  - MI tsgminw3012-GatewayCloudLifterCertificate-expired
-  - Managed Instance tsgminw3012-GatewayCloudLifterCertificate-expired
+  - MI resource usage analysis by node
+  - MonMachineLocalWatchdog ClusterName component TIMESTAMP
+  - Check MonMachineLocalWatchdog ClusterName component
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2587,8 +2690,9 @@ SqlSkills:
   Topic: tsgminw3018-mi-control-ring-failover
   Source: TSG-SQL-MI-Networking/content/networking/tsgminw3018-mi-control-ring-failover.md
   Prompts:
-  - MI tsgminw3018-mi-control-ring-failover
-  - Managed Instance tsgminw3018-mi-control-ring-failover
+  - MI failover group configuration
+  - MonManagementResourceProvider PreciseTimeStamp request_url
+  - Check MonManagementResourceProvider request_url ClusterName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2609,8 +2713,9 @@ SqlSkills:
   Topic: tsgminw3019-table-storage-resolution-issues
   Source: TSG-SQL-MI-Networking/content/networking/tsgminw3019-table-storage-resolution-issues.md
   Prompts:
-  - MI tsgminw3019-table-storage-resolution-issues
-  - Managed Instance tsgminw3019-table-storage-resolution-issues
+  - MI storage usage and size
+  - MonUpsertTenantRingRequests is_swift TIMESTAMP ClusterName
+  - Check MonUpsertTenantRingRequests is_swift ClusterName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2629,8 +2734,9 @@ SqlSkills:
   Topic: tsgminw3019-table-storage-resolution-issues
   Source: TSG-SQL-MI-Networking/content/networking/tsgminw3019-table-storage-resolution-issues.md
   Prompts:
-  - MI tsgminw3019-table-storage-resolution-issues
-  - Managed Instance tsgminw3019-table-storage-resolution-issues
+  - MI storage usage and size
+  - MonNodeAgentEvents PreciseTimeStamp event ClusterName
+  - Check MonNodeAgentEvents event ClusterName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2651,8 +2757,9 @@ SqlSkills:
   Topic: AKV-Endpoint-unavailable
   Source: TSG-SQL-MI-Networking/content/operational/active-production-problems/AKV-Endpoint-unavailable.md
   Prompts:
-  - MI AKV-Endpoint-unavailable
-  - Managed Instance AKV-Endpoint-unavailable
+  - MI restore request status
+  - MonSQLSystemHealth TIMESTAMP AppTypeName message
+  - Check MonSQLSystemHealth AppTypeName message
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2671,8 +2778,9 @@ SqlSkills:
   Topic: AKV-Endpoint-unavailable
   Source: TSG-SQL-MI-Networking/content/operational/active-production-problems/AKV-Endpoint-unavailable.md
   Prompts:
-  - MI AKV-Endpoint-unavailable
-  - Managed Instance AKV-Endpoint-unavailable
+  - MI restore request status by node
+  - MonSQLSystemHealth TIMESTAMP AppTypeName message
+  - Check MonSQLSystemHealth AppTypeName message
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2691,8 +2799,9 @@ SqlSkills:
   Topic: AKV-Endpoint-unavailable
   Source: TSG-SQL-MI-Networking/content/operational/active-production-problems/AKV-Endpoint-unavailable.md
   Prompts:
-  - MI AKV-Endpoint-unavailable
-  - Managed Instance AKV-Endpoint-unavailable
+  - MI restore request status
+  - MonSQLSystemHealth TIMESTAMP AppTypeName message
+  - Check MonSQLSystemHealth AppTypeName message
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2711,8 +2820,9 @@ SqlSkills:
   Topic: Fabric-DNS-Service
   Source: TSG-SQL-MI-Networking/content/operational/active-production-problems/Fabric-DNS-Service.md
   Prompts:
-  - MI Fabric-DNS-Service
-  - Managed Instance Fabric-DNS-Service
+  - MI connectivity and networking by node
+  - Unknown TIMESTAMP ClusterName NodeName
+  - Check Unknown ClusterName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2739,8 +2849,9 @@ SqlSkills:
   Topic: Fabric-DNS-Service
   Source: TSG-SQL-MI-Networking/content/operational/active-production-problems/Fabric-DNS-Service.md
   Prompts:
-  - MI Fabric-DNS-Service
-  - Managed Instance Fabric-DNS-Service
+  - MI connectivity and networking by node
+  - MonNodeAgentEvents PreciseTimeStamp ClusterName event
+  - Check MonNodeAgentEvents ClusterName event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2763,8 +2874,9 @@ SqlSkills:
   Topic: gateway-ready-but-not-processing-network-traffic
   Source: TSG-SQL-MI-Networking/content/operational/active-production-problems/gateway-ready-but-not-processing-network-traffic.md
   Prompts:
-  - MI gateway-ready-but-not-processing-network-traffic
-  - Managed Instance gateway-ready-but-not-processing-network-traffic
+  - MI connectivity and networking
+  - MonLogin originalEventTimestamp AppName event
+  - Check MonLogin originalEventTimestamp AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2781,8 +2893,9 @@ SqlSkills:
   Topic: gateway-ready-but-not-processing-network-traffic
   Source: TSG-SQL-MI-Networking/content/operational/active-production-problems/gateway-ready-but-not-processing-network-traffic.md
   Prompts:
-  - MI gateway-ready-but-not-processing-network-traffic
-  - Managed Instance gateway-ready-but-not-processing-network-traffic
+  - MI connectivity and networking by node
+  - MonCounterOneMinute PreciseTimeStamp CounterName NodeName
+  - Check MonCounterOneMinute CounterName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2807,8 +2920,9 @@ SqlSkills:
   Topic: gateway-ready-but-not-processing-network-traffic
   Source: TSG-SQL-MI-Networking/content/operational/active-production-problems/gateway-ready-but-not-processing-network-traffic.md
   Prompts:
-  - MI gateway-ready-but-not-processing-network-traffic
-  - Managed Instance gateway-ready-but-not-processing-network-traffic
+  - MI connectivity and networking by node
+  - MonXdbhost originalEventTimestamp NodeName text
+  - Check MonXdbhost originalEventTimestamp NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2827,8 +2941,9 @@ SqlSkills:
   Topic: gateway-uses-stale-SQL-replica-due-to-SF-error
   Source: TSG-SQL-MI-Networking/content/operational/active-production-problems/gateway-uses-stale-SQL-replica-due-to-SF-error.md
   Prompts:
-  - MI gateway-uses-stale-SQL-replica-due-to-SF-error
-  - Managed Instance gateway-uses-stale-SQL-replica-due-to-SF-error
+  - MI replica health and role by server
+  - MonLogin TIMESTAMP AppTypeName result
+  - Check MonLogin AppTypeName result
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2868,8 +2983,9 @@ SqlSkills:
   Topic: slow-crl-import-on-sql-nodes
   Source: TSG-SQL-MI-Networking/content/operational/active-production-problems/slow-crl-import-on-sql-nodes.md
   Prompts:
-  - MI slow-crl-import-on-sql-nodes
-  - Managed Instance slow-crl-import-on-sql-nodes
+  - MI resource usage analysis by server
+  - MonContainerShare TIMESTAMP ClusterName NodeName
+  - Check MonContainerShare ClusterName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2900,8 +3016,9 @@ SqlSkills:
   Topic: slow-crl-import-on-wf-nodes
   Source: TSG-SQL-MI-Networking/content/operational/active-production-problems/slow-crl-import-on-wf-nodes.md
   Prompts:
-  - MI slow-crl-import-on-wf-nodes
-  - Managed Instance slow-crl-import-on-wf-nodes
+  - MI resource usage analysis by server
+  - MonContainerShare TIMESTAMP ClusterName NodeRole
+  - Check MonContainerShare ClusterName NodeRole
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2930,8 +3047,9 @@ SqlSkills:
   Topic: tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway
   Source: TSG-SQL-MI-Networking/content/operational/active-production-problems/tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway.md
   Prompts:
-  - MI tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway
-  - Managed Instance tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway
+  - MI login and connection errors
+  - MonLogin the frozen
+  - Check MonLogin the frozen
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2956,8 +3074,9 @@ SqlSkills:
   Topic: tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway
   Source: TSG-SQL-MI-Networking/content/operational/active-production-problems/tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway.md
   Prompts:
-  - MI tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway
-  - Managed Instance tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway
+  - MI login and connection errors by node
+  - MonXdbhost originalEventTimestamp NodeName text
+  - Check MonXdbhost originalEventTimestamp NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2976,8 +3095,9 @@ SqlSkills:
   Topic: tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway
   Source: TSG-SQL-MI-Networking/content/operational/active-production-problems/tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway.md
   Prompts:
-  - MI tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway
-  - Managed Instance tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway
+  - MI login and connection errors by node
+  - MonRedirector originalEventTimestamp NodeName rn
+  - Check MonRedirector originalEventTimestamp NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3002,8 +3122,9 @@ SqlSkills:
   Topic: tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway
   Source: TSG-SQL-MI-Networking/content/operational/active-production-problems/tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway.md
   Prompts:
-  - MI tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway
-  - Managed Instance tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway
+  - MI login and connection errors
+  - MonRedirector originalEventTimestamp duration process_id
+  - Check MonRedirector originalEventTimestamp duration
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3026,8 +3147,9 @@ SqlSkills:
   Topic: tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway
   Source: TSG-SQL-MI-Networking/content/operational/active-production-problems/tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway.md
   Prompts:
-  - MI tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway
-  - Managed Instance tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway
+  - MI login and connection errors
+  - MonLogin originalEventTimestamp AppName event
+  - Check MonLogin originalEventTimestamp AppName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3044,8 +3166,9 @@ SqlSkills:
   Topic: tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway
   Source: TSG-SQL-MI-Networking/content/operational/active-production-problems/tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway.md
   Prompts:
-  - MI tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway
-  - Managed Instance tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway
+  - MI login and connection errors by node
+  - MonCounterOneMinute PreciseTimeStamp CounterName NodeName
+  - Check MonCounterOneMinute CounterName NodeName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3068,8 +3191,9 @@ SqlSkills:
   Topic: CSU-Slow-CRL-Import
   Source: TSG-SQL-MI-Networking/content/operational/active-production-problems/Deprecated/CSU-Slow-CRL-Import.md
   Prompts:
-  - MI CSU-Slow-CRL-Import
-  - Managed Instance CSU-Slow-CRL-Import
+  - MI connectivity and networking by node
+  - MonContainerShare originalEventTimestamp ClusterName
+  - Check MonContainerShare originalEventTimestamp ClusterName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3094,8 +3218,9 @@ SqlSkills:
   Topic: CSU-Slow-CRL-Import
   Source: TSG-SQL-MI-Networking/content/operational/active-production-problems/Deprecated/CSU-Slow-CRL-Import.md
   Prompts:
-  - MI CSU-Slow-CRL-Import
-  - Managed Instance CSU-Slow-CRL-Import
+  - MI connectivity and networking
+  - Unknown originalEventTimestamp event startTime
+  - Check Unknown originalEventTimestamp event
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3114,8 +3239,9 @@ SqlSkills:
   Topic: CSU-Slow-CRL-Import
   Source: TSG-SQL-MI-Networking/content/operational/active-production-problems/Deprecated/CSU-Slow-CRL-Import.md
   Prompts:
-  - MI CSU-Slow-CRL-Import
-  - Managed Instance CSU-Slow-CRL-Import
+  - MI connectivity and networking by node
+  - MonContainerShare originalEventTimestamp ClusterName
+  - Check MonContainerShare originalEventTimestamp ClusterName
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3140,8 +3266,9 @@ SqlSkills:
   Topic: mintls-login-errors
   Source: TSG-SQL-MI-Networking/content/operational/active-production-problems/Deprecated/mintls-login-errors.md
   Prompts:
-  - MI mintls-login-errors
-  - Managed Instance mintls-login-errors
+  - MI login and connection errors by database
+  - MonLogin TIMESTAMP event error
+  - Check MonLogin event error
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3172,8 +3299,9 @@ SqlSkills:
   Topic: mintls-login-errors
   Source: TSG-SQL-MI-Networking/content/operational/active-production-problems/Deprecated/mintls-login-errors.md
   Prompts:
-  - MI mintls-login-errors
-  - Managed Instance mintls-login-errors
+  - MI login and connection errors by server
+  - MonManagedServers TIMESTAMP logical_server_name
+  - Check MonManagedServers server_minimal_tls_version
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3192,8 +3320,9 @@ SqlSkills:
   Topic: live-site-runners-and-monitors
   Source: TSG-SQL-MI-Networking/content/operational/live-site-runners-and-monitors/live-site-runners-and-monitors.md
   Prompts:
-  - MI live-site-runners-and-monitors
-  - Managed Instance live-site-runners-and-monitors
+  - MI connectivity and networking
+  - Monitor
+  - Investigate connectivity errors
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3222,8 +3351,9 @@ SqlSkills:
   Topic: live-site-runners-and-monitors
   Source: TSG-SQL-MI-Networking/content/operational/live-site-runners-and-monitors/live-site-runners-and-monitors.md
   Prompts:
-  - MI live-site-runners-and-monitors
-  - Managed Instance live-site-runners-and-monitors
+  - MI connectivity and networking
+  - MonitorIPv6DefaultGatewayRouteRunner
+  - Investigate connectivity errors
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -3346,8 +3476,9 @@ SqlSkills:
   Topic: live-site-runners-and-monitors
   Source: TSG-SQL-MI-Networking/content/operational/live-site-runners-and-monitors/live-site-runners-and-monitors.md
   Prompts:
-  - MI live-site-runners-and-monitors
-  - Managed Instance live-site-runners-and-monitors
+  - MI connectivity and networking
+  - Monitor team
+  - Check Monitor team
   CustomizedParameters:
   - ServerName
   - DatabaseName
