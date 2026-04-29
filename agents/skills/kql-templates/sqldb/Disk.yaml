@@ -1,0 +1,9 @@
+SqlSkills:
+  - id: "3.0"
+    Offline: true
+    Description: >
+      This skill will check disk usage in the User Pool,  and System Pool, and identify the root cause if bottleneck are detected.
+    Prompts:
+      - "Disk Bottleneck Analysis"
+      - "Disk Bottleneck"
+      - "Disk Analysis"

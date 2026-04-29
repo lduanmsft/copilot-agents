@@ -1,0 +1,737 @@
+SqlSkills:
+- id: MI-general-1
+  Topic: MI info, VC info (MonManagedServer
+  Source: asmi-troubleshooter-package/MI info, VC info (MonManagedServer.md
+  Prompts:
+  - MI MI info, VC info (MonManagedServer
+  - Managed Instance MI info, VC info (MonManagedServer
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'MonManagedServers
+
+      //| where TIMESTAMP >= {startTime} and TIMESTAMP <= {endTime}'
+- id: MI-general-2
+  Topic: MI info, VC info (MonManagedServer
+  Source: asmi-troubleshooter-package/MI info, VC info (MonManagedServer.md
+  Prompts:
+  - MI MI info, VC info (MonManagedServer
+  - Managed Instance MI info, VC info (MonManagedServer
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'let managedInstanceName = ''xxxxxx'';
+
+      MonManagedServers
+
+      | where name == managedInstanceName
+
+      | summarize arg_max(TIMESTAMP,*) by managed_server_id'
+- id: MI-general-3
+  Topic: MI info, VC info (MonManagedServer
+  Source: asmi-troubleshooter-package/MI info, VC info (MonManagedServer.md
+  Prompts:
+  - MI MI info, VC info (MonManagedServer
+  - Managed Instance MI info, VC info (MonManagedServer
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonPrivateClusters
+    ExecutedQuery: '| join kind=leftouter ( MonPrivateClusters'
+- id: MI-general-4
+  Topic: MI info, VC info (MonManagedServer
+  Source: asmi-troubleshooter-package/MI info, VC info (MonManagedServer.md
+  Prompts:
+  - MI MI info, VC info (MonManagedServer
+  - Managed Instance MI info, VC info (MonManagedServer
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'let managedInstanceName = ''****''; MonManagedServers | where name == managedInstanceName | summarize StartTime = min(TIMESTAMP), EndTime=max(TIMESTAMP) by managed_server_id,private_cluster_id,name,create_time
+      | join kind=leftouter ( MonPrivateClusters | summarize StartTime = min(TIMESTAMP), EndTime=max(TIMESTAMP) by private_cluster_id,name,create_time ) on $left.private_cluster_id == $right.private_cluster_id
+      | project StartTime,EndTime, InstanceName = name, InstanceCreateTime = create_time, VC_Id=private_cluster_id1, VC_Name= name1, VC_CreateTime = create_time1
+
+      let managedInstanceName = ''****'';
+
+      MonManagedServers
+
+      | where name == managedInstanceName
+
+      | summarize StartTime = min(TIMESTAMP), EndTime=max(TIMESTAMP) by managed_server_id,private_cluster_id,name,create_time'
+- id: MI-general-5
+  Topic: MI info, VC info (MonManagedServer
+  Source: asmi-troubleshooter-package/MI info, VC info (MonManagedServer.md
+  Prompts:
+  - MI MI info, VC info (MonManagedServer
+  - Managed Instance MI info, VC info (MonManagedServer
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'MonManagedServers
+
+      | where TIMESTAMP >= {startTime} and TIMESTAMP <= {endTime}'
+- id: MI-general-6
+  Topic: MI info, VC info (MonManagedServer
+  Source: asmi-troubleshooter-package/MI info, VC info (MonManagedServer.md
+  Prompts:
+  - MI MI info, VC info (MonManagedServer
+  - Managed Instance MI info, VC info (MonManagedServer
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'MonManagedServers
+
+      | where name in ('
+- id: MI-general-7
+  Topic: MI info, VC info (MonManagedServer
+  Source: asmi-troubleshooter-package/MI info, VC info (MonManagedServer.md
+  Prompts:
+  - MI MI info, VC info (MonManagedServer
+  - Managed Instance MI info, VC info (MonManagedServer
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'MonManagedServers
+
+      | where private_cluster_tenant_ring_name contains "tr5911.southeastasia1-a.worker.database.windows.net"'
+- id: MI-general-8
+  Topic: DB info (MonManagedDatabases
+  Source: asmi-troubleshooter-package/DB info (MonManagedDatabases.md
+  Prompts:
+  - MI DB info (MonManagedDatabases
+  - Managed Instance DB info (MonManagedDatabases
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedDatabases
+    ExecutedQuery: 'let startTime = ago(12d);
+
+      let endTime = ago(5d);
+
+      let serverId = ''<managed_server_id>'';
+
+      let databaseName = ''<Databasename>'';
+
+      MonManagedDatabases
+
+      | where PreciseTimeStamp >= startTime and PreciseTimeStamp <= endTime
+
+      | where managed_server_id == serverId
+
+      | where managed_database_name == databaseName
+
+      | summarize arg_max(TIMESTAMP,*) by [''state'']'
+- id: MI-general-9
+  Topic: DB info (MonManagedDatabases
+  Source: asmi-troubleshooter-package/DB info (MonManagedDatabases.md
+  Prompts:
+  - MI DB info (MonManagedDatabases
+  - Managed Instance DB info (MonManagedDatabases
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'MonManagedServers
+
+      | where managed_server_id == serverId
+
+      | distinct managed_server_id, name) on managed_server_id
+
+      | project TIMESTAMP, managed_server_id, managed_server_name = name, managed_database_id, managed_database_name, [''state'']'
+- id: MI-general-10
+  Topic: Get database id
+  Source: asmi-troubleshooter-package/Get database id.md
+  Prompts:
+  - MI Get database id
+  - Managed Instance Get database id
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: 'MonAnalyticsDBSnapshot
+
+      | where TIMESTAMP>= ago(1d)'
+- id: MI-general-11
+  Topic: Get database id
+  Source: asmi-troubleshooter-package/Get database id.md
+  Prompts:
+  - MI Get database id
+  - Managed Instance Get database id
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: 'let serverName = ''sqlmi-rms-test-ausoutheast-10'';
+
+      MonAnalyticsDBSnapshot
+
+      | where TIMESTAMP>= ago(1d)
+
+      | where LogicalServerName =~ "{ServerName}" or logical_server_name =~ "{ServerName}"
+
+      //| where logical_database_name =~ "{DatabaseName}"
+
+      |distinct logical_server_name,logical_database_name,logical_database_id
+
+      //| where * has @''6541a05c-073c-4773-bbef-a33967c099a2''
+
+      | limit 100
+
+      //get database status'
+- id: MI-general-12
+  Topic: Get database id
+  Source: asmi-troubleshooter-package/Get database id.md
+  Prompts:
+  - MI Get database id
+  - Managed Instance Get database id
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: 'let startTime = datetime(''2025-05-13 12:25:00'');
+
+      let endTime = datetime(''2025-05-20 08:25:00'');
+
+      let databaseName = ('''');
+
+      MonAnalyticsDBSnapshot
+
+      | where TIMESTAMP between(startTime..endTime)'
+- id: MI-general-13
+  Topic: Database Options (MonDatabaseMetadata
+  Source: asmi-troubleshooter-package/Database Options (MonDatabaseMetadata.md
+  Prompts:
+  - MI Database Options (MonDatabaseMetadata
+  - Managed Instance Database Options (MonDatabaseMetadata
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDatabaseMetadata
+    ExecutedQuery: 'MonDatabaseMetadata
+
+      //| where TIMESTAMP > datetime({StartTime}) and TIMESTAMP < datetime({EndTime})'
+- id: MI-general-14
+  Topic: Database Options (MonDatabaseMetadata
+  Source: asmi-troubleshooter-package/Database Options (MonDatabaseMetadata.md
+  Prompts:
+  - MI Database Options (MonDatabaseMetadata
+  - Managed Instance Database Options (MonDatabaseMetadata
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDatabaseMetadata
+    ExecutedQuery: 'let ServerName = "{ServerName}" ;
+
+      let daysAgo=7d;
+
+      MonDatabaseMetadata
+
+      | where AppName !startswith ''b-'' and AppName !startswith ''v-''
+
+      | where TIMESTAMP > ago(daysAgo)
+
+      | where LogicalServerName =~ ServerName
+
+      //| where table_name== ''sysdbreg''
+
+      | extend is_parameterization_forced = (binary_and(status2, 0x08000000) == 0x08000000)'
+- id: MI-general-15
+  Topic: Billing
+  Source: asmi-troubleshooter-package/Billing.md
+  Prompts:
+  - MI Billing
+  - Managed Instance Billing
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDwBilling
+    ExecutedQuery: MonDwBilling| where AppName has "af44ed44da39"| where TIMESTAMP <= datetime(2023-10-19 06:38:24.8978878)| where billing_metric_name in ("DatabaseSize", "Snapshot", "GeoSnapshot")| where
+      event == "billing_metric_calculated"| summarize avg(todecimal(size_in_bytes)) by SubscriptionId, LogicalServerName, logical_database_id, physical_database_name, file_type, billing_metric_name,bin(TIMESTAMP,
+      1d)| summarize SizeInGB =sum(avg_size_in_bytes)/1024/1024/1024 by TIMESTAMP, SubscriptionId, LogicalServerName, logical_database_id, billing_metric_name
+- id: MI-general-16
+  Topic: Billing
+  Source: asmi-troubleshooter-package/Billing.md
+  Prompts:
+  - MI Billing
+  - Managed Instance Billing
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDwBilling
+    ExecutedQuery: 'MonDwBilling
+
+      | where AppName has "af44ed44da39"
+
+      | where TIMESTAMP <= datetime(2023-10-19 06:38:24.8978878)'
+- id: MI-general-17
+  Topic: Billing
+  Source: asmi-troubleshooter-package/Billing.md
+  Prompts:
+  - MI Billing
+  - Managed Instance Billing
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmRealTimeResourceStats
+    ExecutedQuery: 'let dt = ago(2h);MonDmRealTimeResourceStats| where TIMESTAMP > dt| where LogicalServerName =~ "{ServerName}" //and database_name =~ "{DatabaseName}"| extend myAppName = extract(@''(\w+)'',
+      1, AppName)| summarize oTime = any(TIMESTAMP) by myAppName| join kind=leftouter (MonDwBilling| where TIMESTAMP > dt| extend myAppName = extract(@''(\w+)'', 1, AppName)| summarize oTime = any(TIMESTAMP)
+      by myAppName, logical_database_id| where logical_database_id != "") on myAppName| join kind=leftouter (MonBillingBackupDatabaseSize| summarize max(todouble(size_bytes)) by ClusterName, LogicalServerName,
+      SubscriptionId, logical_database_id, physical_database_name, file_type, bin(TIMESTAMP, 1h), AppName| summarize DatabaseSizeInGB = sum(max_size_bytes) / (1024.0 * 1024.0 * 1024.0), DatabaseSizeRecordCount
+      = count(logical_database_id) by TIMESTAMP, ClusterName, LogicalServerName, SubscriptionId, logical_database_id) on logical_database_id|  join kind=leftouter (MonBillingSnapshotSize | summarize max(todouble(size_bytes))
+      by ClusterName, LogicalServerName, SubscriptionId, logical_database_id, physical_database_name, file_type, backup_time, bin(TIMESTAMP, 1h), AppName| summarize BackupSizeInGB = sum(max_size_bytes)
+      / (1024.0 * 1024.0 * 1024.0), BackupSizeRecordCount = count(logical_database_id) by TIMESTAMP, ClusterName, LogicalServerName, SubscriptionId, logical_database_id) on TIMESTAMP, ClusterName, LogicalServerName,
+      SubscriptionId, logical_database_id| join kind=leftouter (MonBillingGeoSnapshotSize| summarize max(todouble(size_bytes)) by ClusterName, LogicalServerName, SubscriptionId, logical_database_id, physical_database_name,
+      file_type, bin(TIMESTAMP, 1h), AppName| summarize GeoBackupSizeInGB = sum(max_size_bytes) / (1024.0 * 1024.0 * 1024.0), GeoBackupSizeRecordCount = count(logical_database_id) by TIMESTAMP, ClusterName,
+      LogicalServerName, SubscriptionId, logical_database_id) on TIMESTAMP, ClusterName, LogicalServerName, SubscriptionId, logical_database_id| project TIMESTAMP, DatabaseSizeInGB, BackupSizeInGB, GeoBackupSizeInGB
+
+      let dt = ago(2h);
+
+      MonDmRealTimeResourceStats
+
+      | where TIMESTAMP > dt
+
+      | where LogicalServerName =~ "{ServerName}" //and database_name =~ "{DatabaseName}"
+
+      | extend myAppName = extract(@''(\w+)'', 1, AppName)'
+- id: MI-general-18
+  Topic: Billing
+  Source: asmi-troubleshooter-package/Billing.md
+  Prompts:
+  - MI Billing
+  - Managed Instance Billing
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDwBilling
+    ExecutedQuery: 'MonDwBilling
+
+      | where TIMESTAMP > dt
+
+      | extend myAppName = extract(@''(\w+)'', 1, AppName)'
+- id: MI-general-19
+  Topic: Billing
+  Source: asmi-troubleshooter-package/Billing.md
+  Prompts:
+  - MI Billing
+  - Managed Instance Billing
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonBillingBackupDatabaseSize
+    ExecutedQuery: 'MonBillingBackupDatabaseSize
+
+      | summarize max(todouble(size_bytes)) by ClusterName, LogicalServerName, SubscriptionId, logical_database_id, physical_database_name, file_type, bin(TIMESTAMP, 1h), AppName'
+- id: MI-general-20
+  Topic: Billing
+  Source: asmi-troubleshooter-package/Billing.md
+  Prompts:
+  - MI Billing
+  - Managed Instance Billing
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonBillingSnapshotSize
+    ExecutedQuery: 'MonBillingSnapshotSize
+
+      | summarize max(todouble(size_bytes)) by ClusterName, LogicalServerName, SubscriptionId, logical_database_id, physical_database_name, file_type, backup_time, bin(TIMESTAMP, 1h), AppName'
+- id: MI-general-21
+  Topic: Billing
+  Source: asmi-troubleshooter-package/Billing.md
+  Prompts:
+  - MI Billing
+  - Managed Instance Billing
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonBillingGeoSnapshotSize
+    ExecutedQuery: 'MonBillingGeoSnapshotSize
+
+      | summarize max(todouble(size_bytes)) by ClusterName, LogicalServerName, SubscriptionId, logical_database_id, physical_database_name, file_type, bin(TIMESTAMP, 1h), AppName'
+- id: MI-general-22
+  Topic: Governance, Quota
+  Source: asmi-troubleshooter-package/Governance, Quota.md
+  Prompts:
+  - MI Governance, Quota
+  - Managed Instance Governance, Quota
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmIoVirtualFileStats
+    ExecutedQuery: MonDmIoVirtualFileStats//| where PreciseTimeStamp > ago(4h)
+- id: MI-general-23
+  Topic: Governance, Quota
+  Source: asmi-troubleshooter-package/Governance, Quota.md
+  Prompts:
+  - MI Governance, Quota
+  - Managed Instance Governance, Quota
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmDbResourceGovernance
+    ExecutedQuery: 'MonDmDbResourceGovernance
+
+      | where AppName in("c94327dccd25")'
+- id: MI-general-24
+  Topic: Governance, Quota
+  Source: asmi-troubleshooter-package/Governance, Quota.md
+  Prompts:
+  - MI Governance, Quota
+  - Managed Instance Governance, Quota
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmRealTimeResourceStats
+    ExecutedQuery: MonDmRealTimeResourceStats//| where LogicalServerName =~ "{ServerName}" and database_name =~ "{DatabaseName}"
+- id: MI-general-25
+  Topic: MonManagement - most used
+  Source: asmi-troubleshooter-package/MonManagement - most used.md
+  Prompts:
+  - MI MonManagement - most used
+  - Managed Instance MonManagement - most used
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where TIMESTAMP>= datetime(2024-06-07 00:00) and TIMESTAMP<= datetime(2024-06-07 15:00)'
+- id: MI-general-26
+  Topic: MonManagement - most used
+  Source: asmi-troubleshooter-package/MonManagement - most used.md
+  Prompts:
+  - MI MonManagement - most used
+  - Managed Instance MonManagement - most used
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where TIMESTAMP >= ago(12h)
+
+      | where request_id =~ ''6314EBE4-C80A-4989-9BD6-4EDF82A12633''
+
+      | project originalEventTimestamp, state_machine_type, action, event, error,  fsm_event, old_state, new_state, operation_parameters, operation_id,  keys,  message, stack_trace, request_id, caller_state_machine_type
+      , caller_keys , process_id, collect_current_thread_id'
+- id: MI-general-27
+  Topic: Audit
+  Source: asmi-troubleshooter-package/Audit.md
+  Prompts:
+  - MI Audit
+  - Managed Instance Audit
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAuditSessionStatus
+    ExecutedQuery: 'let serverName = ''<MI_name>'';
+
+      MonAuditSessionStatus
+
+      | where TIMESTAMP > ago(100d)
+
+      | where LogicalServerName =~ serverName
+
+      | where audit_name == "SQL_DB_EAE_AUDIT"
+
+      //| where audit_name !has ''SqlDbThreatDetection''
+
+      | summarize min(originalEventTimestamp),max(originalEventTimestamp) by audit_name, status'
+- id: MI-general-28
+  Topic: Audit
+  Source: asmi-troubleshooter-package/Audit.md
+  Prompts:
+  - MI Audit
+  - Managed Instance Audit
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAuditOperational
+    ExecutedQuery: 'MonAuditOperational
+
+      //| where logical_server_name == ''<MI name>''
+
+      | where audit_name == "<Audit Name>"
+
+      | summarize min(TIMESTAMP), max(TIMESTAMP) by logical_server_name,audit_name,event'
+- id: MI-general-29
+  Topic: Audit
+  Source: asmi-troubleshooter-package/Audit.md
+  Prompts:
+  - MI Audit
+  - Managed Instance Audit
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAuditOperationalTelemetry
+    ExecutedQuery: 'MonAuditOperationalTelemetry
+
+      | where audit_name == "<Audit name>"
+
+      |project originalEventTimestamp,logical_server_name,logical_database_name,audit_name,event,audit_specification_name,audit_action_groups_added,audit_action_groups_dropped,category'
+- id: MI-general-30
+  Topic: Audit
+  Source: asmi-troubleshooter-package/Audit.md
+  Prompts:
+  - MI Audit
+  - Managed Instance Audit
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAuditRuntimeTelemetry
+    ExecutedQuery: 'MonAuditRuntimeTelemetry
+
+      | where audit_name == "<Audit name>"
+
+      | where fired_events_count !=0
+
+      | project originalEventTimestamp, logical_server_name,logical_database_name,audit_name,event,fired_events_count,dropped_events_count,audited_queries,successful_blob_writes,failed_blob_writes,statement_avg_chars_len,statement_max_chars_len'
+- id: MI-general-31
+  Topic: Audit
+  Source: asmi-troubleshooter-package/Audit.md
+  Prompts:
+  - MI Audit
+  - Managed Instance Audit
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDatabaseMetadata
+    ExecutedQuery: 'MonDatabaseMetadata
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where table_name == "sysclsobjs"
+
+      | where class == 64
+
+      | project TIMESTAMP, id, type, logical_db_name, name'
+- id: MI-general-32
+  Topic: Audit
+  Source: asmi-troubleshooter-package/Audit.md
+  Prompts:
+  - MI Audit
+  - Managed Instance Audit
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      //| where AppName has "bdeb050658e5" //userdb
+
+      | where AppName has "cd0c87e17d2f" //master
+
+      | where message has "Audit: "//Server Audit: "
+
+      | where TIMESTAMP >= datetime(2023-04-05 08:27:00Z)'
+- id: MI-general-33
+  Topic: Audit
+  Source: asmi-troubleshooter-package/Audit.md
+  Prompts:
+  - MI Audit
+  - Managed Instance Audit
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAuditSessionStatus
+    ExecutedQuery: 'MonAuditSessionStatus
+
+      | where TIMESTAMP > ago(1d)
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      //| where audit_name !contains "Threat"
+
+      | summarize by bin(TIMESTAMP, 1h), logical_database_name, audit_name, AppName, NodeName, status'
+- id: MI-general-34
+  Topic: Audit
+  Source: asmi-troubleshooter-package/Audit.md
+  Prompts:
+  - MI Audit
+  - Managed Instance Audit
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: Unknown
+    ExecutedQuery: 'let serverName = ''thazepmdb0005'';
+
+      | order by TIMESTAMP asc, NodeName asc
+
+      | project-reorder TIMESTAMP, NodeName'
+- id: MI-general-35
+  Topic: Audit
+  Source: asmi-troubleshooter-package/Audit.md
+  Prompts:
+  - MI Audit
+  - Managed Instance Audit
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAuditSessionStatus
+    ExecutedQuery: 'MonAuditSessionStatus
+
+      | where TIMESTAMP > ago(1d)
+
+      | where LogicalServerName =~ serverName
+
+      | where audit_name == "SQLMIAUDITING_GIS"
+
+      //| where audit_name !has ''SqlDbThreatDetection''
+
+      //| summarize arg_max(originalEventTimestamp,*) by audit_name, audit_guid'
+- id: MI-general-36
+  Topic: Audit
+  Source: asmi-troubleshooter-package/Audit.md
+  Prompts:
+  - MI Audit
+  - Managed Instance Audit
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAuditSessionStatus
+    ExecutedQuery: 'MonAuditSessionStatus
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where logical_database_name =~ "{DatabaseName}"
+
+      | where TIMESTAMP > ago(6d)'
+- id: MI-general-37
+  Topic: How to find MI located Subscription ID and attach in ASC_
+  Source: asmi-troubleshooter-package/How to find MI located Subscription ID and attach in ASC_.md
+  Prompts:
+  - MI How to find MI located Subscription ID and attach in ASC_
+  - Managed Instance How to find MI located Subscription ID and attach in ASC_
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'let managedInstanceName = ''misql-data-dev01'';//''dbs-azmssqlmi-intranetapps2-prdizdb-sharepoint'';
+
+      MonManagedServers
+
+      | where name == managedInstanceName
+
+      | summarize arg_max(TIMESTAMP,*) by managed_server_id'
+- id: MI-general-38
+  Topic: How to find MI located Subscription ID and attach in ASC_
+  Source: asmi-troubleshooter-package/How to find MI located Subscription ID and attach in ASC_.md
+  Prompts:
+  - MI How to find MI located Subscription ID and attach in ASC_
+  - Managed Instance How to find MI located Subscription ID and attach in ASC_
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonPrivateClusters
+    ExecutedQuery: '| join kind=leftouter ( MonPrivateClusters'
+- id: MI-general-39
+  Topic: Query All Cluster
+  Source: asmi-troubleshooter-package/Query All Cluster.md
+  Prompts:
+  - MI Query All Cluster
+  - Managed Instance Query All Cluster
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'let queryCluster = (clusterName: string, databaseName: string)
+
+      MonManagement
+
+      | where event == "managed_disk_azure_operation_complete"
+
+      | where operation_type == "UpdateVmDataDisksSection"
+
+      | extend api_version = tostring(split(arm_request_uri,''?'')[1])'
+- id: MI-general-40
+  Topic: Tips with ADF team
+  Source: asmi-troubleshooter-package/Tips with ADF team.md
+  Prompts:
+  - MI Tips with ADF team
+  - Managed Instance Tips with ADF team
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'MonLogin
+
+      | where logical_server_name =~ "{ServerName}" and database_name =~ "{DatabaseName}"
+
+      //| where TIMESTAMP >= datetime(2022-04-29 00:10:00Z)| where TIMESTAMP <= datetime(2022-04-29 00:40:00Z)'
+- id: MI-general-41
+  Topic: Tips with ARM team for failed operation
+  Source: asmi-troubleshooter-package/Tips with ARM team for failed operation.md
+  Prompts:
+  - MI Tips with ARM team for failed operation
+  - Managed Instance Tips with ARM team for failed operation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagementResourceProvider
+    ExecutedQuery: 'let startTime = datetime(2024-04-16 22:00:00Z) ;
+
+      let endTime = datetime(2024-04-17 00:00:00Z);
+
+      let instanceName = ''mcssitdb1'';
+
+      let subId = ''820471c7-56ff-47e6-9d77-1ac11d9daa9b'';
+
+      MonManagementResourceProvider
+
+      |filter request_url contains "/startManagedInstanceOperationResults/c5db2528-f7a8-477f-9ea8-162f16f76e48"
+
+      | where correlation_id == "c5af5cb3-d3cb-4a73-9fe2-fc5b65451c99"
+
+      //| where request_id in (''41A33F9A-0E6B-4F2D-83DA-F1CACBDC9B16'')
+
+      | where originalEventTimestamp between (startTime .. endTime)
+
+      | where subscription_id =~ subId
+
+      |project TIMESTAMP,originalEventTimestamp,response_code,elapsed_time_milliseconds,request_url,http_verb,correlation_id,action_name'

@@ -1,0 +1,221 @@
+SqlSkills:
+  - id: "20"
+    # Description:This skill displays all the Azure profiler traces collected in the Nodes where this Azure DB was running.
+    Prompts:
+      - "Azure Profiler Trace"
+      - "Was Azure profiler collected"
+      - "Azure profiler"
+      - "did server have Azure profiler"
+    KustoQueries:
+      - TableName: "AzureProfiler"
+        ExecutedQuery: |
+          let _desc='Please note that the file name is only correct if it was created by IcM Automation AzProfilerGeneva. If you find that this file does not exist, it was collected by a user running the CAS command. Please contact the user who issued the command to obtain the file name';
+          let rg_server_traces =(MonRgManager
+          | where {ApplicationNamesNodeNamesWithOriginalEventTimeRange}
+          | where event =='rg_process_azure_profiler_request'
+          | where is_success==1
+          | extend trace_name = tostring(split(message, ':', 1)[0])
+          | extend trace_name = replace_regex(trace_name, @'\s+', '')//remove the whitespaces
+          | extend trace_name = trim('"', trace_name)
+          | extend description
+          | project TIMESTAMP,application_name, NodeName, trace_name,description,ClusterName);
+          let casCommand_traces=(MonManagement
+          | extend ClusterName = ring_name
+          | extend NodeName = node_name
+          | extend application_name
+          | where {NodeNamesWithOriginalEventTimeRange}
+          | where event =~ 'cas_workflow_take_azure_profiler_trace_complete'
+          | extend trace_name = strcat(NodeName,'_',ClusterName)
+          | extend description=_desc
+          | project TIMESTAMP, application_name, trace_name,ClusterName,NodeName,description);
+          union rg_server_traces,casCommand_traces
+        DisplayedQuery: |
+          let _desc='Please note that the file name is only correct if it was created by IcM Automation AzProfilerGeneva. If you find that this file does not exist, it was collected by a user running the CAS command. Please contact the user who issued the command to obtain the file name';
+          let rg_server_traces =(MonRgManager
+          | where {ApplicationNamesNodeNamesWithOriginalEventTimeRange}
+          | where event =='rg_process_azure_profiler_request'
+          | where is_success==1
+          | extend trace_name = tostring(split(message, ':', 1)[0])
+          | extend trace_name = replace_regex(trace_name, @'\s+', '')//remove the whitespaces
+          | extend trace_name = trim('"', trace_name)
+          | extend description
+          | project TIMESTAMP,application_name, NodeName, trace_name,description,ClusterName);
+          let casCommand_traces=(MonManagement
+          | extend ClusterName = ring_name
+          | extend NodeName = node_name
+          | extend application_name
+          | where {NodeNamesWithOriginalEventTimeRange}
+          | where event =~ 'cas_workflow_take_azure_profiler_trace_complete'
+          | extend trace_name = strcat(NodeName,'_',ClusterName)
+          | extend description=_desc
+          | project TIMESTAMP, application_name, trace_name,ClusterName,NodeName,description);
+          union rg_server_traces,casCommand_traces
+    MessageForEmptyKustoResult: "The Azure Profiler trace was not collected for this Azure DB or its nodes while the database was running."
+    QuestionToAI: |-
+      Read the 'AzureProfiler' table, which contains only one row, and assign values to the variables below based on its data and the following rules
+      Besides of previous three variables, there are another 1 variable:
+      1.{{rowcount}}, the data type is Integer.
+
+      Rules:
+      1. Store the number of rows of table 'AzureProfiler' to {{rowcount}}.
+      2. The {{IssueDetected}} is set to 'true'.
+      3. The {{ResultMessage}} is set to "{{rowcount}} Azure profiler trace file(s) was/were collected for this Azure DB or its nodes while the database was running."
+    TSGs:
+      - Title: "High CPU - Azure Profiler Trace Collection"
+        Link: "https://eng.ms/docs/cloud-ai-platform/azure-data/azure-data-azure-databases/sql-/sosrgclr-host/sqlos-rg-xevents-clrhost/scheduler/high_cpu_azure_profiler_collection"
+
+  - id: "20.1"
+    Prompts:
+      - "SQL Restart and Failover analysis"
+      - "Did sql restart"
+      - "Did sql failover"
+    MessageForEmptyKustoResult: "No Restart/Failover detected."
+    KustoQueries:
+      - TableName: "MonSQLSystemHealth_RestartFailoverCount"
+        ExecutedQuery: |
+          MonSQLSystemHealth
+          | where {AppNamesNodeNamesWithPreciseTimeRange}
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | summarize count=dcount(process_id)
+          | extend restartStatus=strcat("Azure DB restart/failover ",count-1,"time(s),")
+          | where count>1
+          | project restartStatus
+        DisplayedQuery: |
+          MonSQLSystemHealth
+          | where {AppNamesNodeNamesWithPreciseTimeRange}
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | summarize count=dcount(process_id) by NodeName,ClusterName;
+
+          SqlFailovers
+          | where FailoverStartTime between (datetime({StartTime}) .. datetime({EndTime}))
+          | where logical_server_name =~'{LogicalServerName}' and logical_database_name =~'{LogicalDatabaseName}'
+          | project FailoverStartTime,FailoverEndTime,ReconfigurationType,CRMAction,PLBConstraintType,PLBConstraintTypeList,NewPrimary,OldPrimary,ClusterName
+          | take 1
+    QuestionToAI: |-
+      - {{restartStatus}}, the data type is String.
+
+      ### Rules
+      1. Store the value of restartStatus column in {{restartStatus}}.
+      2. Set {{IssueDetected}} to 'true'.
+      3. Set {{ResultMessage}} to {{restartStatus}}.
+
+  - id: "20.2"
+    Prompts:
+      - "Kill command analysis"
+      - "was Kill command executed"
+      - "was Kill executed"
+      - "any Kill command"
+      - "any Kill"
+    MessageForEmptyKustoResult: "Kill command was not detected."
+    KustoQueries:
+      - TableName: "MonSQLSystemHealth_KillCommandCount"
+        ExecutedQuery: |
+          let killStatusTemplate="Kill command was executed {{count}} time(s). Please note that the CPU resources of queries terminated by the Kill command are not accounted for by QDS. As a result, there is a discrepancy between the User Pool CPU usage and the combined total of CPU usage reported by 'QDS', 'Compile Compilation', and 'Failed Compile Compilation'.";
+          MonSQLSystemHealth
+          | where {AppNamesNodeNamesWithPreciseTimeRange}
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | where message contains "Kill"
+          | summarize count=count()
+          | extend killStatus=replace_string(killStatusTemplate,"{{count}}",tostring(count))
+          | where count>0
+          | project killStatus
+        DisplayedQuery: |
+          MonSQLSystemHealth
+          | where {AppNamesNodeNamesWithPreciseTimeRange}
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | where message contains "Kill"
+          | project PreciseTimeStamp,  message
+          | take 1//comment this line to see all the kill commands
+    QuestionToAI: |-
+      - {{killStatus}}, the data type is String.
+
+      ### Rules
+      1. Store the value of killStatus column in {{killStatus}}.
+      2. Set {{IssueDetected}} to 'true'.
+      3. Set {{ResultMessage}} to {{killStatus}}.
+
+
+  - id: "20.2"
+    Prompts:
+      - "AKV Error Detection"
+      - "Azure Key Vault Error Detection"
+    MessageForEmptyKustoResult: "AKV Error was not detected."
+    KustoQueries:
+      - TableName: "MonSQLSystemHealth_AKV"
+        ServiceTiers: "Free;Basic;Standard;Premium;GeneralPurpose;BusinessCritical"
+        ExecutedQuery: |
+          let AKVMessage=(totalCount:int,dcount:int,StartTime:string,EndTime:string)
+          {
+                    let suggestion=" The error may cause SQL Server to fail when reading data, lead to query delays, or even prevent the database from starting. Please engage the Azure Key Vault team (Security: Transparent Data Encryption (TDE) and AKV) for investigation.";
+                    let message=case(totalCount==0,"Azure Key Vault error is not detected.",
+                    totalCount==1, strcat("Azure Key Vault error was detected 1 time, at ",StartTime,". "),
+                    totalCount>1 and dcount==1, strcat("Azure Key Vault error was detected ",PluralOrSingular(totalCount,"time"), " between ",StartTime," and ", EndTime, ". "),
+                    strcat("Azure Key Vault error was detected ",PluralOrSingular(totalCount,"time"), " across ",dcount," different error types between ",StartTime," and ", EndTime, ". ")
+                    );
+                    iff(totalCount>0,strcat(message,suggestion),message)
+          };
+          MonSQLSystemHealth
+          | where {StartOriginalEventTimestampEndOriginalEventTimestamp}
+          | where LogicalServerName =~ '{LogicalServerName}' and AppName in ({AppNamesOnly})
+          | where error_id in (33183 , 37412,33184,37542,37566,37567,37568,37569,37570,37571,37572,37573,37574,37576,40981,45320,45321,45322,45324,45325,45326,45327,45329,45330,45362,45415,45463,45472,45494,45532,45538,45539,45654,45656,45720,45731,45746,45747,49981 ) 
+          | summarize totalCount=count(),dcount=dcount(error_id),StartTime=min(originalEventTimestamp), EndTime=max(originalEventTimestamp)
+          | extend StartTime=format_datetime(StartTime,'yyyy-MM-dd HH:mm:ss'),EndTime=format_datetime(EndTime,'yyyy-MM-dd HH:mm:ss')
+          | extend akvMessage=AKVMessage(totalCount,dcount,StartTime,EndTime)
+          | extend IssueDetected=iff(totalCount>0,'true','false')
+          | project akvMessage,IssueDetected
+        DisplayedQuery: |
+          MonSQLSystemHealth
+          | where {StartOriginalEventTimestampEndOriginalEventTimestamp}
+          | where LogicalServerName =~ '{LogicalServerName}' and AppName in ({AppNamesOnly})
+          | where error_id in (33183 , 37412 ,33184,37542,37566,37567,37568,37569,37570,37571,37572,37573,37574,37576,40981,45320,45321,45322,45324,45325,45326,45327,45329,45330,45362,45415,45463,45472,45494,45532,45538,45539,45654,45656,45720,45731,45746,45747,49981) 
+          | summarize count=count(),StartTime=min(originalEventTimestamp), EndTime=arg_max(originalEventTimestamp,message) by error_id,NodeName,ClusterName
+          | order by count desc
+      - TableName: "MonSQLSystemHealth_AKV_Hyperscale"
+        ServiceTiers: "Hyperscale"
+        ExecutedQuery: |
+          let AKVMessage=(totalCount:int,dcount:int,StartTime:string,EndTime:string)
+          {
+                    let suggestion=" The error may cause SQL Server to fail when reading data, lead to query delays, or even prevent the database from starting. Please engage the Azure Key Vault team (Security: Transparent Data Encryption (TDE) and AKV) for investigation.";
+                    let message=case(totalCount==0,"Azure Key Vault error is not detected.",
+                    totalCount==1, strcat("Azure Key Vault error was detected 1 time, at ",StartTime,". "),
+                    totalCount>1 and dcount==1, strcat("Azure Key Vault error was detected ",PluralOrSingular(totalCount,"time"), " between ",StartTime," and ", EndTime, ". "),
+                    strcat("Azure Key Vault error was detected ",PluralOrSingular(totalCount,"time"), " across ",dcount," different error types between ",StartTime," and ", EndTime, ". ")
+                    );
+                    iff(totalCount>0,strcat(message,suggestion),message)
+          };
+          let appNames=materialize (
+          MonSocrates
+          | where  (originalEventTimestamp between (datetime({StartTime})..datetime({EndTime})))
+          | where LogicalServerName =~ '{LogicalServerName}' and logical_database_name =~ '{LogicalDatabaseName}'
+          | where isnotempty(foreign_file_id)
+          | summarize by AppName,AppTypeName
+          );
+          MonSQLSystemHealth
+          | where {StartOriginalEventTimestampEndOriginalEventTimestamp}
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | join kind=inner(appNames) on AppName
+          | where error_id in (33183 , 37412,33184,37542,37566,37567,37568,37569,37570,37571,37572,37573,37574,37576,40981,45320,45321,45322,45324,45325,45326,45327,45329,45330,45362,45415,45463,45472,45494,45532,45538,45539,45654,45656,45720,45731,45746,45747,49981 ) 
+          | summarize totalCount=count(),dcount=dcount(error_id),StartTime=min(originalEventTimestamp), EndTime=max(originalEventTimestamp)
+          | extend StartTime=format_datetime(StartTime,'yyyy-MM-dd HH:mm:ss'),EndTime=format_datetime(EndTime,'yyyy-MM-dd HH:mm:ss')
+          | extend akvMessage=AKVMessage(totalCount,dcount,StartTime,EndTime)
+          | extend IssueDetected=iff(totalCount>0,'true','false')
+          | project akvMessage,IssueDetected
+        DisplayedQuery: |
+          let appNames=materialize (
+          MonSocrates
+          | where  (originalEventTimestamp between (datetime({StartTime})..datetime({EndTime})))
+          | where LogicalServerName =~ '{LogicalServerName}' and logical_database_name =~ '{LogicalDatabaseName}'
+          | where isnotempty(foreign_file_id)
+          | summarize by AppName,AppTypeName
+          );
+          MonSQLSystemHealth
+          | where {StartOriginalEventTimestampEndOriginalEventTimestamp}
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | join kind=inner(appNames) on AppName
+          | where error_id in (33183 , 37412,33184,37542,37566,37567,37568,37569,37570,37571,37572,37573,37574,37576,40981,45320,45321,45322,45324,45325,45326,45327,45329,45330,45362,45415,45463,45472,45494,45532,45538,45539,45654,45656,45720,45731,45746,45747,49981 ) 
+          | summarize count=count(),StartTime=min(originalEventTimestamp), EndTime=max(originalEventTimestamp), any(message) by error_id,NodeName,ClusterName,AppTypeName,AppName
+          | order by count desc
+    QuestionToAI: |-
+      ### Rules
+      1. Store the value of IssueDetected column in {{IssueDetected}}.
+      2. Store the value of akvMessage column in {{ResultMessage}}.

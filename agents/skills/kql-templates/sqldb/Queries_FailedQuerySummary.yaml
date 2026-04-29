@@ -1,0 +1,144 @@
+SqlSkills:
+  - id: "81.16"
+    Prompts:
+      - "Failed query summary"
+    EvaluationTrueMessage: "Failed query detected"
+    EvaluationFalseMessage: "We checked for failed query executions and compilation errors but did not find any failures."
+    SubSqlSkills:
+      - id: "67.64"
+        IsKusto: true
+        Prompts:
+          - "Failed Compilation Summary"
+      - id: "81.161"
+        Prompts:
+          - "Failed query execution summary"
+
+  - id: "4.17"
+    Prompts:
+      - "Failed query execution summary"
+      - "Failed execution summary"
+      - "Timeout query summary"
+      - "Aborted query summary"
+      - "Internal execution failure summary"
+    KustoQueries:
+      - TableName: "MonWiQdsExecStatsTimeOutTable"
+        ExecutedQuery: |
+          let FailureStatus = (failedPercentage: real,failedCount:long,totalExecCount:long)
+          {
+          case(
+          failedCount==0, strcat(totalExecCount," queries were executed and no failed query execution detected."),
+          0.>failedPercentage , strcat(failedCount, " of ",totalExecCount," queries failed, representing a failure rate of ",failedPercentage,"%."),
+          strcat("Please note that the failure rate exceeded ",failedPercentage,"%: ", failedCount," of ", totalExecCount, " queries failed.")
+          )
+          };
+          MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | summarize totalExecCount = sum(execution_count), failedCount = sumif(execution_count, exec_type !=0)
+          | where totalExecCount > 0
+          | extend failedPercentage=round(100.0*failedCount/totalExecCount,3)
+          | extend IssueDetected=case(failedCount>=1, 'true','false')
+          | extend failureStatus=FailureStatus(failedPercentage,failedCount,totalExecCount)
+          | project IssueDetected,failureStatus
+        DisplayedQuery: |
+          MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | summarize totalExecCount = sum(execution_count), abortCount = sumif(execution_count, exec_type == 3), errorCount = sumif(execution_count, exec_type == 4)
+    MessageForEmptyKustoResult: "We don't find any failure as No query was executed."
+    QuestionToAI: |-
+      -  {{failureStatus}}, the data type is String.
+
+      ### Rules
+      1. Store the value of failedExecMessage column in {{failureStatus}}.
+      2. Store the value of IssueDetected column in {{IssueDetected}}.
+      3. Set then {{ResultMessage}} to "{{failureStatus}}.
+    SubSqlSkills:
+      - id: "4.18"
+        ExecutedWhenParentIssueDetected: true
+        IsKusto: true
+        Reasoning: " Since failure is detected, we are going to check the Top WaitType and failed queries"
+        Prompts:
+          - "Overall Top Wait Types of Query Execution"
+      - id: "4.18"
+        ExecutedWhenParentIssueDetected: true
+        IsKusto: true
+        Prompts:
+          - "Top queries with the highest number of failures"
+
+  - id: "4.18"
+    Prompts:
+      - "Overall Top Wait Types of Query Execution"
+      - "Overall Wait Types of Query Execution"
+    MessageForEmptyKustoResult: "MonWiQdsWaitStats didn't have record."
+    KustoQueries:
+      - TableName: "TopWaitTypesWithHighestTotalWaitTime_MonWiQdsWaitStatsTimeOutTable"
+        ExecutedQuery: |
+          let totalWaitTime_ms=toscalar(MonWiQdsWaitStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | summarize sum(total_query_wait_time_ms));
+          MonWiQdsWaitStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | summarize sumWaitTime_ms=sum(total_query_wait_time_ms) by wait_category
+          | project wait_category,sumWaitTime_ms, percentage=round(sumWaitTime_ms*100.0/totalWaitTime_ms,1)
+          | order by sumWaitTime_ms
+          | take 1
+        DisplayedQuery: |
+          MonWiQdsWaitStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          //| where exec_type != 0  //uncomment this line to filter out successful queries
+          | summarize sumWaitTime_ms=sum(total_query_wait_time_ms) by wait_category
+          | order by sumWaitTime_ms
+          | take 5
+    QuestionToAI: |-
+      -  {{wait_category}},  the data type is String.
+      -  {{sumWaitTime_ms}}, the data type is Big Integer.
+      -  {{percentage}}, the data type is Float.
+
+      ### Rules
+      1. Store the value of wait_category column in {{wait_category}}.
+      2. Store the value of wait_category column in {{Keywords}}.
+      3. Store the value of sumWaitTime_ms column in {{sumWaitTime_ms}}.
+      4. Store the value of percentage column in {{percentage}}.
+      5. If the {{percentage}} is greater than or equal to 20, then {{IssueDetected}} is 'true', else {{IssueDetected}} is 'false'.
+      6. Set {{ResultMessage}} to "The top wait type is {{wait_category}}, with a total duration of {{sumWaitTime_ms}}ms, accounting for {{percentage}}% of the total wait time."
+    SubSqlSkills:
+      - id: "66.0"
+        ExecutedWhenParentIssueDetected: true
+        Keywords: "LOCK"
+        IsKusto: true
+        Reasoning: " Since the LOCK wait type accounts for a significant portion of the total wait time, we will investigate blocking issue."
+        Prompts:
+          - "Blocking summary"
+
+  - id: "4.18"
+    IsDisplayKustoQueryResult: true
+    Prompts:
+      - "Top queries with the highest number of failures"
+    KustoQueries:
+      - TableName: "TopQueriesWithHighestFailures_MonWiQdsWaitStats"
+        ExecutedQuery: |
+          MonWiQdsWaitStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | where exec_type !=0
+          | top-nested 3 of query_hash by failedCount=count(),
+          top-nested 2 of  wait_category by total_query_wait_time_ms=sum(total_query_wait_time_ms) desc
+        DisplayedQuery: |
+          MonWiQdsWaitStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | where exec_type !=0
+          | top-nested 3 of query_hash by failedCount=count(),
+          top-nested 2 of  wait_category by total_query_wait_time_ms=sum(total_query_wait_time_ms) desc
+    MessageForEmptyKustoResult: "No query failure detected in MonWiQdsWaitStats."
+    QuestionToAI: |-
+      -  {{query_hash}},  the data type is String.
+
+      ### Rules
+      1. Store the value from the query_hash column of the first row into {{query_hash}}.
+      2. Set {{IssueDetected}} to 'true'.
+      3. Set {{ResultMessage}} to "Please type 'The detail of query query_hash' if you'd like to dig into. For example:'The detail of query {{query_hash}}'".

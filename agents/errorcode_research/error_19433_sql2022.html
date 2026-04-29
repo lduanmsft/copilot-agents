@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQL Server 2022 Error 19433 Analysis</title>
+    <style>
+        :root {
+            --bg-primary: #1e1e2e;
+            --bg-secondary: #2a2a3e;
+            --bg-code: #181825;
+            --text-primary: #cdd6f4;
+            --text-secondary: #a6adc8;
+            --accent-blue: #89b4fa;
+            --accent-green: #a6e3a1;
+            --accent-yellow: #f9e2af;
+            --accent-red: #f38ba8;
+            --accent-purple: #cba6f7;
+            --accent-teal: #94e2d5;
+            --border: #45475a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', 'Cascadia Code', Consolas, monospace;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            padding: 2rem;
+        }
+        .container { max-width: 1100px; margin: 0 auto; }
+        h1 {
+            color: var(--accent-blue);
+            font-size: 1.8rem;
+            border-bottom: 2px solid var(--accent-blue);
+            padding-bottom: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+        h2 {
+            color: var(--accent-purple);
+            font-size: 1.3rem;
+            margin: 1.5rem 0 0.8rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        h2 .step-badge {
+            background: var(--accent-purple);
+            color: var(--bg-primary);
+            border-radius: 4px;
+            padding: 2px 8px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        .meta-info {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem 1.2rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+        }
+        .meta-info span { color: var(--accent-teal); }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0.8rem 0 1.2rem 0;
+            font-size: 0.9rem;
+        }
+        th, td {
+            border: 1px solid var(--border);
+            padding: 8px 12px;
+            text-align: left;
+        }
+        th {
+            background: var(--bg-secondary);
+            color: var(--accent-yellow);
+            font-weight: 600;
+            width: 200px;
+        }
+        td { color: var(--text-primary); }
+        pre {
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 1rem;
+            overflow-x: auto;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            margin: 0.8rem 0;
+        }
+        code {
+            font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace;
+        }
+        .keyword { color: var(--accent-blue); }
+        .string { color: var(--accent-green); }
+        .comment { color: var(--text-secondary); font-style: italic; }
+        .type { color: var(--accent-yellow); }
+        .func { color: var(--accent-purple); }
+        .number { color: var(--accent-teal); }
+        .error-const { color: var(--accent-red); font-weight: bold; }
+
+        .file-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            color: var(--accent-blue);
+            text-decoration: none;
+            padding: 4px 10px;
+            border: 1px solid var(--accent-blue);
+            border-radius: 4px;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+        .file-link:hover {
+            background: var(--accent-blue);
+            color: var(--bg-primary);
+        }
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .badge-severity { background: var(--accent-yellow); color: var(--bg-primary); }
+        .badge-scierrlog { background: var(--accent-green); color: var(--bg-primary); }
+        .badge-nonfatal { background: var(--accent-teal); color: var(--bg-primary); }
+        .badge-xevent { background: var(--accent-purple); color: var(--bg-primary); }
+
+        .analysis-box {
+            background: var(--bg-secondary);
+            border-left: 4px solid var(--accent-teal);
+            border-radius: 0 6px 6px 0;
+            padding: 1rem 1.2rem;
+            margin: 1rem 0;
+        }
+        .analysis-box h3 {
+            color: var(--accent-teal);
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        .analysis-box ul {
+            margin-left: 1.2rem;
+            color: var(--text-secondary);
+        }
+        .analysis-box li { margin-bottom: 0.3rem; }
+        .analysis-box li strong { color: var(--text-primary); }
+
+        .xevent-box {
+            background: var(--bg-secondary);
+            border-left: 4px solid var(--accent-purple);
+            border-radius: 0 6px 6px 0;
+            padding: 1rem 1.2rem;
+            margin: 1rem 0;
+        }
+        .xevent-box h3 {
+            color: var(--accent-purple);
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .sql-hint {
+            background: var(--bg-code);
+            border: 1px dashed var(--accent-purple);
+            border-radius: 6px;
+            padding: 0.8rem 1rem;
+            margin-top: 0.8rem;
+        }
+
+        .footer {
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        .divider {
+            border: none;
+            border-top: 1px solid var(--border);
+            margin: 1.5rem 0;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <h1>🔍 SQL Server 2022 — Error 19433 Analysis</h1>
+
+    <div class="meta-info">
+        <span>Version:</span> SQL Server 2022 &nbsp;|&nbsp;
+        <span>Repo:</span> DsMainDev &nbsp;|&nbsp;
+        <span>Branch:</span> rel/box/sql2022/sql2022_rtm_qfe-cu &nbsp;|&nbsp;
+        <span>Date:</span> 2026-04-02
+    </div>
+
+    <!-- ===== Step 1-2: Error Definition ===== -->
+    <h2><span class="step-badge">Step 1–2</span> Error Definition from sqlerrorcodes.h</h2>
+    <pre><code><span class="comment">// ErrorNumber: 19433</span>
+<span class="comment">// ErrorSeverity: EX_USER</span>
+<span class="comment">// ErrorInserts: Availability group name, expected group ID, found group ID</span>
+<span class="comment">// ErrorFormat: Always On: AG integrity check failed to find AG name to ID map</span>
+<span class="comment">//   entry with matching group ID for AG '%.*ls' (expected: '%.*ls'; found '%.*ls').</span>
+<span class="comment">// ErrorCause: AG group IDs mismatch between cluster registry and local metadata.</span>
+<span class="comment">// ErrorOwner: micsuw</span>
+<span class="comment">// ErrorFirstProduct: SQL15</span>
+<span class="keyword">const int</span> <span class="error-const">HADR_AG_CLUSTER_INTEGRITY_CHECK_GROUP_ID_FAILURE</span> = <span class="number">33</span>;</code></pre>
+
+    <!-- ===== Step 3: Error Group ===== -->
+    <h2><span class="step-badge">Step 3</span> Error Group Identification</h2>
+    <table>
+        <tr><th>MajorConstant</th><td><code>HADR_ERROR2 = 194</code></td></tr>
+        <tr><th>Minor</th><td><code>33</code></td></tr>
+        <tr><th>ErrorNumber</th><td><code>19400 + 33 = <strong>19433</strong></code></td></tr>
+        <tr><th>Error Group</th><td><code>HADR_ERROR2</code> — Always On Availability Group errors</td></tr>
+        <tr><th>Severity</th><td><span class="badge badge-severity">EX_USER</span></td></tr>
+    </table>
+
+    <hr class="divider">
+
+    <!-- ===== Step 4-5: Code Search ===== -->
+    <h2><span class="step-badge">Step 4–5</span> Code Search Results</h2>
+    <p>Found in <strong>2 files</strong> under <code>/Sql/Ntdbms</code>:</p>
+    <table>
+        <tr><th>File</th><th>Refs</th><th>Type</th></tr>
+        <tr>
+            <td><code>HadrAvailabilityGroupObjectModel.cpp</code></td>
+            <td>1</td>
+            <td><span class="badge badge-scierrlog">scierrlog</span></td>
+        </tr>
+        <tr>
+            <td><code>sqlerrorcodes.h</code></td>
+            <td>1</td>
+            <td>Definition</td>
+        </tr>
+    </table>
+
+    <hr class="divider">
+
+    <!-- ===== Step 6-7: Code Snippet ===== -->
+    <h2><span class="step-badge">Step 6–7</span> Code Snippet &amp; Location</h2>
+
+    <p>
+        📄 <strong>File:</strong> <code>/Sql/Ntdbms/hadr/ar_manager/object_model/src/HadrAvailabilityGroupObjectModel.cpp</code><br>
+        🔗 <a class="file-link" href="https://msdata.visualstudio.com/Database%20Systems/_git/DsMainDev?path=/Sql/Ntdbms/hadr/ar_manager/object_model/src/HadrAvailabilityGroupObjectModel.cpp&version=GBrel/box/sql2022/sql2022_rtm_qfe-cu" target="_blank">Open in Azure DevOps ↗</a><br>
+        📌 <strong>Function:</strong> <code class="func">HadrAvailabilityGroupObjectModel::WsfcIsAgIntactInWsfc()</code>
+    </p>
+
+    <pre><code><span class="comment">// Lines 1023–1033</span>
+<span class="func">scierrlog</span> (
+    <span class="func">EX_NUMBER</span> (
+        <span class="type">HADR_ERROR2</span>,
+        <span class="error-const">HADR_AG_CLUSTER_INTEGRITY_CHECK_GROUP_ID_FAILURE</span>),
+    hadrAgName.<span class="func">GetLenStrInBytes</span> (),
+    hadrAgName.<span class="func">GetStr</span> (),
+    hadrAgGroupId.<span class="func">GetLenStrInBytes</span> (),
+    hadrAgGroupId.<span class="func">GetStr</span> (),
+    tempGroupId.<span class="func">GetLenStrInBytes</span> (),
+    tempGroupId.<span class="func">GetStr</span> ());
+<span class="keyword">return</span> <span class="number">false</span>;</code></pre>
+
+    <p>
+        <strong>Caller:</strong> <code class="func">CHadrArProxy::ComputeInitialStateInWsfc()</code><br>
+        📄 <code>/Sql/Ntdbms/hadr/ar_manager/src/hadrarproxy.cpp</code><br>
+        🔗 <a class="file-link" href="https://msdata.visualstudio.com/Database%20Systems/_git/DsMainDev?path=/Sql/Ntdbms/hadr/ar_manager/src/hadrarproxy.cpp&version=GBrel/box/sql2022/sql2022_rtm_qfe-cu" target="_blank">Open in Azure DevOps ↗</a>
+    </p>
+
+    <pre><code><span class="comment">// Lines 2473–2515 — Caller function</span>
+<span class="keyword">void</span>
+<span class="func">CHadrArProxy::ComputeInitialStateInWsfc</span> ()
+{
+    <span class="func">AUTO_XE_FOR_HADR_API</span> (m_agName);
+
+    <span class="comment">// WsfcIsAgIntactInWsfc() in AGOM is very optimistic.  If any exception is</span>
+    <span class="comment">// caught, and the exception does not correspond to object-not-found, the</span>
+    <span class="comment">// method assumes that all AG objects exist in WSFC and will return 'true'.</span>
+    <span class="comment">//</span>
+    <span class="comment">// The contract: this call will never return false negative, but may</span>
+    <span class="comment">// return false positive.  If it is indeed false positive ('true'), then</span>
+    <span class="comment">// the next startup of this AR will do a local drop-AG, which is correct.</span>
+
+    EX_TRY_SILENT
+    {
+        m_fAgInWsfc =
+                m_pAgom-><span class="func">WsfcIsAgIntactInWsfc</span> (
+                    m_agName,
+                    m_agGroupId,
+                    m_agResId);
+    }
+    EX_CATCHSE (se)
+    {
+        <span class="keyword">if</span> (ERR_ENUM_CLUSTER_REG_VALUE == se.<span class="func">Minor</span> () &amp;&amp;
+            ERROR_CLUSTER_REG_ENUM_VALUE_API_FOR_AG_CONFIG_READ_EXHAUSTED ==
+                se.<span class="func">State</span> ())
+        {
+            DELAYABORT_IN_THIS_SCOPE
+            <span class="func">EnqueueRestartNotification</span> ();
+        }
+    }
+    EX_CATCH_END;
+}</code></pre>
+
+    <hr class="divider">
+
+    <!-- ===== Step 8: Function Logic ===== -->
+    <h2><span class="step-badge">Step 8</span> Function Logic &amp; Analysis</h2>
+
+    <div class="analysis-box">
+        <h3>🧠 WsfcIsAgIntactInWsfc() — WSFC Cluster Integrity Check</h3>
+        <p>Performs a 4-step validation of AG objects in the Windows Server Failover Cluster:</p>
+        <ul>
+            <li><strong>Step 1 — AG Name→ID Map:</strong> Calls <code>RetrieveAgNameToIdMapEntry()</code>, then compares <code>hadrAgGroupId</code> with the retrieved group ID. <span style="color:var(--accent-red)">⚠ Error 19433 fires here when they don't match.</span></li>
+            <li><strong>Step 2 — Resource ID Check:</strong> Compares <code>hadrAgResId</code> similarly (fires error 19434 on mismatch).</li>
+            <li><strong>Step 3 — Cluster Resource Existence:</strong> Opens the cluster resource handle via <code>GetClusterResourceByIdOrName()</code>.</li>
+            <li><strong>Step 4 — SQL Instance→Node Map:</strong> For WSFC AGs, verifies the local instance has an entry in the cluster registry.</li>
+        </ul>
+    </div>
+
+    <div class="analysis-box">
+        <h3>⚙️ Error Handling Behavior</h3>
+        <ul>
+            <li><strong>Raised via:</strong> <span class="badge badge-scierrlog">scierrlog</span> — <span class="badge badge-nonfatal">non-fatal</span>, logged to SQL error log only, no exception thrown</li>
+            <li><strong>Returns:</strong> <code>false</code> immediately — AG is considered <em>not intact</em> in WSFC</li>
+            <li><strong>Exception handling:</strong> <code>EX_TRY_SILENT / EX_CATCHSE</code> wraps the whole function:
+                <ul>
+                    <li>Specific not-found exceptions → <code>retVal = false</code></li>
+                    <li>Other exceptions → optimistically returns <code>true</code> (assumes WSFC quorum loss)</li>
+                    <li><code>ERR_ENUM_CLUSTER_REG_VALUE</code> with exhausted state → enqueues restart notification</li>
+                </ul>
+            </li>
+            <li><strong>Root cause:</strong> AG group ID stored in WSFC cluster registry has diverged from the local SQL Server metadata — can happen after cluster repair, manual registry edits, or AG reconfiguration failures.</li>
+        </ul>
+    </div>
+
+    <hr class="divider">
+
+    <!-- ===== XEvent Diagnostics ===== -->
+    <h2><span class="step-badge">XEvent</span> Related XEvents for Diagnostics</h2>
+
+    <div class="xevent-box">
+        <h3>🔍 XEvent: hadr_ar_api_call</h3>
+        <p>No direct <code>XE_FIRE_EVENT</code> inside <code>WsfcIsAgIntactInWsfc()</code>, but the caller
+            <code>ComputeInitialStateInWsfc()</code> uses the <code>AUTO_XE_FOR_HADR_API</code> macro.</p>
+
+        <table>
+            <tr><th>XEvent Name</th><td><code><span class="badge badge-xevent">hadr_ar_api_call</span></code></td></tr>
+            <tr><th>Macro</th><td><code>AUTO_XE_FOR_HADR_API(m_agName)</code></td></tr>
+            <tr><th>Fires on</th><td>Entry and exit of the AR proxy function (RAII pattern)</td></tr>
+            <tr><th>Fields</th><td>
+                <code>is_entering</code> (bool) — entry vs exit<br>
+                <code>api_name</code> (string) — function name (e.g., <code>CHadrArProxy::ComputeInitialStateInWsfc</code>)<br>
+                <code>id_or_name</code> (unicode string) — AG name
+            </td></tr>
+            <tr><th>Implementation</th><td>
+                Class <code>AutoGenerateXEventOnHadrApi</code> in <code>HadrErrorsXEvents.cpp</code><br>
+                Constructor publishes entry event, destructor publishes exit event via <code>XeSqlPkg::hadr_ar_api_call</code>
+            </td></tr>
+            <tr><th>Diagnostic Value</th><td>
+                Captures AG name and function entry/exit timing. <br>
+                ⚠ Does <strong>not</strong> capture the mismatched group IDs — those are only in the SQL error log.
+            </td></tr>
+        </table>
+
+        <div class="sql-hint">
+            <strong>📝 Suggested XEvent Session:</strong>
+            <pre><code><span class="keyword">CREATE EVENT SESSION</span> [HADR_Debug_19433] <span class="keyword">ON SERVER</span>
+<span class="keyword">ADD EVENT</span> sqlserver.<span class="func">hadr_ar_api_call</span> (
+    <span class="keyword">WHERE</span> api_name = <span class="string">'CHadrArProxy::ComputeInitialStateInWsfc'</span>),
+<span class="keyword">ADD EVENT</span> sqlserver.<span class="func">error_reported</span> (
+    <span class="keyword">WHERE</span> error_number = <span class="number">19433</span>)
+<span class="keyword">WITH</span> (MAX_MEMORY=<span class="number">4096</span> KB, STARTUP_STATE=OFF);
+</code></pre>
+        </div>
+
+        <p style="margin-top:0.8rem; color: var(--text-secondary);">
+            <strong>💡 Tip:</strong> For deeper diagnostics, check the SQL Server error log for the expected vs. found group ID values
+            printed by the <code>scierrlog</code> call. The XEvent only helps correlate timing.
+        </p>
+    </div>
+
+    <hr class="divider">
+
+    <!-- ===== Full Function Code ===== -->
+    <h2><span class="step-badge">Appendix</span> Full Function: WsfcIsAgIntactInWsfc (Lines 1001–1157)</h2>
+
+    <pre><code><span class="func">HadrAvailabilityGroupObjectModel::WsfcIsAgIntactInWsfc</span> (
+    <span class="keyword">__in</span> <span class="keyword">const</span> <span class="type">HadrAgName</span>&amp;       hadrAgName,
+    <span class="keyword">__in</span> <span class="keyword">const</span> <span class="type">HadrAgGroupId</span>&amp;    hadrAgGroupId,
+    <span class="keyword">__in</span> <span class="keyword">const</span> <span class="type">HadrAgResourceId</span>&amp; hadrAgResId)
+{
+    <span class="type">bool</span> retVal = <span class="number">true</span>;
+
+    EX_TRY_SILENT
+    {
+        <span class="comment">// 1. Determine whether AG name to ID map entry exists.</span>
+        <span class="type">HadrAvailabilityGroup::SPersistedData::SMapId</span> mapId;
+        <span class="func">RetrieveAgNameToIdMapEntry</span> (hadrAgName, &amp;mapId);
+        <span class="type">HadrAgGroupId</span> tempGroupId (mapId.m_groupId, mapId.m_cwchGroupId);
+        <span class="keyword">if</span> (<span class="number">0</span> &lt; hadrAgGroupId.<span class="func">GetLenStrInWchars</span> () &amp;&amp;
+            !(hadrAgGroupId == tempGroupId))
+        {
+            <span class="func">scierrlog</span> (
+                <span class="func">EX_NUMBER</span> (
+                    <span class="type">HADR_ERROR2</span>,
+                    <span class="error-const">HADR_AG_CLUSTER_INTEGRITY_CHECK_GROUP_ID_FAILURE</span>),
+                hadrAgName.<span class="func">GetLenStrInBytes</span> (),
+                hadrAgName.<span class="func">GetStr</span> (),
+                hadrAgGroupId.<span class="func">GetLenStrInBytes</span> (),
+                hadrAgGroupId.<span class="func">GetStr</span> (),
+                tempGroupId.<span class="func">GetLenStrInBytes</span> (),
+                tempGroupId.<span class="func">GetStr</span> ());
+            <span class="keyword">return</span> <span class="number">false</span>;
+        }
+        <span class="type">HadrAgResourceId</span> tempResId (mapId.m_resourceId, mapId.m_cwchResourceId);
+        <span class="keyword">if</span> (<span class="number">0</span> &lt; hadrAgResId.<span class="func">GetLenStrInWchars</span> () &amp;&amp;
+            !(hadrAgResId == tempResId))
+        {
+            <span class="func">scierrlog</span> (
+                <span class="func">EX_NUMBER</span> (
+                    <span class="type">HADR_ERROR2</span>,
+                    HADR_AG_CLUSTER_INTEGRITY_CHECK_RESOURCE_ID_FAILURE),
+                ...);
+            <span class="keyword">return</span> <span class="number">false</span>;
+        }
+
+        <span class="comment">// 2. Determine whether AG resource exists.</span>
+        HRESOURCE hResource =
+            m_pWsfcUtil-><span class="func">GetClusterResourceByIdOrName</span> (tempResId);
+        m_pWsfcUtil-><span class="func">CloseHandle</span> (hResource);
+
+        <span class="comment">// 3. Determine whether AG configuration key exists.</span>
+        <span class="type">HadrAvailabilityGroupStore</span> configStore (m_pmo);
+        configStore.<span class="func">Init</span> (m_pWsfcUtil);
+        BYTE* pbConfig = <span class="number">NULL</span>;
+        CAutoRg&lt;BYTE&gt; apbConfig = <span class="number">NULL</span>;
+        DWORD cbConfig = <span class="number">0</span>;
+        configStore.<span class="func">Retrieve</span> (tempResId, &amp;pbConfig, &amp;cbConfig);
+        apbConfig = pbConfig;
+
+        <span class="comment">// For migrate mode — skip instance node map check</span>
+        <span class="keyword">if</span> (<span class="func">GetHadrGlobals</span>()-&gt;fClusterMigrateEnabled)
+            <span class="keyword">return</span> <span class="number">true</span>;
+
+        <span class="comment">// 4. Determine whether SQL instance to node map entry exists.</span>
+        <span class="type">HadrSqlInstanceToWsfcNodeMapEntryStore</span> instToNodeMapStore;
+        instToNodeMapStore.<span class="func">Init</span> (m_pmo, m_pWsfcUtil);
+        <span class="keyword">if</span> (m_type == HadrAvailabilityGroupObjectModelTypeWsfc)
+        {
+            BYTE* pbNodeName = <span class="number">NULL</span>;
+            ...
+            instToNodeMapStore.<span class="func">Retrieve</span> (
+                tempResId, Resource-&gt;wszServerInstanceName, ...);
+        }
+    }
+    EX_CATCHSE (se)
+    {
+        <span class="keyword">if</span> (HADR_AGOM_ERR == se.<span class="func">Major</span> ())
+        {
+            <span class="keyword">if</span> (ERR_AVAILABILITY_GROUP_NAME_TO_ID_MAP_ENTRY_INVALID == se.<span class="func">Minor</span> () ||
+                ERR_AVAILABILITY_GROUP_NAME_TO_ID_MAP_ENTRY_NOT_FOUND == se.<span class="func">Minor</span> () ||
+                ERR_AVAILABILITY_GROUP_DATA_ENTRY_NOT_FOUND == se.<span class="func">Minor</span> () ||
+                ERR_SQL_INSTANCE_TO_NODE_MAP_ENTRY_NOT_FOUND == se.<span class="func">Minor</span> ())
+            {
+                retVal = <span class="number">false</span>;
+            }
+            <span class="keyword">else if</span> ((ERR_OPEN_CLUSTER_SUB_KEY == se.<span class="func">Minor</span> () &amp;&amp;
+                    errorClusterSubKeyDoesNotExist == se.<span class="func">State</span> ()) ||
+                    (ERR_OPEN_RESOURCE_HANDLE == se.<span class="func">Minor</span> () &amp;&amp;
+                    ERR_STATE_RESOURCE_NOT_FOUND == se.<span class="func">State</span> ()))
+            {
+                retVal = <span class="number">false</span>;
+            }
+        }
+
+        <span class="keyword">if</span> (!retVal)
+        {
+            <span class="func">scierrlog</span> (
+                <span class="func">EX_NUMBER</span> (HADR_ERROR2, HADR_AG_CLUSTER_INTEGRITY_CHECK_FAILURE),
+                hadrAgName.<span class="func">GetLenStrInBytes</span> (), hadrAgName.<span class="func">GetStr</span> (),
+                se.<span class="func">Error</span> (), se.<span class="func">Severity</span> (), se.<span class="func">State</span> ());
+        }
+
+        <span class="comment">// Raise exception up the stack for AR restart</span>
+        <span class="keyword">if</span> (ERR_ENUM_CLUSTER_REG_VALUE == se.<span class="func">Minor</span> () &amp;&amp;
+            ERROR_CLUSTER_REG_ENUM_VALUE_API_FOR_AG_CONFIG_READ_EXHAUSTED == se.<span class="func">State</span> ())
+        {
+            <span class="func">ex_raisecontrol</span> (se);
+        }
+    }
+    EX_CATCH_END;
+
+    <span class="keyword">return</span> retVal;
+}</code></pre>
+
+    <div class="footer">
+        Generated by SQL Error Code Research Agent &nbsp;|&nbsp; SQL Server 2022 &nbsp;|&nbsp; Error 19433 &nbsp;|&nbsp; 2026-04-02
+    </div>
+
+</div>
+</body>
+</html>

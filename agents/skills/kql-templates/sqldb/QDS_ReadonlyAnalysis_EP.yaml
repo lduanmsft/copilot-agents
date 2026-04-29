@@ -1,0 +1,140 @@
+SqlSkills:
+  - id: "232.2"
+    Prompts:
+      - "QDS Readonly Root Cause Analysis"
+      - "QDS Readonly Analysis"
+      - "QDS Readonly RCA"
+      - "Query Store Readonly RCA"
+    MessageForEmptyKustoResult: "Query Store didn't run into readonly. You may type 'QDS Summary' if you' like to get more details."
+    KustoQueries:
+      - TableName: "MonQueryStoreFailures_QDSReadonly_Analysis_Singleton"
+        DeploymentOptions: "Singleton"
+        ExecutedQuery: |
+          let ReadonlyMessage = (totalCount:int, dcount:int,readOnlyReasonArray:string)
+          {
+          case(
+          dcount==1 and totalCount==1,strcat("Query Store run into readonly one time due to readonly_reason:",readOnlyReasonArray),
+          strcat("Query Store run into readonly ",totalCount," times due to readonly_reason:",readOnlyReasonArray))
+          };
+          MonQueryStoreFailures
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | where event in ('query_store_resource_total_over_instance_limit','query_store_stmt_hash_map_over_memory_limit','query_store_buffered_items_over_memory_limit','query_store_disk_size_over_limit','query_store_database_out_of_disk_space')
+          | extend readOnlyReason=case(
+          event=~'query_store_disk_size_over_limit',"65536",
+          event=~'query_store_resource_total_over_instance_limit' and query_store_resource_type=~'x_QdsResourceType_StmtHashMapMemory',"131072",
+          event=~'query_store_stmt_hash_map_over_memory_limit',"131072",
+          event=~'query_store_buffered_items_over_memory_limit',"262144",
+          event=~'query_store_resource_total_over_instance_limit' and query_store_resource_type=~'x_QdsResourceType_BufferedItemsMemory',"262144",
+          event=~'query_store_database_out_of_disk_space',"524288",event
+          )
+          | summarize totalCount=count(),dcount_=dcount(readOnlyReason),readOnlyReasonArray=make_set(readOnlyReason)
+          | where totalCount>0
+          | extend readOnlyReasonArray=tostring(readOnlyReasonArray)
+          | extend readOnlyReasonArray=replace_string(readOnlyReasonArray,"[","")
+          | extend readOnlyReasonArray=replace_string(readOnlyReasonArray,"]","")
+          | extend readOnlyReasonArray=replace_string(readOnlyReasonArray,"\"","")
+          | extend Keywords=replace_string(readOnlyReasonArray,",",";")
+          | extend readonlyMessage=ReadonlyMessage(totalCount,dcount_,readOnlyReasonArray)
+          | project readonlyMessage,Keywords
+        DisplayedQuery: |
+          MonQueryStoreFailures
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | where event in ('query_store_resource_total_over_instance_limit','query_store_stmt_hash_map_over_memory_limit','query_store_buffered_items_over_memory_limit','query_store_disk_size_over_limit','query_store_database_out_of_disk_space')
+          | summarize count() by  event,query_store_resource_type
+          | order by count_ desc
+      - TableName: "MonQueryStoreFailures_QDSReadonly_Analysis_ElasticPool"
+        DeploymentOptions: "ElasticPool"
+        ExecutedQuery: |
+          let FiterReadOnlyReasonArray=(ReadOnlyReasonArray:string)
+          {
+          let ReadOnlyReasonArray_result= replace_string(
+          replace_string(
+          replace_string(ReadOnlyReasonArray, "[", ""),
+          "]", ""),
+          "\"", "");
+          ReadOnlyReasonArray_result
+          };
+          let ReadonlyMessage = (totalReadonlyCount:int, currentDB_ReadonlyCount:int,otherDBs_ReadonlyCount:int,otherDBs_Dcount:int,
+          currentDB_ReadOnlyReasonArray:string,otherDBs_ReadOnlyReasonArray:string,logical_database_name:string)
+          {
+          case(
+          totalReadonlyCount==currentDB_ReadonlyCount,
+          strcat("Query Store of database [",logical_database_name,"] run into readonly ",currentDB_ReadonlyCount,iff(currentDB_ReadonlyCount==1," time", " times")," due to readonly_reason:",currentDB_ReadOnlyReasonArray,". Please note, this is the only database having QDS Readonly issue in the entire ElasticPool"),
+          currentDB_ReadonlyCount==0,strcat("Query Store of database [",logical_database_name,"] didn't run into readonly. At the ElasticPool level, ",otherDBs_Dcount," databases ran into QDS readonly issue ",otherDBs_ReadonlyCount,iff(totalReadonlyCount==1," time"," times")," due to readonly_reason:",otherDBs_ReadOnlyReasonArray,". Please note that we will not proceed with further QDS read-only analysis at this time. To continue, please specify a database currently experiencing the QDS read-only issue and try again."),
+          strcat("Query Store of database [",logical_database_name,"] run into readonly ",currentDB_ReadonlyCount,iff(currentDB_ReadonlyCount==1," time", " times")," due to readonly_reason:",currentDB_ReadOnlyReasonArray,". At the ElasticPool level, other ",otherDBs_Dcount," databases run into QDS readonly issue ",otherDBs_ReadonlyCount,iff(otherDBs_ReadonlyCount==1," time"," times")," due to readonly_reason:",otherDBs_ReadOnlyReasonArray,".")
+          )
+          };
+          MonQueryStoreFailures
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName=~'{LogicalServerName}'
+          | where event in ('query_store_resource_total_over_instance_limit','query_store_stmt_hash_map_over_memory_limit','query_store_buffered_items_over_memory_limit','query_store_disk_size_over_limit','query_store_database_out_of_disk_space')
+          | extend readOnlyReason=case(
+          event=~'query_store_disk_size_over_limit',"65536",
+          event=~'query_store_resource_total_over_instance_limit' and query_store_resource_type=~'x_QdsResourceType_StmtHashMapMemory',"131072",
+          event=~'query_store_stmt_hash_map_over_memory_limit',"131072",
+          event=~'query_store_buffered_items_over_memory_limit',"262144",
+          event=~'query_store_resource_total_over_instance_limit' and query_store_resource_type=~'x_QdsResourceType_BufferedItemsMemory',"262144",
+          event=~'query_store_database_out_of_disk_space',"524288",event
+          )
+          |summarize totalReadonlyCount=count(),currentDB_ReadonlyCount=countif(logical_database_name =~'{LogicalDatabaseName}'),otherDBs_ReadonlyCount=countif(logical_database_name !~'{LogicalDatabaseName}'),
+          otherDBs_Dcount=dcountif(logical_database_name,logical_database_name !~'{LogicalDatabaseName}'),
+          currentDB_ReadOnlyReasonArray=make_set_if(readOnlyReason,logical_database_name =~'{LogicalDatabaseName}'),otherDBs_ReadOnlyReasonArray=make_set_if(readOnlyReason,logical_database_name !~'{LogicalDatabaseName}')
+          | where totalReadonlyCount>0
+          | extend currentDB_ReadOnlyReasonArray=FiterReadOnlyReasonArray(currentDB_ReadOnlyReasonArray)
+          | extend otherDBs_ReadOnlyReasonArray=FiterReadOnlyReasonArray(otherDBs_ReadOnlyReasonArray)
+          | extend Keywords=replace_string(currentDB_ReadOnlyReasonArray,",",";")
+          | extend readonlyMessage=ReadonlyMessage(totalReadonlyCount,currentDB_ReadonlyCount,otherDBs_ReadonlyCount,otherDBs_Dcount,currentDB_ReadOnlyReasonArray,otherDBs_ReadOnlyReasonArray,'{LogicalDatabaseName}')
+          | project readonlyMessage,Keywords
+        DisplayedQuery: |
+          MonQueryStoreFailures
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName=~'{LogicalServerName}'
+          | where event in ('query_store_resource_total_over_instance_limit','query_store_stmt_hash_map_over_memory_limit','query_store_buffered_items_over_memory_limit','query_store_disk_size_over_limit','query_store_database_out_of_disk_space')
+          | summarize count() by logical_database_name, event, query_store_resource_type
+    QuestionToAI: |-
+      -  {{readonlyMessage}}, the data type is String.
+
+      ### Rules
+      1. Store the value of readonlyMessage column in {{readonlyMessage}}.
+      2. Store the value of Keywords column in {{Keywords}}.
+      3. Set {{IssueDetected}} to 'true'.
+      4. Set {{ResultMessage}} to {{readonlyMessage}}.
+    SubSqlSkills:
+      - ExecutedWhenParentIssueDetected: true
+        Keywords: "65536;262144"
+        IsKusto: true
+        Prompts:
+          - "QDS CaptureMode Analysis"
+      - ExecutedWhenParentIssueDetected: true
+        Keywords: "65536"
+        IsKusto: true
+        Prompts:
+          - "QDS Readonly 65536 Analysis"
+      - ExecutedWhenParentIssueDetected: true
+        Keywords: "524288"
+        IsKusto: true
+        Prompts:
+          - "QDS Readonly 524288 Analysis"
+      - ExecutedWhenParentIssueDetected: true
+        Keywords: "131072"
+        IsKusto: true
+        Prompts:
+          - "QDS Readonly 131072 analysis"
+      - ExecutedWhenParentIssueDetected: true
+        Keywords: "262144"
+        IsKusto: true
+        Prompts:
+          - "QDS Readonly 262144 analysis"
+      - ExecutedWhenParentIssueDetected: true
+        Keywords: "131072;262144"
+        IsKusto: true
+        AlwaysDisplayResult: true
+        Prompts:
+          - "QDS Related Memory"
+      - ExecutedWhenParentIssueDetected: true
+        Keywords: "65536;262144;131072"
+        IsKusto: true
+        Prompts:
+          - "Ratio of statementSqlHash to queryHash"

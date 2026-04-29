@@ -1,0 +1,12 @@
+SqlSkills:
+  - IsPublicSkill: false
+    Prompts:
+      - "Wait Category:ASYNC_NETWORK_IO"
+    TSGs:
+      - Title: "Wait Category:ASYNC_NETWORK_IO"
+        Description: |
+          When SQL Server produces result sets and sends them to a client application by putting the results in an output buffer, the client application fetches them from the output buffer. If the client application stops or doesn't fetch the results fast enough, SQL Server has to wait for acknowledgment
+          that the client application has received all the results before sending more results. This wait will show up as ASYNC_NETWORK_IO.
+          There are 3 possible issue:1. The data set is too large hence it takes time to receive it;2. Network Latnecy between the Client side and Azure Sql Side;3. The Azure DB host(vm) has issue and causes issues.
+          Action Plan:Action Plan: Collect a network trace to identify which side is experiencing slowness:1)On the client side, engage the customer's network team; 2) On the Azure side, engage the Azure network team.
+        Link: "https://learn.microsoft.com/en-us/troubleshoot/sql/database-engine/performance/troubleshoot-query-async-network-io"

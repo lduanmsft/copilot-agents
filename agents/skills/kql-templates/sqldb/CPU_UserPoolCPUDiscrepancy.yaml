@@ -1,0 +1,115 @@
+SqlSkills:
+  - id: "1.11"
+    # Description: 
+    #   This skill will check if there are significant discrepancy between User Pool CPU and the combined total of QDS CPU, Successful Compile CPU and Failed Compile CPU.
+    #   If significant discrepancy is detected, will try to identify the cause of the discrepancy.
+    Prompts:
+      - "User Pool CPU Discrepancy Analysis"
+    KustoQueries:
+      - TableName: "UserPoolCPUDiscrepancy"
+        ExecutedQuery: |
+          //Sample output:
+          //1.We've found significant CPU discrepancy. Here are the details: The User Pool CPU time returned by MonDmRealTimeResourceStats is 328355903ms, accounting for approximately 21.1%. While the recorded CPU time is 234246826ms, accounting for approximately 15.0%. The breakdown is as follows: QDS CPU--222885371ms(14.0%), Successful Compile CPU--11325266ms(0.0%), and Failed Compile CPU--36189ms(0.0%). The User Pool CPU is supposed to be close to the combined total of QDS CPU, Successful Compile CPU and Failed Compile CPU.
+          //2.We don't found significant CPU discrepancy. Here are the details: The User Pool CPU time returned by MonDmRealTimeResourceStats is 328355903ms, accounting for approximately 21.1%. While the recorded CPU time is 304246826ms, accounting for approximately 19.4%. The breakdown is as follows: QDS CPU--222885371ms(14.0%), Successful Compile CPU--11325266ms(0.0%), and Failed Compile CPU--36189ms(0.0%). The User Pool CPU is expected to be close to the combined total of QDS CPU, Successful Compile CPU and Failed Compile CPU.
+          let DiscrepancyStatus = (IssueDetected: string,totalUserPoolCpu_ms:long,avgCPUPercentage:real,totalRecordedCPU_ms:long,totalRecordedCPUPercentage:real,qdscpu_ms:long,qdsPercentage:real,successful_compilecpu_ms:long,
+          successful_CompileCpuPercentage:real,failed_compilecpu_ms:long,failed_CompileCpuPercentage:real) {
+          let CpuUsageMessage=strcat("The User Pool CPU time returned by MonDmRealTimeResourceStats is ",totalUserPoolCpu_ms,"ms, accounting for approximately ",avgCPUPercentage,"%. While the recorded CPU time is ",totalRecordedCPU_ms,"ms, accounting for approximately ",totalRecordedCPUPercentage,"%. The breakdown is as follows: QDS CPU--",qdscpu_ms,"ms(",qdsPercentage,"%), Successful Compile CPU--",successful_compilecpu_ms,"ms(",successful_CompileCpuPercentage,"%), and Failed Compile CPU--",failed_compilecpu_ms,"ms(",failed_CompileCpuPercentage,"%). The User Pool CPU is ",iff(IssueDetected =='true',"supposed","expected"), " to be close to the combined total of QDS CPU, Successful Compile CPU and Failed Compile CPU.");
+          case(
+          IssueDetected == 'true', strcat("We've found significant CPU discrepancy. Here are the details: ",CpuUsageMessage),
+          strcat("We don't found significant CPU discrepancy. Here are the details: ",CpuUsageMessage)
+          )
+          };
+          let MonDmRealTimeResourceStats_Sample_sec=15;
+          let totalUserPoolCpu_ms=toscalar(MonDmRealTimeResourceStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | summarize  tolong(sum(avg_cpu_percent*cpu_cap_in_sec *MonDmRealTimeResourceStats_Sample_sec*1000/100)));
+          let qdscpu_ms=toscalar(MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | summarize tolong(sum(cpu_time)/1000));
+          let successful_compilecpu_ms=toscalar(MonWiQueryParamData
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | summarize tolong(sum(compile_cpu_time)/1000));
+          let failed_compilecpu_ms=toscalar(MonQueryProcessing
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | where event =~'failed_compilation'
+          | summarize tolong(sum(compile_cpu)));
+          let totalRecordedCPU_ms=qdscpu_ms+successful_compilecpu_ms+failed_compilecpu_ms;//QDS CPU + Successful Compile CPU + Failed Compile CPU
+          let  totalRecordedCPU_totalUserPoolCpu_ratio=round(totalRecordedCPU_ms*100/totalUserPoolCpu_ms,1);
+          let IssueDetected=case(totalRecordedCPU_totalUserPoolCpu_ratio >= 80, 'false','true');//If the ratio is closed to 80%, we think the gap can be ignored, and IssueDetected is false.
+          let avgCPUPercentage=round(totalUserPoolCpu_ms*100.0/{SumCpuMillisecondOfAllApp},1);
+          let  totalRecordedCPUPercentage=round(totalRecordedCPU_ms*100.0/{SumCpuMillisecondOfAllApp},1);
+          let  qdsPercentage=round(qdscpu_ms*100/{SumCpuMillisecondOfAllApp},1);
+          let  successful_CompileCpuPercentage=round(successful_compilecpu_ms*100/{SumCpuMillisecondOfAllApp},1);
+          let  failed_CompileCpuPercentage=round(failed_compilecpu_ms*100/{SumCpuMillisecondOfAllApp},1);
+          let discrepancyStatus=DiscrepancyStatus(IssueDetected,totalUserPoolCpu_ms,avgCPUPercentage,totalRecordedCPU_ms,totalRecordedCPUPercentage,qdscpu_ms,qdsPercentage,successful_compilecpu_ms,
+          successful_CompileCpuPercentage,failed_compilecpu_ms,failed_CompileCpuPercentage);
+          print IssueDetected=IssueDetected,discrepancyStatus=discrepancyStatus
+        DisplayedQuery: |
+          let MonDmRealTimeResourceStats_Sample_sec=15;
+          let totalUserPoolCpu_ms=toscalar(MonDmRealTimeResourceStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | summarize  tolong(sum(avg_cpu_percent*cpu_cap_in_sec *MonDmRealTimeResourceStats_Sample_sec*1000/100)));
+          let qdscpu_ms=toscalar(MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | summarize tolong(sum(cpu_time)/1000));
+          let successful_compilecpu_ms=toscalar(MonWiQueryParamData
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | summarize tolong(sum(compile_cpu_time)/1000));
+          let failed_compilecpu_ms=toscalar(MonQueryProcessing
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | where event =~'failed_compilation'
+          | summarize tolong(sum(compile_cpu)));
+          let totalRecordedCPU_ms=round(qdscpu_ms+successful_compilecpu_ms+failed_compilecpu_ms,1);//QDS CPU + Successful Compile CPU + Failed Compile CPU
+          print totalUserPoolCpu_ms=totalUserPoolCpu_ms,
+          totalRecordedCPU_ms=totalRecordedCPU_ms,
+          qdscpu_ms=qdscpu_ms,
+          successful_compilecpu_ms=successful_compilecpu_ms,
+          failed_compilecpu_ms=failed_compilecpu_ms
+    QuestionToAI: |-
+      -  {{discrepancyStatus}}, the data type is String.
+
+      ### Rules
+      1. Store the value of discrepancyStatus column in {{discrepancyStatus}}.
+      2. Store the value of IssueDetected column in {{IssueDetected}}.
+      3. Set {{ResultMessage}} to {{discrepancyStatus}}.
+    SubSqlSkills:
+      - id: "1.111"
+        ExecutedWhenParentIssueDetected: true
+        IsKusto: true
+        AlwaysDisplayResult: true
+        Reasoning: "The discrepancy may be due to QDS Readonly, Restart/Failovers, killed queries or queries that are still in running. Now, we will try to investigate the mentioned possible causes."
+        Prompts:
+          - "Root cause of User Pool CPU discrepancy"
+
+  - id: "1.111"
+    # Description:  This skill will check the Root cause of User Pool CPU discrepancy, by checking QDS Readonly,Restart/Failover, Kill command.
+    Prompts:
+      - "Root cause of User Pool CPU discrepancy"
+      - "Why significant gap happened"
+    EvaluationTrueMessage: "We may find the cause of significant gap:"
+    EvaluationFalseMessage: "We conducted checks on QDS Readonly, Restart/Failover, Kill command,ongoing queires. however, didn't find such issues, suggest extending the end time and searching again"
+    SubSqlSkills:
+      - id: "20.1"
+        IsKusto: true
+        Prompts:
+          - "SQL Restart and Failover analysis"
+      - id: "20.2"
+        IsKusto: true
+        Prompts:
+          - "Kill command analysis"
+      - id: "5"
+        IsKusto: true
+        Prompts:
+          - "QDS Readonly detection"
+      - id: "4.91"
+        IsKusto: true
+        Prompts:
+          - "Long Running queries"

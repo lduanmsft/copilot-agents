@@ -1,0 +1,91 @@
+SqlSkills:
+  - id: "17"
+    Prompts:
+      - "Tempdb Full Analysis"
+      - "Tempdb Full"
+      - "Is Tempdb full"
+      - "Is Temp Database Full"
+      - "Is Temp Database File Full"
+    KustoQueries:
+      - TableName: "TempdbFileFull"
+        ExecutedQuery: |
+          let AllocationErrorCount=toscalar( MonSQLSystemHealth
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | where error_id in (1101,1104,1105,5149)
+          | count
+          );
+          let AggInterval_do_NOT_change = time(15m);
+          MonSqlRgHistory
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | where event=='aggregated_virtual_files_io_history'
+          | where database_id == 2
+          | where type_desc =~'ROWS'
+          | where AllocationErrorCount>0
+          | summarize
+          spaceused_gb = round(sum(spaceused_mb / 1024.0),1),
+          size_on_disk_gb = round(sum(size_on_disk_bytes / 1024.0 / 1024.0 / 1024.0),1),
+          max_size_gb=round(sum(max_size_mb/1024.0),1)
+          by  type_desc, bin(originalEventTimestamp, AggInterval_do_NOT_change)
+          | project originalEventTimestamp,file_type=type_desc,spaceused_gb,size_on_disk_gb,max_size_gb
+          | where size_on_disk_gb==max_size_gb
+          | extend Timestamp=originalEventTimestamp
+          | summarize Timestamp=max(Timestamp),count=count()
+        DisplayedQuery: |
+          let AllocationErrorCount=toscalar( MonSQLSystemHealth
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | where error_id in (1101,1104,1105,5149)
+          | count
+          );
+          let AggInterval_do_NOT_change = time(15m);
+          MonSqlRgHistory
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | where event=='aggregated_virtual_files_io_history'
+          | where database_id == 2
+          | where type_desc =~'ROWS'
+          | where AllocationErrorCount>0
+          | summarize
+          spaceused_gb = round(sum(spaceused_mb / 1024.0),1),
+          size_on_disk_gb = round(sum(size_on_disk_bytes / 1024.0 / 1024.0 / 1024.0),1),
+          max_size_gb=round(sum(max_size_mb/1024.0),1)
+          by  type_desc, bin(originalEventTimestamp, AggInterval_do_NOT_change)
+          | project originalEventTimestamp,file_type=type_desc,spaceused_gb,size_on_disk_gb,max_size_gb
+          | where size_on_disk_gb==max_size_gb
+          | extend Timestamp=originalEventTimestamp
+          | summarize Timestamp=max(Timestamp),count=count()
+    TSGs:
+      - Title: "tempdb full"
+        Link: "https://aka.ms/tempdb1"
+    QuestionToAI: |-
+      Read the 'UserPoolCPUTable' and 'tempdbLogFull' tables, each containing a single row, and assign values to the variables below based on its data and the following rules
+      Besides of previous three variables, there are another 5 variables:
+      1.{{TimestampTempdbFileFull}}, the data type is Datetime.
+      2.{{countTempdbFileFull}}, the data type is Integer.
+      3.{{TimestampTempdbLogFull}}, the data type is Datetime.
+      4.{{messageTempdbLogFull}}, the data type is String.
+      5.{{countTempdbLogFull}}, the data type is Integer.
+
+      Rules:
+      1. Store the value of Timestamp column of 'tempdbFileFull' table in {{TimestampTempdbFileFull}}.
+      2. Store the value of count column of 'tempdbFileFull' table in {{countTempdbFileFull}}.
+      3. Store the value of Timestamp column of 'tempdbLogFull' table in {{TimestampTempdbLogFull}}.
+      4. Store the value of message column of 'tempdbLogFull' table in {{messageTempdbLogFull}}.
+      5. Store the value of count column 'tempdbLogFull' table in {{countTempdbLogFull}}.
+      6. If either {{countTempdbFileFull}} or {{countTempdbLogFull}} is greater than 0, then {{IssueDetected}} is 'true', else {{IssueDetected}} is 'false'.
+      7. The {{ResultMessage}} depends on following conditions, When assigning the value to {{ResultMessage}}, please strictly adhere to these conditions and rules and you must replace the variables with actual values:
+      8. If {{countTempdbFileFull}} is greater  than 0, then {{ResultMessage}} will be set to "Tempdb database file was full, with first occurrence around {{TimestampTempdbFileFull}}. "
+      9. If {{countTempdbLogFull}} is greater  than 0, then following string will be appended to {{ResultMessage}} "Tempdb log file was full, with first occurrence at {{TimestampTempdbLogFull}}. Here is the corresponding message:{{messageTempdbLogFull}}."
+      10. if {{IssueDetected}} is 'false', then {{ResultMessage}} will be set to "Tempdb is not full."
+    SubSqlSkills:
+      - ExecutedWhenParentIssueDetected: true
+        IsKusto: true
+        Prompts:
+          - "tempdb file size"
+      - id: "17.2"
+        ExecutedWhenParentIssueDetected: true
+        IsKusto: true
+        Prompts:
+          - "Tempdb Space Usage"

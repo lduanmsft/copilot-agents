@@ -1,0 +1,172 @@
+SqlSkills:
+  - id: "232.131072"
+    Prompts:
+      - "QDS Readonly 131072 analysis"
+      - "QDS Readonly query_store_stmt_hash_map_over_memory_limit analysis"
+      - "query_store_stmt_hash_map_over_memory_limit"
+      - "131072 Analysis"
+      - "131072"
+    MessageForEmptyKustoResult: "QDS Readonly with ReadonlyReason 131072 is not detected"
+    KustoQueries:
+      - TableName: "MonQueryStoreFailures_QDSReadonly_131072_Singleton"
+        DeploymentOptions: "Singleton"
+        ExecutedQuery: |
+          let ReadonlyMessage = (totalCount:int,incorrectCount:int)
+          {
+          let FastPathOptimizationMessage=iff(incorrectCount==0,"",
+          strcat("Note: we've detected abnormal memory usage that actual StmtHash memory was less than the limit, it could be due to 'FastPath Optimization', please engage QDS Expert to investigate."));
+          let mitigationMessage=strcat("The mitigation includes the following actions:1. Implementing query parameterization;2. Upgrading the Service Level Objective (SLO) to increase memory capacity;3. Decreasing capture_policy_stale_threshold_hours;4. Decreasing stale_query_threshold_days.");
+          let dbLevelLimitMessage=strcat("The ",iff(totalCount==1," occurrence was ", " occurrences were")," due to the memory usage of StmtHashMapMemory reached the database level memory threshold-—set at 5% of the total database memory. ");
+          let occurrenceMessage=strcat("The Azure Sql Database Query Store (QDS) ran into read-only mode due to the ReadonlyReason-131072 ",totalCount,iff(totalCount==1," time", " times."));
+          strcat(occurrenceMessage,dbLevelLimitMessage,iff(incorrectCount==0, mitigationMessage,FastPathOptimizationMessage))
+          };
+          MonQueryStoreFailures
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName=~'{LogicalServerName}'
+          | where event=='query_store_stmt_hash_map_over_memory_limit' or
+          ( event=='query_store_resource_total_over_instance_limit' and query_store_resource_type=='x_QdsResourceType_StmtHashMapMemory')
+          |summarize totalCount=count(),
+          incorrectCount=countif(max_stmt_hash_map_size_kb>current_stmt_hash_map_size_kb or max_instance_total_resource_size_kb>current_instance_total_resource_size_kb)
+          | where totalCount>0
+          | extend readonlyMessage=ReadonlyMessage(totalCount,incorrectCount)
+          | project readonlyMessage
+        DisplayedQuery: |
+          MonQueryStoreFailures
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName=~'{LogicalServerName}'
+          | where event=='query_store_stmt_hash_map_over_memory_limit' or
+          ( event=='query_store_resource_total_over_instance_limit' and query_store_resource_type=='x_QdsResourceType_StmtHashMapMemory')
+          | project originalEventTimestamp,logical_database_name,event,query_store_resource_type,current_stmt_hash_map_size_mb=current_stmt_hash_map_size_kb/1024,max_stmt_hash_map_size_mb=max_stmt_hash_map_size_kb/1024,current_instance_total_resource_size_mb=current_instance_total_resource_size_kb/1024, max_instance_total_resource_size_mb=max_instance_total_resource_size_kb/1024, max_memory_available_mb=max_memory_available_kb/1024,memory_percentage_limit
+          | order by originalEventTimestamp asc
+          | take 5
+      - TableName: "MonQueryStoreFailures_QDSReadonly_131072_ElasticPool"
+        DeploymentOptions: "ElasticPool"
+        ExecutedQuery: |
+          let ReadonlyMessage = (totalCount:int, dbLevelCount:int,instanceLevelCount:string,incorrectCount:int)
+          {
+          let FastPathOptimizationMessage=iff(incorrectCount==0,"",
+          strcat("Note: we've detected abnormal memory usage that actual StmtHash memory was less than the limit, it could be due to 'FastPath Optimization', please engage QDS Expert to investigate."));
+          let mitigationMessage=strcat("The mitigation includes the following actions:1. Implementing query parameterization;2. Upgrading the Service Level Objective (SLO) to increase memory capacity;3. Decreasing capture_policy_stale_threshold_hours;4. Decreasing stale_query_threshold_days;",
+          iff(instanceLevelCount==0,"","5. move the database out of the elastic pool."));
+          let elasticPoolLimitMessage=case(
+          instanceLevelCount==0,"",
+          totalCount==instanceLevelCount,strcat("All of the occurrence(s) were due to the memory usage of StmtHashMapMemory reached the Elastic Pool memory threshold-—set at 15% of the total database memory. "),
+          strcat("Rest of the occurrence(s) were due to the memory usage of StmtHashMapMemory reached the Elastic Pool memory threshold-—set at 15% of the total database memory. "));
+          let dbLevelLimitMessage=case(
+          dbLevelCount==0,"",
+          totalCount==dbLevelCount,"All of the occurrence(s) were due to the memory usage of StmtHashMapMemory reached the database level memory threshold-—set at 1% of the total database memory. ",
+          strcat(dbLevelCount," of the occurrence(s) were due to the memory usage of StmtHashMapMemory reached the database level memory threshold-—set at 1% of the total database memory. "));
+          let occurrenceMessage=strcat("The Azure Sql Database Query Store (QDS) ran into read-only mode due to the ReadonlyReason-131072 ",totalCount," time(s). ");
+          strcat(occurrenceMessage,dbLevelLimitMessage,elasticPoolLimitMessage,iff(incorrectCount==0, mitigationMessage,FastPathOptimizationMessage))
+          };
+          MonQueryStoreFailures
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | where event=='query_store_stmt_hash_map_over_memory_limit' or
+          ( event=='query_store_resource_total_over_instance_limit' and query_store_resource_type=='x_QdsResourceType_StmtHashMapMemory')
+          |summarize totalCount=count(),dbLevelCount=countif(event=='query_store_stmt_hash_map_over_memory_limit'),instanceLevelCount=countif(event=='query_store_resource_total_over_instance_limit' and query_store_resource_type=='x_QdsResourceType_StmtHashMapMemory'),
+          incorrectCount=countif(max_stmt_hash_map_size_kb>current_stmt_hash_map_size_kb or max_instance_total_resource_size_kb>current_instance_total_resource_size_kb)
+          | where totalCount>0
+          | extend readonlyMessage=ReadonlyMessage(totalCount,dbLevelCount,instanceLevelCount,incorrectCount)
+          | project readonlyMessage
+        DisplayedQuery: |
+          MonQueryStoreFailures
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | where event=='query_store_stmt_hash_map_over_memory_limit' or
+          ( event=='query_store_resource_total_over_instance_limit' and query_store_resource_type=='x_QdsResourceType_StmtHashMapMemory')
+          | project originalEventTimestamp,logical_database_name,event,query_store_resource_type,current_stmt_hash_map_size_mb=current_stmt_hash_map_size_kb/1024,max_stmt_hash_map_size_mb=max_stmt_hash_map_size_kb/1024,current_instance_total_resource_size_mb=current_instance_total_resource_size_kb/1024,max_instance_total_resource_size_mb=max_instance_total_resource_size_kb/1024, max_memory_available_mb=max_memory_available_kb/1024,memory_percentage_limit
+    TSGs:
+      - Title: "Readonly131072_262144_524288_Troubleshooting"
+        Link: "https://aka.ms/qds0020"
+    QuestionToAI: |-
+      -  {{readonlyMessage}}, the data type is String.
+
+      ### Rules
+      1. Store the value of readonlyMessage column in {{readonlyMessage}}.
+      2. Set {{IssueDetected}} to 'true'.
+      3. Set {{ResultMessage}} to {{readonlyMessage}}.
+
+  - id: "232.262144_EP"
+    Prompts:
+      - "QDS Readonly 262144 analysis"
+      - "QDS Readonly query_store_buffered_items_over_memory_limit analysis"
+      - "query_store_buffered_items_over_memory_limit"
+      - "262144 Analysis"
+      - "262144"
+    MessageForEmptyKustoResult: "QDS Readonly with ReadonlyReason 262144 is not detected"
+    KustoQueries:
+      - TableName: "MonQueryStoreFailures_QDSReadonly_262144_ElasticPool"
+        DeploymentOptions: "ElasticPool"
+        ExecutedQuery: |
+          let ReadonlyMessage = (totalCount:int, dbLevelCount:int,instanceLevelCount:string,incorrectCount:int)
+          {
+          let FastPathOptimizationMessage=iff(incorrectCount==0,"",
+          strcat("Note: we've detected abnormal memory usage that actual Buffereditem memory was less than the limit, it could be due to 'FastPath Optimization', please engage QDS Expert to investigate."));
+          let mitigationMessage=strcat("The mitigation includes the following actions:1. Implementing query parameterization;2. Upgrading the Service Level Objective (SLO) to increase memory capacity;3. Decreasing flush_interval_seconds;",iff(instanceLevelCount==0,"","5. move the database out of the elastic pool."));
+          let elasticPoolLimitMessage=case(
+          instanceLevelCount==0,"",
+          totalCount==instanceLevelCount,strcat("All of the occurrence(s) were due to the memory usage of BufferedItemsMemory reached the Elastic Pool memory threshold-—set at 5% of the total database memory. "),
+          strcat("Rest of the occurrence(s) were due to the memory usage of BufferedItemsMemory reached the Elastic Pool memory threshold-—set at 5% of the total database memory. "));
+          let dbLevelLimitMessage=case(
+          dbLevelCount==0,"",
+          totalCount==dbLevelCount,"All of the occurrence(s) were due to the memory usage of BufferedItemsMemory reached the database level memory threshold-—set at 1% of the total database memory. ",
+          strcat(dbLevelCount," of the occurrence(s) were due to the memory usage of BufferedItemsMemory reached the database level memory threshold-—set at 1% of the total database memory. "));
+          let occurrenceMessage=strcat("The Azure Sql Database Query Store (QDS) ran into read-only mode due to the ReadonlyReason-262144 ",totalCount," time(s). ");
+          strcat(occurrenceMessage,dbLevelLimitMessage,elasticPoolLimitMessage,iff(incorrectCount==0, mitigationMessage,FastPathOptimizationMessage))
+          };
+          MonQueryStoreFailures
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | where event=='query_store_buffered_items_over_memory_limit' or
+          ( event=='query_store_resource_total_over_instance_limit' and query_store_resource_type=='x_QdsResourceType_BufferedItemsMemory')
+          |summarize totalCount=count(),dbLevelCount=countif(event=='query_store_buffered_items_over_memory_limit'),instanceLevelCount=countif(event=='query_store_resource_total_over_instance_limit' and query_store_resource_type=='x_QdsResourceType_BufferedItemsMemory'),
+          incorrectCount=countif(max_buffered_items_size_kb>current_buffered_items_size_kb or max_instance_total_resource_size_kb>current_instance_total_resource_size_kb)
+          | where totalCount>0
+          | extend readonlyMessage=ReadonlyMessage(totalCount,dbLevelCount,instanceLevelCount,incorrectCount)
+          | project readonlyMessage
+        DisplayedQuery: |
+          MonQueryStoreFailures
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | where event=='query_store_buffered_items_over_memory_limit' or
+          ( event=='query_store_resource_total_over_instance_limit' and query_store_resource_type=='x_QdsResourceType_BufferedItemsMemory')
+          | project originalEventTimestamp,logical_database_name,event,query_store_resource_type,current_buffered_items_size_mb=current_buffered_items_size_kb/1024,max_buffered_items_size_mb=max_buffered_items_size_kb/1024,current_instance_total_resource_size_mb=current_instance_total_resource_size_kb/1024,max_instance_total_resource_size_mb=max_instance_total_resource_size_kb/1024, max_memory_available_mb=max_memory_available_kb/1024,memory_percentage_limit
+      - TableName: "MonQueryStoreFailures_QDSReadonly_262144_Singleton"
+        DeploymentOptions: "Singleton"
+        ExecutedQuery: |
+          let ReadonlyMessage = (totalCount:int,incorrectCount:int)
+          {
+          let FastPathOptimizationMessage=iff(incorrectCount==0,"",
+          strcat("Note: we've detected abnormal memory usage that actual Buffereditem memory was less than the limit, it could be due to 'FastPath Optimization', please engage QDS Expert to investigate."));
+          let mitigationMessage=strcat("The mitigation includes the following actions:1. Implementing query parameterization;2. Upgrading the Service Level Objective (SLO) to increase memory capacity;3. Decreasing flush_interval_seconds;");
+          let dbLevelLimitMessage=strcat("The ",iff(totalCount==1," occurrence was ", " occurrences were")," due to the memory usage of BufferedItemsMemory reached the database level memory threshold-—set at 1% of the total database memory. ");
+          let occurrenceMessage=strcat("The Azure Sql Database Query Store (QDS) ran into read-only mode due to the ReadonlyReason-262144 ",totalCount,iff(totalCount==1," time", " times."));
+          strcat(occurrenceMessage,dbLevelLimitMessage,iff(incorrectCount==0, mitigationMessage,FastPathOptimizationMessage))
+          };
+          MonQueryStoreFailures
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | where event=='query_store_buffered_items_over_memory_limit' or
+          ( event=='query_store_resource_total_over_instance_limit' and query_store_resource_type=='x_QdsResourceType_BufferedItemsMemory')
+          |summarize totalCount=count(),incorrectCount=countif(max_buffered_items_size_kb>current_buffered_items_size_kb or max_instance_total_resource_size_kb>current_instance_total_resource_size_kb)
+          | where totalCount>0
+          | extend readonlyMessage=ReadonlyMessage(totalCount,incorrectCount)
+          | project readonlyMessage
+        DisplayedQuery: |
+          MonQueryStoreFailures
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | where event=='query_store_buffered_items_over_memory_limit' or
+          ( event=='query_store_resource_total_over_instance_limit' and query_store_resource_type=='x_QdsResourceType_BufferedItemsMemory')
+          |project originalEventTimestamp,event,query_store_resource_type,current_buffered_items_size_kb,max_buffered_items_size_kb,current_instance_total_resource_size_kb,max_memory_available_kb,memory_percentage_limit
+    TSGs:
+      - Title: "Readonly131072_262144_524288_Troubleshooting"
+        Link: "https://aka.ms/qds0020"
+    QuestionToAI: |-
+      -  {{readonlyMessage}}, the data type is String.
+
+      ### Rules
+      1. Store the value of readonlyMessage column in {{readonlyMessage}}.
+      2. Set {{IssueDetected}} to 'true'.
+      3. Set {{ResultMessage}} to {{readonlyMessage}}.

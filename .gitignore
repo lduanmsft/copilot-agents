@@ -1,0 +1,10 @@
+logs/
+session-state/
+mcp.json
+settings.json
+*.log
+*.tmp
+shared-docs/
+mi-backup-v1/
+
+agents/search-results/

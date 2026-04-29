@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Error 41317 — SQL2022 Research Report (Parallel)</title>
+<style>
+:root{--bg:#1e1e2e;--surface:#282840;--border:#3a3a5c;--text:#cdd6f4;--accent:#89b4fa;--green:#a6e3a1;--red:#f38ba8;--yellow:#f9e2af;--orange:#fab387;--mauve:#cba6f7;--teal:#94e2d5}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',Consolas,monospace;padding:24px;line-height:1.6;max-width:1200px;margin:0 auto}
+h1{color:var(--accent);font-size:1.8em;border-bottom:2px solid var(--accent);padding-bottom:8px;margin-bottom:16px}
+h2{color:var(--mauve);font-size:1.3em;margin-top:24px;margin-bottom:8px;border-left:4px solid var(--mauve);padding-left:8px}
+h3{color:var(--teal);font-size:1.1em;margin-top:16px}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;margin:12px 0}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:0.85em;font-weight:600}
+.badge-err{background:var(--red);color:#1e1e2e}
+.badge-sev{background:var(--yellow);color:#1e1e2e}
+.badge-ok{background:var(--green);color:#1e1e2e}
+.badge-warn{background:var(--orange);color:#1e1e2e}
+pre{background:#11111b;border:1px solid var(--border);border-radius:6px;padding:12px;overflow-x:auto;font-size:0.85em;line-height:1.5;margin:8px 0}
+code{font-family:'Cascadia Code','Fira Code',Consolas,monospace}
+.kw{color:#cba6f7}.fn{color:#89b4fa}.cm{color:#6c7086;font-style:italic}.num{color:#fab387}.err{color:#f38ba8;font-weight:bold}.str{color:#a6e3a1}
+table{border-collapse:collapse;width:100%;margin:8px 0}
+th,td{border:1px solid var(--border);padding:8px 12px;text-align:left}
+th{background:var(--surface);color:var(--mauve)}
+blockquote{border-left:3px solid var(--teal);padding-left:12px;margin:8px 0;color:var(--teal);font-style:italic}
+details{margin:8px 0}summary{cursor:pointer;color:var(--accent);font-weight:600;padding:6px 0}
+.tag{display:inline-block;background:#313244;color:var(--yellow);padding:1px 6px;border-radius:3px;font-size:0.8em;margin:2px}
+.perf{background:#1a2a1a;border:1px solid var(--green);border-radius:8px;padding:12px;margin:12px 0}
+.footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--border);color:#6c7086;font-size:0.8em;text-align:center}
+</style>
+</head>
+<body>
+
+<h1>🔬 Error 41317 — SQL2022 Research Report</h1>
+<p><strong>Version:</strong> SQL Server 2022 | <strong>Branch:</strong> rel/box/sql2022/sql2022_rtm_qfe-cu | <strong>Method:</strong> Parallel Dispatch</p>
+
+<div class="perf">
+<strong>⚡ Performance:</strong> Parallel dispatch — Source analysis + Doc search ran simultaneously. Docs completed ~6min before source analysis.
+</div>
+
+<h2>📋 Error Definition</h2>
+<div class="card">
+<span class="badge badge-err">Error 41317</span> <span class="badge badge-sev">EX_USER (Level 16)</span>
+<table style="margin-top:12px">
+<tr><th>Property</th><th>Value</th></tr>
+<tr><td>Constant</td><td><code>HK_CROSS_DATABASE_TX_NOT_SUPPORTED</code></td></tr>
+<tr><td>Group</td><td><code>HK_ERR</code> (Major 413, range 41300–41399)</td></tr>
+<tr><td>First Product</td><td>SQL11 (SQL Server 2012)</td></tr>
+<tr><td>Message</td><td>A user transaction that accesses memory optimized tables or natively compiled modules cannot access more than one user database or databases model and msdb, and it cannot write to master.</td></tr>
+</table>
+<p style="margin-top:8px"><strong>📄 Source:</strong> <a href="https://msdata.visualstudio.com/Database%20Systems/_git/DsMainDev?path=/Sql/Ntdbms/include/sqlerrorcodes.h&version=GBrel/box/sql2022/sql2022_rtm_qfe-cu">sqlerrorcodes.h</a></p>
+</div>
+
+<h2>💻 Source Code Analysis</h2>
+<p><em>5 code locations across 4 .cpp files + 1 consumer reference</em></p>
+
+<table>
+<tr><th>State</th><th>File</th><th>Function</th><th>Trigger Condition</th></tr>
+<tr><td>3</td><td><a href="https://msdata.visualstudio.com/Database%20Systems/_git/DsMainDev?path=/Sql/Ntdbms/storeng/dfs/trans/xactrm.cpp&version=GBrel/box/sql2022/sql2022_rtm_qfe-cu">xactrm.cpp</a></td><td>GetXdesLong()</td><td>New DB XDES while HK tx active</td></tr>
+<tr><td>4</td><td><a href="https://msdata.visualstudio.com/Database%20Systems/_git/DsMainDev?path=/Sql/Ntdbms/storeng/dfs/trans/xactrm.cpp&version=GBrel/box/sql2022/sql2022_rtm_qfe-cu">xactrm.cpp</a></td><td>CommitInternal()</td><td>Commit-time: HK tx wrote to master</td></tr>
+<tr><td>0</td><td><a href="https://msdata.visualstudio.com/Database%20Systems/_git/DsMainDev?path=/Sql/Ntdbms/Hekaton/sqlhost/sqllang/hkproc.cpp&version=GBrel/box/sql2022/sql2022_rtm_qfe-cu">hkproc.cpp</a></td><td>CheckForCrossDatabaseTransaction()</td><td>Natively compiled proc cross-DB mismatch</td></tr>
+<tr><td>1</td><td><a href="https://msdata.visualstudio.com/Database%20Systems/_git/DsMainDev?path=/Sql/Ntdbms/query/qecore/qquery.cpp&version=GBrel/box/sql2022/sql2022_rtm_qfe-cu">qquery.cpp</a></td><td>SetDbIdHekatonInterop()</td><td>Query references HK tables from 2+ DBs</td></tr>
+<tr><td>6</td><td><a href="https://msdata.visualstudio.com/Database%20Systems/_git/DsMainDev?path=/Sql/Ntdbms/frontend/execenv/xstmtquery.cpp&version=GBrel/box/sql2022/sql2022_rtm_qfe-cu">xstmtquery.cpp</a></td><td>BeginHkXactIfNecessary()</td><td>Runtime cross-DB HK interop check</td></tr>
+</table>
+
+<p style="margin-top:8px"><strong>Consumer:</strong> <a href="https://msdata.visualstudio.com/Database%20Systems/_git/DsMainDev?path=/Sql/Ntdbms/query/qeoptim/util/statutil.cpp&version=GBrel/box/sql2022/sql2022_rtm_qfe-cu">statutil.cpp</a> — <code>FErrorIsAutoStatsSave()</code> ensures error 41317 is NOT silently swallowed during auto-stats.</p>
+
+<details>
+<summary>📌 Key Code Snippet — GetXdesLong() (most common trigger)</summary>
+<pre><code><span class="cm">// xactrm.cpp — XactRM::GetXdesLong()</span>
+<span class="kw">bool</span> fHkTempdbEnabled = GLOBALTRACE_RETAIL(TRCFLG_RETAIL_TEMPDB_METADATA_MEMORY_OPTIMIZED);
+<span class="kw">if</span>(m_hkTx && !IsHekatonCrossDbAccessAllowed(recoveryUnit->GetDbId()))
+{
+    <span class="kw">if</span> (!fHkTempdbEnabled ||
+        HkDatabaseGetDbIdFromTx(m_hkTx) != TEMPDBID)
+    {
+        <span class="fn">ex_raise</span>(<span class="err">HK_ERR</span>, <span class="err">HK_CROSS_DATABASE_TX_NOT_SUPPORTED</span>, EX_USER, <span class="num">3</span>);
+    }
+}</code></pre>
+</details>
+
+<h2>🔍 XEvent Diagnostics</h2>
+<div class="card">
+<p><strong>No error-specific XEvent found for error 41317.</strong></p>
+<p>The <code>sqlserver.error_reported</code> <span class="badge badge-ok">✅ Verified</span> event can capture this error.</p>
+<p><strong>Source evidence:</strong> <code>XeSqlPkg::error_reported</code> found in <a href="https://msdata.visualstudio.com/Database%20Systems/_git/DsMainDev?path=/Sql/Ntdbms/frontend/utils/ErrorReport.cpp&version=GBrel/box/sql2022/sql2022_rtm_qfe-cu">ErrorReport.cpp</a></p>
+<p><strong>CSS Wiki TSG evidence:</strong> In-Memory DB Workflow log-collection TSG uses this exact pattern for error 41317.</p>
+<pre><code><span class="cm">-- Source: CSS Wiki — In-Memory DB Workflow / log-collection TSG</span>
+<span class="kw">CREATE EVENT SESSION</span> [Dumperror] <span class="kw">ON SERVER</span>
+<span class="kw">ADD EVENT</span> sqlserver.error_reported(
+    <span class="kw">ACTION</span>(sqlserver.create_dump_all_threads)
+    <span class="kw">WHERE</span> ([error_number]=(<span class="num">41317</span>)))
+<span class="kw">ADD TARGET</span> package0.ring_buffer</code></pre>
+</div>
+
+<h2>📚 Related Microsoft Learn Docs</h2>
+<div class="card">
+<h3><a href="https://learn.microsoft.com/sql/relational-databases/in-memory-oltp/cross-database-queries?view=sql-server-ver17">Cross-Database Queries (In-Memory OLTP)</a></h3>
+<p><strong>Section:</strong> Main article</p>
+<blockquote>Starting with SQL Server 2014 (12.x), memory-optimized tables do not support cross-database transactions. You cannot access another database from the same transaction or the same query that also accesses a memory-optimized table.</blockquote>
+<blockquote>Table variables are not transactional. Therefore, memory-optimized table variables can be used in cross-database queries, and can thus facilitate moving data from one database into memory-optimized tables in another. You can use two transactions.</blockquote>
+</div>
+
+<h2>📋 Related CSS Wiki TSGs</h2>
+<div class="card">
+<h3>In-Memory DB Workflow — Log Collection</h3>
+<p><strong>Wiki:</strong> SQLServerWindows</p>
+<blockquote>CREATE EVENT SESSION [Dumperror] ON SERVER ADD EVENT sqlserver.error_reported(ACTION(sqlserver.create_dump_all_threads) WHERE ([error_number]=(41317))) ADD TARGET package0.ring_buffer</blockquote>
+<p><em>Contains XEvent dump capture examples specifically for error 41317.</em></p>
+</div>
+
+<h2>🐛 Related Bugs</h2>
+<div class="card">
+<table>
+<tr><th>ID</th><th>Title</th><th>State</th><th>Tags</th></tr>
+<tr>
+<td><a href="https://dev.azure.com/msdata/Database%20Systems/_workitems/edit/2025974">#2025974</a></td>
+<td>[Hotfix] Msg 41317 when querying sys catalogs with HkTempDB enabled</td>
+<td>Removed</td>
+<td><span class="tag">CSS</span><span class="tag">HkTempdbBugs</span><span class="tag">HotFix</span></td>
+</tr>
+<tr>
+<td><a href="https://dev.azure.com/msdata/Database%20Systems/_workitems/edit/3843540">#3843540</a></td>
+<td>MEMORY_OPTIMIZED TEMPDB_METADATA breaks dm_db_stats_properties</td>
+<td>Removed</td>
+<td><span class="tag">EAP</span><span class="tag">Train:SQL2025</span></td>
+</tr>
+</table>
+<p style="margin-top:8px"><strong>Bug #2025974:</strong></p>
+<blockquote>When HkTempDB is enabled, querying system catalog views (e.g., sys.indexes LEFT JOIN sys.stats) can trigger 41317 because the system catalog access creates an implicit HK transaction on tempdb.</blockquote>
+<p><strong>Bug #3843540:</strong></p>
+<blockquote>When MEMORY_OPTIMIZED TEMPDB_METADATA is ON, calling sys.dm_db_stats_properties in a cross apply with sys.stats where one or more tables are in memory tables triggers Error 41317.</blockquote>
+</div>
+
+<h2>🛠️ Workarounds</h2>
+<div class="card">
+<details open>
+<summary>Workaround 1: Use memory-optimized table variables for cross-database data transfer</summary>
+<p><strong>Source:</strong> <a href="https://learn.microsoft.com/sql/relational-databases/in-memory-oltp/cross-database-queries?view=sql-server-ver17">Microsoft Learn — Cross-Database Queries</a>, Section: main article</p>
+<blockquote>Table variables are not transactional. Therefore, memory-optimized table variables can be used in cross-database queries.</blockquote>
+<pre><code><span class="cm">-- Use two separate transactions</span>
+<span class="kw">DECLARE</span> @tmp dbo.MemoryType;
+<span class="kw">INSERT</span> @tmp <span class="kw">SELECT</span> * <span class="kw">FROM</span> SourceDB.dbo.SourceTable;  <span class="cm">-- TX 1</span>
+<span class="kw">INSERT</span> dbo.DestTable_InMem <span class="kw">SELECT</span> * <span class="kw">FROM</span> @tmp;       <span class="cm">-- TX 2</span></code></pre>
+</details>
+
+<details>
+<summary>Workaround 2: For HkTempdb-related occurrences — apply latest CU</summary>
+<p><strong>Source:</strong> Bug <a href="https://dev.azure.com/msdata/Database%20Systems/_workitems/edit/2025974">#2025974</a> — [Hotfix] Msg 41317 when querying sys catalogs with HkTempDB enabled</p>
+<p>Tags include PostmortemCU20 through CU25, indicating fixes were shipped in cumulative updates.</p>
+</details>
+
+<details>
+<summary>Workaround 3: Restructure to avoid cross-database transactions with MO tables</summary>
+<p><strong>Source:</strong> Source code analysis — <code>xactrm.cpp</code> GetXdesLong() and CommitInternal()</p>
+<p>The code explicitly checks for cross-database access at transaction start and commit time. The only exemptions are tempdb (in HkTempdb mode), master (read-only), and resource DB.</p>
+</details>
+</div>
+
+<div class="footer">
+Generated by Copilot CLI — lduan agent · Parallel Dispatch Method · April 2026<br>
+Source: DsMainDev repo, branch rel/box/sql2022/sql2022_rtm_qfe-cu<br>
+Sub-Agent A (source): ~7min | Sub-Agent B (docs): ~1min | Total: ~7min (vs ~10min serial)
+</div>
+
+</body>
+</html>

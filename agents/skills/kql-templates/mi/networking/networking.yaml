@@ -1,0 +1,3362 @@
+SqlSkills:
+- id: MI-networking-1
+  Topic: Gateway issue
+  Source: asmi-troubleshooter-package/Gateway issue.md
+  Prompts:
+  - MI Gateway issue
+  - Managed Instance Gateway issue
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'let timeBucket = iff(datetime_diff(''second'', datetime(2024-03-20 00:15:00), datetime(2024-03-26 02:30)) < 1000, 1s, iff(datetime_diff(''minute'',  datetime(2024-03-20 00:15), datetime(2024-03-26
+      02:30)) < 1000, 1m, 1h));
+
+      MonLogin
+
+      | where originalEventTimestamp between(datetime(2024-03-20 00:15).. datetime(2024-03-26 02:30))
+
+      | where event == ''process_login_finish''
+
+      | where logical_server_name =~ "{ServerName}"// and database_name =~ "{DatabaseName}"
+
+      | summarize count() by bin(originalEventTimestamp, timeBucket), iff(is_success == true, strcat(''Successful_'', package), strcat(''Failed_'', package, ''_'', error, ''_'', state)),AppName'
+- id: MI-networking-2
+  Topic: Gateway issue
+  Source: asmi-troubleshooter-package/Gateway issue.md
+  Prompts:
+  - MI Gateway issue
+  - Managed Instance Gateway issue
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRedirector
+    ExecutedQuery: 'let startTime = datetime(''2024-03-20 00:00:00'');
+
+      let endTime = datetime(''2024-03-21 23:22:00'');
+
+      MonRedirector
+
+      | where originalEventTimestamp between(startTime..endTime)
+
+      | where ClusterName in (''tr5896.southeastasia1-a.worker.database.windows.net'')'
+- id: MI-networking-3
+  Topic: Gateway issue
+  Source: asmi-troubleshooter-package/Gateway issue.md
+  Prompts:
+  - MI Gateway issue
+  - Managed Instance Gateway issue
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRedirector
+    ExecutedQuery: 'MonRedirector
+
+      | where TIMESTAMP > ago(7d)
+
+      | where ClusterName contains ''tr5896.southeastasia1-a.worker.database.windows.net'''
+- id: MI-networking-4
+  Topic: Gateway issue
+  Source: asmi-troubleshooter-package/Gateway issue.md
+  Prompts:
+  - MI Gateway issue
+  - Managed Instance Gateway issue
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'let tenantRing = ''tr5896.southeastasia1-a.worker.database.windows.net'';
+
+      let serverName = ''thazefmdb0029'';
+
+      MonLogin
+
+      | where originalEventTimestamp > ago(7d)
+
+      | where ClusterName == tenantRing
+
+      | where event == ''process_login_finish''
+
+      | where error != 0 or is_success == 0
+
+      | where AppTypeName startswith ''Gateway.PDC''
+
+      | where logical_server_name =~ serverName'
+- id: MI-networking-5
+  Topic: Gateway issue
+  Source: asmi-troubleshooter-package/Gateway issue.md
+  Prompts:
+  - MI Gateway issue
+  - Managed Instance Gateway issue
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCounterOneMinute
+    ExecutedQuery: 'MonCounterOneMinute
+
+      | where ClusterName == ''tr5896.southeastasia1-a.worker.database.windows.net'''
+- id: MI-networking-6
+  Topic: Gateway issue
+  Source: asmi-troubleshooter-package/Gateway issue.md
+  Prompts:
+  - MI Gateway issue
+  - Managed Instance Gateway issue
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRgLoad
+    ExecutedQuery: 'let tenantRing = ''tr5896.southeastasia1-a.worker.database.windows.net'';
+
+      MonRgLoad
+
+      | extend originalEventTimestamp = originalEventTimestampFrom'
+- id: MI-networking-7
+  Topic: Proxy error 40613 v.s. 42127
+  Source: asmi-troubleshooter-package/Proxy error 40613 v.s. 42127.md
+  Prompts:
+  - MI Proxy error 40613 v.s. 42127
+  - Managed Instance Proxy error 40613 v.s. 42127
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'MonLogin
+
+      | where originalEventTimestamp > datetime(''2025-02-17 00:27:00'') and originalEventTimestamp < datetime(''2025-02-17 02:27:00'')
+
+      | where connection_id == ''D275504B-C4D8-4F1B-B6BA-927A17732349''
+
+      | project originalEventTimestamp, event, total_time_ms,  proxy_dispacther_time_ms, action, ssl_protocol,ssl_cipher,extra_info'
+- id: MI-networking-8
+  Topic: Proxy or Redirect
+  Source: asmi-troubleshooter-package/Proxy or Redirect.md
+  Prompts:
+  - MI Proxy or Redirect
+  - Managed Instance Proxy or Redirect
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'let startTime = datetime(2022-06-03 12:00:00);
+
+      let endTime = datetime(2022-06-03 14:00:00);
+
+      let srv = "{ServerName}";
+
+      let db = "{DatabaseName}";
+
+      MonLogin
+
+      | where TIMESTAMP >= startTime and TIMESTAMP <= endTime'
+- id: MI-networking-9
+  Topic: Proxy or Redirect
+  Source: asmi-troubleshooter-package/Proxy or Redirect.md
+  Prompts:
+  - MI Proxy or Redirect
+  - Managed Instance Proxy or Redirect
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'let startTime = todatetime(''2024-08-19 21:20:00'');
+
+      let endTime = todatetime(''2024-08-26 18:03:47'');
+
+      let serverName = ''bhazms0512001p'';
+
+      MonLogin
+
+      | where originalEventTimestamp between(startTime..endTime)
+
+      | where logical_server_name =~ "{ServerName}"
+
+      | where event == "process_login_finish" and is_success==true
+
+      | where NodeName =="_WF2C_3"
+
+      | extend AADUser= iif( fedauth_adal_workflow> 0 or fedauth_library_type> 0, "AAD", "SQL")'
+- id: MI-networking-10
+  Topic: Proxy or Redirect
+  Source: asmi-troubleshooter-package/Proxy or Redirect.md
+  Prompts:
+  - MI Proxy or Redirect
+  - Managed Instance Proxy or Redirect
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'let starttime= ago(1d);
+
+      let endtime= now();
+
+      let server= ''mtcacuat'';
+
+      let database= ''MerlotCADemo'';
+
+      MonLogin
+
+      | where originalEventTimestamp>= starttime and originalEventTimestamp<= endtime
+
+      | where logical_server_name=~ server and database_name=~ database
+
+      //| where event == ''process_login_finish''
+
+      //| where error == 18456 and [''state''] == 132
+
+      | extend AADUser= iif( fedauth_adal_workflow> 0 or fedauth_library_type> 0, "AAD", "SQL")'
+- id: MI-networking-11
+  Topic: Proxy or Redirect
+  Source: asmi-troubleshooter-package/Proxy or Redirect.md
+  Prompts:
+  - MI Proxy or Redirect
+  - Managed Instance Proxy or Redirect
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonFedAuthTicketService
+    ExecutedQuery: 'MonFedAuthTicketService
+
+      | where originalEventTimestamp>= starttime and originalEventTimestamp<= endtime
+
+      | where event== ''fedauth_webtoken_failure''
+
+      | project sql_connection_id, database_name, logical_database_name, JSONWebTokenErrorState= error_state, error_message'
+- id: MI-networking-12
+  Topic: AAD authentication
+  Source: asmi-troubleshooter-package/AAD authentication.md
+  Prompts:
+  - MI AAD authentication
+  - Managed Instance AAD authentication
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'MonLogin
+
+      | where TIMESTAMP >= datetime(2024-05-06 00:39:00Z) | where TIMESTAMP < datetime(2024-05-06 14:15:53Z)'
+- id: MI-networking-13
+  Topic: AAD authentication
+  Source: asmi-troubleshooter-package/AAD authentication.md
+  Prompts:
+  - MI AAD authentication
+  - Managed Instance AAD authentication
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'let starttime= ago(1d);
+
+      let endtime= now();
+
+      let server= ''myazepmdb0011'';
+
+      let database= ''MerlotCADemo'';
+
+      MonLogin
+
+      | where originalEventTimestamp>= starttime and originalEventTimestamp<= endtime
+
+      | where logical_server_name=~ server //and database_name=~ database
+
+      //| where event == ''process_login_finish''
+
+      //| where error == 18456 and [''state''] == 132
+
+      | extend AADUser= iif( fedauth_adal_workflow> 0 or fedauth_library_type> 0, "AAD", "SQL")'
+- id: MI-networking-14
+  Topic: AAD authentication
+  Source: asmi-troubleshooter-package/AAD authentication.md
+  Prompts:
+  - MI AAD authentication
+  - Managed Instance AAD authentication
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonFedAuthTicketService
+    ExecutedQuery: 'MonFedAuthTicketService
+
+      | where originalEventTimestamp>= starttime and originalEventTimestamp<= endtime
+
+      | where event== ''fedauth_webtoken_failure''
+
+      | project sql_connection_id, database_name, logical_database_name, JSONWebTokenErrorState= error_state, error_message'
+- id: MI-networking-15
+  Topic: AAD authentication
+  Source: asmi-troubleshooter-package/AAD authentication.md
+  Prompts:
+  - MI AAD authentication
+  - Managed Instance AAD authentication
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAzureActivDirService
+    ExecutedQuery: 'MonAzureActivDirService
+
+      | where originalEventTimestamp between(startTime..endTime)
+
+      | where logical_server_name =~ serverName and (isempty(databaseName) or database_name =~ databaseName)
+
+      | project originalEventTimestamp, logical_database_name, NodeName, AppName, event'
+- id: MI-networking-16
+  Topic: MonLogin - most used
+  Source: asmi-troubleshooter-package/MonLogin - most used.md
+  Prompts:
+  - MI MonLogin - most used
+  - Managed Instance MonLogin - most used
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'MonLogin
+
+      | where LogicalServerName =~ ''<MI_name>'' or logical_server_name =~ ''<MI_name>''
+
+      //| where ClusterName == "tr2252.australiasoutheast1-a.worker.database.windows.net"//filter only ClusterName may give you more information'
+- id: MI-networking-17
+  Topic: MonLogin - most used
+  Source: asmi-troubleshooter-package/MonLogin - most used.md
+  Prompts:
+  - MI MonLogin - most used
+  - Managed Instance MonLogin - most used
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'let timeBucket = iff(datetime_diff(''second'', datetime(2024-05-06 00:15:00), datetime(2024-05-06 05:30)) < 1000, 1s iff(datetime_diff(''minute'',  datetime(2024-05-06 00:15), datetime(2024-05-06
+      05:30)) < 1000, 1m, 1h));
+
+      MonLogin
+
+      | where originalEventTimestamp between(datetime(2024-05-06 00:15).. datetime(2024-05-06 05:30))
+
+      | where event == ''process_login_finish''
+
+      | where logical_server_name =~ "{ServerName}"// and database_name =~ "{DatabaseName}"
+
+      | summarize count() by bin(originalEventTimestamp, timeBucket), iff(is_success == true, strcat(''Successful_'', package), strcat(''Failed_'', package, ''_'', error, ''_'', state)),AppName'
+- id: MI-networking-18
+  Topic: MonLogin - most used
+  Source: asmi-troubleshooter-package/MonLogin - most used.md
+  Prompts:
+  - MI MonLogin - most used
+  - Managed Instance MonLogin - most used
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'MonLogin
+
+      | where originalEventTimestamp > datetime(2024-05-15 08:20) and originalEventTimestamp < datetime(2024-05-15 09:00)
+
+      | where LogicalServerName =~ "{ServerName}" or logical_server_name =~ "{ServerName}"
+
+      | where event=="process_login_finish"
+
+      | summarize Success = countif(is_success == 1), UserFailed = countif(is_success == 0 and is_user_error == 1), TrueFailed = countif(is_success == 0 and is_user_error == 0) by bin(PreciseTimeStamp,
+      1min)'
+- id: MI-networking-19
+  Topic: Tips with Azure Network team
+  Source: asmi-troubleshooter-package/Tips with Azure Network team.md
+  Prompts:
+  - MI Tips with Azure Network team
+  - Managed Instance Tips with Azure Network team
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCapacityTenantSnapshot
+    ExecutedQuery: 'let clusterName = ''tr11909.westus2-a.worker.database.windows.net'';
+
+      let timestape = ago(5d);
+
+      MonCapacityTenantSnapshot
+
+      | where TIMESTAMP > timestape
+
+      | summarize arg_max(TIMESTAMP, *) by tenant_ring_name, tenant_name'
+- id: MI-networking-20
+  Topic: Linked Server
+  Source: asmi-troubleshooter-package/Linked Server.md
+  Prompts:
+  - MI Linked Server
+  - Managed Instance Linked Server
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLinkedServerInfo
+    ExecutedQuery: 'MonLinkedServerInfo
+
+      | where LogicalServerName == "mi name" or LogicalServerName == "server name"
+
+      | where linked_server_name startswith "10.1.9.60"
+
+      | where originalEventTimestamp > ago(10d)
+
+      | project originalEventTimestamp, LogicalServerName, linked_server_name, provider_name'
+- id: MI-networking-21
+  Topic: Distributed Transaction _ DTC
+  Source: asmi-troubleshooter-package/Distributed Transaction _ DTC.md
+  Prompts:
+  - MI Distributed Transaction _ DTC
+  - Managed Instance Distributed Transaction _ DTC
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagementOperations
+    ExecutedQuery: 'let startTime = ago(20d);
+
+      let endTime = now();
+
+      let serverName = ''azwninsqld051v'';
+
+      MonManagementOperations
+
+      | where originalEventTimestamp >= startTime and originalEventTimestamp <= endTime
+
+      | where operation_parameters has serverName
+
+      //| where operation_type == ''UpdateManagedServerDTC''
+
+      | project TIMESTAMP , operation_type , PreciseTimeStamp , event , request_id , message, error_code,  operation_parameters, error_message, operation_result'
+- id: MI-networking-22
+  Topic: gateway-throttling-analysis
+  Source: TSG-SQL-MI-Networking/content/analysis/gateway-throttling-analysis.md
+  Prompts:
+  - MI gateway-throttling-analysis
+  - Managed Instance gateway-throttling-analysis
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: AlrLogin
+    ExecutedQuery: '| XEvent | Purpose | Key Fields |
+
+      |--------|---------|------------|
+
+      | `report_login_proxyconn_throttling` | Per-connection throttling state | `logical_server_name`, `database_name`, `action`, `total_task_count`, `open_running_count` |
+
+      | `login_proxy_throttling_dispatching` | Dispatch metrics (MDM `AlrLogin`) | `LogicalServerName`, `DatabaseName`, `dispatcher_pool_size`, `open_running_count` |
+
+      | `login_proxy_throttling_count` | Total throttled disconnects | `LogicalServerName`, `DatabaseName`, `ClusterName` |
+
+      | Login event | Connection details | `proxy_open_time_ms`, `proxy_dispacther_wait_list_time_ms`, `instance_port`, `is_success` |'
+- id: MI-networking-23
+  Topic: initial-investigation-steps-for-connectivity
+  Source: TSG-SQL-MI-Networking/content/connectivity/initial-investigation-steps-for-connectivity.md
+  Prompts:
+  - MI initial-investigation-steps-for-connectivity
+  - Managed Instance initial-investigation-steps-for-connectivity
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'let startTime = datetime(2026-02-11 00:00);
+
+      let endTime = datetime(2026-02-11 12:00);
+
+      let tenantRing = ''tr12345.region-a.worker.database.windows.net'';
+
+      let serverName = ''myserver'';
+
+      MonLogin
+
+      | where originalEventTimestamp between(startTime..endTime)
+
+      | where ClusterName == tenantRing
+
+      | where event == ''process_login_finish''
+
+      | where error != 0 or is_success == 0
+
+      | where AppTypeName startswith ''Gateway.PDC''
+
+      | where logical_server_name =~ serverName'
+- id: MI-networking-24
+  Topic: initial-investigation-steps-for-connectivity
+  Source: TSG-SQL-MI-Networking/content/connectivity/initial-investigation-steps-for-connectivity.md
+  Prompts:
+  - MI initial-investigation-steps-for-connectivity
+  - Managed Instance initial-investigation-steps-for-connectivity
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCounterOneMinute
+    ExecutedQuery: 'let nodeName = ''DB80C_4'';
+
+      let tenantRingName = ''tr4959.westus2-a.worker.database.windows.net'';
+
+      MonCounterOneMinute
+
+      | where TIMESTAMP > ago(1h)
+
+      | where ClusterName == tenantRingName
+
+      | where NodeName == nodeName
+
+      | where CounterName endswith "Rejected Connections/sec"
+
+      | project TIMESTAMP, NodeName, CounterValue
+
+      | render timechart'
+- id: MI-networking-25
+  Topic: initial-investigation-steps-for-connectivity
+  Source: TSG-SQL-MI-Networking/content/connectivity/initial-investigation-steps-for-connectivity.md
+  Prompts:
+  - MI initial-investigation-steps-for-connectivity
+  - Managed Instance initial-investigation-steps-for-connectivity
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'MonLogin
+
+      | where originalEventTimestamp > ago(1h)
+
+      | where ClusterName == ''<tenant-ring>''
+
+      | where event == ''process_login_finish''
+
+      | where error != 0
+
+      | summarize count() by error, state, state_desc'
+- id: MI-networking-26
+  Topic: initial-investigation-steps-for-connectivity
+  Source: TSG-SQL-MI-Networking/content/connectivity/initial-investigation-steps-for-connectivity.md
+  Prompts:
+  - MI initial-investigation-steps-for-connectivity
+  - Managed Instance initial-investigation-steps-for-connectivity
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'MonLogin
+
+      | where originalEventTimestamp > ago(1h)
+
+      | where ClusterName == ''<tenant-ring>''
+
+      | where AppTypeName startswith ''Gateway.PDC''
+
+      | summarize TotalLogins=count(), Errors=countif(error!=0) by NodeName'
+- id: MI-networking-27
+  Topic: initial-investigation-steps-for-connectivity
+  Source: TSG-SQL-MI-Networking/content/connectivity/initial-investigation-steps-for-connectivity.md
+  Prompts:
+  - MI initial-investigation-steps-for-connectivity
+  - Managed Instance initial-investigation-steps-for-connectivity
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCounterOneMinute
+    ExecutedQuery: 'MonCounterOneMinute
+
+      | where TIMESTAMP > ago(1h)
+
+      | where ClusterName == ''<tenant-ring>''
+
+      | where NodeName == ''<node-name>''
+
+      | where CounterName endswith "Rejected Connections/sec"
+
+      | summarize MaxRejections=max(CounterValue)'
+- id: MI-networking-28
+  Topic: investigate-problems-on-gateway
+  Source: TSG-SQL-MI-Networking/content/connectivity/investigate-problems-on-gateway.md
+  Prompts:
+  - MI investigate-problems-on-gateway
+  - Managed Instance investigate-problems-on-gateway
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'let startTime = datetime(2022-10-05 18:00);
+
+      let endTime = datetime(2022-10-09 12:00);
+
+      let tenantRing = ''tr12345.region-a.worker.database.windows.net'';
+
+      let serverName = ''myserver-name'';
+
+      MonLogin
+
+      | where originalEventTimestamp between(startTime..endTime)
+
+      | where ClusterName == tenantRing
+
+      | where event == ''process_login_finish''
+
+      | where error != 0 or is_success == 0
+
+      | where AppTypeName startswith ''Gateway.PDC''
+
+      | where logical_server_name =~ serverName'
+- id: MI-networking-29
+  Topic: investigate-problems-on-gateway
+  Source: TSG-SQL-MI-Networking/content/connectivity/investigate-problems-on-gateway.md
+  Prompts:
+  - MI investigate-problems-on-gateway
+  - Managed Instance investigate-problems-on-gateway
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'let startTime = datetime(2022-10-05 18:00);
+
+      let endTime = datetime(2022-10-09 12:00);
+
+      let tenantRing = ''tr12345.region-a.worker.database.windows.net'';
+
+      let serverName = ''myserver-name'';
+
+      MonLogin
+
+      | where originalEventTimestamp between(startTime..endTime)
+
+      | where ClusterName == tenantRing
+
+      | where event == ''process_login_finish''
+
+      | where error != 0
+
+      | where AppTypeName startswith ''Gateway.PDC''
+
+      | where logical_server_name =~ serverName
+
+      | summarize ErrorCount = count() by bin(originalEventTimestamp, 5m), error, state
+
+      | render timechart'
+- id: MI-networking-30
+  Topic: investigate-problems-on-gateway
+  Source: TSG-SQL-MI-Networking/content/connectivity/investigate-problems-on-gateway.md
+  Prompts:
+  - MI investigate-problems-on-gateway
+  - Managed Instance investigate-problems-on-gateway
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'let startTime = datetime(2022-10-05 18:00);
+
+      let endTime = datetime(2022-10-09 12:00);
+
+      let tenantRing = ''tr12345.region-a.worker.database.windows.net'';
+
+      MonLogin
+
+      | where originalEventTimestamp between(startTime..endTime)
+
+      | where ClusterName == tenantRing
+
+      | where event == ''process_login_finish''
+
+      | where error != 0
+
+      | where AppTypeName startswith ''Gateway.PDC''
+
+      | summarize ErrorCount = count(), UniqueErrors = dcount(error) by NodeName
+
+      | order by ErrorCount desc'
+- id: MI-networking-31
+  Topic: investigate-problems-on-gateway
+  Source: TSG-SQL-MI-Networking/content/connectivity/investigate-problems-on-gateway.md
+  Prompts:
+  - MI investigate-problems-on-gateway
+  - Managed Instance investigate-problems-on-gateway
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'let startTime = datetime(2022-10-05 18:00);
+
+      let endTime = datetime(2022-10-09 12:00);
+
+      let tenantRing = ''tr12345.region-a.worker.database.windows.net'';
+
+      MonLogin
+
+      | where originalEventTimestamp between(startTime..endTime)
+
+      | where ClusterName == tenantRing
+
+      | where AppTypeName startswith ''Gateway.PDC''
+
+      | where error == 17830 and state == 103
+
+      | extend LoginDuration = datetime_diff(''second'', process_login_end, process_login_start)
+
+      | summarize AvgLoginDuration = avg(LoginDuration), MaxLoginDuration = max(LoginDuration) by bin(originalEventTimestamp, 5m)
+
+      | render timechart'
+- id: MI-networking-32
+  Topic: investigate-problems-on-gateway
+  Source: TSG-SQL-MI-Networking/content/connectivity/investigate-problems-on-gateway.md
+  Prompts:
+  - MI investigate-problems-on-gateway
+  - Managed Instance investigate-problems-on-gateway
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'let startTime = datetime(2022-10-05 18:00);
+
+      let endTime = datetime(2022-10-09 12:00);
+
+      let tenantRing = ''tr12345.region-a.worker.database.windows.net'';
+
+      MonLogin
+
+      | where originalEventTimestamp between(startTime..endTime)
+
+      | where ClusterName == tenantRing
+
+      | where error == 40613
+
+      | where AppTypeName startswith ''Gateway.PDC''
+
+      | summarize Count = count() by bin(originalEventTimestamp, 1m), state_desc
+
+      | render timechart'
+- id: MI-networking-33
+  Topic: investigate-problems-on-gateway
+  Source: TSG-SQL-MI-Networking/content/connectivity/investigate-problems-on-gateway.md
+  Prompts:
+  - MI investigate-problems-on-gateway
+  - Managed Instance investigate-problems-on-gateway
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'let startTime = datetime(2022-10-05 18:00);
+
+      let endTime = datetime(2022-10-09 12:00);
+
+      let tenantRing = ''tr12345.region-a.worker.database.windows.net'';
+
+      let serverName = ''myserver-name'';
+
+      MonLogin
+
+      | where originalEventTimestamp between(startTime..endTime)
+
+      | where ClusterName == tenantRing
+
+      | where error == 18456
+
+      | where logical_server_name =~ serverName
+
+      | summarize Count = count() by state, state_desc, login_name'
+- id: MI-networking-34
+  Topic: investigate-problems-on-gateway
+  Source: TSG-SQL-MI-Networking/content/connectivity/investigate-problems-on-gateway.md
+  Prompts:
+  - MI investigate-problems-on-gateway
+  - Managed Instance investigate-problems-on-gateway
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'let startTime = datetime(2022-10-05 18:00);
+
+      let endTime = datetime(2022-10-09 12:00);
+
+      let tenantRing = ''tr12345.region-a.worker.database.windows.net'';
+
+      let serverName = ''myserver-name'';
+
+      MonLogin
+
+      | where originalEventTimestamp between(startTime..endTime)
+
+      | where ClusterName == tenantRing
+
+      | where AppTypeName startswith ''Gateway.PDC''
+
+      | where logical_server_name =~ serverName
+
+      | where error == 17830
+
+      | extend PreLoginDuration = datetime_diff(''millisecond'', prelogin_end, prelogin_start)
+
+      | extend LoginPacketDuration = datetime_diff(''millisecond'', process_login_packet_end, process_login_packet_start)
+
+      | extend TotalLoginDuration = datetime_diff(''millisecond'', process_login_end, process_login_start)
+
+      | project originalEventTimestamp, error, state, state_desc,'
+- id: MI-networking-35
+  Topic: investigate-problems-on-gateway
+  Source: TSG-SQL-MI-Networking/content/connectivity/investigate-problems-on-gateway.md
+  Prompts:
+  - MI investigate-problems-on-gateway
+  - Managed Instance investigate-problems-on-gateway
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCounterOneMinute
+    ExecutedQuery: 'let startTime = datetime(2022-10-05 18:00);
+
+      let endTime = datetime(2022-10-09 12:00);
+
+      let tenantRing = ''tr12345.region-a.worker.database.windows.net'';
+
+      MonCounterOneMinute
+
+      | where TIMESTAMP between(startTime..endTime)
+
+      | where ClusterName == tenantRing
+
+      | where NodeName startswith ''Gateway''
+
+      | where CounterName == "% Processor Time"
+
+      | summarize AvgCPU = avg(CounterValue) by NodeName, bin(TIMESTAMP, 5m)
+
+      | render timechart'
+- id: MI-networking-36
+  Topic: investigate-problems-on-gateway
+  Source: TSG-SQL-MI-Networking/content/connectivity/investigate-problems-on-gateway.md
+  Prompts:
+  - MI investigate-problems-on-gateway
+  - Managed Instance investigate-problems-on-gateway
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'let startTime = datetime(2022-10-05 18:00);
+
+      let endTime = datetime(2022-10-09 12:00);
+
+      let tenantRing = ''tr12345.region-a.worker.database.windows.net'';
+
+      MonLogin
+
+      | where originalEventTimestamp between(startTime..endTime)
+
+      | where ClusterName == tenantRing
+
+      | where AppTypeName startswith ''Gateway.PDC''
+
+      | where event == ''process_login_start''
+
+      | summarize StartCount = count() by bin(originalEventTimestamp, 1m)
+
+      | join kind=leftouter ('
+- id: MI-networking-37
+  Topic: investigate-problems-on-gateway
+  Source: TSG-SQL-MI-Networking/content/connectivity/investigate-problems-on-gateway.md
+  Prompts:
+  - MI investigate-problems-on-gateway
+  - Managed Instance investigate-problems-on-gateway
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'MonLogin
+
+      | where originalEventTimestamp between(startTime..endTime)
+
+      | where ClusterName == tenantRing
+
+      | where AppTypeName startswith ''Gateway.PDC''
+
+      | where event == ''process_login_finish''
+
+      | summarize FinishCount = count() by bin(originalEventTimestamp, 1m)
+
+      ) on $left.originalEventTimestamp == $right.originalEventTimestamp
+
+      | extend PendingLogins = StartCount - FinishCount
+
+      | where PendingLogins > 10
+
+      | render timechart'
+- id: MI-networking-38
+  Topic: tsgminw1001-backend-node-is-rejecting-connections
+  Source: TSG-SQL-MI-Networking/content/connectivity/tsgminw1001-backend-node-is-rejecting-connections.md
+  Prompts:
+  - MI tsgminw1001-backend-node-is-rejecting-connections
+  - Managed Instance tsgminw1001-backend-node-is-rejecting-connections
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCounterOneMinute
+    ExecutedQuery: 'let nodeName = ''DB80C.4'';
+
+      let tenantRingName = ''tr4959.westus2-a.worker.database.windows.net'';
+
+      MonCounterOneMinute
+
+      | where TIMESTAMP > ago(1h)
+
+      | where ClusterName == tenantRingName
+
+      | where NodeName == nodeName
+
+      | where CounterName endswith "Rejected Connections/sec"
+
+      | project TIMESTAMP, NodeName, CounterValue
+
+      | render timechart'
+- id: MI-networking-39
+  Topic: tsgminw1003-missing-metrics-found-on-node
+  Source: TSG-SQL-MI-Networking/content/connectivity/tsgminw1003-missing-metrics-found-on-node.md
+  Prompts:
+  - MI tsgminw1003-missing-metrics-found-on-node
+  - Managed Instance tsgminw1003-missing-metrics-found-on-node
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: AlrMetricsForLogsToMetricsV1
+    ExecutedQuery: 'let tenantRing = ''tr2812.useuapeast2-a.worker.database.windows.net'';
+
+      AlrMetricsForLogsToMetricsV1
+
+      | where TIMESTAMP > ago(2h)
+
+      | where ClusterName == tenantRing
+
+      | where tostring(split(dimensionValueList, "^", 1)[0]) startswith "Worker.CL.WCOW"
+
+      | extend AppName = tostring(split(dimensionValueList, "^", 0)[0])
+
+      | summarize max(TIMESTAMP) by ClusterName, AppName'
+- id: MI-networking-40
+  Topic: tsgminw1004-gateway-connections-stuck
+  Source: TSG-SQL-MI-Networking/content/connectivity/tsgminw1004-gateway-connections-stuck.md
+  Prompts:
+  - MI tsgminw1004-gateway-connections-stuck
+  - Managed Instance tsgminw1004-gateway-connections-stuck
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'let lookBackPeriod = ago(2h);
+
+      let clusterName = "";
+
+      MonLogin
+
+      | where originalEventTimestamp > lookBackPeriod
+
+      | where ClusterName == clusterName
+
+      | where AppTypeName startswith "Gateway.PDC.WCOW"
+
+      | where event in ("connectivity_ring_buffer_recorded","process_login_finish")
+
+      | extend BufferConnection = iif(event contains "connectivity_ring_buffer_recorded", strcat(NodeName," ","BufferedConnection"),"")
+
+      | extend LoginConnection = iif(event contains "process_login_finish" and logical_server_name != "", strcat(NodeName," ",''Login''),"")
+
+      | extend ProbeConnection = iif(event contains "process_login_finish" and logical_server_name == "", strcat(NodeName," ",''Probe''),"")
+
+      | summarize count() by BufferConnection, LoginConnection, ProbeConnection
+
+      | order by BufferConnection asc, LoginConnection asc, ProbeConnection asc'
+- id: MI-networking-41
+  Topic: tsgminw1007-pcc-connectivity-drop
+  Source: TSG-SQL-MI-Networking/content/connectivity/tsgminw1007-pcc-connectivity-drop.md
+  Prompts:
+  - MI tsgminw1007-pcc-connectivity-drop
+  - Managed Instance tsgminw1007-pcc-connectivity-drop
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'MonLogin
+
+      | where originalEventTimestamp > ago(3d)
+
+      | where logical_server_name == "<instance_from_incident_title>"
+
+      | where event == ''process_login_finish''
+
+      | project AppTypeName, is_success, error, state, originalEventTimestamp, ClusterName, logical_server_name
+
+      | summarize'
+- id: MI-networking-42
+  Topic: tsgminw1010-high-cpu-sql-cert-validation
+  Source: TSG-SQL-MI-Networking/content/connectivity/tsgminw1010-high-cpu-sql-cert-validation.md
+  Prompts:
+  - MI tsgminw1010-high-cpu-sql-cert-validation
+  - Managed Instance tsgminw1010-high-cpu-sql-cert-validation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRgLoad
+    ExecutedQuery: 'MonRgLoad
+
+      | where TIMESTAMP > ago(1h)
+
+      | where ClusterName == "<tenant_ring_name>"
+
+      | where NodeName == "<node_name>"
+
+      | where application_name contains "Worker.CL.WCOW"
+
+      | where event == "instance_load"  and code_package_name == "Code"  and service_manifest_name == "SQL"
+
+      | summarize max(cpu_load)/max(cpu_load_cap)*100 by bin(TIMESTAMP, 1m), application_name
+
+      | render timechart'
+- id: MI-networking-43
+  Topic: tsgminw1010-high-cpu-sql-cert-validation
+  Source: TSG-SQL-MI-Networking/content/connectivity/tsgminw1010-high-cpu-sql-cert-validation.md
+  Prompts:
+  - MI tsgminw1010-high-cpu-sql-cert-validation
+  - Managed Instance tsgminw1010-high-cpu-sql-cert-validation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'MonLogin
+
+      | where originalEventTimestamp > ago(1d)
+
+      | where ClusterName == "<tenant_ring_name>"
+
+      | where logical_server_name =~ ''<managed_server_name>''
+
+      | where event == ''process_login_finish''
+
+      | summarize count() by strcat(package, '' '',is_success), bin(originalEventTimestamp,5m)
+
+      | render timechart'
+- id: MI-networking-44
+  Topic: tsgminw1013-network-monitoring-private-lb-unreachable
+  Source: TSG-SQL-MI-Networking/content/connectivity/tsgminw1013-network-monitoring-private-lb-unreachable.md
+  Prompts:
+  - MI tsgminw1013-network-monitoring-private-lb-unreachable
+  - Managed Instance tsgminw1013-network-monitoring-private-lb-unreachable
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonNetworkMonitoring
+    ExecutedQuery: 'MonNetworkMonitoring
+
+      | {0}
+
+      | where event contains "load_balancer_test"
+
+      | where is_public == false
+
+      | where port == "1433"
+
+      | where TIMESTAMP > ago(45min)
+
+      | summarize'
+- id: MI-networking-45
+  Topic: tsgminw1013-network-monitoring-private-lb-unreachable
+  Source: TSG-SQL-MI-Networking/content/connectivity/tsgminw1013-network-monitoring-private-lb-unreachable.md
+  Prompts:
+  - MI tsgminw1013-network-monitoring-private-lb-unreachable
+  - Managed Instance tsgminw1013-network-monitoring-private-lb-unreachable
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServerInstances
+    ExecutedQuery: 'MonManagedServerInstances
+
+      | distinct managed_server_instance_name=name, managed_server_id
+
+      ) on managed_server_instance_name
+
+      | join kind=inner ('
+- id: MI-networking-46
+  Topic: tsgminw1013-network-monitoring-private-lb-unreachable
+  Source: TSG-SQL-MI-Networking/content/connectivity/tsgminw1013-network-monitoring-private-lb-unreachable.md
+  Prompts:
+  - MI tsgminw1013-network-monitoring-private-lb-unreachable
+  - Managed Instance tsgminw1013-network-monitoring-private-lb-unreachable
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'MonManagedServers
+
+      | distinct managed_server_id, subnet_id
+
+      ) on managed_server_id
+
+      | extend'
+- id: MI-networking-47
+  Topic: tsgminw1005-aia-gateway-aliasdb-connectivity-troubleshooting
+  Source: TSG-SQL-MI-Networking/content/connectivity/Deprecated/tsgminw1005-aia-gateway-aliasdb-connectivity-troubleshooting.md
+  Prompts:
+  - MI tsgminw1005-aia-gateway-aliasdb-connectivity-troubleshooting
+  - Managed Instance tsgminw1005-aia-gateway-aliasdb-connectivity-troubleshooting
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCounterOneMinute
+    ExecutedQuery: 'let lookBackTime = todatetime(ago(4h)); //Update time as per need
+
+      let clusterName = ''tr5896.southeastasia1-a.worker.database.windows.net''; //Update tenant ring
+
+      MonCounterOneMinute
+
+      | where TIMESTAMP > lookBackTime
+
+      | where ClusterName == clusterName
+
+      | where NodeName contains ''WF''
+
+      | where CounterName == ''\\Memory\\Available MBytes''
+
+      | project PreciseTimeStamp, AvailableMemory=CounterValue, NodeName
+
+      | summarize avg(AvailableMemory) by bin(PreciseTimeStamp, 5min), NodeName
+
+      | order by PreciseTimeStamp asc, NodeName asc
+
+      | render timechart'
+- id: MI-networking-48
+  Topic: tsgminw1014-network-monitoring-mi-endpoints
+  Source: TSG-SQL-MI-Networking/content/connectivity/Deprecated/tsgminw1014-network-monitoring-mi-endpoints.md
+  Prompts:
+  - MI tsgminw1014-network-monitoring-mi-endpoints
+  - Managed Instance tsgminw1014-network-monitoring-mi-endpoints
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonNetworkMonitoring
+    ExecutedQuery: 'MonNetworkMonitoring
+
+      | where event contains "mi_endpoints"
+
+      | where TIMESTAMP > ago(45min)
+
+      | summarize'
+- id: MI-networking-49
+  Topic: tsgminw1014-network-monitoring-mi-endpoints
+  Source: TSG-SQL-MI-Networking/content/connectivity/Deprecated/tsgminw1014-network-monitoring-mi-endpoints.md
+  Prompts:
+  - MI tsgminw1014-network-monitoring-mi-endpoints
+  - Managed Instance tsgminw1014-network-monitoring-mi-endpoints
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServerInstances
+    ExecutedQuery: 'MonManagedServerInstances
+
+      | where isnotempty(tenant_ring_name)
+
+      | distinct tenant_ring_name, managed_server_id, name, fabric_application_uri
+
+      ) on $left.app_name == $right.name
+
+      | join kind=inner ('
+- id: MI-networking-50
+  Topic: tsgminw1014-network-monitoring-mi-endpoints
+  Source: TSG-SQL-MI-Networking/content/connectivity/Deprecated/tsgminw1014-network-monitoring-mi-endpoints.md
+  Prompts:
+  - MI tsgminw1014-network-monitoring-mi-endpoints
+  - Managed Instance tsgminw1014-network-monitoring-mi-endpoints
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'MonManagedServers
+
+      | distinct managed_server_id, managed_server_name = name
+
+      ) on managed_server_id
+
+      | project tenant_ring_name, managed_server_name, fabric_application_uri, ip_addresses'
+- id: MI-networking-51
+  Topic: tsgminw1015-connectivity-success-monitoring
+  Source: TSG-SQL-MI-Networking/content/connectivity/Deprecated/tsgminw1015-connectivity-success-monitoring.md
+  Prompts:
+  - MI tsgminw1015-connectivity-success-monitoring
+  - Managed Instance tsgminw1015-connectivity-success-monitoring
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'let _lookBackWindow = 1h;
+
+      let _logicalServerNames = dynamic([''mslcorescus'',''mslcorencus'']);
+
+      let _clusterNames = (MonManagedServers
+
+      let fogName = (''mslcore'');
+
+      | where TIMESTAMP > ago(1d)
+
+      | where name in (_logicalServerNames)
+
+      | summarize arg_max(TIMESTAMP, private_cluster_tenant_ring_name)
+
+      | project private_cluster_tenant_ring_name);'
+- id: MI-networking-52
+  Topic: tsgminw1015-connectivity-success-monitoring
+  Source: TSG-SQL-MI-Networking/content/connectivity/Deprecated/tsgminw1015-connectivity-success-monitoring.md
+  Prompts:
+  - MI tsgminw1015-connectivity-success-monitoring
+  - Managed Instance tsgminw1015-connectivity-success-monitoring
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'MonLogin
+
+      | where TIMESTAMP > ago(_lookBackWindow)
+
+      | where ClusterName in (_clusterNames)
+
+      | where'
+- id: MI-networking-53
+  Topic: tsgminw1016-long-gateway-startup
+  Source: TSG-SQL-MI-Networking/content/connectivity/Deprecated/tsgminw1016-long-gateway-startup.md
+  Prompts:
+  - MI tsgminw1016-long-gateway-startup
+  - Managed Instance tsgminw1016-long-gateway-startup
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRedirector
+    ExecutedQuery: 'MonRedirector
+
+      | where TIMESTAMP > ago(1h)
+
+      | where AppName == "Gateway.PDC.WCOW"
+
+      | where text contains "[CertificateValidationCallback] Thumbprint validation failed."
+
+      | summarize dcount(process_id) by ClusterName, NodeName
+
+      | where dcount_process_id > 5
+
+      | summarize NodeList = make_set(NodeName) by ClusterName'
+- id: MI-networking-54
+  Topic: container-dependency-applications-and-creation-workflow
+  Source: TSG-SQL-MI-Networking/content/containers/container-dependency-applications-and-creation-workflow.md
+  Prompts:
+  - MI container-dependency-applications-and-creation-workflow
+  - Managed Instance container-dependency-applications-and-creation-workflow
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: Unknown
+    ExecutedQuery: 'let startTime = ago(3h);
+
+      let endTime = now();
+
+      let tenantRing = ''tr60720.eastus1-a.worker.database.windows.net'';
+
+      let nodeName = ''_DB8C_2'';
+
+      | where ETWTimestamp between (startTime .. endTime)
+
+      | where ClusterName == tenantRing
+
+      | where NodeName contains nodeName
+
+      | where EventType in ('
+- id: MI-networking-55
+  Topic: container-dependency-applications-and-creation-workflow
+  Source: TSG-SQL-MI-Networking/content/containers/container-dependency-applications-and-creation-workflow.md
+  Prompts:
+  - MI container-dependency-applications-and-creation-workflow
+  - Managed Instance container-dependency-applications-and-creation-workflow
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: Unknown
+    ExecutedQuery: 'let nodeName = "DB4C"; //Specify node name or use node type as in this example
+
+      | where ETWTimestamp between (datetime(2024-06-23 06:00:38.1493561) .. datetime(2024-06-23 06:30:47.5437289))
+
+      | where ClusterName == ''tr28321.eastus2-a.worker.database.windows.net''
+
+      | where Text contains nodeName
+
+      | where EventType contains "Reconfiguration" //Filter out this clause for more details
+
+      | where EventType !in ('
+- id: MI-networking-56
+  Topic: container-dependency-applications-and-creation-workflow
+  Source: TSG-SQL-MI-Networking/content/containers/container-dependency-applications-and-creation-workflow.md
+  Prompts:
+  - MI container-dependency-applications-and-creation-workflow
+  - Managed Instance container-dependency-applications-and-creation-workflow
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: Unknown
+    ExecutedQuery: 'let _clusterName = "tr15233"; //Example (Use short name): tr2394
+
+      let _regionName = "northeurope1-a"; //Example: useuapeast2-a
+
+      let _affectedNodeName = "_DB8C_4"; //Example: _DB4C_1
+
+      | where Timestamp > ago(0.5h)
+
+      | where Role == "DNCRole"
+
+      | where Raw contains _affectedNodeName
+
+      | extend ClusterName = extract_json("$.ResourceGroup", CustomDimensionsKeyValuePairs)
+
+      | where ClusterName contains _clusterName and ClusterName contains _regionName
+
+      | extend RnmId = extract_json("$.DNCPartition", CustomDimensionsKeyValuePairs)
+
+      | extend PrimaryDncNodeName = extract_json("$.hostname", CustomDimensionsKeyValuePairs)
+
+      | extend MessageType = extract_json("$.MessageType", CustomDimensionsKeyValuePairs)
+
+      | extend NodeName = case('
+- id: MI-networking-57
+  Topic: container-dependency-applications-and-creation-workflow
+  Source: TSG-SQL-MI-Networking/content/containers/container-dependency-applications-and-creation-workflow.md
+  Prompts:
+  - MI container-dependency-applications-and-creation-workflow
+  - Managed Instance container-dependency-applications-and-creation-workflow
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonContainerShare
+    ExecutedQuery: 'MonContainerShare
+
+      | where PreciseTimeStamp > ago (1h)
+
+      | where ClusterName == ''tr44532.eastus1-a.worker.database.windows.net''
+
+      | where NodeName contains "WF2C_1"
+
+      | project PreciseTimeStamp, NodeName, host_environment_type, log_level, process_id, operation, step, status, state'
+- id: MI-networking-58
+  Topic: initial-investigation-steps-for-containers
+  Source: TSG-SQL-MI-Networking/content/containers/initial-investigation-steps-for-containers.md
+  Prompts:
+  - MI initial-investigation-steps-for-containers
+  - Managed Instance initial-investigation-steps-for-containers
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: Unknown
+    ExecutedQuery: 'let startTime = ago(30d);
+
+      let endTime = now();
+
+      let tenantRing = ''tr80883.eastus1-a.worker.database.windows.net'';
+
+      let nodeName = ''_DB80C_0'';
+
+      | where ETWTimestamp between (startTime .. endTime)
+
+      | where ClusterName == tenantRing
+
+      | where NodeName contains nodeName
+
+      | where EventType in ('
+- id: MI-networking-59
+  Topic: tsgminw2001-containerd-issue-service-not-running
+  Source: TSG-SQL-MI-Networking/content/containers/tsgminw2001-containerd-issue-service-not-running.md
+  Prompts:
+  - MI tsgminw2001-containerd-issue-service-not-running
+  - Managed Instance tsgminw2001-containerd-issue-service-not-running
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: Unknown
+    ExecutedQuery: 'let ContainerDIssueAllowedCount = 50;
+
+      | where TIMESTAMP > ago(1h)
+
+      | where TaskName contains "Hosting"
+
+      | where Text contains "OnQueryPodList: Error=GrpcStatusCode=UNAVAILABLE, ErrorMessage=failed to connect to all addresses"
+
+      | summarize Count = count() by ClusterName, NodeName
+
+      | where Count > ContainerDIssueAllowedCount'
+- id: MI-networking-60
+  Topic: tsgminw2001-containerd-issue-service-not-running
+  Source: TSG-SQL-MI-Networking/content/containers/tsgminw2001-containerd-issue-service-not-running.md
+  Prompts:
+  - MI tsgminw2001-containerd-issue-service-not-running
+  - Managed Instance tsgminw2001-containerd-issue-service-not-running
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: AlrWinFabHealthNodeEvent
+    ExecutedQuery: 'let ContainerDIssueAllowedCount = 3;
+
+      AlrWinFabHealthNodeEvent
+
+      | where PreciseTimeStamp > ago(1h)
+
+      | where Property == "ContainerNetworkInformationWatchdog"
+
+      | where Description has "failed to connect to all addresses"
+
+      | summarize Count = count() by ClusterEntityName, NodeEntityName
+
+      | where Count > ContainerDIssueAllowedCount'
+- id: MI-networking-61
+  Topic: tsgminw2002-high-osdrive-usage-detected
+  Source: TSG-SQL-MI-Networking/content/containers/tsgminw2002-high-osdrive-usage-detected.md
+  Prompts:
+  - MI tsgminw2002-high-osdrive-usage-detected
+  - Managed Instance tsgminw2002-high-osdrive-usage-detected
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRgLoad
+    ExecutedQuery: 'MonRgLoad
+
+      | where TIMESTAMP >ago(1h)
+
+      | where event =~''drive_usage_report_load''
+
+      | where  ClusterName == "tr8667.southeastasia1-a.worker.database.windows.net"
+
+      | where drive_name startswith "C:" and NodeName == ''_DB8C_0''
+
+      | project TIMESTAMP,drive_name,  NodeName, event, drive_capacity_in_bytes, drive_usage_percentage, space_left_gb =round( drive_capacity_in_bytes* (100.00 - drive_usage_percentage)/100.00/1024/1024/1024,1)
+
+      | order by TIMESTAMP asc'
+- id: MI-networking-62
+  Topic: tsgminw2005-missing-nc-vfp-rules
+  Source: TSG-SQL-MI-Networking/content/containers/tsgminw2005-missing-nc-vfp-rules.md
+  Prompts:
+  - MI tsgminw2005-missing-nc-vfp-rules
+  - Managed Instance tsgminw2005-missing-nc-vfp-rules
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: Unknown
+    ExecutedQuery: 'let nodeId = "a52c8867-30bd-843a-cee3-cdc2fa4eee4a";
+
+      | where TIMESTAMP > ago(1d)
+
+      | where NodeId == nodeId
+
+      | where Message has "VfpRemoveLayers: Failed to remove group"'
+- id: MI-networking-63
+  Topic: tsgminw2005-missing-nc-vfp-rules
+  Source: TSG-SQL-MI-Networking/content/containers/tsgminw2005-missing-nc-vfp-rules.md
+  Prompts:
+  - MI tsgminw2005-missing-nc-vfp-rules
+  - Managed Instance tsgminw2005-missing-nc-vfp-rules
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: Unknown
+    ExecutedQuery: 'let nodeId = "771ef668-dd6b-4f48-90c7-86f60974e748";
+
+      | where TIMESTAMP > ago(1d)
+
+      | where NodeId == nodeId
+
+      | where ErrorId has "ERROR_GOALSTATEREJECTED_SWIFT_PROCESS_INTERFACES_FAILED"
+
+      | project TIMESTAMP, NodeId, NodeIP, ErrorMessage = Message, ErrorId, NmAgentBuildInfo, Role
+
+      | summarize count() by ErrorId'
+- id: MI-networking-64
+  Topic: tsgminw2005-missing-nc-vfp-rules
+  Source: TSG-SQL-MI-Networking/content/containers/tsgminw2005-missing-nc-vfp-rules.md
+  Prompts:
+  - MI tsgminw2005-missing-nc-vfp-rules
+  - Managed Instance tsgminw2005-missing-nc-vfp-rules
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: Unknown
+    ExecutedQuery: 'let nodeId = "9234365a-9bec-4821-178d-65bafaf35bdd";
+
+      | where TIMESTAMP > ago(1d)
+
+      | where NodeId == nodeId
+
+      | where ErrorId == ''ERROR_CANINTERFACEBECREATED_NCLIMIT''
+
+      | project TIMESTAMP, NodeId, NodeIP, ErrorMessage = Message, ErrorId, NmAgentBuildInfo, Role
+
+      | summarize count()'
+- id: MI-networking-65
+  Topic: tsgminw2005-missing-nc-vfp-rules
+  Source: TSG-SQL-MI-Networking/content/containers/tsgminw2005-missing-nc-vfp-rules.md
+  Prompts:
+  - MI tsgminw2005-missing-nc-vfp-rules
+  - Managed Instance tsgminw2005-missing-nc-vfp-rules
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: Unknown
+    ExecutedQuery: 'let nodeId = "9234365a-9bec-4821-178d-65bafaf35bdd";
+
+      | where TIMESTAMP > ago(1d)
+
+      | where NodeId == nodeId
+
+      | where Message  has "VNetInterface::ValidateInterfaceDependencies failed" and Message has "due to missing encryption dependencies, hr: 0x81390003"
+
+      | project PreciseTimeStamp, NodeId, NodeIP, ErrorMessage = Message, ReasonCode, NmAgentBuildInfo, Role
+
+      | summarize count()'
+- id: MI-networking-66
+  Topic: tsgminw2006-leaked-pod
+  Source: TSG-SQL-MI-Networking/content/containers/tsgminw2006-leaked-pod.md
+  Prompts:
+  - MI tsgminw2006-leaked-pod
+  - Managed Instance tsgminw2006-leaked-pod
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: Unknown
+    ExecutedQuery: 'let clusterName = ''tr50953.westeurope1-a.worker.database.windows.net'';
+
+      let nodeName = ''_DB32C_6'';
+
+      | where TIMESTAMP > ago(1h)
+
+      | where ClusterName == clusterName
+
+      | where NodeName == nodeName
+
+      | where Text has ''OnRemovePodSandbox''
+
+      | where Text has ''ErrorMessage=sandbox network namespace''
+
+      | where Text has ''is not fully closed.''
+
+      | summarize count()'
+- id: MI-networking-67
+  Topic: tsgminw2006-leaked-pod
+  Source: TSG-SQL-MI-Networking/content/containers/tsgminw2006-leaked-pod.md
+  Prompts:
+  - MI tsgminw2006-leaked-pod
+  - Managed Instance tsgminw2006-leaked-pod
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: Unknown
+    ExecutedQuery: 'let clusterName = ''<your-cluster-name>'';
+
+      let nodeName = ''<your-node-name>'';
+
+      | where TIMESTAMP > ago(15m)
+
+      | where ClusterName == clusterName
+
+      | where NodeName == nodeName
+
+      | where Text has ''OnRemovePodSandbox''
+
+      | where Text has ''ErrorMessage=sandbox network namespace''
+
+      | where Text has ''is not fully closed.''
+
+      | summarize count()'
+- id: MI-networking-68
+  Topic: tsgminw2007-containershareutil-out-of-memory-due-to-large-crl
+  Source: TSG-SQL-MI-Networking/content/containers/tsgminw2007-containershareutil-out-of-memory-due-to-large-crl.md
+  Prompts:
+  - MI tsgminw2007-containershareutil-out-of-memory-due-to-large-crl
+  - Managed Instance tsgminw2007-containershareutil-out-of-memory-due-to-large-crl
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonContainerShare
+    ExecutedQuery: 'let clusterName = ''tr1028.useuapcentral1-a.worker.database.windows.net'';
+
+      let nodeName = ''_WF2C_3'';
+
+      MonContainerShare
+
+      | where TIMESTAMP > ago(1h)
+
+      | where ClusterName == clusterName
+
+      | where NodeName == nodeName
+
+      | where host_environment_type == ''Container''
+
+      | where exception_type == ''ContainerShareUtil.CertRevocationListException''
+
+      | where exception_message == ''Encountered Win32 error 0x8007000E in external operation CertAddSerializedElementToStore.''
+
+      | summarize count()'
+- id: MI-networking-69
+  Topic: tsgminw2007-containershareutil-out-of-memory-due-to-large-crl
+  Source: TSG-SQL-MI-Networking/content/containers/tsgminw2007-containershareutil-out-of-memory-due-to-large-crl.md
+  Prompts:
+  - MI tsgminw2007-containershareutil-out-of-memory-due-to-large-crl
+  - Managed Instance tsgminw2007-containershareutil-out-of-memory-due-to-large-crl
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonContainerShare
+    ExecutedQuery: 'let clusterName = ''tr1028.useuapcentral1-a.worker.database.windows.net'';
+
+      let nodeName = ''_WF2C_3'';
+
+      MonContainerShare
+
+      | where TIMESTAMP > ago(1h)
+
+      | where ClusterName == clusterName
+
+      | where NodeName == nodeName
+
+      | where host_environment_type == ''Host''
+
+      | where exception_type == ''System.OutOfMemoryException''
+
+      | where stack_trace has ''ContainerShareUtil.Native.CertRevocationListsNative.GetCRLsFromStore''
+
+      | summarize count()'
+- id: MI-networking-70
+  Topic: tsgminw2009-leaked-container
+  Source: TSG-SQL-MI-Networking/content/containers/tsgminw2009-leaked-container.md
+  Prompts:
+  - MI tsgminw2009-leaked-container
+  - Managed Instance tsgminw2009-leaked-container
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: AlrWinFabHealthApplicationState
+    ExecutedQuery: 'let minWorkerClIssueLookbackTime = time(1h);
+
+      AlrWinFabHealthApplicationState
+
+      | where TIMESTAMP > ago(minWorkerClIssueLookbackTime)
+
+      | where ApplicationName contains "Worker.CL.WCOW"
+
+      | where HealthState =~ "Error" or HealthState =~ "Warning"
+
+      | distinct ClusterName, ApplicationName
+
+      | join kind = inner ('
+- id: MI-networking-71
+  Topic: tsgminw2009-leaked-container
+  Source: TSG-SQL-MI-Networking/content/containers/tsgminw2009-leaked-container.md
+  Prompts:
+  - MI tsgminw2009-leaked-container
+  - Managed Instance tsgminw2009-leaked-container
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: AlrWinFabHealthPartitionEvent
+    ExecutedQuery: 'AlrWinFabHealthPartitionEvent
+
+      | where TIMESTAMP > ago(minWorkerClIssueLookbackTime)
+
+      | where HealthState != ''Ok''
+
+      //In some cases we don''t have telemetry for marker service, so we will include replicated master in query
+
+      | where ServiceName contains "SQL.ManagedServer" or ServiceName contains "SQL.ManagedReplicatedMasterDb"
+
+      | distinct ClusterName, ApplicationName)
+
+      on $left.ClusterName == $right.ClusterName and $left.ApplicationName == $right.ApplicationName
+
+      | project ClusterName, ApplicationName
+
+      | join kind=leftouter ('
+- id: MI-networking-72
+  Topic: tsgminw2009-leaked-container
+  Source: TSG-SQL-MI-Networking/content/containers/tsgminw2009-leaked-container.md
+  Prompts:
+  - MI tsgminw2009-leaked-container
+  - Managed Instance tsgminw2009-leaked-container
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonNodeTraceETW
+    ExecutedQuery: 'MonNodeTraceETW
+
+      | where TIMESTAMP > ago(1d)
+
+      //| where NodeName contains "DB"
+
+      | parse Message with "ProcessId: \"" processId "\"" * "Application Name : \"" ApplicationName "\"" * "CodePackageName \"" packageName "\"" *
+
+      | where packageName == "Code"
+
+      | summarize LastProcessTimestamp = arg_max(TIMESTAMP, *) by ClusterName, ApplicationName
+
+      | project LastProcessTimestamp, ClusterName, ApplicationName, processId
+
+      ) on $left.ClusterName == $right.ClusterName and $left.ApplicationName == $right.ApplicationName
+
+      | where isempty(LastProcessTimestamp) or LastProcessTimestamp < ago(minWorkerClIssueLookbackTime)'
+- id: MI-networking-73
+  Topic: tsgminw2010-hcn-create-endpoint-failed
+  Source: TSG-SQL-MI-Networking/content/containers/tsgminw2010-hcn-create-endpoint-failed.md
+  Prompts:
+  - MI tsgminw2010-hcn-create-endpoint-failed
+  - Managed Instance tsgminw2010-hcn-create-endpoint-failed
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: Unknown
+    ExecutedQuery: 'let HcnCreateEndpointFailedAllowedCount = 20;
+
+      | where Text contains "Error: hcnCreateEndpoint failed in Win32: An address provided is invalid or reserved. (0x803b002f)"
+
+      | where TIMESTAMP > ago(1h)
+
+      | where TaskName == "Hosting"
+
+      | where EventType == "CriContainerActivator"
+
+      | summarize Count = count() by ClusterName, NodeName
+
+      | where Count > HcnCreateEndpointFailedAllowedCount'
+- id: MI-networking-74
+  Topic: tsgminw2011-dnc-could-not-get-primary-ip-endpoint
+  Source: TSG-SQL-MI-Networking/content/containers/tsgminw2011-dnc-could-not-get-primary-ip-endpoint.md
+  Prompts:
+  - MI tsgminw2011-dnc-could-not-get-primary-ip-endpoint
+  - Managed Instance tsgminw2011-dnc-could-not-get-primary-ip-endpoint
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: Unknown
+    ExecutedQuery: 'let clusterName = "tr11541.westus2-a.worker.database.windows.net"; // Replace with affected cluster
+
+      | where ClusterName =~ clusterName
+
+      | where TIMESTAMP > ago(3h)
+
+      | where EventType in ('
+- id: MI-networking-75
+  Topic: tsgminw2011-dnc-could-not-get-primary-ip-endpoint
+  Source: TSG-SQL-MI-Networking/content/containers/tsgminw2011-dnc-could-not-get-primary-ip-endpoint.md
+  Prompts:
+  - MI tsgminw2011-dnc-could-not-get-primary-ip-endpoint
+  - Managed Instance tsgminw2011-dnc-could-not-get-primary-ip-endpoint
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: Unknown
+    ExecutedQuery: 'let clusterName = "tr11541.westus2-a.worker.database.windows.net"; // Replace with affected cluster
+
+      | where TIMESTAMP > ago(3h)
+
+      | where ClusterName =~ clusterName
+
+      | where EventType =~ ''ByoVnetProvider''
+
+      | where Text contains "could not get primary IP endpoint" or Text contains "WinHttpError=12007"
+
+      | summarize by ClusterName, NodeName
+
+      | extend MitigateCAS = strcat(''Get-FabricNode -NodeName '', NodeName,'' -NodeClusterName '', ClusterName, '' | Kill-Process -ProcessName FabricDnsService.exe -ApplicationNameUri All -ForceActionOnProtectedCustomers
+      true'')'
+- id: MI-networking-76
+  Topic: tsgminw2011-dnc-could-not-get-primary-ip-endpoint
+  Source: TSG-SQL-MI-Networking/content/containers/tsgminw2011-dnc-could-not-get-primary-ip-endpoint.md
+  Prompts:
+  - MI tsgminw2011-dnc-could-not-get-primary-ip-endpoint
+  - Managed Instance tsgminw2011-dnc-could-not-get-primary-ip-endpoint
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonNodeAgentEvents
+    ExecutedQuery: 'let clusterName = ''tr11541.westus2-a.worker.database.windows.net''; // Replace with affected cluster
+
+      MonNodeAgentEvents
+
+      | where PreciseTimeStamp > ago(5h)
+
+      | where ClusterName =~ clusterName
+
+      | where event =~ ''node_agent_log'' and message has "System.Exception" and message has "PutIpReservationSet"
+
+      | summarize by ClusterName, NodeName
+
+      | extend MitigateCAS = strcat(''Get-FabricNode -NodeName '', NodeName,'' -NodeClusterName '', ClusterName, '' | Kill-Process -ProcessName FabricDnsService.exe -ApplicationNameUri All -ForceActionOnProtectedCustomers
+      true'')'
+- id: MI-networking-77
+  Topic: tsgminw2014-restart-csu-host-stuck-update-slo
+  Source: TSG-SQL-MI-Networking/content/containers/tsgminw2014-restart-csu-host-stuck-update-slo.md
+  Prompts:
+  - MI tsgminw2014-restart-csu-host-stuck-update-slo
+  - Managed Instance tsgminw2014-restart-csu-host-stuck-update-slo
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | {regionFilter}
+
+      | where TIMESTAMP > ago(20min)
+
+      | where state_machine_type == "ManagedPhysicalDatabaseStateMachine"
+
+      | where state == "DroppingStorageFiles"
+
+      | where message contains "Microsoft.Xdb.Common.Service.ResolveInstanceTransientException"
+
+      | distinct request_id'
+- id: MI-networking-78
+  Topic: tsgminw2014-restart-csu-host-stuck-update-slo
+  Source: TSG-SQL-MI-Networking/content/containers/tsgminw2014-restart-csu-host-stuck-update-slo.md
+  Prompts:
+  - MI tsgminw2014-restart-csu-host-stuck-update-slo
+  - Managed Instance tsgminw2014-restart-csu-host-stuck-update-slo
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagementOperations
+    ExecutedQuery: 'MonManagementOperations
+
+      | {regionFilter}
+
+      | where request_id =~ "{request_id}"
+
+      | extend xmlData = parse_xml(operation_parameters)
+
+      | extend ServerName = tostring(xmlData.InputParameters.ServerName)
+
+      | where ServerName != ""
+
+      | project ServerName'
+- id: MI-networking-79
+  Topic: tsgminw2014-restart-csu-host-stuck-update-slo
+  Source: TSG-SQL-MI-Networking/content/containers/tsgminw2014-restart-csu-host-stuck-update-slo.md
+  Prompts:
+  - MI tsgminw2014-restart-csu-host-stuck-update-slo
+  - Managed Instance tsgminw2014-restart-csu-host-stuck-update-slo
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonChangeManagedServerInstanceReqs
+    ExecutedQuery: 'MonChangeManagedServerInstanceReqs
+
+      | {regionFilter}
+
+      | where request_id =~ "{request_id}"
+
+      | extend xmlData = parse_xml(fsm_extension_data)
+
+      | mv-expand Properties = xmlData.FiniteStateMachineExtensionData.Properties.PropertyExtendedData
+
+      | extend PropertyName = tostring(Properties.PropertyName), PropertyValue = tostring(Properties.Value)
+
+      | where PropertyName in ("IsCrossRingUpdateSlo", "SourceTenantRingName")
+
+      | where PropertyValue != "" and PropertyName == "SourceTenantRingName"
+
+      | distinct PropertyValue, source_sql_instance_name'
+- id: MI-networking-80
+  Topic: tsgminw2003-apipa-removed-on-hns-restart
+  Source: TSG-SQL-MI-Networking/content/containers/Deprecated/tsgminw2003-apipa-removed-on-hns-restart.md
+  Prompts:
+  - MI tsgminw2003-apipa-removed-on-hns-restart
+  - Managed Instance tsgminw2003-apipa-removed-on-hns-restart
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'let lookbackTime = 60min;
+
+      let errorCount = 100;
+
+      | where TIMESTAMP > ago(lookbackTime)
+
+      | where TaskName == ''Transport''
+
+      | where EventType == "FailedToConnect"
+
+      | where NodeName contains "DB"
+
+      | where Text contains "client-169.254.128.1"
+
+      | summarize Count=count() by ClusterName, NodeName
+
+      | where Count > errorCount
+
+      | join kind=inner (MonSQLSystemHealth
+
+      | where TIMESTAMP > ago(lookbackTime)
+
+      | where AppTypeName has "Worker.CL.WCOW"
+
+      | extend ApplicationName=strcat("fabric:/",AppTypeName,"/",AppName)
+
+      | distinct ClusterName, ApplicationName, NodeName)
+
+      on ClusterName, NodeName
+
+      | project ClusterName, NodeName, ApplicationName, Count'
+- id: MI-networking-81
+  Topic: tsgminw2003-apipa-removed-on-hns-restart
+  Source: TSG-SQL-MI-Networking/content/containers/Deprecated/tsgminw2003-apipa-removed-on-hns-restart.md
+  Prompts:
+  - MI tsgminw2003-apipa-removed-on-hns-restart
+  - Managed Instance tsgminw2003-apipa-removed-on-hns-restart
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonFabricClusters
+    ExecutedQuery: 'let tenantRing = ''tr59222.westeurope1-a.worker.database.windows.net''; //Affected tenant ring name
+
+      MonFabricClusters
+
+      | where TIMESTAMP > ago(1d)
+
+      | where name =~ tenantRing
+
+      | distinct ClusterName=name, Region = tostring(split(ClusterName, ".")[1]), custom_maintenance_protected_ring, custom_maintenance_window_enabled, enable_wise_upgrades
+
+      | join kind=inner (MonPrivateClusters
+
+      | where TIMESTAMP > ago(1d)
+
+      | where tenant_ring_name contains tenantRing
+
+      | distinct ClusterName=tenant_ring_name, maintenance_policy_id)
+
+      on ClusterName
+
+      | join kind=leftouter(MonRolloutProgress
+
+      | where PreciseTimeStamp > ago(7d)
+
+      | where id == "PlanFutureMaintenanceWindow"and message has "isEmergencyMaintenanceWindow: False"
+
+      | where isempty(dng_id) or dng_id in (''SQL-MIDFBF4188-BD0D-4CEE-8E79-FD2BC030DB6D'',''SQL-MI45A27940-D443-4544-9746-BE90319D2E6A'',''SQL-MIB28E1A90-AD12-4D0D-BEE0-E2BC8E1F5C10'')
+
+      | distinct Region = tostring(split(ClusterName, ".")[1]),dng_id, start_time_utc, end_time_utc
+
+      | where end_time_utc > now()
+
+      | extend maintenance_policy_id = case('
+- id: MI-networking-82
+  Topic: tsgminw2015-mds-agent-launcher-memory-leak
+  Source: TSG-SQL-MI-Networking/content/containers/Deprecated/tsgminw2015-mds-agent-launcher-memory-leak.md
+  Prompts:
+  - MI tsgminw2015-mds-agent-launcher-memory-leak
+  - Managed Instance tsgminw2015-mds-agent-launcher-memory-leak
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRgLoad
+    ExecutedQuery: 'let lookBackTime = 5h;
+
+      MonRgLoad
+
+      | where NodeName contains "C"
+
+      | where TIMESTAMP > ago(lookBackTime)
+
+      | where event == "instance_load"
+
+      | where code_package_name =~ "MDSAgentLauncher.Code"
+
+      | summarize avg(memory_load) by ClusterName, NodeName
+
+      | where avg_memory_load > 400'
+- id: MI-networking-83
+  Topic: check-dns-configuration-on-vnet
+  Source: TSG-SQL-MI-Networking/content/how-to/check-dns-configuration-on-vnet.md
+  Prompts:
+  - MI check-dns-configuration-on-vnet
+  - Managed Instance check-dns-configuration-on-vnet
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonPrivateClusters
+    ExecutedQuery: 'let _tenantRingSearch = "tr44532.eastus1-a.worker.database.windows.net"; //Cluster name of affected ring
+
+      MonPrivateClusters
+
+      | where tenant_ring_name == _tenantRingSearch
+
+      | project vnet_resource_guid
+
+      | take 1'
+- id: MI-networking-84
+  Topic: find-host-node-details
+  Source: TSG-SQL-MI-Networking/content/how-to/find-host-node-details.md
+  Prompts:
+  - MI find-host-node-details
+  - Managed Instance find-host-node-details
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonFabricClusters
+    ExecutedQuery: 'let clusterName = ''tr13907.westus2-a.worker.database.windows.net'';
+
+      MonFabricClusters
+
+      | where name  == clusterName
+
+      | summarize arg_max(TIMESTAMP, *) by name, hosted_service_subscription_id
+
+      | project ClusterName = name, HostSubscriptionId = hosted_service_subscription_id'
+- id: MI-networking-85
+  Topic: find-host-node-details
+  Source: TSG-SQL-MI-Networking/content/how-to/find-host-node-details.md
+  Prompts:
+  - MI find-host-node-details
+  - Managed Instance find-host-node-details
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: Unknown
+    ExecutedQuery: 'let regionName = ''centralus'';
+
+      let infraSubscriptionId =~ "{SubscriptionId}";
+
+      | where TIMESTAMP > ago(1d)
+
+      | where RegionFriendlyName == regionName
+
+      | where subscriptionId =~ infraSubscriptionId
+
+      | summarize by hostNodeId = nodeId, tenantId = tenantName, containerId, fabricController = Tenant, roleName = roleInstanceName'
+- id: MI-networking-86
+  Topic: find-host-node-details
+  Source: TSG-SQL-MI-Networking/content/how-to/find-host-node-details.md
+  Prompts:
+  - MI find-host-node-details
+  - Managed Instance find-host-node-details
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonPrivateClusters
+    ExecutedQuery: 'let clusterName = ''tr13907.westus2-a.worker.database.windows.net'';
+
+      MonPrivateClusters
+
+      | where tenant_ring_name == clusterName
+
+      | summarize arg_max(TIMESTAMP, *) by ClusterName = tenant_ring_name, VnetID = tolower(vnet_resource_guid)
+
+      | project ClusterName, VnetID'
+- id: MI-networking-87
+  Topic: find-host-node-details
+  Source: TSG-SQL-MI-Networking/content/how-to/find-host-node-details.md
+  Prompts:
+  - MI find-host-node-details
+  - Managed Instance find-host-node-details
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonFabricClusters
+    ExecutedQuery: 'let clusterName = ''tr13907.westus2-a.worker.database.windows.net'';
+
+      MonFabricClusters
+
+      | where name  == clusterName
+
+      | summarize arg_max(TIMESTAMP, *) by name, hosted_service_subscription_id
+
+      | project ClusterName = name, HostSubscriptionId = hosted_service_subscription_id
+
+      | join kind=inner ('
+- id: MI-networking-88
+  Topic: find-host-node-details
+  Source: TSG-SQL-MI-Networking/content/how-to/find-host-node-details.md
+  Prompts:
+  - MI find-host-node-details
+  - Managed Instance find-host-node-details
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonPrivateClusters
+    ExecutedQuery: 'MonPrivateClusters
+
+      | summarize arg_max(TIMESTAMP, *) by ClusterName = tenant_ring_name, VnetID = tolower(vnet_resource_guid)
+
+      | project ClusterName, VnetID
+
+      ) on  $left.ClusterName == $right.ClusterName
+
+      | project-away ClusterName1
+
+      | join kind=inner ('
+- id: MI-networking-89
+  Topic: how-to-investigate-NMAgent
+  Source: TSG-SQL-MI-Networking/content/how-to/how-to-investigate-NMAgent.md
+  Prompts:
+  - MI how-to-investigate-NMAgent
+  - Managed Instance how-to-investigate-NMAgent
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: Unknown
+    ExecutedQuery: 'let nodeId = "a150d62f-982d-3e1f-d7f5-f8c5389b59d4";
+
+      | where TIMESTAMP > ago(1d)
+
+      | where NodeId == nodeId
+
+      | project TIMESTAMP, NodeId, NodeIP, ErrorMessage = Message, ErrorId, NmAgentBuildInfo, Role'
+- id: MI-networking-90
+  Topic: how-to-investigate-NMAgent
+  Source: TSG-SQL-MI-Networking/content/how-to/how-to-investigate-NMAgent.md
+  Prompts:
+  - MI how-to-investigate-NMAgent
+  - Managed Instance how-to-investigate-NMAgent
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: Unknown
+    ExecutedQuery: 'let nodeId = "a150d62f-982d-3e1f-d7f5-f8c5389b59d4";
+
+      | where TIMESTAMP > ago(1d)
+
+      | where NodeId == nodeId
+
+      | project PreciseTimeStamp, NodeId, NodeIP, ErrorMessage = Message, ReasonCode, NmAgentBuildInfo, Role'
+- id: MI-networking-91
+  Topic: how-to-investigate-NMAgent
+  Source: TSG-SQL-MI-Networking/content/how-to/how-to-investigate-NMAgent.md
+  Prompts:
+  - MI how-to-investigate-NMAgent
+  - Managed Instance how-to-investigate-NMAgent
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonFabricClusters
+    ExecutedQuery: 'let clusterName = ''tr13907.westus2-a.worker.database.windows.net'';
+
+      let nodeName = ''_DB8C_4'';
+
+      MonFabricClusters
+
+      | where name  == clusterName
+
+      | summarize arg_max(TIMESTAMP, *) by name, hosted_service_subscription_id
+
+      | project ClusterName = name, HostSubscriptionId = hosted_service_subscription_id
+
+      | join kind=inner ('
+- id: MI-networking-92
+  Topic: troubleshooting-finite-state-machines
+  Source: TSG-SQL-MI-Networking/content/how-to/troubleshooting-finite-state-machines.md
+  Prompts:
+  - MI troubleshooting-finite-state-machines
+  - Managed Instance troubleshooting-finite-state-machines
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where request_id =~ "b9d92209-9883-4301-867a-26e18339fb88"
+
+      | where state_machine_type == ''ManagedServerStateMachine''
+
+      | project PreciseTimeStamp, originalEventTimestamp, state_machine_type, action, event,  fsm_event, old_state, new_state, operation_id,  keys, message, stack_trace, error_message_scrubbed, request_id,
+      caller_state_machine_type, caller_keys, operation_parameters, process_id, collect_current_thread_id
+
+      | order by originalEventTimestamp asc'
+- id: MI-networking-93
+  Topic: initial-investigation-steps-for-networking
+  Source: TSG-SQL-MI-Networking/content/networking/initial-investigation-steps-for-networking.md
+  Prompts:
+  - MI initial-investigation-steps-for-networking
+  - Managed Instance initial-investigation-steps-for-networking
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'let vnetResourceUri = ''/subscriptions/8fb1ad69-28b1-4046-b50f-43999c131722/resourceGroups/zlamark-rg/providers/Microsoft.Network/virtualNetworks/vnet-zlamarkmi'';
+
+      MonManagement
+
+      | where PreciseTimeStamp between (datetime(''2024-07-10 04:04:00'')..datetime(''2024-07-11 16:04:00''))
+
+      | where (event == ''nrp_complete'' and operation != ''GetSubnet'' and operation != ''GetVnet'') or event == ''nrp_failed''
+
+      | where request_uri contains vnetResourceUri or nrp_response_body contains vnetResourceUri
+
+      | extend code = parse_json(nrp_response_body)
+
+      | extend ErrorCode = tostring(code.error.code)
+
+      | extend ErrorMessage = tostring(code.error.message)
+
+      | project PreciseTimeStamp, Event = event, Operation = operation, SubnetResourceId = subnet_resource_id, ErrorCode, ErrorMessage'
+- id: MI-networking-94
+  Topic: initial-investigation-steps-for-networking
+  Source: TSG-SQL-MI-Networking/content/networking/initial-investigation-steps-for-networking.md
+  Prompts:
+  - MI initial-investigation-steps-for-networking
+  - Managed Instance initial-investigation-steps-for-networking
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: Unknown
+    ExecutedQuery: 'let cxSubscriptionID = ''8fb1ad69-28b1-4046-b50f-43999c131722'';
+
+      | where SubscriptionId =~ cxSubscriptionID
+
+      | where TIMESTAMP > ago(2d)
+
+      | where ResourceType in ('
+- id: MI-networking-95
+  Topic: tsgminw3004-failed-to-create-containerd-task
+  Source: TSG-SQL-MI-Networking/content/networking/tsgminw3004-failed-to-create-containerd-task.md
+  Prompts:
+  - MI tsgminw3004-failed-to-create-containerd-task
+  - Managed Instance tsgminw3004-failed-to-create-containerd-task
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: Unknown
+    ExecutedQuery: 'let startTime = datetime(2023-05-23 14:34);
+
+      let endTime = datetime(2023-05-23 15:41);
+
+      let tenantRing = ''tr37177.eastus1-a.worker.database.windows.net'';
+
+      | where ClusterName =~ tenantRing
+
+      | where TIMESTAMP between(startTime..endTime)
+
+      | where EventType in ('
+- id: MI-networking-96
+  Topic: tsgminw3006-troubleshooting-crl-issues
+  Source: TSG-SQL-MI-Networking/content/networking/tsgminw3006-troubleshooting-crl-issues.md
+  Prompts:
+  - MI tsgminw3006-troubleshooting-crl-issues
+  - Managed Instance tsgminw3006-troubleshooting-crl-issues
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonPrivateClusters
+    ExecutedQuery: 'MonPrivateClusters
+
+      | where TIMESTAMP > ago(2h)
+
+      | where state == ''Ready''
+
+      | distinct ClusterName = tenant_ring_name
+
+      | join kind=inner (MonClusterLoad
+
+      | where TIMESTAMP > ago(1h)
+
+      | where event == ''node_state_report''
+
+      | summarize arg_max(TIMESTAMP, node_status) by ClusterName, node_name
+
+      | where node_status in (''Up'',''Disabling'')
+
+      | project ClusterName, NodeName = node_name)
+
+      on ClusterName
+
+      | join kind=inner (MonMachineLocalWatchdog
+
+      | where TIMESTAMP > ago(21d)
+
+      | where component == "CrlWatchdog"
+
+      | where * has "Successfully downloaded CRL lists from blob storage account and installed them to certificate store"
+
+      | summarize min(TIMESTAMP), max(TIMESTAMP) by ClusterName, NodeName
+
+      | where max_TIMESTAMP < ago(2d))
+
+      on ClusterName, NodeName
+
+      | join kind=leftanti (AlrWinFabHealthNodeEvent
+
+      | where TIMESTAMP > ago(48h)
+
+      | where Property == ''CrlWatchdog''
+
+      | where Description'
+- id: MI-networking-97
+  Topic: tsgminw3006-troubleshooting-crl-issues
+  Source: TSG-SQL-MI-Networking/content/networking/tsgminw3006-troubleshooting-crl-issues.md
+  Prompts:
+  - MI tsgminw3006-troubleshooting-crl-issues
+  - Managed Instance tsgminw3006-troubleshooting-crl-issues
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: AlrWinFabHealthNodeEvent
+    ExecutedQuery: 'AlrWinFabHealthNodeEvent
+
+      | where TIMESTAMP > ago(48h)
+
+      | where ClusterName == ''<your-cluster-name>''
+
+      | where NodeEntityName == ''<your-node-name>''
+
+      | where Property == ''CrlWatchdog''
+
+      | where Description has ''CRL''
+
+      | project TIMESTAMP, Description, HealthState
+
+      | order by TIMESTAMP desc'
+- id: MI-networking-98
+  Topic: tsgminw3006-troubleshooting-crl-issues
+  Source: TSG-SQL-MI-Networking/content/networking/tsgminw3006-troubleshooting-crl-issues.md
+  Prompts:
+  - MI tsgminw3006-troubleshooting-crl-issues
+  - Managed Instance tsgminw3006-troubleshooting-crl-issues
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonMachineLocalWatchdog
+    ExecutedQuery: 'MonMachineLocalWatchdog
+
+      | where TIMESTAMP > ago(2h)
+
+      | where ClusterName == ''<your-cluster-name>''
+
+      | where NodeName == ''<your-node-name>''
+
+      | where component == "CrlWatchdog"
+
+      | where * has "Successfully downloaded CRL lists from blob storage account and installed them to certificate store"
+
+      | summarize max(TIMESTAMP)'
+- id: MI-networking-99
+  Topic: tsgminw3006-troubleshooting-crl-issues
+  Source: TSG-SQL-MI-Networking/content/networking/tsgminw3006-troubleshooting-crl-issues.md
+  Prompts:
+  - MI tsgminw3006-troubleshooting-crl-issues
+  - Managed Instance tsgminw3006-troubleshooting-crl-issues
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonClusterLoad
+    ExecutedQuery: 'MonClusterLoad
+
+      | where TIMESTAMP > ago(15m)
+
+      | where ClusterName == ''<your-cluster-name>''
+
+      | where node_name == ''<your-node-name>''
+
+      | where event == ''node_state_report''
+
+      | summarize arg_max(TIMESTAMP, node_status)'
+- id: MI-networking-100
+  Topic: tsgminw3006-troubleshooting-crl-issues
+  Source: TSG-SQL-MI-Networking/content/networking/tsgminw3006-troubleshooting-crl-issues.md
+  Prompts:
+  - MI tsgminw3006-troubleshooting-crl-issues
+  - Managed Instance tsgminw3006-troubleshooting-crl-issues
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: AlrWinFabHealthNodeEvent
+    ExecutedQuery: 'AlrWinFabHealthNodeEvent
+
+      | where TIMESTAMP > ago(1h)
+
+      | where ClusterName == ''<your-cluster-name>''
+
+      | where NodeEntityName == ''<your-node-name>''
+
+      | where Property == ''CrlWatchdog''
+
+      | where Description has ''Successfully downloaded CRL lists''
+
+      | project TIMESTAMP, Description, HealthState'
+- id: MI-networking-101
+  Topic: tsgminw3009-cluster-certificate-expired
+  Source: TSG-SQL-MI-Networking/content/networking/tsgminw3009-cluster-certificate-expired.md
+  Prompts:
+  - MI tsgminw3009-cluster-certificate-expired
+  - Managed Instance tsgminw3009-cluster-certificate-expired
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'let lookBackTime = ago(60min);
+
+      let errorThreshhold = 100;
+
+      MonLogin
+
+      | where TIMESTAMP > lookBackTime
+
+      | where event contains "login_finish"
+
+      | where AppTypeName =~ "Gateway.PDC"
+
+      | where error == 26078
+
+      | project ClusterName, logical_server_name, connection_peer_id
+
+      | join kind=inner (MonLogin
+
+      | where TIMESTAMP > lookBackTime
+
+      | where event contains "login_finish"
+
+      | where AppTypeName contains "Worker.CL"
+
+      | where error == 17830 and state == 105
+
+      | project connection_peer_id)
+
+      on connection_peer_id
+
+      | summarize count() by ClusterName, logical_server_name
+
+      | where count_ > errorThreshhold
+
+      | project ClusterName, LogicalServerName = logical_server_name
+
+      | join kind=inner (MonDmDbHadrReplicaStates
+
+      | where TIMESTAMP > lookBackTime
+
+      | where internal_state_desc  == ''PRIMARY''
+
+      | distinct ClusterName, LogicalServerName, NodeName, AppName, AppTypeName)
+
+      on ClusterName, LogicalServerName
+
+      | project ClusterName, NodeName, ApplicationName = strcat("fabric:/",AppTypeName,"/",AppName)'
+- id: MI-networking-102
+  Topic: tsgminw3009-cluster-certificate-expired
+  Source: TSG-SQL-MI-Networking/content/networking/tsgminw3009-cluster-certificate-expired.md
+  Prompts:
+  - MI tsgminw3009-cluster-certificate-expired
+  - Managed Instance tsgminw3009-cluster-certificate-expired
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'let clusterName = ''tr126.northeurope1-b.worker.sqltest-eg1.mscds.com''; //You can clusterName in incident titile
+
+      let applicationName = ''fabric:/Worker.CL.WCOW/ac91aabea473''; // You can find applicationName in incident titile
+
+      MonManagedServers
+
+      | where TIMESTAMP > ago(1h)
+
+      | where private_cluster_tenant_ring_name == clusterName
+
+      | extend test = split(applicationName, "/")[2]
+
+      | where physical_instance_name == split(applicationName, "/")[2]
+
+      | distinct edition'
+- id: MI-networking-103
+  Topic: tsgminw3012-GatewayCloudLifterCertificate-expired
+  Source: TSG-SQL-MI-Networking/content/networking/tsgminw3012-GatewayCloudLifterCertificate-expired.md
+  Prompts:
+  - MI tsgminw3012-GatewayCloudLifterCertificate-expired
+  - Managed Instance tsgminw3012-GatewayCloudLifterCertificate-expired
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonMachineLocalWatchdog
+    ExecutedQuery: 'let clusterName = ""; //tr21813.northeurope1-a.worker.database.windows.net
+
+      MonMachineLocalWatchdog
+
+      | where ClusterName == ClusterName
+
+      | where component == "CertificateWatchdog"
+
+      | where TIMESTAMP > ago(10h)
+
+      | parse message_resourcename with *"Subject=CN=" Subject "," * "Thumbprint=" Thumbprint ";" * "Expires="ExpireDateStr";" * "RegistryLogicalName=" CertificateName ";" *
+
+      | where not(isempty(Subject))
+
+      | where not(isempty(Thumbprint))
+
+      | where not(isempty(ExpireDateStr))
+
+      | where CertificateName == "GatewayCloudLifterCertificate"
+
+      | extend ExpireDate = todatetime(ExpireDateStr)
+
+      | extend Expired = ExpireDate < now()
+
+      | summarize arg_max(ExpireDate, Thumbprint, Expired) by Subject, ClusterName, NodeName
+
+      | where ExpireDate < (now() + 7d)'
+- id: MI-networking-104
+  Topic: tsgminw3018-mi-control-ring-failover
+  Source: TSG-SQL-MI-Networking/content/networking/tsgminw3018-mi-control-ring-failover.md
+  Prompts:
+  - MI tsgminw3018-mi-control-ring-failover
+  - Managed Instance tsgminw3018-mi-control-ring-failover
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagementResourceProvider
+    ExecutedQuery: 'MonManagementResourceProvider
+
+      | {regionFilter}
+
+      | where PreciseTimeStamp > ago(2h)
+
+      | where request_url contains "ManagementService.Trusted.svc/Cluster/InternalManagedServerInstances"
+
+      | extend instanceName = tolower(extract("InternalManagedServerInstances/(.+)/", 1, request_url))
+
+      | summarize by ClusterName'
+- id: MI-networking-105
+  Topic: tsgminw3019-table-storage-resolution-issues
+  Source: TSG-SQL-MI-Networking/content/networking/tsgminw3019-table-storage-resolution-issues.md
+  Prompts:
+  - MI tsgminw3019-table-storage-resolution-issues
+  - Managed Instance tsgminw3019-table-storage-resolution-issues
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonUpsertTenantRingRequests
+    ExecutedQuery: 'MonUpsertTenantRingRequests
+
+      | where is_swift == 1 and buildout_ring_type == "PrivateDatabaseCluster" and isnotempty(tenant_ring_name)
+
+      | where TIMESTAMP > ago(3h)
+
+      | project tenant_ring_name, is_swift) on $left.ClusterName == $right.tenant_ring_name
+
+      | distinct ClusterName'
+- id: MI-networking-106
+  Topic: tsgminw3019-table-storage-resolution-issues
+  Source: TSG-SQL-MI-Networking/content/networking/tsgminw3019-table-storage-resolution-issues.md
+  Prompts:
+  - MI tsgminw3019-table-storage-resolution-issues
+  - Managed Instance tsgminw3019-table-storage-resolution-issues
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonNodeAgentEvents
+    ExecutedQuery: 'MonNodeAgentEvents
+
+      | where PreciseTimeStamp > ago(3h)
+
+      | where event =~ ''node_agent_log'' and message has "System.Exception" and message has "PutIpReservationSet"
+
+      | summarize Count = count() by ClusterName
+
+      | where Count > 5
+
+      | distinct ClusterName'
+- id: MI-networking-107
+  Topic: AKV-Endpoint-unavailable
+  Source: TSG-SQL-MI-Networking/content/operational/active-production-problems/AKV-Endpoint-unavailable.md
+  Prompts:
+  - MI AKV-Endpoint-unavailable
+  - Managed Instance AKV-Endpoint-unavailable
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where TIMESTAMP > ago(6h)
+
+      | where AppTypeName contains "worker.cl.wcow"
+
+      | where message contains ". Error code: 12057." and message contains "initakv"
+
+      | summarize by ClusterName, AppTypeName, AppName'
+- id: MI-networking-108
+  Topic: AKV-Endpoint-unavailable
+  Source: TSG-SQL-MI-Networking/content/operational/active-production-problems/AKV-Endpoint-unavailable.md
+  Prompts:
+  - MI AKV-Endpoint-unavailable
+  - Managed Instance AKV-Endpoint-unavailable
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where TIMESTAMP > ago(1h)
+
+      | where AppTypeName contains "worker.cl.wcow"
+
+      | where message contains ". Error code: 12057." and message contains "initakv"
+
+      | summarize by ClusterName, code_package_version, NodeName'
+- id: MI-networking-109
+  Topic: AKV-Endpoint-unavailable
+  Source: TSG-SQL-MI-Networking/content/operational/active-production-problems/AKV-Endpoint-unavailable.md
+  Prompts:
+  - MI AKV-Endpoint-unavailable
+  - Managed Instance AKV-Endpoint-unavailable
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where TIMESTAMP > ago(30m)
+
+      | where AppTypeName contains "worker.cl.wcow"
+
+      | where message contains ". Error code: 12057." and message contains "initakv"
+
+      | summarize by ClusterName, AppTypeName, AppName'
+- id: MI-networking-110
+  Topic: Fabric-DNS-Service
+  Source: TSG-SQL-MI-Networking/content/operational/active-production-problems/Fabric-DNS-Service.md
+  Prompts:
+  - MI Fabric-DNS-Service
+  - Managed Instance Fabric-DNS-Service
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: Unknown
+    ExecutedQuery: 'let clusterName = "tr22068.westus2-a.worker.database.windows.net";
+
+      let nodeName = "_WF2C_0";
+
+      | where TIMESTAMP > ago(3h)
+
+      | where ClusterName =~ clusterName
+
+      | where NodeName =~ nodeName
+
+      | where EventType =~ ''ByoVnetProvider''
+
+      | where Text contains "could not get primary IP endpoint" or Text contains "WinHttpError=12007"
+
+      | summarize by ClusterName, NodeName
+
+      | extend MitigateCAS = strcat(''Get-FabricNode -NodeName '', NodeName,'' -NodeClusterName '', ClusterName, '' | Kill-Process -ProcessName FabricDnsService.exe -ApplicationNameUri All'')'
+- id: MI-networking-111
+  Topic: Fabric-DNS-Service
+  Source: TSG-SQL-MI-Networking/content/operational/active-production-problems/Fabric-DNS-Service.md
+  Prompts:
+  - MI Fabric-DNS-Service
+  - Managed Instance Fabric-DNS-Service
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonNodeAgentEvents
+    ExecutedQuery: 'let clusterName = ''tr13862.uksouth1-a.worker.database.windows.net'';
+
+      MonNodeAgentEvents
+
+      | where PreciseTimeStamp > ago(5h)
+
+      | where ClusterName =~ clusterName
+
+      | where event =~ ''node_agent_log'' and message has "System.Exception" and message has "PutIpReservationSet"
+
+      | summarize by ClusterName, NodeName
+
+      | extend MitigateCAS = strcat(''Get-FabricNode -NodeName '', NodeName,'' -NodeClusterName '', ClusterName, '' | Kill-Process -ProcessName FabricDnsService.exe -ApplicationNameUri All'')'
+- id: MI-networking-112
+  Topic: gateway-ready-but-not-processing-network-traffic
+  Source: TSG-SQL-MI-Networking/content/operational/active-production-problems/gateway-ready-but-not-processing-network-traffic.md
+  Prompts:
+  - MI gateway-ready-but-not-processing-network-traffic
+  - Managed Instance gateway-ready-but-not-processing-network-traffic
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'MonLogin
+
+      | where originalEventTimestamp > ago(30m)
+
+      | where AppName == "Gateway.PDC.WCOW"
+
+      | summarize slbProbeOrLoginCount=countif((event == "connectivity_ring_buffer_recorded" and remote_host == "168.63.129.xx" and local_port == 1433) or event == "process_login_finish")'
+- id: MI-networking-113
+  Topic: gateway-ready-but-not-processing-network-traffic
+  Source: TSG-SQL-MI-Networking/content/operational/active-production-problems/gateway-ready-but-not-processing-network-traffic.md
+  Prompts:
+  - MI gateway-ready-but-not-processing-network-traffic
+  - Managed Instance gateway-ready-but-not-processing-network-traffic
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCounterOneMinute
+    ExecutedQuery: 'MonCounterOneMinute
+
+      | where PreciseTimeStamp > ago(15m)
+
+      //| where ClusterName in ("tr83103.eastus1-a.worker.database.windows.net")
+
+      | where CounterName contains "\\Microsoft Winsock BSP\\Rejected Connections/sec"
+
+      | where NodeName contains "WF"
+
+      | summarize max(MaxVal), all=count(), nonZeroCount=countif(MaxVal > 0) by ClusterName, NodeName
+
+      | extend percDrops = nonZeroCount * 1.0 / all * 100
+
+      | where percDrops > 80;'
+- id: MI-networking-114
+  Topic: gateway-ready-but-not-processing-network-traffic
+  Source: TSG-SQL-MI-Networking/content/operational/active-production-problems/gateway-ready-but-not-processing-network-traffic.md
+  Prompts:
+  - MI gateway-ready-but-not-processing-network-traffic
+  - Managed Instance gateway-ready-but-not-processing-network-traffic
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonXdbhost
+    ExecutedQuery: 'MonXdbhost
+
+      | where originalEventTimestamp > ago(1h)
+
+      | where NodeName contains "C"
+
+      | where text contains "***[ERROR]Current socket Duplicate task stuck:"
+
+      | summarize by ClusterName, NodeName'
+- id: MI-networking-115
+  Topic: gateway-uses-stale-SQL-replica-due-to-SF-error
+  Source: TSG-SQL-MI-Networking/content/operational/active-production-problems/gateway-uses-stale-SQL-replica-due-to-SF-error.md
+  Prompts:
+  - MI gateway-uses-stale-SQL-replica-due-to-SF-error
+  - Managed Instance gateway-uses-stale-SQL-replica-due-to-SF-error
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'let SingleCluster=(clstr: string)
+
+      MonLogin
+
+      | where TIMESTAMP > ago(1h)
+
+      | where AppTypeName == ''Gateway.PDC.WCOW''
+
+      | where result == ''e_crContinue''
+
+      | extend RedirectDnsBase = extract("^(\\d+d\\d+d\\d+d\\d+)\\.(.+)$", 2, instance_name)
+
+      | where RedirectDnsBase == ClusterName
+
+      | extend RedirectIP = replace_string(extract("^(\\d+d\\d+d\\d+d\\d+)\\.(.+)$", 1, instance_name), "d", ".")
+
+      | extend ReadOnlyIntent = (toint(login_flags / 2097152) % 2) != 0 // (>> 21) % 2
+
+      | extend Database = iif(ReadOnlyIntent, database_name, "") // There is known bug in gateway that redirects on different replica per database
+
+      | project originalEventTimestamp, ClusterName, NodeName, instance_name, RedirectIP, RedirectDnsBase, ReadOnlyIntent, logical_server_name, Database
+
+      | summarize RedirectIPs = make_set(RedirectIP), RedirectMappings = make_set(strcat(NodeName,"-", RedirectIP)) by bin(originalEventTimestamp, 5min), ClusterName , logical_server_name, ReadOnlyIntent,
+      Database
+
+      | where array_length(RedirectIPs) > 1
+
+      | summarize Errors = count(), min(originalEventTimestamp), max(originalEventTimestamp), RedirectMappings = make_set(RedirectMappings) by ClusterName, logical_server_name, ReadOnlyIntent, Database
+
+      | where Errors > 3'
+- id: MI-networking-116
+  Topic: slow-crl-import-on-sql-nodes
+  Source: TSG-SQL-MI-Networking/content/operational/active-production-problems/slow-crl-import-on-sql-nodes.md
+  Prompts:
+  - MI slow-crl-import-on-sql-nodes
+  - Managed Instance slow-crl-import-on-sql-nodes
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonContainerShare
+    ExecutedQuery: 'MonContainerShare
+
+      | where TIMESTAMP > ago(1d)
+
+      | where ClusterName == ''tr25107.northeurope1-a.worker.database.windows.net''
+
+      | where NodeName == ''_DB4C_2''
+
+      | where host_environment_type == ''Container''
+
+      | summarize arg_max(originalEventTimestamp,*) by process_id, AppTypeName, AppName, LogicalServerName, ClusterName, NodeName
+
+      | project originalEventTimestamp, event, process_id, AppTypeName, AppName, LogicalServerName, ClusterName, NodeRole, NodeName
+
+      | where event contains "crl" or event has "certificate"
+
+      | summarize count() by AppTypeName, AppName, LogicalServerName, ClusterName, NodeRole , NodeName
+
+      | where AppTypeName startswith "Worker" or AppTypeName startswith "Gateway"
+
+      | where count_ > 3'
+- id: MI-networking-117
+  Topic: slow-crl-import-on-wf-nodes
+  Source: TSG-SQL-MI-Networking/content/operational/active-production-problems/slow-crl-import-on-wf-nodes.md
+  Prompts:
+  - MI slow-crl-import-on-wf-nodes
+  - Managed Instance slow-crl-import-on-wf-nodes
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonContainerShare
+    ExecutedQuery: 'MonContainerShare
+
+      | where TIMESTAMP > ago(2h)
+
+      | where ClusterName == ''tr11840.westus2-a.worker.database.windows.net''
+
+      | where NodeRole == ''WF2C''
+
+      | where host_environment_type == ''Container''
+
+      | summarize arg_max(originalEventTimestamp,*) by process_id, AppTypeName, AppName, LogicalServerName, ClusterName, NodeName
+
+      | project originalEventTimestamp, event, process_id, AppTypeName, AppName, LogicalServerName, ClusterName, NodeRole, NodeName
+
+      | where event contains "crl" or event has "certificate"
+
+      | summarize count() by AppTypeName, AppName, LogicalServerName, ClusterName, NodeName
+
+      | where AppTypeName startswith "Worker" or AppTypeName startswith "Gateway"'
+- id: MI-networking-118
+  Topic: tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway
+  Source: TSG-SQL-MI-Networking/content/operational/active-production-problems/tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway.md
+  Prompts:
+  - MI tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway
+  - Managed Instance tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: '| Layer | Signal | What you see |
+
+      |-------|--------|--------------|
+
+      | Customer (Private Endpoint) | TDS login | Login timeouts / SSMS hangs for instances whose PE traffic is hashed to the frozen gateway. |
+
+      | Customer (Public Endpoint) | TDS login | **Healthy** — SLB has already excluded the frozen GW from rotation. |
+
+      | GatewayBeacon | Gateway liveness | **Healthy** — this is the giveaway. PE keeps using the bad GW because beacon does not detect freeze. |
+
+      | SLB probe (`MonLogin` → `Gateway.PDC.WCOW`, `connectivity_ring_buffer_recorded` from `168.63.129.xx:1433`) | Probe results | Drop to **zero** for the affected GW node for ≥15 minutes. |
+
+      | Gateway (`MonRedirector`) | `Gateway.PDC.WCOW` events | Process is logging *some* events (so it''s alive), but `process_login_finish` is **zero** for ≥15 minutes. |
+
+      | Backend node (`MonXdbhost`) | Socket-duplication | `***[ERROR]Current socket Duplicate task stuck:` on the backend (`*C*`) nodes whose connections are being handed off by the frozen GW. |'
+- id: MI-networking-119
+  Topic: tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway
+  Source: TSG-SQL-MI-Networking/content/operational/active-production-problems/tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway.md
+  Prompts:
+  - MI tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway
+  - Managed Instance tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonXdbhost
+    ExecutedQuery: 'MonXdbhost
+
+      | where originalEventTimestamp > ago(1h)
+
+      | where NodeName contains "C"
+
+      | where text contains "***[ERROR]Current socket Duplicate task stuck:"
+
+      | summarize count(), arg_max(originalEventTimestamp, text) by ClusterName, NodeName'
+- id: MI-networking-120
+  Topic: tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway
+  Source: TSG-SQL-MI-Networking/content/operational/active-production-problems/tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway.md
+  Prompts:
+  - MI tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway
+  - Managed Instance tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRedirector
+    ExecutedQuery: 'MonRedirector
+
+      | where originalEventTimestamp > ago(15m)
+
+      | where NodeName contains "C"
+
+      | summarize arg_max(originalEventTimestamp, process_id) by ClusterName, NodeName
+
+      | order by ClusterName, originalEventTimestamp desc
+
+      | extend rn = row_number(1, prev(ClusterName) != ClusterName and prev(NodeName) != NodeName)
+
+      | where rn <= 3
+
+      | join kind=inner ('
+- id: MI-networking-121
+  Topic: tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway
+  Source: TSG-SQL-MI-Networking/content/operational/active-production-problems/tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway.md
+  Prompts:
+  - MI tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway
+  - Managed Instance tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRedirector
+    ExecutedQuery: 'MonRedirector
+
+      | where originalEventTimestamp > ago(15m)
+
+      | summarize gw_start_time=min(originalEventTimestamp), gw_end_time=max(originalEventTimestamp) by process_id
+
+      | project duration=datetime_diff(''minute'', gw_end_time, gw_start_time), process_id
+
+      | where duration > 5
+
+      ) on process_id
+
+      | join kind=inner ('
+- id: MI-networking-122
+  Topic: tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway
+  Source: TSG-SQL-MI-Networking/content/operational/active-production-problems/tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway.md
+  Prompts:
+  - MI tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway
+  - Managed Instance tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'MonLogin
+
+      | where originalEventTimestamp > ago(15m)
+
+      | where AppName == "Gateway.PDC.WCOW"
+
+      | summarize slbProbeOrLoginCount=countif((event == "connectivity_ring_buffer_recorded" and remote_host == "168.63.129.xx" and local_port == 1433) or event == "process_login_finish")'
+- id: MI-networking-123
+  Topic: tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway
+  Source: TSG-SQL-MI-Networking/content/operational/active-production-problems/tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway.md
+  Prompts:
+  - MI tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway
+  - Managed Instance tsgminw1012-xdbhost-socket-duplication-stuck-frozen-gateway
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCounterOneMinute
+    ExecutedQuery: 'MonCounterOneMinute
+
+      | where PreciseTimeStamp > ago(15m)
+
+      | where CounterName contains "\\Microsoft Winsock BSP\\Rejected Connections/sec"
+
+      | where NodeName contains "WF"
+
+      | summarize max(MaxVal), all=count(), nonZeroCount=countif(MaxVal > 0) by ClusterName, NodeName
+
+      | extend percDrops = nonZeroCount * 1.0 / all * 100
+
+      | where percDrops > 80'
+- id: MI-networking-124
+  Topic: CSU-Slow-CRL-Import
+  Source: TSG-SQL-MI-Networking/content/operational/active-production-problems/Deprecated/CSU-Slow-CRL-Import.md
+  Prompts:
+  - MI CSU-Slow-CRL-Import
+  - Managed Instance CSU-Slow-CRL-Import
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonContainerShare
+    ExecutedQuery: 'let clusterName = "tr27104.centralus1-a.worker.database.windows.net";
+
+      let nodeName = "_DB4C_0";
+
+      MonContainerShare
+
+      | where originalEventTimestamp > ago(3h)
+
+      | where ClusterName =~ clusterName
+
+      | where NodeName =~ nodeName
+
+      | where event in (''starting_crl_transfer'', ''crl_imported'')
+
+      | summarize startTime = minif(originalEventTimestamp, event == ''starting_crl_transfer'')'
+- id: MI-networking-125
+  Topic: CSU-Slow-CRL-Import
+  Source: TSG-SQL-MI-Networking/content/operational/active-production-problems/Deprecated/CSU-Slow-CRL-Import.md
+  Prompts:
+  - MI CSU-Slow-CRL-Import
+  - Managed Instance CSU-Slow-CRL-Import
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: Unknown
+    ExecutedQuery: 'let SingleCluster=(clstr: string)
+
+      | where originalEventTimestamp > ago(3h)
+
+      | where ClusterName !contains "euap"
+
+      | where event in (''starting_crl_transfer'', ''crl_imported'')
+
+      | summarize startTime = minif(originalEventTimestamp, event == ''starting_crl_transfer'')'
+- id: MI-networking-126
+  Topic: CSU-Slow-CRL-Import
+  Source: TSG-SQL-MI-Networking/content/operational/active-production-problems/Deprecated/CSU-Slow-CRL-Import.md
+  Prompts:
+  - MI CSU-Slow-CRL-Import
+  - Managed Instance CSU-Slow-CRL-Import
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonContainerShare
+    ExecutedQuery: 'let clusterName = "<your-cluster-name>";
+
+      let nodeName = "<your-node-name>";
+
+      MonContainerShare
+
+      | where originalEventTimestamp > ago(1h)
+
+      | where ClusterName =~ clusterName
+
+      | where NodeName =~ nodeName
+
+      | where event in (''starting_crl_transfer'', ''crl_imported'')
+
+      | summarize startTime = minif(originalEventTimestamp, event == ''starting_crl_transfer'')'
+- id: MI-networking-127
+  Topic: mintls-login-errors
+  Source: TSG-SQL-MI-Networking/content/operational/active-production-problems/Deprecated/mintls-login-errors.md
+  Prompts:
+  - MI mintls-login-errors
+  - Managed Instance mintls-login-errors
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'let loopback = ago(1d);
+
+      MonLogin
+
+      | where TIMESTAMP > loopback
+
+      | where event == ''process_login_finish''
+
+      | where error == 47072
+
+      | where state == 171
+
+      | where AppTypeName startswith "Gateway.PDC.WCOW"
+
+      | summarize min(originalEventTimestamp), max(originalEventTimestamp), count() by ClusterName, NodeName, AppTypeName, database_name, logical_server_name, client_ssl_protocol = ssl_protocol
+
+      | where count_ > 20
+
+      | order by ClusterName
+
+      | join kind=inner ('
+- id: MI-networking-128
+  Topic: mintls-login-errors
+  Source: TSG-SQL-MI-Networking/content/operational/active-production-problems/Deprecated/mintls-login-errors.md
+  Prompts:
+  - MI mintls-login-errors
+  - Managed Instance mintls-login-errors
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'MonManagedServers
+
+      | where TIMESTAMP > loopback
+
+      | summarize arg_max(TIMESTAMP, *) by name, server_minimal_tls_version = minimal_tls_version
+
+      ) on $left.logical_server_name == $right.name
+
+      | extend client_minimal_tls_version = case('
+- id: MI-networking-129
+  Topic: live-site-runners-and-monitors
+  Source: TSG-SQL-MI-Networking/content/operational/live-site-runners-and-monitors/live-site-runners-and-monitors.md
+  Prompts:
+  - MI live-site-runners-and-monitors
+  - Managed Instance live-site-runners-and-monitors
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: Monitor
+    ExecutedQuery: '| Criteria | Geneva/BRAIN Monitor | ICM Automation | SqlTelemetry Runner |
+
+      |----------|---------------------|---------------|---------------------|
+
+      | Logic complexity | Threshold-based SLI/SLO rules | Simple Kusto queries | Complex logic, multi-step |
+
+      | Data source | MDM (hot path, < 1 min latency) | Kusto (warm path) | Kusto, CMS, MDS |
+
+      | Detection speed | Fast (sub-minute via MDM metrics) | Medium (Kusto query interval) | Medium (runner execution interval) |
+
+      | Actions | Fire IcM incidents | IcM annotation, email reports | Auto-mitigation, CAS calls, AKV |
+
+      | Auto-mitigation | No | No | Yes |
+
+      | Source control | Geneva portal config | No built-in source control | Full Git-based source control |
+
+      | Connectors | MDM, IcM, BRAIN | Kusto, IcM, MDS, MDM, Geneva Actions | Kusto, CAS, IcM, MDS, MDM, VCS, SF, AKV |
+
+      | Best for | Regional outage detection, SLI-based alerting | Quick prototypes, IcM enrichment | Production-grade alerting & mitigation |'
+- id: MI-networking-130
+  Topic: live-site-runners-and-monitors
+  Source: TSG-SQL-MI-Networking/content/operational/live-site-runners-and-monitors/live-site-runners-and-monitors.md
+  Prompts:
+  - MI live-site-runners-and-monitors
+  - Managed Instance live-site-runners-and-monitors
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonitorIPv6DefaultGatewayRouteRunner
+    ExecutedQuery: '| Runner Name | Source Code | Status | TSG |
+
+      |-------------|-------------|--------|-----|
+
+      | AiaGatewayAliasConnectivityRunner | [AiaGatewayAliasConnectivityRunner.cs](https://msdata.visualstudio.com/Database%20Systems/_git/SqlTelemetry?path=/Src/MdsRunners/MdsRunners/Runners/CloudLifterRunners/ConnectivityNetworking/AiaGatewayAliasConnectivityRunner.cs&version=GBR2D2)
+      | Disabled | [TSGMINW1005](/connectivity/Deprecated/tsgminw1005-aia-gateway-aliasdb-connectivity-troubleshooting.md) (Deprecated) |
+
+      | ClusterCertExpiredRunner | [ClusterCertExpiredRunner.cs](https://msdata.visualstudio.com/Database%20Systems/_git/SqlTelemetry?path=/Src/MdsRunners/MdsRunners/Runners/CloudLifterRunners/ConnectivityNetworking/ClusterCertExpiredRunner.cs&version=GBR2D2)
+      | Disabled | [TSGMINW3009](/networking/tsgminw3009-cluster-certificate-expired.md) |
+
+      | CmsAliasDbRecordMismatchRunner | [CmsAliasDbRecordMismatchRunner.cs](https://msdata.visualstudio.com/Database%20Systems/_git/SqlTelemetry?path=/Src/MdsRunners/MdsRunners/Runners/CloudLifterRunners/ConnectivityNetworking/CmsAliasDbRecordMismatchRunner.cs&version=GBR2D2)
+      | Disabled | [TSGMINW1006](/connectivity/Deprecated/tsgminw1006-unblock-stuck-seeding-caused-by-cms-aliasdb-misalignment.md) (Deprecated) |
+
+      | ConnectivitySuccessRunner | [ConnectivitySuccessRunner.cs](https://msdata.visualstudio.com/Database%20Systems/_git/SqlTelemetry?path=/Src/MdsRunners/MdsRunners/Runners/CloudLifterRunners/ConnectivityNetworking/ConnectivitySuccessRunner.cs&version=GBR2D2)
+      | Disabled | [TSGMINW1015](/connectivity/Deprecated/tsgminw1015-connectivity-success-monitoring.md) (Deprecated) |
+
+      | ContainerIssuesRunner | [ContainerIssuesRunner.cs](https://msdata.visualstudio.com/Database%20Systems/_git/SqlTelemetry?path=/Src/MdsRunners/MdsRunners/Runners/CloudLifterRunners/ConnectivityNetworking/ContainerIssuesRunner.cs&version=GBR2D2)
+      | **Enabled** | [TSGMINW2001](/containers/tsgminw2001-containerd-issue-service-not-running.md), [2004](/containers/tsgminw2004-leaked-nc-managed-server-encountered-a-stuck-update-slo-operation-ghost-replica-problem.md),
+      [2006](/containers/tsgminw2006-leaked-pod.md), [2010](/containers/tsgminw2010-hcn-create-endpoint-failed.md) |
+
+      | ContainerShareUtilIssuesRunner | [ContainerShareUtilIssuesRunner.cs](https://msdata.visualstudio.com/Database%20Systems/_git/SqlTelemetry?path=/Src/MdsRunners/MdsRunners/Runners/CloudLifterRunners/ConnectivityNetworking/ContainerShareUtilIssuesRunner.cs&version=GBR2D2)
+      | **Enabled** | [TSGMINW2008](/containers/tsgminw2008-containershareutil-memory-pressure.md) |
+
+      | CrlPushToStorageAccountRunner | [CrlPushToStorageAccountRunner.cs](https://msdata.visualstudio.com/Database%20Systems/_git/SqlTelemetry?path=/Src/MdsRunners/MdsRunners/Runners/CloudLifterRunners/ConnectivityNetworking/CrlPushToStorageAccountRunner.cs&version=GBR2D2)
+      | **Enabled** | [Runner TSG](crl-push-to-storage-account-runner.md) |
+
+      | CrlWatchdogFailureRunner | [CrlWatchdogFailureRunner.cs](https://msdata.visualstudio.com/Database%20Systems/_git/SqlTelemetry?path=/Src/MdsRunners/MdsRunners/Runners/CloudLifterRunners/ConnectivityNetworking/CrlWatchdogFailureRunner.cs&version=GBR2D2)
+      | **Enabled** | [TSGMINW3006](/networking/tsgminw3006-troubleshooting-crl-issues.md) |
+
+      | DnsNameResolutionFailureRunner | [DnsNameResolutionFailureRunner.cs](https://msdata.visualstudio.com/Database%20Systems/_git/SqlTelemetry?path=/Src/MdsRunners/MdsRunners/Runners/CloudLifterRunners/ConnectivityNetworking/DnsNameResolutionFailureRunner.cs&version=GBR2D2)
+      | Disabled | [TSGMINW3006](/networking/tsgminw3006-troubleshooting-crl-issues.md) (CRL expiration) |
+
+      | DnsServerMonitorRunner | [DnsServerMonitorRunner.cs](https://msdata.visualstudio.com/Database%20Systems/_git/SqlTelemetry?path=/Src/MdsRunners/MdsRunners/Runners/CloudLifterRunners/ConnectivityNetworking/DnsServerMonitorRunner.cs&version=GBR2D2)
+      | Disabled | [TSGMINW3014](/networking/tsgminw3014-Azure-DNS-Set-as-the-Default-DNS-Server.md) |
+
+      | ExpiredGatewayCertificateRunner | [ExpiredGatewayCertificateRunner.cs](https://msdata.visualstudio.com/Database%20Systems/_git/SqlTelemetry?path=/Src/MdsRunners/MdsRunners/Runners/CloudLifterRunners/ConnectivityNetworking/ExpiredGatewayCertificateRunner.cs&version=GBR2D2)
+      | **Enabled** | [TSGMINW3012](/networking/tsgminw3012-GatewayCloudLifterCertificate-expired.md) |
+
+      | FixNodeIpRunner | [FixNodeIpRunner.cs](https://msdata.visualstudio.com/Database%20Systems/_git/SqlTelemetry?path=/Src/MdsRunners/MdsRunners/Runners/CloudLifterRunners/ConnectivityNetworking/FixNodeIpRunner.cs&version=GBR2D2)
+      | Disabled | [TSGCL0182](/networking/Deprecated/tsgcl0182-fix-node-ip.md) (Deprecated) |
+
+      | GatewayConnectionsStuckRunner | [GatewayConnectionsStuckRunner.cs](https://msdata.visualstudio.com/Database%20Systems/_git/SqlTelemetry?path=/Src/MdsRunners/MdsRunners/Runners/CloudLifterRunners/ConnectivityNetworking/GatewayConnectionsStuckRunner.cs&version=GBR2D2)
+      | **Enabled** | [TSGMINW1004](/connectivity/tsgminw1004-gateway-connections-stuck.md) |
+
+      | GatewayNotificationNotRecievedRunner | [GatewayNotificationNotRecievedRunner.cs](https://msdata.visualstudio.com/Database%20Systems/_git/SqlTelemetry?path=/Src/MdsRunners/MdsRunners/Runners/CloudLifterRunners/ConnectivityNetworking/GatewayNotificationNotRecievedRunner.cs&version=GBR2D2)
+      | **Enabled** | [TSGCL0302](https://eng.ms/docs/cloud-ai-platform/azure-data/azure-data-azure-databases/sql-/sql-connectivity/sql-mi-connectivity-and-networking/sql_mi_livesite/tsgs/connectivity-and-networking/tsgcl0302-gateway-notification-missing-runner)
+      |
+
+      | GenpactPerfMonitorRunner | [GenpactPerfMonitorRunner.cs](https://msdata.visualstudio.com/Database%20Systems/_git/SqlTelemetry?path=/Src/MdsRunners/MdsRunners/Runners/CloudLifterRunners/ConnectivityNetworking/GenpactPerfMonitorRunner.cs&version=GBR2D2)
+      | **Enabled** | [TSGMINW1011](/connectivity/tsgminw1011-high-cpu-sql-cert-url-cache-mitigation.md) |
+
+      | LongGatewayStartupRunner | [LongGatewayStartupRunner.cs](https://msdata.visualstudio.com/Database%20Systems/_git/SqlTelemetry?path=/Src/MdsRunners/MdsRunners/Runners/CloudLifterRunners/ConnectivityNetworking/LongGatewayStartupRunner.cs&version=GBR2D2)
+      | Disabled | [TSGMINW1016](/connectivity/Deprecated/tsgminw1016-long-gateway-startup.md) (Deprecated) |
+
+      | ManagedServerAndGatewayOnSameNodeRunner | [ManagedServerAndGatewayOnSameNodeRunner.cs](https://msdata.visualstudio.com/Database%20Systems/_git/SqlTelemetry?path=/Src/MdsRunners/MdsRunners/Runners/CloudLifterRunners/ConnectivityNetworking/ManagedServerAndGatewayOnSameNodeRunner.cs&version=GBR2D2)
+      | **Enabled** | [TSGCL0087](https://eng.ms/docs/cloud-ai-platform/azure-data/azure-data-azure-databases/sql-/sql-connectivity/sql-mi-connectivity-and-networking/sql_mi_livesite/tsgs/connectivity-and-networking/tsgcl0087-managed-server-and-gateway-on-same-node)
+      |
+
+      | ManagedServerGatewayAliasConnectivityRunner | [ManagedServerGatewayAliasConnectivityRunner.cs](https://msdata.visualstudio.com/Database%20Systems/_git/SqlTelemetry?path=/Src/MdsRunners/MdsRunners/Runners/CloudLifterRunners/ConnectivityNetworking/ManagedServerGatewayAliasConnectivityRunner.cs&version=GBR2D2)
+      | Disabled | [TSGMINW1005](/connectivity/Deprecated/tsgminw1005-aia-gateway-aliasdb-connectivity-troubleshooting.md) (Deprecated) |
+
+      | MdsAgentLauncherLeakKillRunner | [MdsAgentLauncherLeakKIllRunner.cs](https://msdata.visualstudio.com/Database%20Systems/_git/SqlTelemetry?path=/Src/MdsRunners/MdsRunners/Runners/CloudLifterRunners/ConnectivityNetworking/MdsAgentLauncherLeakKIllRunner.cs&version=GBR2D2)
+      | Disabled | [TSGMINW2015](/containers/Deprecated/tsgminw2015-mds-agent-launcher-memory-leak.md) (Deprecated) |
+
+      | MIConfigurationUpdateRunner | [MIConfigurationUpdateRunner.cs](https://msdata.visualstudio.com/Database%20Systems/_git/SqlTelemetry?path=/Src/MdsRunners/MdsRunners/Runners/CloudLifterRunners/ConnectivityNetworking/MIConfigurationUpdateRunner.cs&version=GBR2D2)
+      | **Enabled** | [TSGMINW3011](/networking/tsgminw3011-Telemetry-configuration-not-properly-set.md) |
+
+      | MIControlRingFailoverRunner | [MIControlRingFailoverRunner.cs](https://msdata.visualstudio.com/Database%20Systems/_git/SqlTelemetry?path=/Src/MdsRunners/MdsRunners/Runners/CloudLifterRunners/ConnectivityNetworking/MIControlRingFailoverRunner.cs&version=GBR2D2)
+      | **Enabled** | [TSGMINW3018](/networking/tsgminw3018-mi-control-ring-failover.md) |
+
+      | MIReliabilityTestDegradationDetectorRunner | [MIReliabilityTestDegradationDetectorRunner.cs](https://msdata.visualstudio.com/Database%20Systems/_git/SqlTelemetry?path=/Src/MdsRunners/MdsRunners/Runners/CloudLifterRunners/ConnectivityNetworking/MIReliabilityTestDegradationDetectorRunner.cs&version=GBR2D2)
+      | **Enabled** | [External TSG](https://aka.ms/mi-reliability-test-tsg) |
+
+      | MonitorIPv6DefaultGatewayRouteRunner | [MonitorIPv6DefaultGatewayRouteRunner.cs](https://msdata.visualstudio.com/Database%20Systems/_git/SqlTelemetry?path=/Src/MdsRunners/MdsRunners/Runners/CloudLifterRunners/ConnectivityNetworking/MonitorIPv6DefaultGatewayRouteRunner.cs&version=GBR2D2)
+      | **Enabled** | [TSGMINW3002](/networking/tsgminw3002-azure-ipv6-default-gateway-route-issues.md) |
+
+      | NetworkContainerLeakRunner | [NetworkContainerLeakRunner.cs](https://msdata.visualstudio.com/Database%20Systems/_git/SqlTelemetry?path=/Src/MdsRunners/MdsRunners/Runners/CloudLifterRunners/ConnectivityNetworking/NetworkContainerLeakRunner.cs&version=GBR2D2)
+      | **Enabled** | [TSGMINW3001](/networking/tsgminw3001-leaked-network-containers.md) |
+
+      | NetworkMonitoringMiEndpointsRunner | [NetworkMonitoringMiEndpointsRunner.cs](https://msdata.visualstudio.com/Database%20Systems/_git/SqlTelemetry?path=/Src/MdsRunners/MdsRunners/Runners/CloudLifterRunners/ConnectivityNetworking/NetworkMonitoringMiEndpointsRunner.cs&version=GBR2D2)
+      | Disabled | [TSGMINW1014](/connectivity/Deprecated/tsgminw1014-network-monitoring-mi-endpoints.md) (Deprecated) |
+
+      | NetworkMonitoringRunner | [NetworkMonitoringRunner.cs](https://msdata.visualstudio.com/Database%20Systems/_git/SqlTelemetry?path=/Src/MdsRunners/MdsRunners/Runners/CloudLifterRunners/ConnectivityNetworking/NetworkMonitoringRunner.cs&version=GBR2D2)
+      | **Enabled** | [TSGMINW1013](/connectivity/tsgminw1013-network-monitoring-private-lb-unreachable.md) |
+
+      | NodeRejectingConnectionsRunner | [NodeRejectingConnectionsRunner.cs](https://msdata.visualstudio.com/Database%20Systems/_git/SqlTelemetry?path=/Src/MdsRunners/MdsRunners/Runners/CloudLifterRunners/ConnectivityNetworking/NodeRejectingConnectionsRunner.cs&version=GBR2D2)
+      | **Enabled** | [TSGMINW1001](/connectivity/tsgminw1001-backend-node-is-rejecting-connections.md) |
+
+      | PeInternalDnsRecordRunner | [PeInternalDnsRecordRunner.cs](https://msdata.visualstudio.com/Database%20Systems/_git/SqlTelemetry?path=/Src/MdsRunners/MdsRunners/Runners/CloudLifterRunners/ConnectivityNetworking/PeInternalDnsRecordRunner.cs&version=GBR2D2)
+      | **Enabled** | [TSGMINW3008](/networking/tsgminw3008-private-endpoint-internal-dns-records-pointing-to-the-wrong-ring.md) |
+
+      | PortExhaustionAlertRunner | [PortExhaustionAlertRunner.cs](https://msdata.visualstudio.com/Database%20Systems/_git/SqlTelemetry?path=/Src/MdsRunners/MdsRunners/Runners/CloudLifterRunners/ConnectivityNetworking/PortExhaustionAlertRunner.cs&version=GBR2D2)
+      | Disabled | [TSGCL0197](/networking/Deprecated/tsgcl0197-port-exhaustion.md) (Deprecated) |
+
+      | RepairTableStorageRunner | [RepairTableStorageRunner.cs](https://msdata.visualstudio.com/Database%20Systems/_git/SqlTelemetry?path=/Src/MdsRunners/MdsRunners/Runners/CloudLifterRunners/ConnectivityNetworking/RepairTableStorageRunner.cs&version=GBR2D2)
+      | **Enabled** | [TSGMINW3019](/networking/tsgminw3019-table-storage-resolution-issues.md) |
+
+      | RestartCSUHostRunner | [RestartCSUHostRunner.cs](https://msdata.visualstudio.com/Database%20Systems/_git/SqlTelemetry?path=/Src/MdsRunners/MdsRunners/Runners/CloudLifterRunners/ConnectivityNetworking/RestartCSUHostRunner.cs&version=GBR2D2)
+      | **Enabled** | [TSGMINW2014](/containers/tsgminw2014-restart-csu-host-stuck-update-slo.md) |
+
+      | ServiceFabricConnectivityFailureRunner | [ServiceFabricConnectivityFailureRunner.cs](https://msdata.visualstudio.com/Database%20Systems/_git/SqlTelemetry?path=/Src/MdsRunners/MdsRunners/Runners/CloudLifterRunners/ConnectivityNetworking/ServiceFabricConnectivityFailureRunner.cs&version=GBR2D2)
+      | **Enabled** | [TSGCL0113](https://eng.ms/docs/cloud-ai-platform/azure-data/azure-data-azure-databases/sql-/sql-connectivity/sql-mi-connectivity-and-networking/sql_mi_livesite/tsgs/connectivity-and-networking/tsgcl0113-service-fabric-connectivity-failure)
+      |
+
+      | SqlMICSUAKVIssuesRunner | [SqlMICSUAKVIssuesRunner.cs](https://msdata.visualstudio.com/Database%20Systems/_git/SqlTelemetry?path=/Src/MdsRunners/MdsRunners/Runners/CloudLifterRunners/ConnectivityNetworking/SqlMICSUAKVIssuesRunner.cs&version=GBR2D2)
+      | **Enabled** | [AKV Endpoint Unavailable](/operational/active-production-problems/AKV-Endpoint-unavailable.md) |
+
+      | SqlMiOsDriveUsageAlertRunner | [SqlMiOsDriveUsageAlertRunner.cs](https://msdata.visualstudio.com/Database%20Systems/_git/SqlTelemetry?path=/Src/MdsRunners/MdsRunners/Runners/CloudLifterRunners/ConnectivityNetworking/SqlMiOsDriveUsageAlertRunner.cs&version=GBR2D2)
+      | **Enabled** | [TSGMINW2002](/containers/tsgminw2002-high-osdrive-usage-detected.md) |
+
+      | StuckAliasDBRunner | [StuckAliasDBRunner.cs](https://msdata.visualstudio.com/Database%20Systems/_git/SqlTelemetry?path=/Src/MdsRunners/MdsRunners/Runners/CloudLifterRunners/ConnectivityNetworking/StuckAliasDBRunner.cs&version=GBR2D2)
+      | Disabled | [SOPCL0094](https://eng.ms/docs/cloud-ai-platform/azure-data/azure-data-azure-databases/sql-/sql-connectivity/sql-mi-connectivity-and-networking/sql_mi_livesite/tsgs/connectivity-and-networking/sopcl0094alias-db-stucks-in-same-state-for-more-th)
+      |'
+- id: MI-networking-131
+  Topic: live-site-runners-and-monitors
+  Source: TSG-SQL-MI-Networking/content/operational/live-site-runners-and-monitors/live-site-runners-and-monitors.md
+  Prompts:
+  - MI live-site-runners-and-monitors
+  - Managed Instance live-site-runners-and-monitors
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: Monitor
+    ExecutedQuery: '| Monitor | MDM Ready | SLI Authored | Status | Notes |
+
+      |---------|-----------|-------------|--------|-------|
+
+      | Connectivity/Networking SLI Monitor | Completed | Completed | Maturing SLI | Owned by NW team |
+
+      | Login Success Monitor | Completed | Completed | Active | Not planned for sev 2 |'

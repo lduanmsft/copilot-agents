@@ -1,0 +1,70 @@
+SqlSkills:
+  - id: "4.91"
+    Prompts:
+      - "Long Running Transactions Analysis"
+      - "Long Running Transactions"
+      - "Long Running Query Analysis"
+      - "Long Running Query"
+    MessageForEmptyKustoResult: "Long running queries were not detected when MonDmTranActiveTransactions collection starts"
+    KustoQueries:
+      - TableName: "MonDmTranActiveTransactions"
+        ExecutedQuery: |
+          let LongRunningMessage = (totalCount: int,negativeSessionCount:int,systemTaskSessionCount: int,max_duration_hour:real)
+          {
+          strcat(
+          PluralOrSingular(totalCount,"long runng transaction")," was detected, with max duration ",max_duration_hour, " hours.",
+          iff(negativeSessionCount==0,"",
+          strcat(
+          " ",  PluralOrSingular(systemTaskSessionCount,"transaction")," were Azure DB System Tasks, please engage Experts; ",PluralOrSingular(negativeSessionCount,"transaction"), " had negative session IDs"
+          )
+          )
+          )
+          };
+          MonDmTranActiveTransactions
+          | where {AppNamesNodeNamesWithPreciseTimeRange}
+          | where LogicalServerName =~ '{LogicalServerName}' and (user_db_name =~ '{LogicalDatabaseName}' or 4>= database_id)
+          | extend category = iff(user_db_name == 'tempdb', 'tempdb', iff(accessed_tempdb == 0, 'user_db', 'user_db_with_accessed_tempdb'))
+          | extend duration_hour = round((end_utc_date - transaction_begin_time) / time(1h),1)
+          | extend negativeSessionCount=0>session_id
+          | extend IsSystemTask=program_name in ('DmvCollector', 'TdService', 'BackupService', 'MetricsDownloader')
+          | summarize max_duration_hour = arg_max(duration_hour,
+          session_id,
+          transaction_begin_time,
+          transaction_type,
+          transaction_state,
+          IsSystemTask,
+          status,
+          accessed_tempdb,category,
+          report_time = end_utc_date)
+          by transaction_id,negativeSessionCount
+          | summarize count(),max(max_duration_hour) by IsSystemTask,accessed_tempdb,negativeSessionCount
+          | summarize totalCount=sum(count_), negativeSessionCount=sumif(count_,negativeSessionCount==true),systemTaskSessionCount=sumif(count_,IsSystemTask==true),max_duration_hour=max(max_max_duration_hour)
+          | where totalCount>0
+          | extend longRunningMessage=LongRunningMessage(totalCount,negativeSessionCount,systemTaskSessionCount,max_duration_hour)
+          | project longRunningMessage
+        DisplayedQuery: |
+          MonDmTranActiveTransactions
+          | where {AppNamesNodeNamesWithPreciseTimeRange}
+          | where LogicalServerName =~ '{LogicalServerName}' and (user_db_name =~ '{LogicalDatabaseName}' or 4>= database_id)
+          | extend category = iff(user_db_name == 'tempdb', 'tempdb', iff(accessed_tempdb == 0, 'user_db', 'user_db_with_accessed_tempdb'))
+          | extend duration_hour = round((end_utc_date - transaction_begin_time) / time(1h),1)
+          | extend negativeSessionCount=0>session_id
+          | extend IsSystemTask=program_name in ('DmvCollector', 'TdService', 'BackupService', 'MetricsDownloader')
+          | summarize max_duration_hour = arg_max(duration_hour,
+          session_id,
+          transaction_begin_time,
+          transaction_type,
+          transaction_state,
+          status,
+          accessed_tempdb,category,IsSystemTask,program_name,
+          report_time = end_utc_date)
+          by transaction_id,negativeSessionCount
+          | order by transaction_begin_time asc
+          | take 5
+    QuestionToAI: |-
+      -  {{longRunningMessage}},  the data type is String.
+
+      ### Rules
+      1. Store the value of longRunningMessage column in {{longRunningMessage}}.
+      2. Set {{IssueDetected}} to 'true'.
+      3. Set {{ResultMessage}} to {{longRunningMessage}}.
