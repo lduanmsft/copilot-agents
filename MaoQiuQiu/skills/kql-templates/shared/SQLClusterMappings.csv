@@ -1,0 +1,63 @@
+# SQL Kusto Cluster Mappings
+# Source: DRICopilot/src/core/copilot_v2/skills/kql/general/KustoClusterMappings/SQLClusterMappings.csv
+# Last synced: 2026-04-29
+#
+# Format: [Group] Name, https://cluster.kusto.windows.net:443/database
+# These clusters serve BOTH SQL DB and SQL MI telemetry (sqlazure1 database)
+#
+[ICM] ICM Database,https://icmcluster.kusto.windows.net/IcmDataWarehouse
+[SQL] Australia,https://sqlazureau2.kusto.windows.net:443/sqlazure1
+[SQL] Austria East,https://sqlazureate.austriaeast.kusto.windows.net:443/sqlazure1
+[SQL] Belgium Central,https://sqlazurebec.belgiumcentral.kusto.windows.net:443/sqlazure1
+[SQL] Brazil,https://sqlazurebr2.kusto.windows.net:443/sqlazure1
+[SQL] Brazil South,https://sqlazurebrse1.brazilsouth.kusto.windows.net:443/sqlazure1
+[SQL] Canada,https://sqlazureca2.kusto.windows.net:443/sqlazure1
+[SQL] Central US,https://sqlazurecus2.kusto.windows.net:443/sqlazure1
+[SQL] Chile Central,https://sqlazureclc.chilecentral.kusto.windows.net:443/sqlazure1
+[SQL] East Asia,https://sqlazureeas2.kusto.windows.net:443/sqlazure1
+[SQL] East US 1,https://sqlazureeus12.kusto.windows.net:443/sqlazure1
+[SQL] East US 2,https://sqlazureeus22.kusto.windows.net:443/sqlazure1
+[SQL] France,https://sqlazurefra.kusto.windows.net:443/sqlazure1
+[SQL] Germany,https://sqlazuregermany.kusto.windows.net:443/sqlazure1
+[SQL] India Central,https://sqlazureince2.kusto.windows.net:443/sqlazure1
+[SQL] India South,https://sqlazureinso2.kusto.windows.net:443/sqlazure1
+[SQL] India West,https://sqlazureinwe2.kusto.windows.net:443/sqlazure1
+[SQL] Indonesia Central,https://sqlazureidc.indonesiacentral.kusto.windows.net:443/sqlazure1
+[SQL] Israel Central,https://sqlazureilc.swedencentral.kusto.windows.net:443/sqlazure1
+[SQL] Israel Northwest,https://sqlazureilnw.israelnorthwest.kusto.windows.net:443/sqlazure1
+[SQL] Italy North,https://sqlazureitn.swedencentral.kusto.windows.net:443/sqlazure1
+[SQL] Japan,https://sqlazureja2.kusto.windows.net:443/sqlazure1
+[SQL] Jio India Central,https://sqlazurejinc.centralindia.kusto.windows.net:443/sqlazure1
+[SQL] Jio India West,https://sqlazurejinw.centralindia.kusto.windows.net:443/sqlazure1
+[SQL] Korea,https://sqlazurekor.kusto.windows.net:443/sqlazure1
+[SQL] Malaysia South,https://sqlazuremys.japanwest.kusto.windows.net:443/sqlazure1
+[SQL] Malaysia West,https://sqlazuremyw.malaysiawest.kusto.windows.net:443/sqlazure1
+[SQL] Mexico Central,https://sqlazuremxc.westus3.kusto.windows.net:443/sqlazure1
+[SQL] North Central US,https://sqlazurencus3.kusto.windows.net:443/sqlazure1
+[SQL] North Europe,https://sqlazureneu2.kusto.windows.net:443/sqlazure1
+[SQL] New Zealand North,https://sqlazurenzn.newzealandnorth.kusto.windows.net:443/sqlazure1
+[SQL] Norway,https://sqlazurenorway.kusto.windows.net:443/sqlazure1
+[SQL] Poland Central,https://sqlazureplc.swedencentral.kusto.windows.net:443/sqlazure1
+[SQL] Qatar,https://sqlazureqac.westeurope.kusto.windows.net:443/sqlazure1
+[SQL] SQL Adhoc,https://sqladhoc.kusto.windows.net:443/sqlazure1
+[SQL] SQL Stage,https://sqlstage.kusto.windows.net:443/sqlazure1
+[SQL] South Africa,https://sqlazuresouthafrica.kusto.windows.net:443/sqlazure1
+[SQL] South Central US,https://sqlazurescus2.kusto.windows.net:443/sqlazure1
+[SQL] South East Asia,https://sqlazureseas2.kusto.windows.net:443/sqlazure1
+[SQL] Southcentral US 2,https://sqlazureussc2.southcentralus2.kusto.windows.net:443/sqlazure1
+[SQL] Southeast US,https://sqlazureusse1.southeastus.kusto.windows.net:443/sqlazure1
+[SQL] Southeast US 3,https://sqlazureusse3.southeastus3.kusto.windows.net:443/sqlazure1
+[SQL] Southwest US,https://sqlazureussw1.southwestus.kusto.windows.net:443/sqlazure1
+[SQL] Spain Central,https://sqlazureesc.swedencentral.kusto.windows.net:443/sqlazure1
+[SQL] Sweden South,https://sqlazureses.westeurope.kusto.windows.net:443/sqlazure1
+[SQL] Sweden Central,https://sqlazuresec.westeurope.kusto.windows.net:443/sqlazure1
+[SQL] Switzerland,https://sqlazureswitzerland.kusto.windows.net:443/sqlazure1
+[SQL] Taiwan North,https://sqlazuretwn.japaneast.kusto.windows.net:443/sqlazure1
+[SQL] Taiwan Northwest,https://sqlazuretwnw.japaneast.kusto.windows.net:443/sqlazure1
+[SQL] United Arab Emirates,https://sqlazureuae2.uaenorth.kusto.windows.net:443/sqlazure1
+[SQL] United Kingdom,https://sqlazureuk2.kusto.windows.net:443/sqlazure1
+[SQL] West Central US,https://sqlazrwcus.kusto.windows.net:443/sqlazure1
+[SQL] West Europe,https://sqlazureweu2.kusto.windows.net:443/sqlazure1
+[SQL] West US 1,https://sqlazurewus1.kusto.windows.net:443/sqlazure1
+[SQL] West US 2,https://sqlazurewus2.kusto.windows.net:443/sqlazure1
+[SQL] West US 3,https://sqlazureusw3.westus.kusto.windows.net:443/sqlazure1

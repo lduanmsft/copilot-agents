@@ -1,0 +1,227 @@
+SqlSkills:
+  - id: "79.0"
+    Prompts:
+      - "Memory OverBooking Detection"
+    EvaluationTrueMessage: "Overbooking(Memory) is detected. Please type 'Memory OverBooking Analysis' to get more details."
+    EvaluationFalseMessage: "We conducted checks on MRG, PLB Failover and DRG, but did not identify any significant issue."
+    SuppressOutputOfDescendants: true
+    SubSqlSkills:
+      - Prompts:
+          - "Memory OverBooking Analysis"
+          
+
+  - id: "79"
+    Prompts:
+      - "Memory OverBooking Analysis"
+      - "Memory OverBooking"
+      - "Did the Node have memory pressure"
+      - "Did the Node have memory issue"
+    EvaluationTrueMessage: "Overbooking(Memory) is detected."
+    EvaluationFalseMessage: "We conducted checks on MRG, PLB Failover and DRG, but did not identify any significant issue."
+    #OpenAISummary: "Summarize the result of the 3 SubSqlSkills, excluding the last Sub SqlSkill 'Node Low Memory Analysis', please limite the result in 100 words."
+    SubSqlSkills:
+      - Prompts:
+          - "MRG Issue Analysis"
+      - Prompts:
+          - "DRG Issue Analysis"  
+      - Prompts:
+          - "PLB Failover Analysis"  
+      - Prompts:
+          - "Node Low Memory Analysis"  
+
+
+  - id: "79.1"
+    Prompts:
+      - "MRG Issue Analysis"
+      - "Did the server have MRG"
+      - "Did MRG happen"
+    KustoQueries:
+      - TableName: "MRGTable"
+        ExecutedQuery: |
+          let MRGMessage=(count:int)
+          {
+              iff(count>0,strcat("The Azure db encountered MRG issue ",PluralOrSingular(count,"time")," due to node-level memory pressure caused by overbooking. This may impact overall performance. Please note that MRG is designed to mitigate node-level memory pressure and its activation is expected behavior under such conditions. Do not file an ICM for this."),
+              "The Azure db didn't encountered MRG issue.")
+          };
+          MonRgManager
+          | where {NodeNamesWithOriginalEventTimeRange}
+          | where multi_instance_mem_rg_instance_name has_any ({AppNames})
+          | where event == 'multi_instance_mem_rg_recliam_target'
+          | summarize count=count()
+          | extend ResultMessage=MRGMessage(count)
+          | extend IssueDetected=iff(count>0,'true','false')
+          | project IssueDetected,ResultMessage
+        DisplayedQuery: |
+          MonRgManager
+          | where {NodeNamesWithOriginalEventTimeRange}
+          | where multi_instance_mem_rg_instance_name has_any ({AppNames})
+          | where event == 'multi_instance_mem_rg_recliam_target'
+          | project originalEventTimestamp,multi_instance_mem_rg_session_id,multi_instance_mem_rg_reclaim_target_pages,multi_instance_mem_rg_reclaim_timeout_seconds,multi_instance_mem_rg_instance_name
+          | take 5
+    TSGs:
+      - Title: "MRG"
+        Link: "https://eng.ms/docs/cloud-ai-platform/azure-data/azure-data-azure-databases/sql-/sosrgclr-host/tsg-sqldb-interprocessrg/memory/memtsg002-mrg"
+    QuestionToAI: |-
+      ### Rules
+      1. Store the value of IssueDetected column in {{IssueDetected}}.
+      2. Store the value of ResultMessage column in {{ResultMessage}}.
+
+  - id: "79.2"
+    Prompts:
+      - "DRG Issue Analysis"
+      - "Did the server have DRG"
+      - "Did DRG happen"
+    KustoQueries:
+      - TableName: "DRGTable"
+        ExecutedQuery: |
+          let DRGMessage=(count:int)
+          {
+              iff(count>0,strcat("The Azure db encountered DRG issue ",PluralOrSingular(count,"time"),". This Node level memory pressure(Overbooking), and the overall performance may be impacted, including but not limited to query slowness, login outage, drastic memory cap change, database failover. Please engage Sql Server RG team for RCA."),
+              "The Azure db didn't encountered DRG issue.")
+          };
+          MonRgManager
+          | where {NodeNamesWithOriginalEventTimeRange}
+          | where instance_name has_any ({AppNames})
+          | where event == 'dynamic_rg_cap_change' and resource=='MEMORY'
+          | summarize count=count()
+          | extend ResultMessage=DRGMessage(count)
+          | extend IssueDetected=iff(count>0,'true','false')
+          | project IssueDetected,ResultMessage
+        DisplayedQuery: |
+          MonRgManager
+          | where {NodeNamesWithOriginalEventTimeRange}
+          | where instance_name has_any ({AppNames})
+          | where event == 'dynamic_rg_cap_change' and resource=='MEMORY'
+          | extend Condition = case(new_cap > old_cap, 'MEMORY_DRG_Increase', old_cap>new_cap , 'MEMORY_DRG_Decrease', 'Other')
+          | project originalEventTimestamp,instance_name,slo_cap,job_object_cap,Condition,new_cap,old_cap
+    TSGs:
+      - Title: "DRG"
+        Link: "https://eng.ms/docs/cloud-ai-platform/azure-data/azure-data-azure-databases/sql-/sosrgclr-host/tsg-sqldb-interprocessrg/memory/memtsg001-drg"
+    QuestionToAI: |-
+      ### Rules
+      1. Store the value of IssueDetected column in {{IssueDetected}}.
+      2. Store the value of ResultMessage column in {{ResultMessage}}.
+
+  - id: "79.3"
+    #Description: This skill will check if PLB failover happened when DRG happened."
+    Prompts:
+      - "PLB Failover Analysis"
+      - "Failover Due to PLB"
+      - "Did PLB failover happen before DRG happen"
+    KustoQueries:
+      - TableName: "SqlFailovers_AppMemoryUsageMB"
+        ExecutedQuery: |
+          let FailoverMessage=(failoverCount:int, drgCount:int)
+          {
+              case(drgCount>0 and failoverCount==0,strcat("PLB is supposed to failover to mitigate Node-Level memory pressure, however it didn't happen. Please engage Sql Server RG team to investigte why DRG was triggered but PLB didn't failover."),
+              failoverCount>0,strcat("Failover happened ",PluralOrSingular(failoverCount,"time")," due to Node level memory pressure.(This is an expected behavior when Overbooking happens)"),
+              "No PLB failover happened.")
+          };
+          let AggInterval = time(5m);
+          let failover=materialize (SqlFailovers
+          | where FailoverStartTime between (datetime({StartTime}) ..datetime({EndTime}))
+          | extend LogicalServerName= logical_server_name
+          | where {LogicalServerAndLogicalDatabaseName}
+          | where PLBConstraintType =~'AppMemoryUsageMB'
+          |summarize failoverCount=count() by bin(FailoverStartTime,AggInterval));
+          let drg=materialize(MonRgManager
+          | where {NodeNamesWithOriginalEventTimeRange}
+          | where instance_name has_any ({AppNames})
+          | where event == 'dynamic_rg_cap_change' and resource=='MEMORY'
+          | summarize drgCount=count() by bin(originalEventTimestamp,AggInterval));
+          failover
+          |join kind=fullouter drg on $left.FailoverStartTime==$right.originalEventTimestamp
+          | extend failoverCount=coalesce(failoverCount,0)//set to 0 if null
+          | extend drgCount=coalesce(drgCount,0)//set to 0 if null
+          | order by failoverCount desc 
+          | take 1
+          | extend ResultMessage=FailoverMessage(failoverCount,drgCount)
+          | extend IssueDetected=iff(failoverCount+drgCount>0,'true','false')
+          | project IssueDetected,ResultMessage
+        DisplayedQuery: |
+          SqlFailovers
+          | where FailoverStartTime between (datetime({StartTime}) ..datetime({EndTime}))
+          | extend LogicalServerName= logical_server_name
+          | where {LogicalServerAndLogicalDatabaseName}
+          | where PLBConstraintType =~'AppMemoryUsageMB'
+          | project FailoverStartTime,FailoverEndTime,FailoverCount,ReconfigurationType,PLBConstraintType,OldPrimary,NewPrimary, logical_server_name,logical_database_name
+          | take 5
+    MessageForEmptyKustoResult: "No PLB failover happened."
+    QuestionToAI: |-
+      ### Rules
+      1. Store the value of IssueDetected column in {{IssueDetected}}.
+      2. Store the value of ResultMessage column in {{ResultMessage}}.
+
+  - id: "79.4"
+    Prompts:
+      - "Node Low Memory Analysis"
+      - "Node Memory Pressure"
+    #This skill will check the Node memory usage and compare with DRG/MRG threshold to see if the node had memory pressure
+    KustoQueries:
+      - TableName: "AvailableMemoryLow_DRG_MRG"
+        ExecutedQuery: |
+          let drg_threshold=(MonRgManager
+          | where {NodeNamesAndClusterName}
+          | where originalEventTimestamp between (datetime_add('day',-20,datetime({StartTime})) ..datetime({EndTime}))
+          | where event =="dynamic_rg_update_parameters" and resource =="MEMORY"
+          | extend drg_threshold_mb=toint(min_threshold)
+          | distinct ClusterName,NodeName,drg_threshold_mb
+          );
+          let mrg_threshold=(MonRgManager
+          | where {NodeNamesAndClusterName}
+          | where originalEventTimestamp between (datetime_add('day',-20,datetime({StartTime})) ..datetime({EndTime}))
+          | where event =="multi_instance_mem_rg_update_parameters"
+          | extend mrg_threshold_mb=toint(multi_instance_mem_rg_min_physical_memory_available_mb)
+          | distinct ClusterName,NodeName,mrg_threshold_mb
+          );
+          let LowMemoryDetection = (mrgCount:int, drgCount:int) 
+          {
+                    iff(mrgCount+drgCount==0,"The node(s) did not encounter a low memory condition, and neither MRG nor DRG occurred.",
+                              strcat("The node encountered low memory condition, with available memory falling below MRG threshold ", PluralOrSingular(mrgCount,"time"), ", and below DRG threshold ",PluralOrSingular(drgCount,"time"),". Please click the link to review the Node Memory usage and Threshold of DRG/MRG.")
+                    );
+          };
+          MonRgLoad
+          | extend originalEventTimestamp=TIMESTAMP
+          | where {NodeNamesWithOriginalEventTimeRange}
+          | where event =~'node_info'
+          | extend node_Available_memory_mb=toint(node_physical_mem_mb)-toint(node_used_commit_mem_mb)
+          | join kind= inner(drg_threshold) on ClusterName,NodeName
+          | join kind= inner(mrg_threshold) on ClusterName,NodeName
+          | extend isDrgTriggered= drg_threshold_mb>node_Available_memory_mb
+          | extend isMrgTriggered= mrg_threshold_mb>node_Available_memory_mb
+          | summarize count=count(),mrgCount=countif(isMrgTriggered),drgCount=countif(isDrgTriggered)
+          | where count > 0//NodeInfo telemetry is not available if it's 0
+          | extend ResultMessage=LowMemoryDetection(mrgCount,drgCount)
+          | extend IssueDetected=iff(mrgCount+drgCount>0,'true','false')
+        DisplayedQuery: |
+          MonCounterOneMinute
+          | where CounterName=~@'\Memory\Available MBytes'
+          | where {NodeNamesWithPreciseTimeRange}
+          | project PreciseTimeStamp, AvailableMemory_MB=CounterValue,NodeName
+          | render timechart;
+
+          //This query is to get the node memory configuration including DRG and MRG threshold
+          let nodeInfo=(MonRgLoad
+          | extend originalEventTimestamp=TIMESTAMP
+          | where {NodeNamesWithOriginalEventTimeRange}
+          | where event =~'node_info'
+          | distinct ClusterName,NodeName,node_sku,node_physical_mem_mb);
+          let drg=(MonRgManager
+          | where {NodeNamesAndClusterName}
+          | where originalEventTimestamp between (datetime_add('day',-20,datetime({StartTime})) ..datetime({EndTime}))
+          | where event =="dynamic_rg_update_parameters" and resource =="MEMORY"//When available memory falls below min_threshold_gb, DRG will take action to reduce job memory capacity. Once memory recovers to max_threshold_gb, DRG will gradually restore the job memory capacity to its original value
+          | summarize  by ClusterName,NodeName,min_threshold,max_threshold);
+          let mrg=(MonRgManager
+          | where {NodeNamesAndClusterName}
+          | where originalEventTimestamp between (datetime_add('day',-20,datetime({StartTime})) ..datetime({EndTime}))
+          | where event =="multi_instance_mem_rg_update_parameters"////When available memory falls below multi_instance_mem_rg_min_physical_memory_available_mb, MRG will reduce the Azure DB memory target to alleviate memory pressure. Once memory recovers to multi_instance_mem_rg_max_physical_memory_available_mb, DRG will gradually restore the memory target
+          | summarize by multi_instance_mem_rg_min_physical_memory_available_mb,multi_instance_mem_rg_max_physical_memory_available_mb, ClusterName,NodeName);
+          nodeInfo
+          | join kind=fullouter   drg on ClusterName,NodeName
+          | join kind=fullouter   mrg on ClusterName,NodeName
+          | project-away ClusterName1,NodeName1,ClusterName2,NodeName2
+    MessageForEmptyKustoResult: "NodeInfo telemetry(dynamic_rg_update_parameters/multi_instance_mem_rg_update_parameters in MonRgManager) is not available"
+    QuestionToAI: |-
+      ### Rules
+      1. Store the value of ResultMessage column in {{ResultMessage}}.
+      2. Store the value of IssueDetected column in {{IssueDetected}}.

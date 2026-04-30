@@ -1,0 +1,16 @@
+let PluralOrSingular = (count:int, word:string) {iff(count>1, strcat(count," ",word, "s"),strcat(count," ",word))};
+let FilterMakeSetResult=(Make_SetResult:string)//This function is filter the result of make_set function, to remove the brackets and double quotes from the ReadOnlyReasonArray returned by make_set function
+{
+let filteredResult= replace_string(
+                      replace_string(
+						replace_string(
+							replace_string(
+								replace_string(Make_SetResult, "[", ""),///remove [
+											                          "]", ""),//remove ]
+							                                              "\"", ""),
+                                                                               @"\\", @"\"),
+					",", ";");
+filteredResult
+//Input:["ACTIVE_TRANSACTION","CHECKPOINT"]
+//Output:ACTIVE_TRANSACTION;CHECKPOINT
+};

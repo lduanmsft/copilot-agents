@@ -1,0 +1,105 @@
+SqlSkills:
+  - id: "79.0"
+    Prompts:
+      - "Worker Thread Exhaustion Detection"
+    EvaluationTrueMessage: "Worker Thread Exhaustion is detected, please type 'Worker Thread Exhaustion Analysis' to get more details."
+    EvaluationFalseMessage: "Worker Thread Exhaustion is not detected."
+    SuppressOutputOfDescendants: true
+    SubSqlSkills:
+      - Prompts:
+          - "Worker Thread Exhaustion Analysis"
+
+  - id: "18"
+    # Description:This skill will check Worker thread usage and find possible root cause if worker thread exhaustion happened.
+    Prompts:
+      - "Worker Thread Exhaustion Analysis"
+      - "thread exhaustion"
+      - "Worker exhaustion"
+      - "is worker exhausted"
+      - "is thread exhausted"
+    KustoQueries:
+      - TableName: "MonSQLSystemHealthWorkerExhaustion"
+        ExecutedQuery: |
+          MonSQLSystemHealth
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | where message contains 'The request limit for the database' or message contains 'The request limit for the elastic pool'
+          //| summarize Hits_PerHour = count() by bin(originalEventTimestamp, 1h)
+          //The error_id are 10928 and 10936. We use message instead of error_id to filter because the error_id covers both 'Request limit' and 'Session Limit'
+          | summarize count=count()
+        DisplayedQuery: |
+          MonSQLSystemHealth
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | where message contains 'The request limit for the database' or message contains 'The request limit for the elastic pool'
+          | summarize Hits_PerHour = count() by bin(originalEventTimestamp, 15m)
+    QuestionToAI: |-
+      Read the 'MonSQLSystemHealthWorkerExhaustion' table, which contains only one row, and assign values to the variables below based on its data and the following rules
+      Besides of previous three variables, there are another 1 variable:
+      1.{{count}}, the data type is Integer.
+
+      Rules:
+      1. Read the data from the row, and perform the following operations:
+      2. Store the value of count column in {{count}}.
+      3. If the {{count}} is greater than 0, then  {{IssueDetected}} is 'true', else {{IssueDetected}} is 'false'.
+      4. If {{IssueDetected}} is 'false', then {{ResultMessage}} is "Worker threads exhaustion didn't happen.",
+      else {{ResultMessage}} is "The worker threads limited is reached {{count}} time(s) for the database.
+      Potential causes include excessive blocking, a sudden surge in active sessions, and other factors.
+      We will now investigate these possible causes".
+    SubSqlSkills:
+      - id: "18.1"
+        ExecutedWhenParentIssueDetected: true
+        AlwaysDisplayResult: true
+        Prompts:
+          - "Worker thread grow possible cause"
+
+  - id: "18.1"
+    Prompts:
+      - "Worker thread grow possible cause"
+      - "Why Worker thread grow"
+    EvaluationTrueMessage: "Possible cause is found"
+    EvaluationFalseMessage: >
+      We conducted checks on Blocking, Session spawn, Non-Yielding Scheduler but did not identify any significant issue. You may need to collect Azure Profiler trace
+    SubSqlSkills:
+      - id: "18.2"
+        Prompts:
+          - "Possible cause of Worker growth "
+      - id: "18.2"
+        Prompts:
+          - "Blocking summary"
+      - id: "18.2"
+        Prompts:
+          - "Non-Yielding Scheduler"
+
+  - id: "18.2"
+    Prompts:
+      - "Possible cause of Worker growth "
+      - "Comparison of pattern similarity between 'Worker Threads' usage and 'Sessions' usage."
+    KustoQueries:
+      - TableName: "MonDmRealTimeResourceStats_Similiary"
+        ExecutedQuery: |
+          MonDmRealTimeResourceStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | summarize Max_Worker = max(max_worker_percent), Max_Session = max(max_session_percent) by bin(originalEventTimestamp, 15s)
+          | sort by originalEventTimestamp asc nulls last
+          | summarize workers=make_list(Max_Worker),sessions=make_list(Max_Session)
+          | extend similarity = series_cosine_similarity(workers, sessions)
+          | project similarity
+        DisplayedQuery: |
+          MonDmRealTimeResourceStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | project originalEventTimestamp ,max_worker_percent, max_session_percent
+          | order by originalEventTimestamp asc
+          | render timechart
+    QuestionToAI: |-
+      Read the 'MonDmRealTimeResourceStats_Similiary' table, which contains only one row, and assign values to the variables below based on its data and the following rules
+      Besides of previous three variables, there are another 1 variable:
+      1.{{similarity}}, the data type is Float.
+
+      Rules:
+      1. Store the value of similarity column in {{similarity}}.
+      2. The {{IssueDetected}} depends on the {{highCpuDuration_min}}: If {{similarity}} is greater than 0.9, then {{IssueDetected}} is 'true', else {{IssueDetected}} is 'false'.
+      3. If {{IssueDetected}} is true, then {{ResultMessage}} is "The pattern of worker threads and sessions is very similar. The increased number of worker threads may be caused by sessions spawned by user applications. Please review the ASC Report 'Database Resource Consumption Statistics' to confirm.",
+      else the {{ResultMessage}} is "No correlation between worker threads and session Spike has been detected.."

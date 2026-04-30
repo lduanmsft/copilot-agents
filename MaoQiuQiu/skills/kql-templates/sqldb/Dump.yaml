@@ -1,0 +1,123 @@
+SqlSkills:
+  - id: "4.17"
+    Prompts:
+      - "Dump summary"
+      - "Dump Analysis"
+      - "Was dump created"
+      - "Any dump"
+      - "Any dump file"
+    KustoQueries:
+      - TableName: "MonSqlDumperActivity"
+        ServiceTiers: "Free;Basic;Standard;Premium;GeneralPurpose;BusinessCritical"
+        ExecutedQuery: |
+          let DumpMessage = (totalCount: int,dcount_StackSignature: int,StartTime: string,EndTime: string,StackSignature: string,count_TopSignature: int,DumpErrorDetails: string,StartTime_TopSignature: string,EndTime_TopSignature: string
+          )
+          {
+          strcat(
+          "Dump was created ", PluralOrSingular(totalCount,"time")," with ",
+          dcount_StackSignature, " distinct stack Signature from '",
+          StartTime, "' and '", EndTime, "'. The most frequent Stack Signature is ",
+          StackSignature, " associated with DumpErrorDetails '",DumpErrorDetails, "'. It happened ",PluralOrSingular(count_TopSignature,"time"), " between '", StartTime_TopSignature, "'~'", EndTime_TopSignature,"'"
+          )
+          //sample:Dump was created 44 times with 7 distinct stack Signature from '2025-08-23 18:33:59' and '2025-08-24 07:50:40'. The most frequent Stack Signature is 00000000000003BD associated with DumpErrorDetails'Stalled Dispatcher'. It happened 15 times between '2025-08-24 01:50:29'~'2025-08-24 07:32:04'
+          };
+          let baseUrl="https://portal.watson.azure.com/dump?dumpUID=";
+          MonSqlDumperActivity
+          | extend AppName=split(TargetAppName, "/")[-1]//To extract the appname after last slash in a value like fabric:/Worker.ISO.Premium/ABCDEFG
+          | extend LogicalServerName=split(TargetLogicalServerName, ".")[0]//To extract the string before the first dot in a value like "serverName.database.windows.net"
+          | where AppName in ({AppNames})
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | extend DumperStartTime=PreciseTimeStamp//DumperStartTime is supposed to be Datetime, however it's string datatype in some clusters(sqlazureeus12 for example). To make it work in all regions, temporarily use PreciseTimeStamp
+          | where DumperStartTime between(datetime({StartTime})..datetime({EndTime}))
+          | extend DumperStartTime=format_datetime(DumperStartTime, 'yyyy-MM-dd HH:mm:ss')
+          | summarize arg_max(TIMESTAMP,DumperStartTime, AppName,NodeName,ClusterName,CallStack,StackSignature,DumpErrorText,DumpErrorDetails) by DumpUID
+          | summarize count(),min(DumperStartTime),max(DumperStartTime) by StackSignature,DumpErrorDetails
+          | summarize totalCount=sum(count_),dcount_StackSignature=dcount(StackSignature),StartTime=min(min_DumperStartTime),EndTime=max(max_DumperStartTime), arg_max(count_TopSignature=count_,StackSignature,DumpErrorDetails,StartTime_TopSignature=min_DumperStartTime,EndTime_TopSignature=max_DumperStartTime)
+          | where totalCount>0
+          | extend dumpMessage=DumpMessage(totalCount,dcount_StackSignature,StartTime,EndTime,StackSignature,count_TopSignature,DumpErrorDetails,StartTime_TopSignature,EndTime_TopSignature)
+          | project dumpMessage
+        DisplayedQuery: |
+          let baseUrl="https://portal.watson.azure.com/dump?dumpUID=";
+          MonSqlDumperActivity
+          |extend AppName=split(TargetAppName, "/")[-1]
+          |extend LogicalServerName=split(TargetLogicalServerName, ".")[0]
+          | where AppName in ({AppNames})
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | extend DumperStartTime=PreciseTimeStamp//DumperStartTime is supposed to be Datetime, however it's string datatype in some clusters(sqlazureeus12 for example). To make it work in all regions, temporarily use PreciseTimeStamp
+          | where DumperStartTime between(datetime({StartTime})..datetime({EndTime}))
+          | extend DumperStartTime=format_datetime(DumperStartTime, 'yyyy-MM-dd HH:mm:ss')
+          | summarize arg_max(TIMESTAMP,DumperStartTime, AppName,NodeName,ClusterName,CallStack,StackSignature,DumpErrorText,DumpErrorDetails,IsFailed,FailReason) by DumpUID
+          | extend DumpURL =iff(IsFailed==false, strcat(baseUrl, DumpUID),FailReason)
+          | summarize arg_min(DumperStartTime,DumpURL,DumpErrorDetails,DumpErrorText,IsFailed,FailReason,NodeName) by StackSignature
+          | order by DumperStartTime asc
+      - TableName: "MonSqlDumperActivity_Hyperscale"
+        ServiceTiers: "Hyperscale"
+        ExecutedQuery: |
+          let DumpMessage = (totalCount: int,Count_PageServer_LogServer:int,dcount_StackSignature: int,StartTime: string,EndTime: string,
+          StackSignature: string,count_TopSignature: int,DumpErrorDetails: string,StartTime_TopSignature: string,EndTime_TopSignature: string)
+          {
+          strcat(
+          "Dump was created ", PluralOrSingular(totalCount,"time")," with ",
+          dcount_StackSignature, " distinct stack Signature from '",
+          StartTime, "' and '", EndTime, "'. The most frequent Stack Signature is ",
+          StackSignature, " associated with DumpErrorDetails '",DumpErrorDetails, "'. It happened ", PluralOrSingular(count_TopSignature,"time"),  " between '", StartTime_TopSignature, "'~'", EndTime_TopSignature,"'.",
+          case(Count_PageServer_LogServer==0," Please note, all dump files were created in ComputeNode.",
+          Count_PageServer_LogServer==totalCount," Please note, all dump files were created in Page/Log Servers.",
+          strcat("Please note, ", PluralOrSingular(totalCount-Count_PageServer_LogServer,"dump file")," were created in ComputeNode, rest of them were created in Page/Log Servers."))
+          )
+          //sample1:Dump was created 1792 times with 45 distinct stack Signature from '2025-08-15 03:56:11' and '2025-08-17 00:00:10'. The most frequent Stack Signature is 0000000000000193 associated with DumpErrorDetails 'Non-yielding Scheduler'. It happened 119 times between '2025-08-15 11:17:47'~'2025-08-16 23:37:06'. Please note, all dump files were created in Page Servers.
+          //sample 2:Dump was created 4014 times with 46 distinct stack Signature from '2025-08-15 03:56:11' and '2025-08-17 23:00:07'. The most frequent Stack Signature is 0000000000000193 associated with DumpErrorDetails 'Non-yielding Scheduler'. It happened 240 times between '2025-08-15 11:17:47'~'2025-08-17 22:32:20'.Please note, 15 dump files were created in ComputeNode, rest of them were created in Page/Log Servers.
+          };
+          let baseUrl="https://portal.watson.azure.com/dump?dumpUID=";
+          let appNames=materialize (
+          MonSocrates
+          | where  (originalEventTimestamp between (datetime({StartTime})..datetime({EndTime})))
+          | where LogicalServerName =~ '{LogicalServerName}' and logical_database_name =~ '{LogicalDatabaseName}'
+          | where isnotempty(foreign_file_id)
+          | summarize by AppName,AppTypeName
+          );
+          MonSqlDumperActivity
+          | extend AppName=split(TargetAppName, "/")[-1]
+          | extend AppName=tostring(AppName)
+          | extend LogicalServerName=split(TargetLogicalServerName, ".")[0]
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | join kind=inner(appNames) on AppName
+          | extend DumperStartTime=PreciseTimeStamp//DumperStartTime is supposed to be Datetime, however it's string datatype in some clusters(sqlazureeus12 for example). To make it work in all regions, temporarily use PreciseTimeStamp
+          | where DumperStartTime between (datetime({StartTime})..datetime({EndTime}))
+          | extend DumperStartTime=format_datetime(DumperStartTime, 'yyyy-MM-dd HH:mm:ss')
+          | summarize arg_min(DumperStartTime, AppName, NodeName,ClusterName,CallStack,StackSignature,DumpErrorText,DumpErrorDetails) by DumpUID,AppTypeName1
+          | summarize count(),min(DumperStartTime),max(DumperStartTime) by StackSignature,DumpErrorDetails,AppTypeName1
+          | summarize totalCount=sum(count_),Count_PageServer_LogServer=sumif(count_,AppTypeName1!='Worker.Vldb.Compute'),dcount_StackSignature=dcount(StackSignature),StartTime=min(min_DumperStartTime),EndTime=max(max_DumperStartTime), arg_max(count_TopSignature=count_,StackSignature,DumpErrorDetails,StartTime_TopSignature=min_DumperStartTime,EndTime_TopSignature=max_DumperStartTime)
+          | where totalCount>0
+          | extend dumpMessage=DumpMessage(totalCount,Count_PageServer_LogServer,dcount_StackSignature,StartTime,EndTime,StackSignature,count_TopSignature,DumpErrorDetails,StartTime_TopSignature,EndTime_TopSignature)
+          | project dumpMessage
+        DisplayedQuery: |
+          let appNames=materialize (
+          MonSocrates
+          | where  (originalEventTimestamp between (datetime({StartTime})..datetime({EndTime})))
+          | where LogicalServerName =~ '{LogicalServerName}' and logical_database_name =~ '{LogicalDatabaseName}'
+          | where isnotempty(foreign_file_id)
+          | summarize by AppName,AppTypeName
+          );
+          let baseUrl="https://portal.watson.azure.com/dump?dumpUID=";
+          MonSqlDumperActivity
+          |extend AppName=split(TargetAppName, "/")[-1]
+          | extend AppName=tostring(AppName)
+          |extend LogicalServerName=split(TargetLogicalServerName, ".")[0]
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | join kind=inner(appNames) on AppName
+          | extend DumperStartTime=PreciseTimeStamp//DumperStartTime is supposed to be Datetime, however it's string datatype in some clusters(sqlazureeus12 for example). To make it work in all regions, temporarily use PreciseTimeStamp
+          | where DumperStartTime between(datetime({StartTime})..datetime({EndTime}))
+          | extend DumperStartTime=format_datetime(DumperStartTime, 'yyyy-MM-dd HH:mm:ss')
+          | summarize arg_min(DumperStartTime, AppName1,NodeName,ClusterName,CallStack,StackSignature,DumpErrorText,DumpErrorDetails,IsFailed,FailReason) by DumpUID,AppTypeName1
+          | extend DumpURL =iff(IsFailed==false, strcat(baseUrl, DumpUID),FailReason)
+          | order by DumperStartTime asc
+          | take 5
+    MessageForEmptyKustoResult: "The azure Db didn't have dump created"
+    QuestionToAI: |-
+      -  {{dumpMessage}},  the data type is String.
+
+      ### Rules
+      1. Store the value of dumpMessage column in {{dumpMessage}}.
+      2. Set {{IssueDetected}} to 'true'.
+      3. Set {{ResultMessage}} to {{dumpMessage}}.

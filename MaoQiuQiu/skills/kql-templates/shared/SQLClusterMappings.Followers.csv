@@ -1,0 +1,61 @@
+# SQL Kusto Cluster Mappings - Follower Clusters (Read-Only, Lower Load)
+# Source: DRICopilot/src/core/copilot_v2/skills/kql/general/KustoClusterMappings/SQLClusterMappings.Followers.csv
+# Last synced: 2026-04-29
+# Prefer follower clusters for ad-hoc queries to avoid impacting production telemetry ingestion
+#
+[ICM] ICM Database,https://icmcluster.kusto.windows.net/IcmDataWarehouse
+[SQL] Australia,https://sqlazureau2follower.australiaeast.kusto.windows.net:443/sqlazure1
+[SQL] Austria East,https://sqlazureatefollower.austriaeast.kusto.windows.net:443/sqlazure1
+[SQL] Belgium Central,https://sqlazurebecfollower.belgiumcentral.kusto.windows.net:443/sqlazure1
+[SQL] Brazil,https://sqlazurebr2follower.brazilsouth.kusto.windows.net:443/sqlazure1
+[SQL] Brazil South,https://sqlazurebrse1follower.brazilsouth.kusto.windows.net:443/sqlazure1
+[SQL] Canada,https://sqlazureca2follower.canadacentral.kusto.windows.net:443/sqlazure1
+[SQL] Central US,https://sqlazurecus2follower.centralus.kusto.windows.net:443/sqlazure1
+[SQL] Chile Central,https://sqlazureclcfollower.chilecentral.kusto.windows.net:443/sqlazure1
+[SQL] East Asia,https://sqlazureeas2follower.eastasia.kusto.windows.net:443/sqlazure1
+[SQL] East US 1,https://sqlazureeus12follower.eastus.kusto.windows.net:443/sqlazure1
+[SQL] East US 2,https://sqlazureeus22follower.eastus2.kusto.windows.net:443/sqlazure1
+[SQL] France,https://sqlazurefrafollower.francecentral.kusto.windows.net:443/sqlazure1
+[SQL] Germany,https://sqlazuredenfollower.francecentral.kusto.windows.net:443/sqlazure1
+[SQL] India Central,https://sqlazureince2follower.southeastasia.kusto.windows.net:443/sqlazure1
+[SQL] India South,https://sqlazureinso2follower.southeastasia.kusto.windows.net:443/sqlazure1
+[SQL] India West,https://sqlazureinwe2follower.southeastasia.kusto.windows.net:443/sqlazure1
+[SQL] Indonesia Central,https://sqlazureidcfollower.indonesiacentral.kusto.windows.net:443/sqlazure1
+[SQL] Israel Central,https://sqlazureilcfollower.swedencentral.kusto.windows.net:443/sqlazure1
+[SQL] Israel Northwest,https://sqlazureilnwfollower.israelnorthwest.kusto.windows.net:443/sqlazure1
+[SQL] Italy North,https://sqlazureitnfollower.swedencentral.kusto.windows.net:443/sqlazure1
+[SQL] Japan,https://sqlazureja2follower.japaneast.kusto.windows.net:443/sqlazure1
+[SQL] Jio India Central,https://sqlazurejincfollower.centralindia.kusto.windows.net:443/sqlazure1
+[SQL] Jio India West,https://sqlazurejinwfollower.centralindia.kusto.windows.net:443/sqlazure1
+[SQL] Korea,https://sqlazurekorfollower.koreacentral.kusto.windows.net:443/sqlazure1
+[SQL] Malaysia South,https://sqlazuremysfollower.japanwest.kusto.windows.net:443/sqlazure1
+[SQL] Malaysia West,https://sqlazuremywfollower.malaysiawest.kusto.windows.net:443/sqlazure1
+[SQL] Mexico Central,https://sqlazuremxcfollower.westus3.kusto.windows.net:443/sqlazure1
+[SQL] North Central US,https://sqlazurencus3follower.northcentralus.kusto.windows.net:443/sqlazure1
+[SQL] North Europe,https://sqlazureneu2follower.northeurope.kusto.windows.net:443/sqlazure1
+[SQL] New Zealand North,https://sqlazurenznfollower.newzealandnorth.kusto.windows.net:443/sqlazure1
+[SQL] Norway,https://sqlazurenorwayfollower.northeurope.kusto.windows.net:443/sqlazure1
+[SQL] Poland Central,https://sqlazureplcfollower.swedencentral.kusto.windows.net:443/sqlazure1
+[SQL] Qatar,https://sqlazureqacfollower.westeurope.kusto.windows.net:443/sqlazure1
+[SQL] SQL Adhoc,https://sqladhoc.kusto.windows.net:443/sqlazure1
+[SQL] SQL Stage,https://sqlstagefollower.southeastasia.kusto.windows.net:443/sqlazure1
+[SQL] South Africa,https://sqlazurejnbfollower.southindia.kusto.windows.net:443/sqlazure1
+[SQL] South Central US,https://sqlazurescus2follower.southcentralus.kusto.windows.net:443/sqlazure1
+[SQL] South East Asia,https://sqlazureseas2follower.southeastasia.kusto.windows.net:443/sqlazure1
+[SQL] Southcentral US 2,https://sqlazureussc2follower.southcentralus2.kusto.windows.net:443/sqlazure1
+[SQL] Southeast US,https://sqlazureusse1follower.southeastus.kusto.windows.net:443/sqlazure1
+[SQL] Southeast US 3,https://sqlazureusse3follower.southeastus3.kusto.windows.net:443/sqlazure1
+[SQL] Southwest US,https://sqlazureussw1follower.southwestus.kusto.windows.net:443/sqlazure1
+[SQL] Spain Central,https://sqlazureescfollower.swedencentral.kusto.windows.net:443/sqlazure1
+[SQL] Sweden South,https://sqlazuresesfollower.westeurope.kusto.windows.net:443/sqlazure1
+[SQL] Sweden Central,https://sqlazuresecfollower.westeurope.kusto.windows.net:443/sqlazure1
+[SQL] Switzerland,https://sqlazurechnfollower.francecentral.kusto.windows.net:443/sqlazure1
+[SQL] Taiwan North,https://sqlazuretwnfollower.japaneast.kusto.windows.net:443/sqlazure1
+[SQL] Taiwan Northwest,https://sqlazuretwnwfollower.japaneast.kusto.windows.net:443/sqlazure1
+[SQL] United Arab Emirates,https://sqlazureuae2follower.uaenorth.kusto.windows.net:443/sqlazure1
+[SQL] United Kingdom,https://sqlazureuk2follower.uksouth.kusto.windows.net:443/sqlazure1
+[SQL] West Central US,https://sqlazrwcusfollower.westcentralus.kusto.windows.net:443/sqlazure1
+[SQL] West Europe,https://sqlazureweu2follower.westeurope.kusto.windows.net:443/sqlazure1
+[SQL] West US 1,https://sqlazurewus1follower.westus.kusto.windows.net:443/sqlazure1
+[SQL] West US 2,https://sqlazurewus2follower.westus.kusto.windows.net:443/sqlazure1
+[SQL] West US 3,https://sqlazureusw3follower.westus.kusto.windows.net:443/sqlazure1

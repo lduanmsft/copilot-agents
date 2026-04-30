@@ -1,0 +1,174 @@
+SqlSkills:
+  - id: "232.1"
+    Prompts:
+      - "QDS Readonly Detection"
+      - "Query Store Readonly Detection"
+      - "QDS Readonly"
+    MessageForEmptyKustoResult: "Query Store didn't run into readonly."
+    KustoQueries:
+      - TableName: "MonQueryStoreFailures_QDSReadonly_detection"
+        ExecutedQuery: |
+          MonQueryStoreFailures
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | where event in~ ('query_store_stmt_hash_map_over_memory_limit',
+          'query_store_buffered_items_over_memory_limit',
+          'query_store_resource_total_over_instance_limit' ,
+          'query_store_disk_size_over_limit',
+          'query_store_database_out_of_disk_space'
+          )
+          | summarize _count=count()
+          | where _count > 0
+          | extend readonlyMessage=strcat("Query Store run into readonly ",_count," time(s). Please type 'QDS Readonly Root Cause Analysis' if you'd like to find the root cause")
+        DisplayedQuery: |
+          MonQueryStoreFailures
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | where event in~ ('query_store_stmt_hash_map_over_memory_limit',
+          'query_store_buffered_items_over_memory_limit',
+          'query_store_resource_total_over_instance_limit' ,
+          'query_store_disk_size_over_limit',
+          'query_store_database_out_of_disk_space'
+          )
+          | summarize _count=count(),min(originalEventTimestamp),max(originalEventTimestamp) by event
+          | order by _count desc
+    QuestionToAI: |-
+      -  {{readonlyMessage}}, the data type is String.
+
+      ### Rules
+      1. Store the value of readonlyMessage column in {{readonlyMessage}}.
+      2. Set {{IssueDetected}} to 'true'.
+      3. Set {{ResultMessage}} to {{readonlyStatus}}.
+
+  - id: "232.2"
+    Prompts:
+      - "QDS Current Settings"
+    KustoQueries:
+      - TableName: "MonQueryStoreInfo_QDSSetting"
+        ExecutedQuery: |
+          let="" CapturePolicyStatus = (capture_policy_mode: string,capture_policy_execution_count:int,capture_policy_total_compile_cpu_ms:int,capture_policy_total_execution_cpu_ms:int)
+          {
+          let recommendatoin="Suggest switching to Auto mode. Current setting is not recommended because it persists all queries into Query Store and is likely to cause Query Store to enter read-only mode due to one of the following reasons: 65536, 131072, 262144.";
+          case(
+          capture_policy_mode =~'x_qdsCaptureModeAll' ,strcat("CaptureMode is set to 'Full' instead of 'Auto'. ",recommendatoin),
+          capture_policy_execution_count<30 or capture_policy_total_compile_cpu_ms<1000 or capture_policy_total_execution_cpu_ms<100,strcat("The capture_policy_setting allows more queries to be persisted ",recommendatoin),"We don't find obvious issue."
+            )
+            //Sample output1:CaptureMode is set to 'Full' instead of 'Auto'. Suggest switching to Auto mode. Current setting is not recommended because it persists all queries into Query Store and is likely to cause Query Store to enter read-only mode due to one of the following reasons: 65536, 131072, 262144.
+            //Sample output2:The capture_policy_setting allows more queries to be persisted. Suggest switching to Auto mode. Current setting is not recommended because it persists all queries into Query Store and is likely to cause Query Store to enter read-only mode due to one of the following reasons: 65536, 131072, 262144.
+            };
+            MonQueryStoreInfo
+            | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+            | where {LogicalServerAndLogicalDatabaseName}
+            | where event == 'query_store_db_settings_and_state'////event query_store_db_diagnostics happens every 60 mins.
+            | extend ActualState = case (db_state_actual == 0, 'Off', db_state_actual == 1, 'ReadOnly', db_state_actual == 2, 'ReadWrite', db_state_actual == 3, 'Error', db_state_desired == 4, 'READ_CAPTURE_SECONDARY','Other')
+            | extend DesiredState = case (db_state_desired == 0, 'Off', db_state_desired == 1, 'ReadOnly', db_state_desired == 2, 'ReadWrite', db_state_desired == 3, 'Error', db_state_desired == 4, 'READ_CAPTURE_SECONDARY','Other')
+            |top 1  by  PreciseTimeStamp desc
+            | extend capturePolicyStatus=CapturePolicyStatus(capture_policy_mode,capture_policy_execution_count,capture_policy_total_compile_cpu_ms,capture_policy_total_execution_cpu_ms)
+            |project capturePolicyStatus
+        DisplayedQuery: |
+          MonQueryStoreFailures
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | where AppTypeName !contains 'Worker.Vldb.Storage'//filterd out hyperscale stroage node.
+          | where event == 'query_store_db_settings_and_state'////event query_store_db_diagnostics happens every 60 mins.
+          | extend ActualState = case (db_state_actual == 0, 'Off', db_state_actual == 1, 'ReadOnly', db_state_actual == 2, 'ReadWrite', db_state_actual == 3, 'Error', db_state_desired == 4, 'READ_CAPTURE_SECONDARY','Other')
+          | extend DesiredState = case (db_state_desired == 0, 'Off', db_state_desired == 1, 'ReadOnly', db_state_desired == 2, 'ReadWrite', db_state_desired == 3, 'Error', db_state_desired == 4, 'READ_CAPTURE_SECONDARY','Other')
+          | extend CaptureMode = case (capture_policy_mode =~ 'x_qdsCaptureModeAuto', 'Auto', capture_policy_mode =~ 'x_qdsCaptureModeAll', 'All',
+          capture_policy_mode =~ 'x_qdsCaptureModeNone', 'None',  capture_policy_mode =~ 'x_qdsCaptureModeCustom', 'Custom', 'Other')
+          |top 1  by  PreciseTimeStamp desc
+          | project Packed=pack(
+          'ActualState',ActualState,
+          'DesiredState',DesiredState,
+          'CaptureMode',CaptureMode,
+          'max_size_mb', tostring(max_size_mb),
+          'capture_policy_execution_count', tostring(capture_policy_execution_count),
+          'capture_policy_total_compile_cpu_ms', tostring(capture_policy_total_compile_cpu_ms),
+          'capture_policy_total_execution_cpu_ms', tostring(capture_policy_total_execution_cpu_ms),
+          'flush_interval_seconds', tostring(flush_interval_seconds),
+          'interval_length_minutes', tostring(interval_length_minutes),
+          'stale_query_threshold_days', tostring(stale_query_threshold_days),
+          'capture_policy_stale_threshold_hours', tostring(capture_policy_stale_threshold_hours),
+          'max_plans_per_query', tostring(max_plans_per_query),
+          'size_based_cleanup_mode', size_based_cleanup_mode,
+          'wait_stats_capture_mode', wait_stats_capture_mode,
+          'fast_path_optimization_mode', fast_path_optimization_mode
+          )
+          | mvexpand Packed
+          | parse tostring(Packed) with '{\x22'Property'\x22:\x22'Value'\x22}'
+          | project Property,Value
+    QuestionToAI: |-
+      -  {{capturePolicyStatus}}, the data type is String.
+
+      ### Rules
+      1. Store the value of capturePolicyStatus column in {{readonlyStatus}}.
+      2. Set {{IssueDetected}} to 'true'.
+      3. Set {{ResultMessage}} to {{capturePolicyStatus}}.
+
+  - id: "232.3"
+    IsDisplayKustoQueryResult: true
+    Prompts:
+      - "QDS Setting Change History"
+      - "QDS Setting Changes"
+    MessageForEmptyKustoResult: "QDS setting has not changed yet."
+    KustoQueries:
+      - TableName: "MonQueryStoreInfo_settingChanges"
+        ExecutedQuery: |
+          MonQueryStoreInfo
+          //Time Filter is not needed as we wanna display all change history.
+          | where {LogicalServerAndLogicalDatabaseName}
+          | where event == 'query_store_db_settings_changed'//event query_store_db_settings_changed is fired immediately when setting change occurres. Please note, query_store_db_settings_changed only display setting changes made in primary replica
+          | extend
+          Change = strcat
+          (
+          iff(capture_policy_execution_count_old != capture_policy_execution_count_new, strcat(', capture_policy_execution_count:', tostring(capture_policy_execution_count_old), '->', tostring(capture_policy_execution_count_new)), ''),
+          iff(capture_policy_mode_old != capture_policy_mode_new, strcat(', capture_policy_mode:', capture_policy_mode_old, '->', capture_policy_mode_new), ''),
+          iff(capture_policy_stale_threshold_hours_old != capture_policy_stale_threshold_hours_new, strcat(', capture_policy_stale_threshold_hours:', tostring(capture_policy_stale_threshold_hours_old), '->', tostring(capture_policy_stale_threshold_hours_new)), ''),
+          iff(capture_policy_total_compile_cpu_ms_old != capture_policy_total_compile_cpu_ms_new, strcat(', capture_policy_total_compile_cpu_ms:', tostring(capture_policy_total_compile_cpu_ms_old), '->', tostring(capture_policy_total_compile_cpu_ms_new)), ''),
+          iff(capture_policy_total_execution_cpu_ms_old != capture_policy_total_execution_cpu_ms_new, strcat(', capture_policy_total_execution_cpu_ms:', tostring(capture_policy_total_execution_cpu_ms_old), '->', tostring(capture_policy_total_execution_cpu_ms_new)), ''),
+          iff(fast_path_optimization_mode_old != fast_path_optimization_mode_new, strcat(', fast_path_optimization_mode:', fast_path_optimization_mode_old, '->', fast_path_optimization_mode_new), ''),
+          iff(flush_interval_seconds_old != flush_interval_seconds_new, strcat(', flush_interval_seconds:', flush_interval_seconds_old, '->', flush_interval_seconds_new), ''),
+          iff(interval_length_minutes_old != interval_length_minutes_new, strcat(', interval_length_minutes:', interval_length_minutes_old, '->', interval_length_minutes_new), ''),
+          iff(max_plans_per_query_old != max_plans_per_query_new, strcat(', max_plans_per_query:', max_plans_per_query_old, '->', max_plans_per_query_new), ''),
+          iff(max_size_mb_old != max_size_mb_new, strcat(', max_size_mb:', max_size_mb_old, '->', max_size_mb_new), ''),
+          iff(query_store_enabled_old != query_store_enabled_new, strcat(', query_store_enabled:', query_store_enabled_old, '->', query_store_enabled_new), ''),
+          iff(query_store_error_state_old != query_store_error_state_new, strcat(', query_store_error_state:', query_store_error_state_old, '->', query_store_error_state_new), ''),
+          iff(query_store_read_only_old != query_store_read_only_new, strcat(', query_store_read_only:', query_store_read_only_old, '->', query_store_read_only_new), ''),
+          iff(size_based_cleanup_mode_old != size_based_cleanup_mode_new, strcat(', size_based_cleanup_mode:', size_based_cleanup_mode_old, '->', size_based_cleanup_mode_new), ''),
+          iff(stale_query_threshold_days_old != stale_query_threshold_days_new, strcat(', stale_query_threshold_days:', stale_query_threshold_days_old, '->', stale_query_threshold_days_new), ''),
+          iff(wait_stats_capture_mode_old != wait_stats_capture_mode_new, strcat(', wait_stats_capture_mode:', wait_stats_capture_mode_old, '->', wait_stats_capture_mode_new), ''),
+          ''
+          )
+          | extend Change=trim_start(',',Change)
+          | where isnotempty(Change)
+          | project PreciseTimeStamp,AppName,NodeName,Change
+          | order by PreciseTimeStamp
+        DisplayedQuery: |
+          MonQueryStoreInfo
+          //Time Filter is not needed as we wanna display all change history.
+          | where {LogicalServerAndLogicalDatabaseName}
+          | where event == 'query_store_db_settings_changed'//event query_store_db_settings_changed is fired immediately when setting change occurres. Please note, query_store_db_settings_changed only display setting changes made in primary replica
+          | extend
+          Change = strcat
+          (
+          iff(capture_policy_execution_count_old != capture_policy_execution_count_new, strcat(', capture_policy_execution_count:', tostring(capture_policy_execution_count_old), '->', tostring(capture_policy_execution_count_new)), ''),
+          iff(capture_policy_mode_old != capture_policy_mode_new, strcat(', capture_policy_mode:', capture_policy_mode_old, '->', capture_policy_mode_new), ''),
+          iff(capture_policy_stale_threshold_hours_old != capture_policy_stale_threshold_hours_new, strcat(', capture_policy_stale_threshold_hours:', tostring(capture_policy_stale_threshold_hours_old), '->', tostring(capture_policy_stale_threshold_hours_new)), ''),
+          iff(capture_policy_total_compile_cpu_ms_old != capture_policy_total_compile_cpu_ms_new, strcat(', capture_policy_total_compile_cpu_ms:', tostring(capture_policy_total_compile_cpu_ms_old), '->', tostring(capture_policy_total_compile_cpu_ms_new)), ''),
+          iff(capture_policy_total_execution_cpu_ms_old != capture_policy_total_execution_cpu_ms_new, strcat(', capture_policy_total_execution_cpu_ms:', tostring(capture_policy_total_execution_cpu_ms_old), '->', tostring(capture_policy_total_execution_cpu_ms_new)), ''),
+          iff(fast_path_optimization_mode_old != fast_path_optimization_mode_new, strcat(', fast_path_optimization_mode:', fast_path_optimization_mode_old, '->', fast_path_optimization_mode_new), ''),
+          iff(flush_interval_seconds_old != flush_interval_seconds_new, strcat(', flush_interval_seconds:', flush_interval_seconds_old, '->', flush_interval_seconds_new), ''),
+          iff(interval_length_minutes_old != interval_length_minutes_new, strcat(', interval_length_minutes:', interval_length_minutes_old, '->', interval_length_minutes_new), ''),
+          iff(max_plans_per_query_old != max_plans_per_query_new, strcat(', max_plans_per_query:', max_plans_per_query_old, '->', max_plans_per_query_new), ''),
+          iff(max_size_mb_old != max_size_mb_new, strcat(', max_size_mb:', max_size_mb_old, '->', max_size_mb_new), ''),
+          iff(query_store_enabled_old != query_store_enabled_new, strcat(', query_store_enabled:', query_store_enabled_old, '->', query_store_enabled_new), ''),
+          iff(query_store_error_state_old != query_store_error_state_new, strcat(', query_store_error_state:', query_store_error_state_old, '->', query_store_error_state_new), ''),
+          iff(query_store_read_only_old != query_store_read_only_new, strcat(', query_store_read_only:', query_store_read_only_old, '->', query_store_read_only_new), ''),
+          iff(size_based_cleanup_mode_old != size_based_cleanup_mode_new, strcat(', size_based_cleanup_mode:', size_based_cleanup_mode_old, '->', size_based_cleanup_mode_new), ''),
+          iff(stale_query_threshold_days_old != stale_query_threshold_days_new, strcat(', stale_query_threshold_days:', stale_query_threshold_days_old, '->', stale_query_threshold_days_new), ''),
+          iff(wait_stats_capture_mode_old != wait_stats_capture_mode_new, strcat(', wait_stats_capture_mode:', wait_stats_capture_mode_old, '->', wait_stats_capture_mode_new), ''),
+          ''
+          )
+          | extend Change=trim_start(',',Change)
+          | where isnotempty(Change)
+          | project PreciseTimeStamp,AppName,NodeName,Change
+          | order by PreciseTimeStamp

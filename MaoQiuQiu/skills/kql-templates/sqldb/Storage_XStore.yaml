@@ -1,0 +1,45 @@
+SqlSkills:
+  - id: "232.1"
+    Prompts:
+      - "XStore Error Analysis"
+      - "XStore Outage Analysis"
+    MessageForEmptyKustoResult: "We didn't detect any XStore related errors."
+    KustoQueries:
+      - TableName: "MonSQLXStore_xio_failed_request"
+        ExecutedQuery: |
+          let ErrorMessage=(totalCount: int,errorcodeArray:string,
+          count_TopError: int,mapped_errorcode: int,dcount_errorcode: int
+          )
+          {
+          let summary=strcat(
+          "The Azure DB Storage run into error ",totalCount, iif(totalCount == 1, " time", " times"),
+          " with ",dcount_errorcode, iif(dcount_errorcode == 1, " single error ", " different errors"),errorcodeArray,".");
+          let topError=iif(dcount_errorcode ==1,"",
+          strcat(" The top error was ",mapped_errorcode, ", happening ",count_TopError, iif(count_TopError == 1, " time", " times")));
+          strcat(summary,topError)
+          };
+          MonSQLXStore
+          | where AppName in ({AppNames})
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | where TIMESTAMP between (datetime({StartTime})..datetime({EndTime}))
+          | where event =='xio_failed_request
+          | where file_path contains '.mdf' or file_path contains '.ndf' or file_path contains '.ldf'
+          | summarize count_=count() by mapped_errorcode
+          | summarize totalCount=sum(count_),errorcodeArray=make_set(mapped_errorcode),count_TopError=arg_max(count_, mapped_errorcode),dcount_errorcode=dcount(mapped_errorcode)
+          | where totalCount >0
+          | extend errorMessage=ErrorMessage(totalCount,errorcodeArray,count_TopError,mapped_errorcode,dcount_errorcode)
+          | project errorMessage
+        DisplayedQuery: |
+          MonSQLXStore
+          | where AppName in ({AppNames})
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | where TIMESTAMP between (datetime({StartTime})..datetime({EndTime}))
+          | where event =='xio_failed_request'
+          | project originalEventTimestamp,request_type, errorcode,error_response,http_errorcode,mapped_errorcode,ssl_errorcode,retry_count,retry_reason,correlation_id,primary_correlation_id
+    QuestionToAI: |-
+      -  {{errorMessage}}, the data type is String.
+
+      ### Rules
+      1. Store the value of errorMessage column in {{errorMessage}}.
+      2. Set {{IssueDetected}} to 'true'.
+      3. Set {{ResultMessage}} to {{errorMessage}}.

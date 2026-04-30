@@ -1,0 +1,486 @@
+SqlSkills:
+  - id: "232.QDS Readonly Health check"
+    Prompts:
+      - "QDS Summary"
+    SubSqlSkills:
+      - IsKusto: true
+        AlwaysDisplayResult: true
+        Prompts:
+          - "QDS Current Setting"
+      - IsKusto: true
+        AlwaysDisplayResult: true
+        Prompts:
+          - "QDS Setting Change History"
+      - IsKusto: true
+        AlwaysDisplayResult: true
+        Prompts:
+          - "QDS CaptureMode Analysis"
+      - IsKusto: true
+        AlwaysDisplayResult: true
+        Prompts:
+          - "Ratio of statementSqlHash to queryHash"
+      - IsKusto: true
+        AlwaysDisplayResult: true
+        Prompts:
+          - "QDS Readonly 131072 Analysis"
+      - IsKusto: true
+        AlwaysDisplayResult: true
+        Prompts:
+          - "QDS Readonly 262144 Analysis"
+      - IsKusto: true
+        AlwaysDisplayResult: true
+        Prompts:
+          - "QDS Size over time"
+      - IsKusto: true
+        AlwaysDisplayResult: true
+        Prompts:
+          - "QDS Readonly 65536 Analysis"
+      - Keywords: "524288"
+        IsKusto: true
+        AlwaysDisplayResult: true
+        Prompts:
+          - "QDS Readonly 524288 Analysis"
+      - IsKusto: true
+        AlwaysDisplayResult: true
+        Prompts:
+          - "QDS Related Memory"
+
+  - id: "232.QDS CaptureMode analysis"
+    Prompts:
+      - "QDS CaptureMode analysis"
+    MessageForEmptyKustoResult: "We didn't identify any obvious issues in the QDS CaptureMode settings."
+    KustoQueries:
+      - TableName: "MonQueryStoreInfo_QDSSetting"
+        ExecutedQuery: |
+          let CaptureModeMessage= (CaptureModeAllCount:int,CaptureModeAllChange_Count:int,CustomCapture_PolicyExecutionPolicyCount:int,CustomCapture_PolicyExecutionPolicyChangeCount:int)
+          {
+          let CaptureModeAllChange_Count_message=case(CaptureModeAllChange_Count==0,"",
+          strcat("The CaptureMode was changed to 'All' ",CaptureModeAllChange_Count,iff(CaptureModeAllChange_Count==1," time", " times."))
+          );
+          let CaptureModeAllCount_Message=case(CaptureModeAllCount==0,"",
+          strcat("The CaptureMode in 'All' mode was detected ",CaptureModeAllCount,iff(CaptureModeAllCount==1," time", " times."))
+          );
+          let CustomCapture_PolicyExecutionPolicyChangeCount_message=case(CustomCapture_PolicyExecutionPolicyChangeCount==0,"",
+          strcat(" The CaptureMode was changed to 'Custom' with not recommended capture_policy_execution_count/capture_policy_total_compile_cpu_ms/capture_policy_total_execution_cpu_ms ",CustomCapture_PolicyExecutionPolicyChangeCount,iff(CustomCapture_PolicyExecutionPolicyChangeCount==1," time", " times."))
+          );
+          let CustomCapture_PolicyExecutionPolicyCount_message=case(CustomCapture_PolicyExecutionPolicyCount==0,"",
+          strcat(" The CaptureMode in 'Custom' with not recommended capture_policy_execution_count/capture_policy_total_compile_cpu_ms/capture_policy_total_execution_cpu_ms  was detected ",CustomCapture_PolicyExecutionPolicyCount,iff(CustomCapture_PolicyExecutionPolicyCount==1," time", " times."))
+          );
+          let BenefitsMessage=case(CaptureModeAllChange_Count+CaptureModeAllCount+CustomCapture_PolicyExecutionPolicyChangeCount+CustomCapture_PolicyExecutionPolicyCount==0,"",
+          strcat(" Please change CaptureMode to  Auto. Benefits:When CaptureMode is set to Auto, fewer entries are persisted to QDS, reducing the likelihood of encountering a QDS ReadOnly state with ReadOnlyReason 65536/262144.")
+          );
+          strcat(CaptureModeAllChange_Count_message,CaptureModeAllCount_Message,CustomCapture_PolicyExecutionPolicyChangeCount_message,CustomCapture_PolicyExecutionPolicyCount_message,BenefitsMessage)
+          };
+          let setting1=(MonQueryStoreInfo
+          | where {ApplicationNamesNodeNamesWith7DayOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | where event == 'query_store_db_settings_and_state'
+          | summarize CaptureModeAllCount=countif(capture_policy_mode =~ 'x_qdsCaptureModeAll'),CustomCapture_PolicyExecutionPolicyCount=countif(capture_policy_mode=~'x_qdsCaptureModeCustom' and (capture_policy_execution_count<30 or capture_policy_total_compile_cpu_ms<1000 or capture_policy_total_execution_cpu_ms<100))
+          | extend joinColumn=1);
+          let setting2=(MonQueryStoreInfo
+          | where {ApplicationNamesNodeNamesWith7DayOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | where event == 'query_store_db_settings_changed'
+          | summarize
+          captureModeAllChange_Count=countif(capture_policy_mode_old=~ 'x_qdsCaptureModeAll' or capture_policy_mode_new =~ 'x_qdsCaptureModeAll'),
+          CustomCapture_PolicyExecutionPolicyChangeCount=countif(
+          (capture_policy_execution_count_old<30 or capture_policy_total_compile_cpu_ms_old<1000 or capture_policy_total_execution_cpu_ms_old<100) or
+          (capture_policy_execution_count_new<30 or capture_policy_total_compile_cpu_ms_new<1000 or capture_policy_total_execution_cpu_ms_new<100)
+          )
+          |extend joinColumn=1);
+          setting1
+          | join kind=inner (setting2) on joinColumn
+          | where CaptureModeAllCount>0 or captureModeAllChange_Count>0 or CustomCapture_PolicyExecutionPolicyCount>0 or CustomCapture_PolicyExecutionPolicyChangeCount>0
+          | extend captureModeMessage=CaptureModeMessage(CaptureModeAllCount,captureModeAllChange_Count,CustomCapture_PolicyExecutionPolicyCount,CustomCapture_PolicyExecutionPolicyChangeCount)
+          | project captureModeMessage
+        DisplayedQuery: |
+          MonQueryStoreInfo
+          | where {ApplicationNamesNodeNamesWith7DayOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | where event == 'query_store_db_settings_and_state'
+          | where capture_policy_mode =~ 'x_qdsCaptureModeAll' or
+          (capture_policy_mode=~'x_qdsCaptureModeCustom' and (capture_policy_execution_count<30 or capture_policy_total_compile_cpu_ms<1000 or capture_policy_total_execution_cpu_ms<100))
+          | project-reorder originalEventTimestamp,capture_policy_mode,capture_policy_execution_count, capture_policy_total_compile_cpu_ms, capture_policy_total_execution_cpu_ms
+          ;
+          MonQueryStoreInfo
+          | where {ApplicationNamesNodeNamesWith7DayOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | where event == 'query_store_db_settings_changed'
+          | where capture_policy_mode_old=~ 'x_qdsCaptureModeAll' or capture_policy_mode_new =~ 'x_qdsCaptureModeAll'
+          or capture_policy_execution_count_old<30 or capture_policy_total_compile_cpu_ms_old<1000 or capture_policy_total_execution_cpu_ms_old<100
+          or capture_policy_execution_count_new<30 or capture_policy_total_compile_cpu_ms_new<1000 or capture_policy_total_execution_cpu_ms_new<100
+          | project-reorder originalEventTimestamp,capture_policy_mode_old,capture_policy_mode_new,capture_policy_execution_count_old, capture_policy_total_compile_cpu_ms_old, capture_policy_total_execution_cpu_ms_old,
+          capture_policy_execution_count_new, capture_policy_total_compile_cpu_ms_new, capture_policy_total_execution_cpu_ms_new
+    QuestionToAI: |-
+      -  {{captureModeMessage}}, the data type is String.
+
+      ### Rules
+      1. Store the value of captureModeMessage column in {{captureModeMessage}}.
+      2. Set {{IssueDetected}} to 'true'.
+      3. Set {{ResultMessage}} to captureModeMessage.
+
+  - id: "232.Ratio"
+    Prompts:
+      - "Ratio of statementSqlHash to queryHash analysis"
+      - "Ratio of statementSqlHash to queryHash"
+      - "query parameterization analysis"
+    MessageForEmptyKustoResult: "MonWiQdsExecStats doesn't have any data, we can't process the Ratio of statementSqlHash to queryHash analysis"
+    KustoQueries:
+      - TableName: "MonWiQdsExecStats_ratio"
+        ExecutedQuery: |
+          let highRatioThreshold=3;
+          let RatioMessage = (dcount_statementSqlHash_all:long,dcount_queryHash_all:long,dcount_statementSqlHash_Captured:long,dcount_queryHash_Captured:long,readonly131072_Count:int)
+          {
+          let undecidedQueriesCount=dcount_statementSqlHash_all-dcount_statementSqlHash_Captured;
+          let Ratio_undecidedQueries_to_Captured=undecidedQueriesCount*1.0/dcount_statementSqlHash_Captured;
+          let Ratio_statementSqlHash_to_queryHash=round(dcount_statementSqlHash_all*1.0/dcount_queryHash_all,1);
+          let highUndicidedQueriesMessage=case( highRatioThreshold>Ratio_undecidedQueries_to_Captured,"",
+          strcat(" Please note, there were ",dcount_statementSqlHash_all," queries held in memory, waiting evaluation by QDS to determine if they were qualified to be persisted. However, only ",dcount_statementSqlHash_Captured," were ultimately persisted. ",
+          iff(readonly131072_Count==0,"Although QDS Readonly with ReadonlyReason 131072 didn't happen, that still consume StmtHashMapMemory"," This is one of the reason QDS ran into Readonly with ReadonlyReason 131072."),
+          iff(highRatioThreshold>Ratio_statementSqlHash_to_queryHash," .If this is an concern, "," Besides of parameterization, ")," You may consider reducing the capture_policy_stale_threshold_hours settting to reduce the StmtHashMap memory usage(avoding 13172).")
+          );
+          let sideEffectMessage="Such redundancy increases consumption of both disk space and memory resources, and may potentially cause QDS to enter read-only mode, triggered by various readonlyReason including 65536, 131072, and 262144. This issue is typically caused by ad-hoc queries that are not parameterized. Please engage customer's T-SQL developers to implement query parameterization. ";
+          let resourceUsageMessage=strcat("For this specifc Azure Db {LogicalServerName}, over the past 7 day up to the specified time period, a cumulative total of ",dcount_statementSqlHash_Captured," entries were persisted in the QDS, while ",dcount_statementSqlHash_all," entries have consumed BufferedItems/StmtHashMap Memory.");
+          let improvementMessage=case(dcount_queryHash_Captured>dcount_statementSqlHash_Captured,
+          strcat("Benefits of Parameterization:",resourceUsageMessage," If parameterization was fully implemented, the number of entries consuming BufferedItems/StmtHashMap/QDSRUNTIMESTATS Memory would drop from ",dcount_statementSqlHash_all," to ",dcount_queryHash_all,". That's a massive reduction in memory usage, which would greatly improve QDS stability and performance."),
+          strcat("Benefits of Parameterization:",resourceUsageMessage," If parameterization was fully implemented, the number of entries persisted to QDS would drop from ",dcount_statementSqlHash_Captured," to ",dcount_queryHash_Captured," and the number of entries consuming BufferedItems/StmtHashMap/QDSRUNTIMESTATS Memory would drop from ",dcount_statementSqlHash_all," to just ",dcount_queryHash_all,". That's a massive reduction in memory usage and storage overhead, which would greatly improve QDS stability and performance.")
+          );
+          case(
+          3>=Ratio_statementSqlHash_to_queryHash,strcat("The ratio of statement_sql_hash to query_hash is ",Ratio_statementSqlHash_to_queryHash,", which is within an acceptable range. This indicates that each query_hash corresponds to approximately ",Ratio_statementSqlHash_to_queryHash," times entries, either persisted in the QDS, consuming QDS related memory(StmtHashMap,BufferedItems and QDSRUNTIMESTATS Memory), or both. This is typically caused by queries issued with different drivers, ANSI settings or ad-hoc queries.",highUndicidedQueriesMessage),
+          Ratio_statementSqlHash_to_queryHash>3 and 6>=Ratio_statementSqlHash_to_queryHash,strcat("The ratio of statement_sql_hash to query_hash is ",Ratio_statementSqlHash_to_queryHash,", indicating that each query_hash corresponds to approximately ",Ratio_statementSqlHash_to_queryHash," times entries, either persisted in the QDS, consuming QDS related memory(StmtHashMap,BufferedItems and QDSRUNTIMESTATS Memory), or both. This is typically caused by queries issued with different drivers, ANSI settingor ad-hoc queries.",improvementMessage,highUndicidedQueriesMessage),
+          strcat("We observed a high ratio of statement_sql_hash to query_hash, measured at ",Ratio_statementSqlHash_to_queryHash,". This indicates that each query_hash corresponds to approximately ",Ratio_statementSqlHash_to_queryHash," times entries, either persisted in the QDS, consuming QDS related memory(StmtHashMap,BufferedItems and QDSRUNTIMESTATS Memory), or both. ",sideEffectMessage,improvementMessage,highUndicidedQueriesMessage )
+          )
+          };
+          let readonly131072_Count=toscalar(MonQueryStoreFailures
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName=~'{LogicalServerName}'
+          | where event =~'query_store_stmt_hash_map_over_memory_limit' or (event=~'query_store_resource_total_over_instance_limit' and query_store_resource_type=~'x_QdsResourceType_StmtHashMapMemory')
+          | summarize count());
+          MonWiQdsExecStats
+          | where {ApplicationNamesNodeNamesWith7DayOriginalEventTimeRange}
+          | where LogicalServerName=~'{LogicalServerName}'
+          | summarize dcount_statementSqlHash_all=dcount(statement_sql_hash),dcount_queryHash_all=dcount(query_hash),
+          dcount_statementSqlHash_Captured=dcountif(statement_sql_hash,runtime_stats_exhaust_type=~'x_Captured'),
+          dcount_queryHash_Captured=dcountif(query_hash,runtime_stats_exhaust_type=~'x_Captured')
+          | extend ratioMessage=RatioMessage(dcount_statementSqlHash_all,dcount_queryHash_all,dcount_statementSqlHash_Captured,dcount_queryHash_Captured,readonly131072_Count)
+          | extend ratio1=round(dcount_statementSqlHash_all*1.0/dcount_queryHash_all,1)
+          | extend ratio2=round((dcount_statementSqlHash_all-dcount_statementSqlHash_Captured)*1.0/dcount_statementSqlHash_Captured,1)
+          | extend IssueDetected=iff(ratio1 >highRatioThreshold or ratio2>highRatioThreshold,'true','false')
+          | project ratioMessage,IssueDetected
+        DisplayedQuery: |
+          MonWiQdsExecStats
+          | where {ApplicationNamesNodeNamesWith7DayOriginalEventTimeRange}
+          | where LogicalServerName=~'{LogicalServerName}'
+          | summarize dcount_statementSqlHash_all=dcount(statement_sql_hash),dcount_queryHash_all=dcount(query_hash),
+          dcount_statementSqlHash_Captured=dcountif(statement_sql_hash,runtime_stats_exhaust_type=~'x_Captured'),
+          dcount_queryHash_Captured=dcountif(query_hash,runtime_stats_exhaust_type=~'x_Captured'),
+          dcount_statementSqlHash_UndecidedSingle=dcountif(statement_sql_hash,runtime_stats_exhaust_type=~'x_UndecidedSingle')
+          | extend ratio=round(dcount_statementSqlHash_all*1.0/dcount_queryHash_all,1);
+    QuestionToAI: |-
+      -  {{ratioMessage}}, the data type is String.
+
+      ### Rules
+      1. Store the value of ratioMessage column in {{ratioMessage}}.
+      2. Store the value of IssueDetected column in {{IssueDetected}}.
+      3. Set {{ResultMessage}} to ratioMessage.
+
+  - id: "232.65536.1"
+    Prompts:
+      - "QDS Readonly 65536 Analysis"
+      - "QDS Readonly query_store_disk_size_over_limit analysis"
+      - "query_store_disk_size_over_limit"
+      - "65536"
+    MessageForEmptyKustoResult: "QDS Readonly is not detected"
+    KustoQueries:
+      - TableName: "MonQueryStoreFailures_query_store_disk_size_over_limit"
+        ExecutedQuery: |
+          let ReadonlyMessage = (totalCount:int,max_size_mb:long,dcount_max_size_mb: int,startTime:string,endTime:string)
+          {
+          let optionMessage=case(10240>max_size_mb,strcat("(The max size limit is 10240 MB, you have ",10240-max_size_mb," MB to increase)"),
+          max_size_mb==10240,strcat("(This is not an option, as the max_storage_size_mb of QDS is already set to 10240 MB, which is the maximum limit.)"),
+          strcat("(This is not an option, as the max_storage_size_mb of QDS is already set to ",max_size_mb," MB, which is already greater than the 10GB limit.)")
+          );
+          let percentOfLimit=max_size_mb*100.0/10240;
+          let mitigationMessage=case(50>=percentOfLimit,strcat("The mitigation includes the following actions:1. Increasing max_storage_size_mb of QDS;",optionMessage," 2. Implementing query parameterization;3. Decreasing stale_query_threshold_days;4. Removing specific entries in QDS."),
+          90>=percentOfLimit,strcat("The mitigation includes the following actions:1. Implementing query parameterization;2. Increasing max_storage_size_mb of QDS;",optionMessage,"3. Decreasing stale_query_threshold_days;4. Removing specific entries in QDS."),
+          strcat("The mitigation includes the following actions:1. Implementing query parameterization;2. Decreasing stale_query_threshold_days;3. Removing specific entries in QDS.4. Increasing max_storage_size_mb of QDS;",optionMessage));
+          let maxSizeMessage=case(dcount_max_size_mb ==1,strcat("The max size of QDS setting was ",max_size_mb," megabyte. "),
+          strcat("The max size of QDS setting was ",max_size_mb," megabyte. Please note, the Max Size Setting was adjusted ",dcount_max_size_mb-1," time(s).")
+          );
+          case(totalCount ==1,
+          strcat("The Azure Db ran into Readonly once at ",startTime, ", with ReadonlyReason 65536(Max QDS Size is reached). ",maxSizeMessage,mitigationMessage),
+          strcat("The Azure Db ran into Readonly ",totalCount," times with same ReadonlyReason 65536(Max QDS Size is reached). The first occurrence happended at ",startTime, ", and the most recent happened at ",endTime,". ",maxSizeMessage,mitigationMessage)
+          )
+          };
+          MonQueryStoreFailures
+          | where {ApplicationNamesNodeNamesWith7DayOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | where event=~'query_store_disk_size_over_limit'
+          | extend current_size_mb=current_size_kb/1024
+          | extend max_size_mb=max_size_kb/1024
+          | project originalEventTimestamp,current_size_mb,max_size_mb
+          | summarize totalCount=count(),max_size_mb=max(max_size_mb),startTime=min(originalEventTimestamp),endTime=max(originalEventTimestamp),
+          dcount_max_size_mb=dcount(max_size_mb)
+          | extend startTime=format_datetime(startTime,'yyyy-MM-dd HH:mm:ss')
+          | extend endTime=format_datetime(endTime,'yyyy-MM-dd HH:mm:ss')
+          | where totalCount>0
+          | extend readonlyMessage=ReadonlyMessage(totalCount,max_size_mb,dcount_max_size_mb,startTime,endTime)
+          | project readonlyMessage
+        DisplayedQuery: |
+          MonQueryStoreFailures
+          | where {ApplicationNamesNodeNamesWith7DayOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | where event=~'query_store_disk_size_over_limit'
+          | extend current_size_mb=current_size_kb/1024
+          | extend max_size_mb=max_size_kb/1024
+          | project originalEventTimestamp,current_size_mb,max_size_mb
+          | order by originalEventTimestamp asc
+          | take 5
+    QuestionToAI: |-
+      -  {{readonlyMessage}}, the data type is String.
+
+      ### Rules
+      1. Store the value of readonlyMessage column in {{readonlyMessage}}.
+      2. Set {{IssueDetected}} to 'true'.
+      3. Set {{ResultMessage}} to {{readonlyMessage}}.
+    SubSqlSkills:
+      - ExecutedWhenParentIssueDetected: true
+        IsKusto: true
+        Prompts:
+          - "QDS Size over time"
+      - ExecutedWhenParentIssueDetected: true
+        IsKusto: true
+        Prompts:
+          - "QDS Sizebased Cleanup job Analysis"
+
+  - id: "232.65536.2"
+    Prompts:
+      - "QDS Size over time"
+    MessageForEmptyKustoResult: "Event query_store_disk_size_info in MonQueryStoreInfo didn't emit any data"
+    KustoQueries:
+      - TableName: "MonQueryStoreInfo_query_store_disk_size_info"
+        ExecutedQuery: |
+          let SizeMessage = (totalCount:int, count_greaterthan100:int,count_greaterthan90:int,count_greaterthan80:int)
+          {
+          let summaryMessage=case(count_greaterthan100 >0,"Issue detected. Here are the details:",
+          count_greaterthan80>0,"Potential issue detected. Here are the details:",
+          "We don't find obvious issue. Here are the details:");
+          strcat(summaryMessage," Over the past 7 days up to the specified time range, the size of QDS reached its size limit ",
+          count_greaterthan100,iff(count_greaterthan100==1," time", " times"),", exceeded 90% of limit ",count_greaterthan90,iff(count_greaterthan90==1," time", " times"),", and exceeded 80% of limit ",count_greaterthan80,
+          iff(count_greaterthan80==1," time", " times"),"——accounting for ",round(count_greaterthan100*100.0/totalCount,1),"%, ",round(count_greaterthan90*100.0/totalCount,1),"%, ",round(count_greaterthan80*100.0/totalCount,1),"% of the total statistical data, respectively.")
+          };
+          MonQueryStoreInfo
+          | where {ApplicationNamesNodeNamesWith7DayOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | where event == "query_store_disk_size_info"
+          | summarize totalCount=count(), count_greaterthan100=countif(current_size_kb>=max_size_kb),count_greaterthan90=countif(current_size_kb>max_size_kb*0.9), count_greaterthan80=countif(current_size_kb>max_size_kb*0.8)
+          | extend sizeMessage=SizeMessage(totalCount,count_greaterthan100,count_greaterthan90,count_greaterthan80)
+          | extend IssueDetected=iff(count_greaterthan80 >0,'true','false')
+          | project sizeMessage,IssueDetected
+        DisplayedQuery: |
+          MonQueryStoreInfo
+          | where {ApplicationNamesNodeNamesWith7DayOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | where event == "query_store_disk_size_info"
+          | project TIMESTAMP, current_size_mb=current_size_kb/1024, max_size_mb=max_size_kb/1024
+          | render timechart
+    QuestionToAI: |-
+      -  {{sizeMessage}}, the data type is String.
+
+      ### Rules
+      1. Store the value of sizeMessage column in {{sizeMessage}}.
+      3. Store the value of IssueDetected column in {{IssueDetected}}.
+      3. Set {{ResultMessage}} to {{sizeMessage}}.
+
+  - id: "232.QDS Sizebased Cleanup job Analysis"
+    Prompts:
+      - "QDS Size Based Cleanup job Analysis"
+      - "QDS Size Based Cleanup job"
+      - "QDS Cleanup job Analysis"
+      - "QDS Cleanup job"
+    MessageForEmptyKustoResult: "No QDS Cleanup job detected in the past 7 days. Could be a telemetry issue or QDS issue."
+    KustoQueries:
+      - TableName: "MonQueryStoreInfo_CleanupJob"
+        ExecutedQuery: |
+          let longDurationThreshold=60;
+          let CleanupJobMessage = (totalCount_cleanupStart:int,totalCount_CleanupFinish:int,endedWithCleanupFinish:bool,longDurationCount:int,min_duration:int,max_duration:int,avg_duration:real)
+          {
+          let longDurationMessage=case(longDurationCount >0,strcat(" Additionally, ",longDurationCount," Cleanup job took more than 60 mins to complete. The most time consuming one took ",max_duration," minutes to complete, while the average completion time was ",avg_duration, " mins. You may engage QDS experts to investigate the long-running jobs."),
+          isnan(avg_duration)==false,strcat("The most time consuming one took ",max_duration," minutes to complete, while the average completion time was ",toint(avg_duration), " mins"),
+          ""
+          );
+          let potentionalFailureCount=totalCount_cleanupStart-totalCount_CleanupFinish;
+          let lastCleanupWithoutFinishMessage="Please note, The most recent cleanup job started but did not complete. There are two possible reasons: 1) The specified time range may not include the job's completion time. Try expanding the endTime and rerunning it. 2) The cleanup background job failed, then please engage QDS expert to investigate.";
+          let failedCleanupJobMessage=case(potentionalFailureCount==0,"",
+          endedWithCleanupFinish ==false and potentionalFailureCount==1,lastCleanupWithoutFinishMessage,
+          endedWithCleanupFinish ==true  and potentionalFailureCount>0, strcat(potentionalFailureCount, " of ",totalCount_cleanupStart, " started but didn't complete, indicating potential failures. Please engage QDS expert to investigate."),
+          strcat(potentionalFailureCount, " of ",totalCount_cleanupStart, " started but didn't complete, indicating potential failures. Please engage QDS expert to investigate. ",lastCleanupWithoutFinishMessage)
+          );
+          let succeededCleanupJobMessage=case(
+          potentionalFailureCount==0,strcat("Over the past 7 days up to the specified time period, QDS size-based cleanup background job(s) were executed ",totalCount_cleanupStart," time(s), no failure detected. "),
+          strcat("Over the past 7 days up to the specified time period, QDS size-based cleanup background job(s) were executed ",totalCount_cleanupStart," time(s), ",totalCount_CleanupFinish," of ",totalCount_cleanupStart," completed successfully. ")
+          );
+          strcat(succeededCleanupJobMessage,failedCleanupJobMessage,longDurationMessage)
+          };
+          let longRunningCleanupJob=MonQueryStoreInfo
+          | where {ApplicationNamesNodeNamesWith7DayOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          |where event in ('query_store_size_retention_cleanup_started','query_store_size_retention_cleanup_finished')
+          |order by originalEventTimestamp asc nulls first
+          | serialize
+          | extend preTime =iff(event=~'query_store_size_retention_cleanup_finished',prev(originalEventTimestamp), datetime(null))
+          | extend duration_minutes=datetime_diff('minute',originalEventTimestamp,preTime)
+          | extend duration_hours=datetime_diff('hour',originalEventTimestamp,preTime)
+          | extend originalEventTimestamp=format_datetime(originalEventTimestamp,'yyyy-MM-dd HH:mm:ss')
+          | where event =~'query_store_size_retention_cleanup_finished'
+          | project originalEventTimestamp,preTime,duration_minutes,duration_hours,event,current_size_kb,target_delete_size_kb,deleted_plan_count,deleted_query_count,estimated_deleted_size_kb,last_deleted_query_total_cpu,max_deleted_total_cpu
+          | order by originalEventTimestamp asc
+          | summarize totalCount_LongRunningCleanupJob=countif(duration_minutes>=60),longDurationCount=countif(duration_minutes>=longDurationThreshold),min_duration=min(duration_minutes),max_duration=max(duration_minutes),avg_duration=round(avg(duration_minutes),1)
+          | extend joinColumn=1
+          ;
+          let potentailFailedCleanupJob=MonQueryStoreInfo
+          | where {ApplicationNamesNodeNamesWith7DayOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | where event in ('query_store_size_retention_cleanup_started','query_store_size_retention_cleanup_finished')
+          | order by originalEventTimestamp asc nulls first
+          | serialize
+          | extend rn = row_number()
+          | summarize maxCountOfCleanupFinished=maxif(rn,event=~'query_store_size_retention_cleanup_finished' ),maxCount=max(rn),
+          totalCount_CleanupFinish=countif(event=~'query_store_size_retention_cleanup_finished') ,
+          totalCount_CleanupStart=countif(event=~'query_store_size_retention_cleanup_started' or (event=~'query_store_size_retention_cleanup_finished' and rn==1))
+          | extend endedWithCleanupFinish=maxCountOfCleanupFinished==maxCount
+          | extend potentionalFailureCount=totalCount_CleanupStart-totalCount_CleanupFinish
+          | extend joinColumn=1;
+          potentailFailedCleanupJob
+          | join kind=fullouter (longRunningCleanupJob) on joinColumn
+          | project totalCount_CleanupStart,totalCount_CleanupFinish,endedWithCleanupFinish,longDurationCount,min_duration,max_duration,avg_duration
+          | where totalCount_CleanupStart >=1
+          | extend cleanupJobMessage=CleanupJobMessage(totalCount_CleanupStart,totalCount_CleanupFinish,endedWithCleanupFinish,longDurationCount,min_duration,max_duration,avg_duration)
+          | extend IssueDetected=case(totalCount_CleanupStart-totalCount_CleanupFinish>1 or max_duration >=longDurationThreshold,'true','false')
+          | summarize count() ,arg_max(totalCount_CleanupStart,cleanupJobMessage,IssueDetected)
+          | extend IssueDetected=iff(count_ ==0,'true',IssueDetected)
+          | extend Keywords=iff(count_ ==0,'NoRecords',"")
+        DisplayedQuery: |
+          MonQueryStoreInfo
+          | where {ApplicationNamesNodeNamesWith7DayOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | where event in ('query_store_size_retention_cleanup_started','query_store_size_retention_cleanup_finished')
+          | order by originalEventTimestamp asc nulls first
+          | serialize
+          | extend preTime =iff(event=~'query_store_size_retention_cleanup_finished',prev(originalEventTimestamp), datetime(null))
+          | extend nextEvent=next(event)
+          | extend potentialFailure=event=~'query_store_size_retention_cleanup_started' and event==nextEvent
+          | extend duration_minutes=datetime_diff('minute',originalEventTimestamp,preTime)
+          | extend duration_hours=datetime_diff('hour',originalEventTimestamp,preTime)
+          | extend originalEventTimestamp=format_datetime(originalEventTimestamp,'yyyy-MM-dd HH:mm:ss')
+          | project originalEventTimestamp,potentialFailure,duration_minutes,duration_hours,event,current_size_kb,target_delete_size_kb,deleted_plan_count,deleted_query_count,estimated_deleted_size_kb,last_deleted_query_total_cpu,max_deleted_total_cpu
+          | order by originalEventTimestamp asc
+    QuestionToAI: |-
+      -  {{cleanupJobMessage}}, the data type is String.
+
+      ### Rules
+      1. Store the value of cleanupJobMessage column in {{cleanupJobMessage}}.
+      2. Store the value of Keywords column in {{Keywords}}.
+      3. Store the value of IssueDetected column in {{IssueDetected}}.
+      4. Set {{ResultMessage}} to cleanupJobMessage.
+    SubSqlSkills:
+      - id: "232.QDS SizeBased cleanup disabled analysis"
+        ExecutedWhenParentIssueDetected: true
+        Keywords: "NoRecords"
+        IsKusto: true
+        AlwaysDisplayResult: true
+        Reasoning: "Because telemetry didn't have QDS Sizebased Cleanup job activity for last 7 days, we'll check if the size_based_cleanup_mode was set to OFF."
+        Prompts:
+          - "QDS SizeBased cleanup Mode analysis"
+
+  - id: "232.QDS SizeBased cleanup disabled analysis"
+    Prompts:
+      - "QDS SizeBased cleanup Mode analysis"
+    MessageForEmptyKustoResult: "QDS SizeBased cleanup Mode was auto, we don't find obvious issue."
+    KustoQueries:
+      - TableName: "MonQueryStoreInfo_QDSSetting"
+        ExecutedQuery: |
+          let SizeBasedCleanupModeMessage= (size_based_cleanup_mode_Disabled_Count:int,size_based_cleanup_mode_Disabled_Change_Count:int)
+          {
+          "QDS size_based_cleanup_mode was set to off. Please note, the size-based cleanup backgroub job doesn't run when the mode is off, which may cause QDS run into readonly with readonly issue 65536."
+          };
+          let setting1=(MonQueryStoreInfo
+          | where {ApplicationNamesNodeNamesWith7DayOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | where event == 'query_store_db_settings_and_state'
+          | where size_based_cleanup_mode =~ 'x_qdsSizeBasedCleanupModeMin'
+          | summarize size_based_cleanup_mode_Disabled_Count=count()
+          | extend joinColumn=1);
+          let setting2=(MonQueryStoreInfo
+          | where {ApplicationNamesNodeNamesWith7DayOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | where event == 'query_store_db_settings_changed'
+          | summarize
+          size_based_cleanup_mode_Disabled_Change_Count=countif(size_based_cleanup_mode_old=~ 'x_qdsSizeBasedCleanupModeMin' or size_based_cleanup_mode_new =~ 'x_qdsSizeBasedCleanupModeMin')
+          |extend joinColumn=1);
+          setting1
+          | join kind=inner (setting2) on joinColumn
+          | where size_based_cleanup_mode_Disabled_Count+size_based_cleanup_mode_Disabled_Change_Count>0
+          | extend sizeBasedCleanupModeMessage=SizeBasedCleanupModeMessage(CaptureModeAllCount,size_based_cleanup_mode_Disabled_Change_Count)
+          | project sizeBasedCleanupModeMessage
+        DisplayedQuery: |
+          MonQueryStoreInfo
+          | where {ApplicationNamesNodeNamesWith7DayOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | where event == 'query_store_db_settings_and_state'
+          | summarize CaptureModeAllCount=countif(capture_policy_mode =~ 'x_qdsCaptureModeAll'),CustomCapture_PolicyExecutionPolicyCount=countif(capture_policy_mode=~'x_qdsCaptureModeCustom'
+          and (capture_policy_execution_count<30 or capture_policy_total_compile_cpu_ms<1000 or capture_policy_total_execution_cpu_ms<100))
+          ;
+          MonQueryStoreInfo
+          | where {ApplicationNamesNodeNamesWith7DayOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | where event == 'query_store_db_settings_changed'
+          | summarize
+          captureModeAllChange_Count=countif(capture_policy_mode_old=~ 'x_qdsCaptureModeAll' or capture_policy_mode_new =~ 'x_qdsCaptureModeAll'),
+          CustomCapture_PolicyExecutionPolicyChangeCount=countif(
+          (capture_policy_execution_count_old<30 or capture_policy_total_compile_cpu_ms_old<1000 or capture_policy_total_execution_cpu_ms_old<100) or
+          (capture_policy_execution_count_new<30 or capture_policy_total_compile_cpu_ms_new<1000 or capture_policy_total_execution_cpu_ms_new<100)
+          )
+    QuestionToAI: |-
+      -  {{sizeBasedCleanupModeMessage}}, the data type is String.
+
+      ### Rules
+      1. Store the value of sizeBasedCleanupModeMessage column in {{sizeBasedCleanupModeMessage}}.
+      2. Set {{IssueDetected}} to 'true'.
+      3. Set {{ResultMessage}} to sizeBasedCleanupModeMessage.
+
+  - id: "232.QDS Related Memory"
+    Prompts:
+      - "QDS Related Memory"
+    MessageForEmptyKustoResult: "MonSqlMemoryClerkStats doesn't have QDS related info. Please click the kusto query link to get more details"
+    KustoQueries:
+      - TableName: "MonWiQdsExecStats_ratio"
+        ExecutedQuery: |
+          let AggInterval_do_NOT_change=time(5m);
+          MonSqlMemoryClerkStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName =~'{LogicalServerName}'
+          | extend memory_clerk_type = iff(memory_clerk_type == 'MEMORYCLERK_QUERYDISKSTORE_HASHMAP','StmtHashMap Memory', memory_clerk_type)
+          | extend memory_clerk_type = iff(memory_clerk_type == 'USERSTORE_QDSSTMT',                 'BufferedItem Memory', memory_clerk_type)
+          | where memory_clerk_type in~('StmtHashMap Memory', 'BufferedItem Memory','CACHESTORE_QDSRUNTIMESTATS')
+          | summarize MemoryInMB=sum(pages_kb)/1024 by bin(originalEventTimestamp, AggInterval_do_NOT_change), memory_clerk_type
+          | order by originalEventTimestamp asc
+        DisplayedQuery: |
+          let AggInterval_do_NOT_change=time(5m);
+          MonSqlMemoryClerkStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName =~'{LogicalServerName}'
+          | extend memory_clerk_type = iff(memory_clerk_type == 'MEMORYCLERK_QUERYDISKSTORE_HASHMAP','StmtHashMap Memory', memory_clerk_type)
+          | extend memory_clerk_type = iff(memory_clerk_type == 'USERSTORE_QDSSTMT',                 'BufferedItem Memory', memory_clerk_type)
+          | where memory_clerk_type in~('StmtHashMap Memory', 'BufferedItem Memory','CACHESTORE_QDSRUNTIMESTATS')
+          | summarize MemoryInMB=sum(pages_kb)/1024 by bin(originalEventTimestamp, AggInterval_do_NOT_change), memory_clerk_type
+          | order by originalEventTimestamp asc
+          | render timechart ;
+
+          MonQueryStoreInfo
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName =~'{LogicalServerName}'
+          | where event=='query_store_global_mem_obj_size_kb'
+          | project originalEventTimestamp,logical_database_name,event,current_buffered_items_size_mb=current_buffered_items_size_kb/1024,max_buffered_items_size_mb=max_buffered_items_size_kb/1024,current_stmt_hash_map_size_mb=current_stmt_hash_map_size_kb/1024,max_stmt_hash_map_size_mb=max_stmt_hash_map_size_kb/1024,current_partitioned_heap_size_mb=current_partitioned_heap_size_kb/1024,max_memory_available_mb=max_memory_available_kb/1024
+          | order by originalEventTimestamp asc nulls first
+          | take 5

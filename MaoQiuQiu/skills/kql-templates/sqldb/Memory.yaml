@@ -1,0 +1,416 @@
+SqlSkills:
+  - id: "79.0"
+    Prompts:
+      - "Memory Pressure Detection"
+      - "Memory Issue Detection"
+      - "Memory Pressure "
+    EvaluationTrueMessage: "Memory pressure is detected, please type 'Memory Pressure Analysis' to get more details."
+    EvaluationFalseMessage: "Memory pressure is not detected."
+    SuppressOutputOfDescendants: true
+    SubSqlSkills:
+      - Prompts:
+          - "Memory Pressure Analysis"
+
+  - id: "2.0"
+    # Description: This skill will check memory status, covering Buffer Pool, abnormal memory clerks, and identify the root cause if bottleneck are detected.
+    Prompts:
+      - "Memory Pressure Analysis"
+    EvaluationTrueMessage: "Memory pressure is detected."
+    EvaluationFalseMessage: >
+      We conducted checks on Buffer Pool fluctuation, but did not identify any significant issue
+    SubSqlSkills:
+      - id: "2.2"
+        IsKusto: true
+        Prompts:
+          - "OOM summary"
+      - id: "2.4"
+        IsKusto: true
+        Prompts:
+          - "Buffer pool analysis"
+
+  - id: "2.2"
+    HandlingFunction: "OOMAnalysis"
+    Prompts:
+      - "OOM Analysis"
+      - "OOM summary"
+      - "Did the server have OOM"
+      - "Did the server suffer from OOM issue"
+    MessageForEmptyKustoResult: "OOM is not detected"
+    KustoQueries:
+      - TableName: "OOMTable"
+        ExecutedQuery: |
+          MonSQLSystemHealth
+          | where AppName in ({AppNames})
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | where event == 'summarized_oom_snapshot'
+          | where originalEventTimestamp between(datetime({StartTime})..datetime({EndTime}))
+          | extend topClerks = parse_json(top_memory_clerks)
+          | extend topPools = parse_json(top_memory_pools)
+          | extend non_sos_usage_pct = non_sos_usage_mb * 100 / current_job_cap_mb
+          | extend oom_pool_name = parse_json(oom_memory_pool).pool_name
+          | extend is_oom_pool_system_pool = oom_pool_name !contains "SloSharedPool" and  oom_pool_name !contains "UserPool"
+          | extend oom_cause = iff(non_sos_usage_pct  < 60 and oom_factor == 5 and is_oom_pool_system_pool, 10, oom_cause)
+          | extend oomCause = case(oom_cause == 1, 'HEKATON_POOL_MEMORY_LOW', oom_cause == 2, 'MEMORY_LOW', oom_cause == 3, 'OS_MEMORY_PRESSURE',
+          oom_cause == 4, 'OS_MEMORY_PRESSURE_SQL', oom_cause == 5, 'NON_SOS_MEMORY_LEAK', oom_cause == 6, 'SERVERLESS_MEMORY_RECLAMATION',
+          oom_cause == 7, 'MEMORY_LEAK', oom_cause == 8, 'SLOW_BUFFER_POOL_SHRINK', oom_cause == 9, 'INTERNAL_POOL', oom_cause == 10, 'SYSTEM_POOL',
+          oom_cause == 11, 'QUERY_MEMORY_GRANTS', oom_cause == 12, 'REPLICAS_AND_AVAILABILITY', 'UNKNOWN')
+          | extend oom_factor_desc = case(
+          oom_factor == 0, "Undefined",
+          oom_factor == 1, "AllocationPotential",
+          oom_factor == 2, "BlockAllocator",
+          oom_factor == 3, "EscapeTimeout",
+          oom_factor == 4, "FailFast",
+          oom_factor == 5, "MemoryPool",
+          oom_factor == 6, "EmergencyAllocator",
+          oom_factor == 7, "VirtualAlloc",
+          oom_factor == 8, "Simulated",
+          oom_factor == 9, "BufAllocator",
+          oom_factor == 10, "QueryMemQueue",
+          oom_factor == 11, "Fragment",
+          oom_factor == 12, "InitDescriptor",
+          oom_factor == 13, "MemoryPoolPressure", "Unknown")
+          | extend top1Pool=tostring(topPools[0]['pool_name'])
+          | extend top2Pool=tostring(topPools[1]['pool_name'])
+          | extend top1Clerk=tostring(topClerks[0]['clerk_type_name']),top1Clerk_size_mb=tolong(topClerks[0]['page_allocated_mb'])+tolong(topClerks[0]['vm_committed_mb'])
+          | extend top2Clerk=tostring(topClerks[1]['clerk_type_name']),top2Clerk_size_mb=tolong(topClerks[1]['page_allocated_mb'])+tolong(topClerks[1]['vm_committed_mb'])
+          | extend ratioOftop1_jobCap=round(top1Clerk_size_mb*100.0/current_job_cap_mb,1)
+          | extend ratioOftop2_jobCap=round(top2Clerk_size_mb*100.0/current_job_cap_mb,1)
+          | summarize oomCount=count(),LastTime=max(originalEventTimestamp), FirstTime=arg_min(originalEventTimestamp,NodeName, is_non_sos_usage_leaked, oom_factor,oom_factor_desc, top1Clerk,top1Clerk_size_mb,ratioOftop1_jobCap,top2Clerk, top2Clerk_size_mb,ratioOftop2_jobCap,top2Pool,
+          oom_memory_pool,available_physical_memory_mb, current_job_cap_mb, process_memory_usage_mb,
+          non_sos_usage_mb, committed_target_mb, committed_mb, allocation_potential_memory_mb) by oomCause,top1Pool,top1Clerk
+          | order by oomCount desc nulls first
+        DisplayedQuery: |
+          MonSQLSystemHealth
+          | where AppName in ({AppNames})
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | where event == 'summarized_oom_snapshot'
+          | where originalEventTimestamp between(datetime({StartTime})..datetime({EndTime}))
+          | extend topClerks = parse_json(top_memory_clerks)
+          | extend topPools = parse_json(top_memory_pools)
+          | extend non_sos_usage_pct = non_sos_usage_mb * 100 / current_job_cap_mb
+          | extend oom_pool_name = parse_json(oom_memory_pool).pool_name
+          | extend is_oom_pool_system_pool = oom_pool_name !contains "SloSharedPool" and  oom_pool_name !contains "UserPool"
+          | extend oom_cause = iff(non_sos_usage_pct  < 60 and oom_factor == 5 and is_oom_pool_system_pool, 10, oom_cause)
+          | extend oomCause = case(oom_cause == 1, 'HEKATON_POOL_MEMORY_LOW', oom_cause == 2, 'MEMORY_LOW', oom_cause == 3, 'OS_MEMORY_PRESSURE',
+          oom_cause == 4, 'OS_MEMORY_PRESSURE_SQL', oom_cause == 5, 'NON_SOS_MEMORY_LEAK', oom_cause == 6, 'SERVERLESS_MEMORY_RECLAMATION',
+          oom_cause == 7, 'MEMORY_LEAK', oom_cause == 8, 'SLOW_BUFFER_POOL_SHRINK', oom_cause == 9, 'INTERNAL_POOL', oom_cause == 10, 'SYSTEM_POOL',
+          oom_cause == 11, 'QUERY_MEMORY_GRANTS', oom_cause == 12, 'REPLICAS_AND_AVAILABILITY', 'UNKNOWN')
+          | extend oom_factor_desc = case(
+          oom_factor == 0, "Undefined",
+          oom_factor == 1, "AllocationPotential",
+          oom_factor == 2, "BlockAllocator",
+          oom_factor == 3, "EscapeTimeout",
+          oom_factor == 4, "FailFast",
+          oom_factor == 5, "MemoryPool",
+          oom_factor == 6, "EmergencyAllocator",
+          oom_factor == 7, "VirtualAlloc",
+          oom_factor == 8, "Simulated",
+          oom_factor == 9, "BufAllocator",
+          oom_factor == 10, "QueryMemQueue",
+          oom_factor == 11, "Fragment",
+          oom_factor == 12, "InitDescriptor",
+          oom_factor == 13, "MemoryPoolPressure", "Unknown")
+          | extend top1Pool=tostring(topPools[0]['pool_name'])
+          | extend top2Pool=tostring(topPools[1]['pool_name'])
+          | extend top1Clerk=tostring(topClerks[0]['clerk_type_name']),top1Clerk_size_mb=tolong(topClerks[0]['page_allocated_mb'])+tolong(topClerks[0]['vm_committed_mb'])
+          | extend top2Clerk=tostring(topClerks[1]['clerk_type_name']),top2Clerk_size_mb=tolong(topClerks[1]['page_allocated_mb'])+tolong(topClerks[1]['vm_committed_mb'])
+          | extend ratioOftop1_jobCap=round(top1Clerk_size_mb*100.0/current_job_cap_mb,1)
+          | extend ratioOftop2_jobCap=round(top2Clerk_size_mb*100.0/current_job_cap_mb,1)
+          | project originalEventTimestamp,NodeName, is_non_sos_usage_leaked, oom_factor,oom_factor_desc, oomCause,top1Pool, top1Clerk,top1Clerk_size_mb,ratioOftop1_jobCap,top2Clerk, top2Clerk_size_mb,ratioOftop2_jobCap,top2Pool,
+          oom_memory_pool,available_physical_memory_mb, current_job_cap_mb, process_memory_usage_mb,
+          non_sos_usage_mb, committed_target_mb, committed_mb, allocation_potential_memory_mb
+          | summarize count(),LastTime=max(originalEventTimestamp), FirstTime=arg_min(originalEventTimestamp, is_non_sos_usage_leaked, oom_factor,oom_factor_desc,top1Clerk_size_mb,ratioOftop1_jobCap,top2Clerk, top2Clerk_size_mb,ratioOftop2_jobCap,top2Pool,
+          oom_memory_pool,available_physical_memory_mb, current_job_cap_mb, process_memory_usage_mb,
+          non_sos_usage_mb, committed_target_mb, committed_mb, allocation_potential_memory_mb) by oomCause,top1Pool,top1Clerk,NodeName
+          | project-reorder FirstTime,LastTime,count_
+          | order by count_ desc nulls first
+    TSGs:
+      - Title: "TSG:MM0001-8 Summarized OOM snapshot"
+        Link: "https://aka.ms/OOM_Debug_TSG"
+    SubSqlSkills:
+      - id: "4.18"
+        ExecutedWhenParentIssueDetected: true
+        IsKusto: true
+        Keywords: "USERSTORE_TOKENPERM;USERSTORE_SXC;USERSTORE_SCHEMAMGR;USERSTORE_QDSSTMT;USERSTORE_OBJPERM;USERSTORE_DBMETADATA;OBJECTSTORE_XACT_CACHE;OBJECTSTORE_SOSTASK;OBJECTSTORE_SNI_PACKET;OBJECTSTORE_SNI_CONN;OBJECTSTORE_SERVICE_BROKER;OBJECTSTORE_SECAUDIT_EVENT_BUFFER;OBJECTSTORE_LOCK_MANAGER;OBJECTSTORE_LBSS;MEMORYCLERK_XTP;MEMORYCLERK_XODBCAUTHENTICATIONCACHE;MEMORYCLERK_XE_BUFFER;MEMORYCLERK_XE;MEMORYCLERK_XDB_PKG_LAUNCHER_MANAGER;MEMORYCLERK_WRITEPAGERECORDER;MEMORYCLERK_USERDBFIREWALLCACHE;MEMORYCLERK_SVL;MEMORYCLERK_SQLXP;MEMORYCLERK_SQLUTILITIES;MEMORYCLERK_SQLTRACE;MEMORYCLERK_SQLSTORENG;MEMORYCLERK_SQLSLO_OPERATIONS;MEMORYCLERK_SQLSERVICEBROKERTRANSPORT;MEMORYCLERK_SQLSERVICEBROKER;MEMORYCLERK_SQLQUERYPLAN;MEMORYCLERK_SQLQUERYEXEC;MEMORYCLERK_SQLQERESERVATIONS;MEMORYCLERK_SQLOPTIMIZER;MEMORYCLERK_SQLLOGPOOL;MEMORYCLERK_SQLHTTP;MEMORYCLERK_SQLGENERAL;MEMORYCLERK_SQLFABRIC;MEMORYCLERK_SQLEXTENSIBILITY;MEMORYCLERK_SQLCONNECTIONPOOL;MEMORYCLERK_SQLCLR;MEMORYCLERK_SQLBUFFERPOOL;MEMORYCLERK_SPATIAL;MEMORYCLERK_SOSNODE;MEMORYCLERK_SOSMEMMANAGER;MEMORYCLERK_SNI;MEMORYCLERK_SLOG;MEMORYCLERK_SECURITY_FEDAUTH_SIGNATURE_VALIDATION;MEMORYCLERK_SECURITY_FEDAUTH_AAD;MEMORYCLERK_SECURITY;MEMORYCLERK_RG_METRICS_REPORTING;MEMORYCLERK_QUERYPROFILE;MEMORYCLERK_QUERYDISKSTORE_STATS;MEMORYCLERK_QUERYDISKSTORE_QUERYVARIANT_DISPATCHERLIST;MEMORYCLERK_QUERYDISKSTORE_MESSAGING;MEMORYCLERK_QUERYDISKSTORE_HASHMAP;MEMORYCLERK_QUERYDISKSTORE_FEEDBACK;MEMORYCLERK_QUERYDISKSTORE;MEMORYCLERK_OTHERS;MEMORYCLERK_NETWORKSXMLMGR;MEMORYCLERK_LWC;MEMORYCLERK_IPADDRINFIREWALLCACHE;MEMORYCLERK_HOST;MEMORYCLERK_FULLTEXT;MEMORYCLERK_FSCHUNKER;MEMORYCLERK_FSAGENT;MEMORYCLERK_EXT_GOV_MGR;MEMORYCLERK_EXTERNAL_GOVERNANCE_AUTHORIZATION_ENGINE;MEMORYCLERK_EXTERNAL_ENDPOINT_BLOCKED_IP_CACHE;MEMORYCLERK_DOSGUARD;MEMORYCLERK_DEK;MEMORYCLERK_DBLEDGER;MEMORYCLERK_CSILOBCOMPRESSION;MEMORYCLERK_CONNECTIVITY;MEMORYCLERK_BHF;CACHESTORE_XSTORE_AADTOKEN;CACHESTORE_XPROC;CACHESTORE_XML_SELECTIVE_DG;CACHESTORE_XMLDBTYPE;CACHESTORE_XMLDBELEMENT;CACHESTORE_XMLDBATTRIBUTE;CACHESTORE_VIEWDEFINITIONS;CACHESTORE_TEMPTABLES;CACHESTORE_SYSTEMROWSET;CACHESTORE_STACKFRAMES;CACHESTORE_SQLCP;CACHESTORE_SEHOBTCOLUMNATTRIBUTE;CACHESTORE_SEARCHPROPERTYLIST;CACHESTORE_QDSRUNTIMESTATS;CACHESTORE_QDSCONTEXTSETTINGS;CACHESTORE_PHDR;CACHESTORE_OBJCP;CACHESTORE_NOTIF;CACHESTORE_FULLTEXTSTOPLIST;CACHESTORE_EVENTS;CACHESTORE_CONVPRI;CACHESTORE_COLUMNSTOREOBJECTPOOL;CACHESTORE_CLRPROC;CACHESTORE_BROKERUSERCERTLOOKUP;CACHESTORE_BROKERTO;CACHESTORE_BROKERTBLACS;CACHESTORE_BROKERRSB;CACHESTORE_BROKERREADONLY;CACHESTORE_BROKERKEK;CACHESTORE_BROKERDSH;"
+        Reasoning: "Please click the link below to check memory usage of top clerk(s) involved in the OOM"
+        Prompts:
+          - "Memory usage of MemoryClerk PLACEHOLDER"
+      - id: "4.18"
+        ExecutedWhenParentIssueDetected: true
+        IsKusto: true
+        Keywords: "CACHESTORE_SQLCP;CACHESTORE_OBJCP"
+        Reasoning: "Please click the link below to check usage of top cacheStore(s) involved in the OOM"
+        Prompts:
+          - "Usage of CacheStore store_type PLACEHOLDER"
+      - id: "4.18"
+        ExecutedWhenParentIssueDetected: true
+        IsKusto: true
+        Keywords: "QUERY_MEMORY_GRANTS"
+        Reasoning: "Because MEMORYCLERK_SQLQERESERVATIONS contributed significantly to the OOM, we are going to check the Top Memory queries."
+        Prompts:
+          - "Top memory queries"
+      - id: "4.18"
+        ExecutedWhenParentIssueDetected: true
+        IsKusto: false
+        Keywords: "USERSTORE_SXC"
+        Reasoning: "Because oomCause was USERSTORE_SXC, we are going to check MonWiQueryParamData to find queries with high number of parameters."
+        Prompts:
+          - "USERSTORE_SXC"
+
+  - id: "2.4"
+    Prompts:
+      - "SLOW_BUFFER_POOL_SHRINK"
+      - "SLOW BUFFER POOL SHRINK"
+    MessageForEmptyKustoResult: |
+      The issue was due to a result of memory overcommit. Some workloads might require a large amount of memory in a short period of time. In order to compensate for this large memory growth, SQL engine will try to shrink cache memory such as Buffer Pool. However, there are times when the memory growth exceeds the rate that SQL engine can shrink the cache memory.
+      When this scenario occurs, overall memory usage might hit the memory resource cap assigned to the database which results in an Out of Memory. To mitigate this issue, we need to increased config setting JobLowMemorySignalThresholdMB which will allow SQL engine to proactively shrink cache memory so that Out of Memory will be best prevented. And you may also try to enable auto-adjusts feature(IHS) that this config based on amount of memory requested by workload.
+      SqlSOS team is also working on other improvements that would handle the sudden burst of memory requests better without causing any unavailability.
+
+  - id: "2.4"
+    IsPublicSkill: false
+    IsDisplayKustoQueryResult: true
+    Prompts:
+      - "USERSTORE_SXC"
+    MessageForEmptyKustoResult: "No data was returned from MonWiQueryParamData"
+    KustoQueries:
+      - TableName: "MonSqlMemoryClerkStats_SpecificClerk"
+        ExecutedQuery: |
+          MonWiQueryParamData
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName =~'{ServerName}'
+          | where originalEventTimestamp between (datetime({startTime})..datetime({endTime}))
+          | project PreciseTimeStamp,query_hash,parameterized_values_count
+          | order by parameterized_values_count
+          | take 10
+        DisplayedQuery: |
+          MonWiQueryParamData
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName =~'{ServerName}'
+          | where originalEventTimestamp between (datetime({startTime})..datetime({endTime}))
+          | project PreciseTimeStamp,query_hash,parameterized_values_count
+          | order by parameterized_values_count
+          | take 10
+    QuestionToAI: |-
+      ### Rules
+      1. Set {{IssueDetected}} to 'true'.
+      2. Set {{ResultMessage}} to "Large USERSTORE_SXC was a User workload issue. Please engage customer to tune their queries: The amount of memory allocated to store a request in SQL Server depends on:
+      The batch size (number of RPCs per request).
+      The number of parameters used in the T-SQL.
+      The type of parameters. For certain types of parameters (for example, sql_variant), SQL Server can save the requests in memory in a potentially inefficient manner. When a client sends a large batch of requests that use these types of parameters, multiple RPCs can be sent in one request. In this scenario, the server accumulates the whole request in memory before it's executed. This could potentially lead to the 701 error discussed in Symptoms.".
+    TSGs:
+      - Title: "TSG:mm0001-7-large-userstore_sxc-usage"
+        Link: "https://eng.ms/docs/cloud-ai-platform/azure-data/azure-data-azure-databases/sql-/sql-db-performance-queue-common-tsgs/self-help-tsgs/memory/mm0001-7-large-userstore_sxc-usage"
+
+  - id: "2.4"
+    IsPublicSkill: false
+    Prompts:
+      - "Memory usage of MemoryClerk PLACEHOLDER"
+      - "Usage of MemoryClerk PLACEHOLDER"
+      - "Memory usage of clerk PLACEHOLDER"
+      - "Memory usage of clerk MEMORYCLERK_SQLBUFFERPOOL"
+    CustomizedParameters:
+      - "memory_clerk_type"
+    KustoQueries:
+      - TableName: "MonSqlMemoryClerkStats_SpecificClerk"
+        ExecutedQuery: |
+          let AggInterval_do_NOT_change = time(5m);
+          MonSqlMemoryClerkStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName=~'{LogicalServerName}'
+          | where {CustomizedParametersPlaceholder}
+          | summarize MemoryInMB=sum(pages_kb)/1024 by bin(originalEventTimestamp, AggInterval_do_NOT_change), memory_clerk_type
+        DisplayedQuery: |
+          let AggInterval_do_NOT_change = time(5m);
+          MonSqlMemoryClerkStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName=~'{LogicalServerName}'
+          | where {CustomizedParametersPlaceholder}
+          | summarize MemoryInMB=sum(pages_kb)/1024 by bin(originalEventTimestamp, AggInterval_do_NOT_change), memory_clerk_type
+          | render timechart
+    MessageForEmptyKustoResult: "MonSqlMemoryClerkStats doesn't have data"
+
+  - id: "2.4"
+    IsPublicSkill: false
+    Prompts:
+      - "Usage of CacheStore store_type PLACEHOLDER"
+    CustomizedParameters:
+      - "store_type"
+    MessageForEmptyKustoResult: "MonSqlCaches doesn't have data"
+    KustoQueries:
+      - TableName: "MonSqlCaches_Usage_OF_Specificstore_type"
+        ExecutedQuery: |
+          let AggInterval_do_NOT_change = time(5m);
+          MonSqlCaches
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName=~'{LogicalServerName}'
+          | where {CustomizedParametersPlaceholder}
+          | where event == "clock_hand_stats"
+          | order by clock_hand_id, TIMESTAMP asc
+          | where clock_hand_id == prev(clock_hand_id)
+          | extend delta_entries_evicted = max_of(removed_all_rounds - prev(removed_all_rounds), 0)
+          | summarize sum(delta_entries_evicted) by bin(TIMESTAMP, AggInterval_do_NOT_change), clock_hand_id
+          | project TIMESTAMP, tostring(clock_hand_id), sum_delta_entries_evicted
+        DisplayedQuery: |
+          let AggInterval_do_NOT_change = time(5m);
+          MonSqlCaches
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName=~'{LogicalServerName}'
+          | where {CustomizedParametersPlaceholder}
+          | where event == "clock_hand_stats"
+          | order by clock_hand_id, TIMESTAMP asc
+          | where clock_hand_id == prev(clock_hand_id)
+          | extend delta_entries_evicted = max_of(removed_all_rounds - prev(removed_all_rounds), 0)
+          | summarize sum(delta_entries_evicted) by bin(TIMESTAMP, AggInterval_do_NOT_change), clock_hand_id
+          | project TIMESTAMP, tostring(clock_hand_id), sum_delta_entries_evicted
+          | render timechart
+    SubSqlSkills:
+      - id: "4.18"
+        ExecutedWhenParentIssueDetected: true
+        IsKusto: true
+        AlwaysDisplayResult: true
+        Reasoning: "As Cache Store entries were purge, we are going to check if Instance level cache store size limit is reached"
+        Prompts:
+          - "Instance level cache store size limit"
+      - id: "4.18"
+        ExecutedWhenParentIssueDetected: true
+        IsKusto: true
+        AlwaysDisplayResult: true
+        Reasoning: "As Cache Store entries were purge, we are going to check if entry limit is reached"
+        Prompts:
+          - "CacheStore store_type PLACEHOLDER entry limit"
+
+  - id: "2.4"
+    IsPublicSkill: false
+    Prompts:
+      - "CacheStore store_type PLACEHOLDER entry limit"
+    CustomizedParameters:
+      - "store_type"
+    MessageForEmptyKustoResult: "The store cache has not reached its entry limit."
+    KustoQueries:
+      - TableName: "MonSqlCaches_NumberofEntryLimit"
+        ExecutedQuery: |
+          let AggInterval_do_NOT_change = time(5m);
+          MonSqlCaches
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName=~'{LogicalServerName}'
+          | where {CustomizedParametersPlaceholder}
+          | where event == "clock_hand_stats"
+          | summarize max(store_entries), max(entries_soft_quota) by originalEventTimestamp , store_type
+          | where max_store_entries >max_entries_soft_quota
+          | summarize count()
+          | where count_>0
+          | extend purgeStatus=strcat("The store cache has reached its entry limit", count_," time(s), that has causes internal memory pressure and lead the cache entries be purged")
+          | project purgeStatus
+        DisplayedQuery: |
+          let AggInterval_do_NOT_change = time(5m);
+          MonSqlCaches
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName=~'{LogicalServerName}'
+          | where {CustomizedParametersPlaceholder}
+          | where event == "clock_hand_stats"
+          | summarize max(store_entries), max(entries_soft_quota) by originalEventTimestamp , store_type
+          | where max_store_entries >max_entries_soft_quota
+          | take 10
+    QuestionToAI: |-
+      -  {{exceededLimitStatus}}, the data type is String.
+
+      ### Rules
+      1. Store the value of exceededLimitStatus column to {{exceededLimitStatus}}.
+      2. Set {{IssueDetected}} to 'true'.
+      3. Set {{ResultMessage}} to exceededLimitStatus.
+
+  - id: "2.4"
+    Prompts:
+      - "instance level cache store size limit"
+    MessageForEmptyKustoResult: "instance level internal cache size limit is not reached."
+    KustoQueries:
+      - TableName: "MonSqlIdleMemCollectorStats_instanceLevelInternalCacheSizeLimit"
+        ExecutedQuery: |
+          let ExceededLimitStatus = (countOfExceedLimit:int,countOfNegativeAllocationPotentialWhenExceedLimit:int)
+          {
+          let exceededLimitStatus=iif(countOfExceedLimit>0,strcat("The size of internal caches exceeded the cache limit ",countOfExceedLimit," time(s)"),"Internal caches didn't exceed the size cache limit");
+          let negativeAllocationPotentialStatus=case(countOfNegativeAllocationPotentialWhenExceedLimit>0,strcat(", while AllocationPotential dropped to negative ",countOfNegativeAllocationPotentialWhenExceedLimit," time(s)"),",while AllocationPotential didn't drop to negative");
+          strcat(exceededLimitStatus,negativeAllocationPotentialStatus)
+          };
+          MonSqlIdleMemCollectorStats
+          | where  (AppName =~'dd5dae7452d1' and originalEventTimestamp between (datetime(8/12/2025 03:00:01 AM)..datetime(8/12/2025 5:59:54 AM)) and ClusterName =~'tr889.indiasouth1-a.worker.database.windows.net' and NodeName =~'_DB_67')
+          | where LogicalServerName=~'spartan-srv-ind-crmcoreind-a7f735156dac'
+          | where event == "sql_memory_perf_stats"
+          | summarize countOfExceedLimit=countif(internal_caches_kb>internal_caches_limit_kb),countOfNegativeAllocationPotentialWhenExceedLimit=countif(internal_caches_kb>internal_caches_limit_kb and 0>allocation_potential_kbs),countOfNegativeAllocationPotential=countif(0>allocation_potential_kbs)
+          | where countOfExceedLimit>0
+          | extend exceededLimitStatus=ExceededLimitStatus(countOfExceedLimit,countOfNegativeAllocationPotentialWhenExceedLimit)
+          | project exceededLimitStatus
+        DisplayedQuery: |
+          MonSqlIdleMemCollectorStats
+          | where  (AppName =~'dd5dae7452d1' and originalEventTimestamp between (datetime(8/12/2025 03:00:01 AM)..datetime(8/12/2025 5:59:54 AM)) and ClusterName =~'tr889.indiasouth1-a.worker.database.windows.net' and NodeName =~'_DB_67')
+          | where LogicalServerName=~'spartan-srv-ind-crmcoreind-a7f735156dac'
+          | where event == "sql_memory_perf_stats"
+          | project originalEventTimestamp,internal_caches_mb=internal_caches_kb/1024,internal_caches_limit_mb=internal_caches_limit_kb/1024,allocation_potential_kbs
+    QuestionToAI: |-
+      -  {{exceededLimitStatus}}, the data type is String.
+
+      ### Rules
+      1. Store the value of exceededLimitStatus column to {{exceededLimitStatus}}.
+      2. Set {{IssueDetected}} to 'true'.
+      3. Set {{ResultMessage}} to exceededLimitStatus.
+
+  - id: "2.4"
+    Prompts:
+      - "Buffer Pool Analysis"
+      - "Buffer Pool drop"
+      - "Did Buffer Pool drop"
+      - "Buffer Pool fluctuation analysis"
+      - "Did the buffer Pool fluctuate"
+      - "Did the buffer Pool decrease"
+    KustoQueries:
+      - TableName: "MonSqlMemoryClerkStats_Bufferpool"
+        # Description: "Check if MEMORYCLERK_SQLBUFFERPOOL had decreased and if the decrease is greater than or equal to 20% using Differencing-method"
+        ExecutedQuery: |
+          let AggInterval_do_NOT_change = time(5m);
+          let warningThreshold=20;
+          MonSqlMemoryClerkStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName=~'{LogicalServerName}'
+          | where memory_clerk_type =~'MEMORYCLERK_SQLBUFFERPOOL'
+          | summarize MemoryInMB=sum(pages_kb)/1024 by bin(originalEventTimestamp, AggInterval_do_NOT_change),process_id
+          | extend timestamp=format_datetime(originalEventTimestamp, 'yyyy-MM-dd HH:mm:ss')
+          | project timestamp, MemoryInMB,process_id
+          | order by timestamp asc
+          | serialize
+          | extend prevMemoryInMB = prev(MemoryInMB),prevProcess_id=prev(process_id),prevTimestamp=prev(timestamp)
+          | project timestamp,prevTimestamp,MemoryInMB,prevMemoryInMB,dropInMB=prevMemoryInMB-MemoryInMB,prevProcess_id,process_id
+          | extend percentage=round(dropInMB*100.0/prevMemoryInMB,1)
+          | where dropInMB >0
+          | where percentage >=warningThreshold
+          | where prevProcess_id==process_id
+          | summarize count=count(),arg_max(dropInMB,percentage,prevMemoryInMB,prevTimestamp,MemoryInMB,timestamp)
+          | where count>0
+        DisplayedQuery: |
+          let AggInterval_do_NOT_change = time(5m);
+          MonSqlMemoryClerkStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName=~'{LogicalServerName}'
+          | where memory_clerk_type =~'MEMORYCLERK_SQLBUFFERPOOL'
+          | summarize MemoryInMB=sum(pages_kb)/1024 by bin(originalEventTimestamp, AggInterval_do_NOT_change)
+          | order by originalEventTimestamp asc nulls first
+          | render timechart
+    MessageForEmptyKustoResult: "Buffer Pool was fine, significant drop was not detected.(Note: memory drops caused by SQL Server restarts have been excluded)"
+    QuestionToAI: |-
+      -  {{count}}, the data type is Integer.
+      -  {{dropInMB}}, the data type is Integer.
+      -  {{percentage}}, the data type is Float.
+      -  {{MemoryInMB}}, the data type is Integer.
+      -  {{timestamp}}, the data type is Datetime.
+      -  {{prevMemoryInMB}}, the data type is Integer.
+      -  {{prevTimestamp}}, the data type is Datetime.
+
+      ### Rules
+      1. Store the value of count column to {{count}}.
+      2. Store the value of dropInMB column to {{dropInMB}}.
+      3. Store the value of percentage column to {{percentage}}.
+      4. Store the value of MemoryInMB column to {{MemoryInMB}}.
+      5. Store the value of timestamp column to {{timestamp}}.
+      6. Store the value of prevMemoryInMB column to {{prevMemoryInMB}}.
+      7. Store the value of prevTimestamp column to {{prevTimestamp}}.
+      8. Set {{IssueDetected}} to 'true'.
+      9. Set {{ResultMessage}} to "The Buffer Pool dropped significantly {{count}} time(s). The most notable drop occurred between {{prevTimestamp}} and {{timestamp}}, with a decrease of {{dropInMB}}MB —from {{prevMemoryInMB}}MB to {{MemoryInMB}}MB—a reduction of {{percentage}}%. (Note: memory drops caused by SQL Server restarts have been excluded)"

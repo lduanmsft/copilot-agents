@@ -1,0 +1,176 @@
+SqlSkills:
+  - id: "294"
+    #Description: "This skill will APRC automatic_tuning_plan_regression_detection_check_completed event"
+    Prompts:
+      - "APRC Plan Regression For Query Placeholder"
+      - "APRC Regression For Query Placeholder"
+    CustomizedParameters:
+      - "query_id"
+      - "query_hash"
+    EvaluationTrueMessage: "APRC has detected a plan regression. Please review the subitems for further details."
+    EvaluationFalseMessage: "APRC doesn't detect plan regression."
+    SubSqlSkills:
+      - Prompts:
+          - "FORCE_LAST_GOOD_PLAN State Check"
+      - Prompts:
+          - "Plan Regression For Query Placeholder"
+      - Prompts:
+          - "Forced Plan Regression For Query Placeholder"
+
+  - id: "294.1"
+    Prompts:
+      - "FORCE_LAST_GOOD_PLAN State Check"
+      - "Is FORCE_LAST_GOOD_PLAN Enabled"
+    MessageForEmptyKustoResult: "MonAutomaticTuningState doesn't have data for FORCE_LAST_GOOD_PLAN"
+    KustoQueries:
+      - TableName: "MonAutomaticTuningState_FORCE_LAST_GOOD_PLAN"
+        ExecutedQuery: |
+          let FORCE_LAST_GOOD_PLAN_StateMessage=(offCount:int, onCount:int,offBySystemCount:int)
+          {//offCount+onCount is always greater than 0
+            case(offBySystemCount>0,"The FORCE_LAST_GOOD_PLAN option was disabled by the system, please transfer to queue 'Automatic tuning, Azure SQL Analytics' for RCA if this is a concern.",
+            offCount>0 and onCount==0,"The FORCE_LAST_GOOD_PLAN option was off, hence it will not automatically force the last good query plan. Please consider enabling it if needed.",
+            offCount>0 and onCount>0,"The FORCE_LAST_GOOD_PLAN option was changed. Please note, the Auto Query Plan Correction will not happen if FORCE_LAST_GOOD_PLAN is OFF.",
+            "The FORCE_LAST_GOOD_PLAN option was On")       
+            //Sampol1:The Sql Server FORCE_LAST_GOOD_PLAN was off, hence it will not automatically force the last good query plan. Please consider enabling it if needed.
+          };
+          MonAutomaticTuningState
+            | where {AppNamesNodeNamesWithPreciseTimeRange}
+            | extend logical_database_name=logical_db_name
+            | where {LogicalServerAndLogicalDatabaseName}
+            | where option_name == "FORCE_LAST_GOOD_PLAN" 
+            | summarize offCount=countif(option_actual_state==0),onCount=countif(option_actual_state==1),offBySystemCount=countif(option_system_disabled==1)
+            | where offCount+onCount>0//0 means there is no data
+            | extend force_LAST_GOOD_PLAN_StateMessage=FORCE_LAST_GOOD_PLAN_StateMessage(offCount,onCount,offBySystemCount)
+            | extend IssueDetected=iff(offCount>0,'true','false')
+        DisplayedQuery: |
+          MonAutomaticTuningState
+            | where {AppNamesNodeNamesWithPreciseTimeRange}
+            | extend logical_database_name=logical_db_name
+            | where {LogicalServerAndLogicalDatabaseName}
+            | where option_name == "FORCE_LAST_GOOD_PLAN" 
+            | summarize min(TIMESTAMP), max(TIMESTAMP) by option_actual_state, option_desired_state,option_system_disabled
+    QuestionToAI: |-
+      -  {{force_LAST_GOOD_PLAN_StateMessage}}, the data type is String.
+
+      ### Rules
+      1. Store the value of force_LAST_GOOD_PLAN_StateMessage column in {{force_LAST_GOOD_PLAN_StateMessage}}.
+      2. Store the value of IssueDetected column in {{IssueDetected}}.
+      3. Set {{ResultMessage}} to {{force_LAST_GOOD_PLAN_StateMessage}}.
+
+  - id: "294.2"
+    Prompts:
+      - "Plan Regression For Query Placeholder"
+    CustomizedParameters:
+      - "query_id"
+      - "query_hash"
+    MessageForEmptyKustoResult: "APRC did not detect any plan regression on the plan"
+    KustoQueries:
+      - TableName: "MonAutomaticTuning_regressionDetected"
+        ExecutedQuery: |
+          let RegressionMessage=(totalCount: int,countPerMinute:real)
+          {
+          let summary=strcat("SQL Server APRC detected a plan regression ", PluralOrSingular(totalCount,"time"),iff(totalCount>2,  strcat("(",countPerMinute, " per minute) ."),"."));
+          let frequentMessage=iff(countPerMinute >1 and  totalCount>5," This indicates frequent plan regression. Kindly engage the DBA team to investigate the underlying cause and ensure long-term query plan stability.","");
+          let suggestion=" Please note, this is a workload-related performance issue rather than a defect in SQL Server itself. ";
+          strcat(summary,frequentMessage,suggestion)
+          //Sample1:SQL Server APRC detected a plan regression 11 times(0.693 per minute) .Please note, this is a workload-related performance issue rather than a defect in SQL Server itself.
+          };
+          let queryIds=(
+          MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | where {CustomizedParametersPlaceholder}
+          | distinct query_id
+          );
+          MonAutomaticTuning
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | join kind=inner (queryIds) on query_id
+          | where event =~'automatic_tuning_plan_regression_detection_check_completed'//automatic_tuning_plan_regression_detection_check_completed is fired when new applied query plan has been executed at least 15 times
+          | where is_regression_detected ==true
+          | project originalEventTimestamp,event,query_id,is_regression_detected,is_regression_corrected,current_plan_id, last_good_plan_id,current_plan_cpu_time_average,current_plan_execution_count,last_good_plan_cpu_time_average,last_good_plan_execution_count
+          | summarize totalCount=count(),countPerMinute=round(count()*1.0/(datetime_diff('minute',max(originalEventTimestamp),min(originalEventTimestamp))+1),3)
+          | where totalCount >0
+          | extend regressionMessage =RegressionMessage(totalCount,countPerMinute)
+          | project regressionMessage
+        DisplayedQuery: |
+          let queryIds=(
+          MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | where {CustomizedParametersPlaceholder}
+          | distinct query_id
+          );
+          MonAutomaticTuning
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | join kind=inner (queryIds) on query_id
+          | where event =~'automatic_tuning_plan_regression_detection_check_completed'//automatic_tuning_plan_regression_detection_check_completed is fired when new applied query plan has been executed at least 15 times
+          | where is_regression_detected ==true
+          | project originalEventTimestamp,event,query_id,is_regression_detected,is_regression_corrected,current_plan_id, last_good_plan_id,current_plan_cpu_time_average,current_plan_execution_count,last_good_plan_cpu_time_average,last_good_plan_execution_count
+          | take 5//comment this line to see all results.
+    QuestionToAI: |-
+      -  {{regressionMessage}}, the data type is String.
+
+      ### Rules
+      1. Store the value of regressionMessage column in {{regressionMessage}}.
+      2. Set {{IssueDetectedMessage}} to true.
+      3. Set {{ResultMessage}} to {{regressionMessage}}.
+
+  - id: "294.3"
+    Prompts:
+      - "Forced Plan Regression For Query Placeholder"
+    CustomizedParameters:
+      - "query_id"
+      - "query_hash"
+    MessageForEmptyKustoResult: "APRC did not detect any plan regression on the forced plan"
+    KustoQueries:
+      - TableName: "MonAutomaticTuning_verificationDetected"
+        ExecutedQuery: |
+          let RegressionMessage=(totalCount: int,countPerMinute:real)
+          {
+          let summary=strcat("SQL Server detected a plan regression and reverted the query to the last known good plan. However, the restored plan did not perform optimally, leading to performance degradation. This pattern repeated ", PluralOrSingular(totalCount,"time"),iff(totalCount>2,  strcat("(",countPerMinute, " per minute) ."),"."));
+          let frequentMessage=iff(countPerMinute >1 and totalCount>5," This indicates frequent plan regression. Kindly engage the DBA team to investigate the underlying cause and ensure long-term query plan stability.","");
+          let suggestion=" Please note, this is a workload-related performance issue rather than a defect in SQL Server itself. ";
+          strcat(summary,frequentMessage,suggestion)
+          };
+          let queryIds=(
+          MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | where {CustomizedParametersPlaceholder}
+          | distinct query_id
+          );
+          MonAutomaticTuning
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | join kind=inner (queryIds) on query_id
+          | where event == "automatic_tuning_plan_regression_verification_check_completed"//automatic_tuning_plan_regression_verification_check_completed  is fired  15 mins later after last good known query plan is forced and 'forced query plan' is executed at least 3 times
+          | where is_regression_detected ==true
+          | summarize totalCount=count(),countPerMinute=round(count()*1.0/(datetime_diff('minute',max(originalEventTimestamp),min(originalEventTimestamp))+1),3)
+          | where totalCount >0
+          | extend regressionMessage =RegressionMessage(totalCount,countPerMinute)
+          | project regressionMessage
+        DisplayedQuery: |
+          let queryIds=(
+          MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | where {CustomizedParametersPlaceholder}
+          | distinct query_id
+          );
+          MonAutomaticTuning
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | join kind=inner (queryIds) on query_id
+          | where event == "automatic_tuning_plan_regression_verification_check_completed"
+          | where is_regression_detected ==true
+          | project originalEventTimestamp,event,query_id,is_regression_detected,is_regression_corrected, plan_id,current_plan_id, last_good_plan_id,current_plan_cpu_time_average,current_plan_execution_count,last_good_plan_cpu_time_average,last_good_plan_execution_count
+          | take 5//comment this line to see all results.
+    QuestionToAI: |-
+      -  {{regressionMessage}}, the data type is String.
+
+      ### Rules
+      1. Store the value of regressionMessage column in {{regressionMessage}}.
+      2. Set {{IssueDetectedMessage}} to true.
+      3. Set {{ResultMessage}} to {{regressionMessage}}.

@@ -1,0 +1,176 @@
+SqlSkills:
+  - IsPublicSkill: false
+    Prompts:
+      - "Wait Category:PARALLELISM"
+    TSGs:
+      - Title: "QDS WaitType Full List"
+        Description: In SQL Server, parallelism wait types often show up when queries run in parallel across multiple threads. Please review the query plan and tune the query to reduce the wait time.
+        Link: "https://learn.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-query-store-wait-stats-transact-sql?view=sql-server-ver16"
+
+  - IsPublicSkill: false
+    Prompts:
+      - "Wait Category:CPU"
+    TSGs:
+      - Title: "QDS WaitType Full List"
+        Description: In SQL Server, CPU often show up when queries are waiting for CPU resource. Suggest find the major CPU consumer and tune them. If the query itself consumes lots of CPU, then tuen this query. Please engage DBA/SQL Developer to get the Actual Query Plan to investigate
+        Link: "https://learn.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-query-store-wait-stats-transact-sql?view=sql-server-ver16"
+
+  - IsPublicSkill: false
+    Prompts:
+      - "Wait Category:Latch"
+    TSGs:
+      - Title: "QDS WaitType Full List"
+        Description: ""
+        Link: "https://learn.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-query-store-wait-stats-transact-sql?view=sql-server-ver16"
+
+  - IsPublicSkill: false
+    Prompts:
+      - "Wait Category:BUFFERLATCH"
+    CustomizedParameters:
+      - "query_hash"
+      - "query_id"
+    MessageForEmptyKustoResult: "Troubleshooting can't display the result because MonWiQdsWaitStats/MonDmCloudDatabaseWaitStats doesn't have data, Please engage telemetry team if this is a concern."
+    KustoQueries:
+      - TableName: "MonWiQdsWaitStats_BUFFERLATCH"
+        ExecutedQuery: |
+          let WaitMessage=(dcount_wait_type:int,set_wait_type:string)
+          {
+          let summary=case(dcount_wait_type==1,strcat("The PageLatch wait type observed for this query was ",set_wait_type,". Due to the QDS limit, the exact wait resource can't be found out. You needed to run following T-SQL to figure it out when the issue is happening:"),
+          strcat("The PageLatch wait type observed for this query could be either ",set_wait_type," waitType, or all. Due to limitations of the Query Data Store (QDS), the exact wait type and wait resource cannot be determined. You needed to run following T-SQL to figure it out when the issue is happening:")
+          );
+          let tsql=" SELECT wt.session_id,wt.wait_type,er.last_wait_type AS last_wait_type,wt.wait_duration_ms,wt.blocking_session_id,wt.blocking_exec_context_id,resource_description FROM sys.dm_os_waiting_tasks AS wt INNER JOIN sys.dm_exec_sessions AS es ON wt.session_id = es.session_id INNER JOIN sys.dm_exec_requests AS er ON wt.session_id = er.session_id WHERE es.is_user_process = 1 AND wt.wait_type != 'SLEEP_TASK' ORDER BY wt.wait_duration_ms DESC;";
+          strcat(summary,tsql)
+          };
+          let QDSAggIntervalInMin = time(15m);
+          let QdsWait=materialize ( MonWiQdsWaitStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | where {CustomizedParametersPlaceholder}
+          | where wait_category=~'BUFFERLATCH'
+          | summarize by bin(originalEventTimestamp,QDSAggIntervalInMin)
+          );
+          MonDmCloudDatabaseWaitStats
+          | where {AppNamesNodeNamesWithPreciseTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | where wait_type in('PAGELATCH_NL','PAGELATCH_KP','PAGELATCH_SH','PAGELATCH_UP','PAGELATCH_EX','PAGELATCH_DT')
+          | summarize  by bin(PreciseTimeStamp,QDSAggIntervalInMin),wait_type
+          | join kind=inner(QdsWait) on $left.PreciseTimeStamp==$right.originalEventTimestamp
+          | summarize dcount_wait_type=dcount(wait_type),set_wait_type=make_set(wait_type)
+          | extend waitMessage=WaitMessage(dcount_wait_type,set_wait_type)
+          | project waitMessage
+        DisplayedQuery: |
+          let QDSAggIntervalInMin = time(15m);
+          let QdsWait=materialize ( MonWiQdsWaitStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | where {CustomizedParametersPlaceholder}
+          | where wait_category=~'BUFFERLATCH'
+          | summarize wait_time_ms_QDS=sum(total_query_wait_time_ms)by bin(originalEventTimestamp,QDSAggIntervalInMin)
+          );
+          MonDmCloudDatabaseWaitStats
+          | where {AppNamesNodeNamesWithPreciseTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | where wait_type in('PAGELATCH_NL','PAGELATCH_KP','PAGELATCH_SH','PAGELATCH_UP','PAGELATCH_EX','PAGELATCH_DT')
+          | summarize delta_wait_time_ms=sum(delta_wait_time_ms) by bin(PreciseTimeStamp,QDSAggIntervalInMin),wait_type
+          | join kind=inner(QdsWait) on $left.PreciseTimeStamp==$right.originalEventTimestamp
+          | project originalEventTimestamp,wait_type,wait_time_ms_QDS,delta_wait_time_ms
+          | order by originalEventTimestamp asc
+          | render timechart
+    QuestionToAI: |-
+      -  {{waitMessage}}, the data type is String.
+
+      ### Rules
+      1. Store the value of waitMessage column in {{waitMessage}}.
+      2. Set {{IssueDetected}} to 'true'.
+      3. Set {{ResultMessage}} to {{waitMessage}}.
+    TSGs:
+      - Title: "QDS WaitType Full List"
+        Description: >
+          The query execution experiences from BUFFERLATCH(PageLatch_xx) when multiple threads are contending for access to the same data page in buffer pool. To determine the exact type of PageLatch, please review the telemetry MonDmCloudDatabaseWaitStats.
+        Link: "https://learn.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-query-store-wait-stats-transact-sql?view=sql-server-ver16"
+      - Title: "Last page contention"
+        Description: >
+          Please reveiw below tsg to determine if this is a Last Page Contention issue.
+        Link: "https://learn.microsoft.com/en-us/troubleshoot/sql/database-engine/performance/resolve-pagelatch-ex-contention"
+
+  - IsPublicSkill: false
+    Prompts:
+      - "Wait Category:NETWORKIO"
+    CustomizedParameters:
+      - "query_hash"
+      - "query_id"
+    MessageForEmptyKustoResult: "Troubleshooting can't display the result because MonWiQdsWaitStats/MonDmCloudDatabaseWaitStats doesn't have data, Please engage telemetry team if this is a concern."
+    KustoQueries:
+      - TableName: "MonWiQdsWaitStats_NETWORKIO"
+        ExecutedQuery: |
+          let WaitMessage=(dcount_wait_type:int,set_wait_type:string)
+          {
+          let summary=case(dcount_wait_type==1,strcat("The NETWORKIO wait type observed for this query was ",set_wait_type,"."),
+          dcount_wait_type==2,strcat("The NETWORKIO wait type observed for this query can be either ",set_wait_type," or both."),
+          strcat("The NETWORKIO wait type observed for this query could be either ",set_wait_type," or any combination of them.")
+          );
+          let ActionPlan_ASYNC_NETWORK_IO=iff(set_wait_type !contains 'ASYNC_NETWORK_IO',"",
+          strcat(" Regarding the 'ASYNC_NETWORK_IO',when SQL Server produces result sets and sends them to a client application by putting the results in an output buffer, the client application fetches them from the output buffer. If the client application stops or doesn't fetch the results fast enough, ",
+          "SQL Server has to wait for acknowledgment that the client application has received all the results before sending more results. ",
+          "This wait will show up as ASYNC_NETWORK_IO. ",
+          "There are 3 possible issue:1. The data set is too large hence it takes time to receive it;2. Network Latnecy between the Client side and Azure Sql Side;3. The Azure DB host(vm) has issue and causes issues. ",
+          "Action Plan:Collect a network trace to identify which side is experiencing slowness:1)On the client side, engage the customer's network team; 2) On the Azure side, engage the Azure network team."));
+          //
+          let ActionPlan_NET_WAITFOR_PACKET=iff(set_wait_type !contains 'PROXY_NETWORK_IO',"",
+          " Regarding the 'PROXY_NETWORK_IO', please engage Sql Server Product Team to Investigate.");
+          //
+          let ActionPlan_PROXY_NETWORK_IO=iff(set_wait_type !contains 'PROXY_NETWORK_IO',"",
+          " Regarding the 'PROXY_NETWORK_IO', please engage Sql Server Product Team to Investigate.");
+          //
+          let ActionPlan_EXTERNAL_SCRIPT_NETWORK_IOF=iff(set_wait_type !contains 'EXTERNAL_SCRIPT_NETWORK_IOF',"",
+          " Regarding the 'EXTERNAL_SCRIPT_NETWORK_IOF', please engage Sql Server Product Team to Investigate.");
+          //
+          strcat(summary,ActionPlan_ASYNC_NETWORK_IO,ActionPlan_NET_WAITFOR_PACKET,ActionPlan_PROXY_NETWORK_IO,ActionPlan_EXTERNAL_SCRIPT_NETWORK_IOF)
+          };
+          let QDSAggIntervalInMin = time(15m);
+          let QdsWait=materialize ( MonWiQdsWaitStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | where {CustomizedParametersPlaceholder}
+          | where wait_category=~'NETWORKIO'
+          | summarize by bin(originalEventTimestamp,QDSAggIntervalInMin)
+          );
+          MonDmCloudDatabaseWaitStats
+          | where {AppNamesNodeNamesWithPreciseTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | where wait_type in('ASYNC_NETWORK_IO', 'NET_WAITFOR_PACKET', 'PROXY_NETWORK_IO' , 'EXTERNAL_SCRIPT_NETWORK_IOF')
+          | summarize  by bin(PreciseTimeStamp,QDSAggIntervalInMin),wait_type
+          | join kind=inner(QdsWait) on $left.PreciseTimeStamp==$right.originalEventTimestamp
+          | summarize dcount_wait_type=dcount(wait_type),set_wait_type=make_set(wait_type)
+          | extend waitMessage=WaitMessage(dcount_wait_type,set_wait_type)
+          | project waitMessage
+        DisplayedQuery: |
+          let QDSAggIntervalInMin = time(15m);
+          let QdsWait=materialize ( MonWiQdsWaitStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | where {CustomizedParametersPlaceholder}
+          | where wait_category=~'NETWORKIO'
+          | summarize wait_time_ms_QDS=sum(total_query_wait_time_ms)by bin(originalEventTimestamp,QDSAggIntervalInMin)
+          );
+          MonDmCloudDatabaseWaitStats
+          | where {AppNamesNodeNamesWithPreciseTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | where wait_type in('ASYNC_NETWORK_IO', 'NET_WAITFOR_PACKET', 'PROXY_NETWORK_IO' , 'EXTERNAL_SCRIPT_NETWORK_IOF')
+          | summarize delta_wait_time_ms=sum(delta_wait_time_ms) by bin(PreciseTimeStamp,QDSAggIntervalInMin),wait_type
+          | join kind=inner(QdsWait) on $left.PreciseTimeStamp==$right.originalEventTimestamp
+          | project originalEventTimestamp,wait_type,wait_time_ms_QDS,delta_wait_time_ms
+          | order by originalEventTimestamp asc
+          | render timechart
+    QuestionToAI: |-
+      -  {{waitMessage}}, the data type is String.
+
+      ### Rules
+      1. Store the value of waitMessage column in {{waitMessage}}.
+      2. Set {{IssueDetected}} to 'true'.
+      3. Set {{ResultMessage}} to {{waitMessage}}.
+    TSGs:
+      - Title: "QDS WaitType NETWORKIO"
+        Link: "https://learn.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-query-store-wait-stats-transact-sql?view=sql-server-ver16"
+      - Title: "ASYNC_NETWORK_IO"
+        Link: "https://learn.microsoft.com/en-us/troubleshoot/sql/database-engine/performance/troubleshoot-query-async-network-io"

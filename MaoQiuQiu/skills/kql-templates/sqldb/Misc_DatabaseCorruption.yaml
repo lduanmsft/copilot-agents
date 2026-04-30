@@ -1,0 +1,84 @@
+SqlSkills:
+
+  - id: "20.2"
+    Prompts:
+      - "Database Corruption Detection"
+    MessageForEmptyKustoResult: "Corruption was not detected."
+    KustoQueries:
+      - TableName: "MonSQLSystemHealth_Corruption"
+        ServiceTiers: "Free;Basic;Standard;Premium;GeneralPurpose;BusinessCritical"
+        ExecutedQuery: |
+          let CorruptionMessage=(totalCount:int,dcount:int,StartTime:string,EndTime:string)
+          {
+                    let suggestion=" The Database corruption affects both data integrity and Azure DB availability, which can lead to severe consequences, including (but not limited to) database downtime, login failures, and query execution errors. Please Engage the Storage Engine team to investigate.";
+                    let message=case(totalCount==0,"Corruption is not detected.",
+                    totalCount==1, strcat("Corruption was detected 1 time, at ",StartTime,". "),
+                    totalCount>1 and dcount==1, strcat("Corruption was detected ",PluralOrSingular(totalCount,"time"), " between ",StartTime," and ", EndTime, ". "),
+                    strcat("Corruption was detected ",PluralOrSingular(totalCount,"time"), " across ",dcount," different corruption types between ",StartTime," and ", EndTime, ". ")
+                    );
+                    iff(totalCount>0,strcat(message,suggestion),message)
+          };
+          MonSQLSystemHealth
+          | where {StartOriginalEventTimestampEndOriginalEventTimestamp}
+          | where LogicalServerName =~ '{LogicalServerName}' and AppName in ({AppNamesOnly})
+          | where error_id in (211,823,824,825,829,2533,2570,2576,3203,7985,7989,8909,8914,8916,8928,8939,8942,8948,8964,8965,8978,8992,8998,8999) 
+          | summarize totalCount=count(),dcount=dcount(error_id),StartTime=min(originalEventTimestamp), EndTime=max(originalEventTimestamp)
+          | extend StartTime=format_datetime(StartTime,'yyyy-MM-dd HH:mm:ss'),EndTime=format_datetime(EndTime,'yyyy-MM-dd HH:mm:ss')
+          | extend corruptionMessage=CorruptionMessage(totalCount,dcount,StartTime,EndTime)
+          | extend IssueDetected=iff(totalCount>0,'true','false')
+          | project corruptionMessage,IssueDetected
+        DisplayedQuery: |
+          MonSQLSystemHealth
+          | where {StartOriginalEventTimestampEndOriginalEventTimestamp}
+          | where LogicalServerName =~ '{LogicalServerName}' and AppName in ({AppNamesOnly})
+          | where error_id in (211,823,824,825,829,2533,2570,2576,3203,7985,7989,8909,8914,8916,8928,8939,8942,8948,8964,8965,8978,8992,8998,8999) 
+          | summarize count=count(),StartTime=min(originalEventTimestamp), EndTime=arg_max(originalEventTimestamp,message) by error_id
+          | order by count desc
+      - TableName: "MonSQLSystemHealth_Corruption_Hyperscale"
+        ServiceTiers: "Hyperscale"
+        ExecutedQuery: |
+          let CorruptionMessage=(totalCount:int,dcount:int,StartTime:string,EndTime:string)
+          {
+                    let suggestion=" The Database corruption affects both data integrity and Azure DB availability, which can lead to severe consequences, including (but not limited to) database downtime, login failures, and query execution errors. Please Engage the Storage Engine team to investigate.";
+                    let message=case(totalCount==0,"Corruption is not detected.",
+                    totalCount==1, strcat("Corruption was detected 1 time, at ",StartTime,". "),
+                    totalCount>1 and dcount==1, strcat("Corruption was detected ",PluralOrSingular(totalCount,"time"), " between ",StartTime," and ", EndTime, ". "),
+                    strcat("Corruption was detected ",PluralOrSingular(totalCount,"time"), " across ",dcount," different corruption types between ",StartTime," and ", EndTime, ". ")
+                    );
+                    iff(totalCount>0,strcat(message,suggestion),message)
+          };
+          let appNames=materialize (
+          MonSocrates
+          | where  (originalEventTimestamp between (datetime({StartTime})..datetime({EndTime})))
+          | where LogicalServerName =~ '{LogicalServerName}' and logical_database_name =~ '{LogicalDatabaseName}'
+          | where isnotempty(foreign_file_id)
+          | summarize by AppName,AppTypeName
+          );
+          MonSQLSystemHealth
+          | where  (originalEventTimestamp between (datetime({StartTime})..datetime({EndTime})))
+          | where LogicalServerName =~ '{LogicalServerName}' 
+          | join kind=inner(appNames) on AppName
+          | where error_id in (211,823,824,825,829,2533,2570,2576,3203,7985,7989,8909,8914,8916,8928,8939,8942,8948,8964,8965,8978,8992,8998,8999) 
+          | summarize totalCount=count(),dcount=dcount(error_id),StartTime=min(originalEventTimestamp), EndTime=max(originalEventTimestamp)
+          | extend StartTime=format_datetime(StartTime,'yyyy-MM-dd HH:mm:ss'),EndTime=format_datetime(EndTime,'yyyy-MM-dd HH:mm:ss')
+          | extend corruptionMessage=CorruptionMessage(totalCount,dcount,StartTime,EndTime)
+          | extend IssueDetected=iff(totalCount>0,'true','false')
+          | project corruptionMessage,IssueDetected
+        DisplayedQuery: |
+          let appNames=materialize (
+          MonSocrates
+          | where  (originalEventTimestamp between (datetime({StartTime})..datetime({EndTime})))
+          | where LogicalServerName =~ '{LogicalServerName}' and logical_database_name =~ '{LogicalDatabaseName}'
+          | where isnotempty(foreign_file_id)
+          | summarize by AppName,AppTypeName
+          );
+          MonSQLSystemHealth
+          | where  (originalEventTimestamp between (datetime({StartTime})..datetime({EndTime})))
+          | where LogicalServerName =~ '{LogicalServerName}' 
+          | join kind=inner(appNames) on AppName
+          | where error_id in (211,823,824,825,829,2533,2570,2576,3203,7985,7989,8909,8914,8916,8928,8939,8942,8948,8964,8965,8978,8992,8998,8999) 
+          | summarize totalCount=count(),StartTime=min(originalEventTimestamp), EndTime=max(originalEventTimestamp),any(message) by error_id,NodeName,ClusterName,AppTypeName
+    QuestionToAI: |-
+      ### Rules
+      1. Store the value of IssueDetected column in {{IssueDetected}}.
+      2. Store the value of corruptionMessage column in {{ResultMessage}}.

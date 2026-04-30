@@ -4,9 +4,21 @@ mcp.json
 settings.json
 *.log
 *.tmp
+*.zip
 shared-docs/
 mi-backup-v1/
 
 agents/search-results/
+agents/outcome/
+agents/errorcode_research/
 
 session-store.db*
+
+# IDE / config (user-specific)
+ide/
+installed-plugins/
+mcp-oauth-config/
+command-history-state.json
+config.json
+permissions-config.json
+crash-context/

@@ -1,0 +1,893 @@
+SqlSkills:
+- id: DB-query-store-1
+  Topic: QDS0003-Check-state-of-QDS-for-a-Database
+  Source: TSG-SQL-DB-QueryStore/TSGs/QDS0003-Check-state-of-QDS-for-a-Database.md
+  Prompts:
+  - SQL DB query store analysis
+  - SQL DB MonQueryStoreInfo event LogicalServerName
+  - SQL DB investigate query store
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonQueryStoreInfo
+    ExecutedQuery: 'MonQueryStoreInfo
+
+      | where TIMESTAMP > now(-2h)
+
+      | where LogicalServerName =~ "{logical_server_name}"
+
+      | where logical_database_name =~ "{logical_database_name}"
+
+      | where event contains "query_store_db_diagnostics"
+
+      | top 1 by TIMESTAMP desc
+
+      | project db_state_actual'
+- id: DB-query-store-2
+  Topic: QDS0003-Check-state-of-QDS-for-a-Database
+  Source: TSG-SQL-DB-QueryStore/TSGs/QDS0003-Check-state-of-QDS-for-a-Database.md
+  Prompts:
+  - SQL DB query store analysis
+  - SQL DB MonQueryStoreInfo event LogicalServerName
+  - SQL DB investigate query store
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonQueryStoreInfo
+    ExecutedQuery: 'MonQueryStoreInfo
+
+      | where LogicalServerName == "{logical_server_name}"
+
+      | where logical_database_name == "{logical_database_name}"
+
+      | where event == "query_store_disk_size_info" or event == "query_store_loaded"'
+- id: DB-query-store-3
+  Topic: QDS0005-How-to-investigate-AIMS-alert-QueryStoreUn
+  Source: TSG-SQL-DB-QueryStore/TSGs/QDS0005-How-to-investigate-AIMS-alert-QueryStoreUn.md
+  Prompts:
+  - SQL DB os exceptIOn stats analysis
+  - SQL DB MonDmOsExceptionStats AppName TIMESTAMP
+  - SQL DB investigate os exceptIOn stats
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmOsExceptionStats
+    ExecutedQuery: 'MonDmOsExceptionStats
+
+      | where AppName == "<AppName>" and exception_id != 12412
+
+      | where TIMESTAMP > datetime(<alert_start_time>) and TIMESTAMP < datetime(<alert_end_time>)
+
+      | where exception_count != delta_exception_count
+
+      | project TIMESTAMP, start_utc_date, end_utc_date, exception_id, delta_exception_count'
+- id: DB-query-store-4
+  Topic: QDS0005-How-to-investigate-AIMS-alert-QueryStoreUn
+  Source: TSG-SQL-DB-QueryStore/TSGs/QDS0005-How-to-investigate-AIMS-alert-QueryStoreUn.md
+  Prompts:
+  - SQL DB SQL system health
+  - SQL DB MonSQLSystemHealth event LogicalServerName
+  - SQL DB investigate SQL system health
+  CustomizedParameters:
+  - DatabaseName
+  - NodeName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where event == "errorlog_written"
+
+      | where message !contains "Backup" and message !contains "18057" and message !contains "will drop"
+
+      | where LogicalServerName == \"{ServerName}\" and NodeName == \"{NodeName}\"
+
+      | where TIMESTAMP > datetime(<alert_start_time>) and TIMESTAMP < datetime(<alert_end_time>)
+
+      | project TIMESTAMP, database_id, call_stack, message
+
+      | order by TIMESTAMP desc
+
+      | take 20'
+- id: DB-query-store-5
+  Topic: QDS0005-How-to-investigate-AIMS-alert-QueryStoreUn
+  Source: TSG-SQL-DB-QueryStore/TSGs/QDS0005-How-to-investigate-AIMS-alert-QueryStoreUn.md
+  Prompts:
+  - SQL DB os exceptIOn stats analysis
+  - SQL DB MonDmOsExceptionStats AppName TIMESTAMP
+  - SQL DB investigate os exceptIOn stats
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmOsExceptionStats
+    ExecutedQuery: 'MonDmOsExceptionStats
+
+      | where AppName == "<AppName>"
+
+      | where exception_id in (12412, 12414, 12415, 12428, 12429, 12434, 12435, 12436)
+
+      | where TIMESTAMP > ago(1h)
+
+      | project TIMESTAMP, exception_id, delta_exception_count
+
+      | order by TIMESTAMP desc'
+- id: DB-query-store-6
+  Topic: QDS0006-How-to-mitigate-QueryStore_HighMemCacheRS_
+  Source: TSG-SQL-DB-QueryStore/TSGs/QDS0006-How-to-mitigate-QueryStore_HighMemCacheRS_.md
+  Prompts:
+  - SQL DB wafl log entries status
+  - SQL DB MonWaflLogEntries LogicalServerName TIMESTAMP
+  - SQL DB investigate wafl log entries
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonWaflLogEntries
+    ExecutedQuery: 'MonWaflLogEntries
+
+      | where TIMESTAMP > ago(2h)
+
+      | where tag == "Command"
+
+      | extend Cmd = parsejson(message)
+
+      | extend LogicalServerName= tostring(Cmd.ServerName), LogicalDatabaseName= tostring(Cmd.DatabaseName), ExecutionStatus = toint(Cmd.ExecutionStatus), CommandType = tostring(Cmd.CommandType)
+
+      | where CommandType == "QdsOffCommand" and ExecutionStatus == 4 and (LogicalServerName== "{ServerName}") and LogicalDatabaseName == "{DatabaseName}"
+
+      | order by TIMESTAMP desc'
+- id: DB-query-store-7
+  Topic: QDS0006-How-to-mitigate-QueryStore_HighMemCacheRS_
+  Source: TSG-SQL-DB-QueryStore/TSGs/QDS0006-How-to-mitigate-QueryStore_HighMemCacheRS_.md
+  Prompts:
+  - SQL DB memory pressure analysis
+  - SQL DB MonGovernorResourcePools LogicalServerName
+  - SQL DB troubleshoot memory pressure
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonGovernorResourcePools
+    ExecutedQuery: 'MonGovernorResourcePools
+
+      | where PreciseTimeStamp > ago(75m)
+
+      | where ago(60m) > PreciseTimeStamp
+
+      | where name == "internal" and AppTypeName in ("Worker.ISO", "Worker.ISO.Premium")
+
+      | project ClusterName , AppName , LogicalServerName , name, used_memory_kb , max_memory_kb, NodeName, AppTypeName
+
+      | summarize AvailableMemoryKb = max(max_memory_kb) by ClusterName, AppTypeName , AppName, LogicalServerName
+
+      | project ClusterName , AppTypeName , AppName , LogicalServerName , AvailableMemoryKb
+
+      | join kind=inner
+
+      ('
+- id: DB-query-store-8
+  Topic: QDS0006-How-to-mitigate-QueryStore_HighMemCacheRS_
+  Source: TSG-SQL-DB-QueryStore/TSGs/QDS0006-How-to-mitigate-QueryStore_HighMemCacheRS_.md
+  Prompts:
+  - SQL DB memory pressure analysis
+  - SQL DB MonDmOsMemoryClerks LogicalServerName AppName
+  - SQL DB troubleshoot memory pressure
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmOsMemoryClerks
+    ExecutedQuery: 'MonDmOsMemoryClerks
+
+      | where (PreciseTimeStamp >= ago(75m))
+
+      | where (PreciseTimeStamp < ago(60m))
+
+      | where pages_kb > 10000
+
+      | where ((type == "CACHESTORE_QDSRUNTIMESTATS") or (type == "USERSTORE_QDSSTMT" ))
+
+      | summarize MinPagesKb = min(pages_kb), MaxPagesKb = max(pages_kb), AvgPagesKb = avg(pages_kb)
+
+      by ClusterName, AppName, LogicalServerName, AppTypeName, type, name
+
+      | project ClusterName, AppName, LogicalServerName, AppTypeName, type, name, MinPagesKb , MaxPagesKb , AvgPagesKb
+
+      )
+
+      on ClusterName , AppTypeName, AppName, LogicalServerName
+
+      | project ClusterName , AppTypeName , AppName , LogicalServerName , AvailableMemoryKb, type, name,
+
+      MinPagesKb , MaxPagesKb , AvgPagesKb
+
+      | extend AvgMemoryUsagePercent = bin(100.0 * AvgPagesKb / AvailableMemoryKb , 0.1)
+
+      | extend MaxMemoryUsagePercent = bin(100.0 * MaxPagesKb / AvailableMemoryKb , 0.1)
+
+      | project ClusterName , AppTypeName , AppName , LogicalServerName , AvgMemoryUsagePercent,
+
+      MaxMemoryUsagePercent , AvailableMemoryKb, type, name, MinPagesKb , MaxPagesKb , AvgPagesKb
+
+      | join kind=leftouter
+
+      ('
+- id: DB-query-store-9
+  Topic: QDS0006-How-to-mitigate-QueryStore_HighMemCacheRS_
+  Source: TSG-SQL-DB-QueryStore/TSGs/QDS0006-How-to-mitigate-QueryStore_HighMemCacheRS_.md
+  Prompts:
+  - SQL DB memory pressure analysis
+  - SQL DB MonQueryStoreInfo LogicalServerName DatabaseName
+  - SQL DB troubleshoot memory pressure
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonQueryStoreInfo
+    ExecutedQuery: 'MonQueryStoreInfo
+
+      | where TIMESTAMP > ago(2h)
+
+      | project ClusterName , AppTypeName , AppName , LogicalServerName , logical_database_name
+
+      | summarize by ClusterName , AppTypeName , AppName , LogicalServerName , logical_database_name
+
+      )
+
+      on ClusterName , AppTypeName , AppName , LogicalServerName
+
+      | project ClusterName , AppTypeName , AppName , ServerName = LogicalServerName,
+
+      DatabaseName = logical_database_name , DatabaseId = -1, AvgMemoryUsagePercent,
+
+      MaxMemoryUsagePercent , AvailableMemoryKb, type, name, MinPagesKb , MaxPagesKb , AvgPagesKb
+
+      | where MaxMemoryUsagePercent > 20
+
+      | where DatabaseName <> "msdb"
+
+      | project ClusterName, ServerName, DatabaseName, DatabaseId'
+- id: DB-query-store-10
+  Topic: QDS0007-How-to-fix-Query-Store_QDS_-initialization
+  Source: TSG-SQL-DB-QueryStore/TSGs/QDS0007-How-to-fix-Query-Store_QDS_-initialization.md
+  Prompts:
+  - SQL DB query store analysis
+  - SQL DB MonQueryStoreInfo event LogicalServerName
+  - SQL DB investigate query store
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonQueryStoreInfo
+    ExecutedQuery: 'MonQueryStoreInfo
+
+      | where event in ("query_store_load_started" , "query_store_loaded")
+
+      | where LogicalServerName == "{srv}"
+
+      | where AppName == "{App}"
+
+      | summarize max(originalEventTimestamp) by event'
+- id: DB-query-store-11
+  Topic: QDS0007-How-to-fix-Query-Store_QDS_-initialization
+  Source: TSG-SQL-DB-QueryStore/TSGs/QDS0007-How-to-fix-Query-Store_QDS_-initialization.md
+  Prompts:
+  - SQL DB query store analysis
+  - SQL DB MonQueryStoreFailures event LogicalServerName
+  - SQL DB investigate query store
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonQueryStoreFailures
+    ExecutedQuery: 'MonQueryStoreFailures
+
+      | where originalEventTimestamp > ago(1h)
+
+      | where event == "query_store_database_initialization_failed"
+
+      | where LogicalServerName == "{Srv}"
+
+      | where AppName == "{App}"
+
+      | summarize FailureCount = count() , FirstTime = min(originalEventTimestamp), LastTime = max(originalEventTimestamp) by ClusterName, LogicalServerName, AppName'
+- id: DB-query-store-12
+  Topic: QDS0008-How-to-mitigate-QueryStore_InstanceLevelMe
+  Source: TSG-SQL-DB-QueryStore/TSGs/QDS0008-How-to-mitigate-QueryStore_InstanceLevelMe.md
+  Prompts:
+  - SQL DB wafl log entries status
+  - SQL DB MonWaflLogEntries LogicalServerName TIMESTAMP
+  - SQL DB investigate wafl log entries
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonWaflLogEntries
+    ExecutedQuery: 'MonWaflLogEntries
+
+      | where TIMESTAMP > ago(2h)
+
+      | where tag == "Command"
+
+      | extend Cmd = parsejson(message)
+
+      | extend LogicalServerName= tostring(Cmd.LogicalServerName), ServerName=tostring(Cmd.ServerName), ExecutionStatus = toint(Cmd.ExecutionStatus), LogicalDatabaseName= tostring(Cmd.LogicalDatabaseName), CommandType = tostring(Cmd.CommandType)
+
+      | where CommandType == "QdsOffCommand" and ExecutionStatus == 4 and (LogicalServerName == "{ServerName}" or ServerName == "{ServerName}")
+
+      | order by TIMESTAMP desc'
+- id: DB-query-store-13
+  Topic: QDS0008-How-to-mitigate-QueryStore_InstanceLevelMe
+  Source: TSG-SQL-DB-QueryStore/TSGs/QDS0008-How-to-mitigate-QueryStore_InstanceLevelMe.md
+  Prompts:
+  - SQL DB snapshot status
+  - SQL DB MonAnalyticsDBSnapshot logical_server_name
+  - SQL DB investigate snapshot
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: 'MonAnalyticsDBSnapshot
+
+      | where TIMESTAMP > ago(5h)
+
+      | where logical_resource_pool_id <> ""
+
+      | where sql_instance_name == "{AppNameFromAlert}"
+
+      | where logical_server_name == "{LogicalServerNameFromAlert}"
+
+      | summarize by  logical_server_name, logical_resource_pool_id, sql_instance_name, customer_subscription_id
+
+      | project ServerName=logical_server_name, ResourcePoolId=logical_resource_pool_id, AppName=sql_instance_name, SubscriptionId=customer_subscription_id
+
+      | join kind=inner('
+- id: DB-query-store-14
+  Topic: QDS0008-How-to-mitigate-QueryStore_InstanceLevelMe
+  Source: TSG-SQL-DB-QueryStore/TSGs/QDS0008-How-to-mitigate-QueryStore_InstanceLevelMe.md
+  Prompts:
+  - SQL DB memory pressure analysis
+  - SQL DB MonDmOsMemoryClerks AppName TIMESTAMP type
+  - SQL DB troubleshoot memory pressure
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmOsMemoryClerks
+    ExecutedQuery: 'MonDmOsMemoryClerks
+
+      | where TIMESTAMP > ago(5h)
+
+      | where AppName == "{AppNameFromAlert}"
+
+      | where type == "CACHESTORE_QDSRUNTIMESTATS" or type == "MEMORYCLERK_QUERYDISKSTORE" or type == "MEMORYCLERK_QUERYDISKSTORE_HASHMAP"
+
+      or type == "USERSTORE_QDSSTMT" or type == "MEMORYCLERK_QUERYDISKSTORE" or type == "CACHESTORE_QDSCONTEXTSETTINGS"
+
+      | summarize sum(pages_kb) by bin( TIMESTAMP, 1m), AppName
+
+      )'
+- id: DB-query-store-15
+  Topic: QDS0008-How-to-mitigate-QueryStore_InstanceLevelMe
+  Source: TSG-SQL-DB-QueryStore/TSGs/QDS0008-How-to-mitigate-QueryStore_InstanceLevelMe.md
+  Prompts:
+  - SQL DB memory pressure analysis
+  - SQL DB MonGovernorResourcePools AppName TIMESTAMP
+  - SQL DB troubleshoot memory pressure
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonGovernorResourcePools
+    ExecutedQuery: 'MonGovernorResourcePools
+
+      | where TIMESTAMP > ago(5h)
+
+      | where name == "SloSharedPool1"
+
+      | summarize max(target_memory_kb), min(target_memory_kb) by AppName
+
+      )'
+- id: DB-query-store-16
+  Topic: QDS0009-How-to-mitigate-QueryStore_InstanceLevelDi
+  Source: TSG-SQL-DB-QueryStore/TSGs/QDS0009-How-to-mitigate-QueryStore_InstanceLevelDi.md
+  Prompts:
+  - SQL DB query store analysis
+  - SQL DB MonQueryStoreInfo event AppName TIMESTAMP
+  - SQL DB investigate query store
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonQueryStoreInfo
+    ExecutedQuery: 'MonQueryStoreInfo
+
+      | where TIMESTAMP > ago(5h)
+
+      | where event == "query_store_disk_size_info"
+
+      | summarize sum(current_size_kb) by bin(TIMESTAMP, 1m), AppName
+
+      | summarize max(sum_current_size_kb) by AppName
+
+      )'
+- id: DB-query-store-17
+  Topic: QDS0009-How-to-mitigate-QueryStore_InstanceLevelDi
+  Source: TSG-SQL-DB-QueryStore/TSGs/QDS0009-How-to-mitigate-QueryStore_InstanceLevelDi.md
+  Prompts:
+  - SQL DB snapshot status
+  - SQL DB MonAnalyticsRPSnapshot TIMESTAMP name
+  - SQL DB investigate snapshot
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonAnalyticsRPSnapshot
+    ExecutedQuery: 'MonAnalyticsRPSnapshot
+
+      | where  TIMESTAMP > ago(5h)
+
+      | summarize min(resource_pool_storage_limit_in_gb) by logical_resource_pool_id, name
+
+      | project ResourcePoolId=logical_resource_pool_id,  min_resource_pool_storage_limit_in_gb
+
+      )'
+- id: DB-query-store-18
+  Topic: QDS0010-How-to-mitigate-QueryStore_StatementConten
+  Source: TSG-SQL-DB-QueryStore/TSGs/QDS0010-How-to-mitigate-QueryStore_StatementConten.md
+  Prompts:
+  - SQL DB wafl log entries status
+  - SQL DB MonWaflLogEntries AppName tag CommandType
+  - SQL DB investigate wafl log entries
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonWaflLogEntries
+    ExecutedQuery: 'MonWaflLogEntries
+
+      | where AppName == "QdsMitigator"
+
+      | where tag == "Command"
+
+      | where message contains "Qds statement contention issue"
+
+      | where message contains "{DbName}"
+
+      | where message contains "{ServerName}"
+
+      | extend Cmd = parsejson(message)
+
+      | extend CommandType = tostring(Cmd.CommandType), ExecutionStatus = toint(Cmd.ExecutionStatus)
+
+      | where CommandType == "QdsOffCommand" and ExecutionStatus == 4'
+- id: DB-query-store-19
+  Topic: QDS0010-How-to-mitigate-QueryStore_StatementConten
+  Source: TSG-SQL-DB-QueryStore/TSGs/QDS0010-How-to-mitigate-QueryStore_StatementConten.md
+  Prompts:
+  - SQL DB os wait stats activity
+  - SQL DB MonDmOsWaitStats AppName AppTypeName ClusterName
+  - SQL DB investigate os wait stats
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmOsWaitStats
+    ExecutedQuery: 'let period = 5h;
+
+      let granularity = 5m;
+
+      let timestamps =  MonDmOsWaitStats
+
+      | where TIMESTAMP > ago(period)
+
+      | summarize by bin(TIMESTAMP, granularity);
+
+      let wait_stats =  MonDmOsWaitStats
+
+      | where AppTypeName == "Control"
+
+      | where TIMESTAMP > ago(5h)
+
+      | extend waiting_tasks = delta_waiting_tasks_count
+
+      | extend signal_time_ms_per_wait = delta_signal_wait_time_ms / waiting_tasks
+
+      | extend wait_time_ms_per_wait = delta_wait_time_ms / waiting_tasks
+
+      | summarize avg(waiting_tasks), avg(signal_time_ms_per_wait), avg(wait_time_ms_per_wait), max(max_wait_time_ms) by ClusterName, AppName , wait_type, bin(TIMESTAMP, 5m)
+
+      | where wait_type == "RESOURCE_SEMAPHORE_QUERY_COMPILE" or wait_type == "QDS_STMT"
+
+      | project TIMESTAMP, wait_type , avg_wait_time_ms_per_wait;
+
+      let qds_stmt_all =   timestamps
+
+      | join kind = leftouter
+
+      ('
+- id: DB-query-store-20
+  Topic: QDS0010-How-to-mitigate-QueryStore_StatementConten
+  Source: TSG-SQL-DB-QueryStore/TSGs/QDS0010-How-to-mitigate-QueryStore_StatementConten.md
+  Prompts:
+  - SQL DB cloud database wait stats activity
+  - SQL DB MonDmCloudDatabaseWaitStats AppName ClusterName
+  - SQL DB investigate cloud database wait stats
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmCloudDatabaseWaitStats
+    ExecutedQuery: 'let App = "{AppName}";
+
+      let period = 5h;
+
+      let granularity = 5m;
+
+      let timestamps =  MonDmCloudDatabaseWaitStats
+
+      | where TIMESTAMP > ago(period)
+
+      |summarize by bin(TIMESTAMP, granularity);
+
+      let cloud_database_wait_stats = MonDmCloudDatabaseWaitStats
+
+      | where AppName == App
+
+      | where TIMESTAMP > ago(period)
+
+      | extend waiting_tasks = delta_waiting_tasks_count
+
+      | extend signal_time_ms_per_wait = delta_signal_wait_time_ms / waiting_tasks
+
+      | extend wait_time_ms_per_wait = delta_wait_time_ms / waiting_tasks
+
+      | summarize avg(waiting_tasks), avg(signal_time_ms_per_wait), avg(wait_time_ms_per_wait), max(max_wait_time_ms) by ClusterName, AppName , wait_type, bin(TIMESTAMP, granularity)
+
+      | where wait_type == "RESOURCE_SEMAPHORE_QUERY_COMPILE" or wait_type == "QDS_STMT"
+
+      | project TIMESTAMP, wait_type , avg_wait_time_ms_per_wait;
+
+      let qds_stmt_all =   timestamps
+
+      | join kind = leftouter
+
+      ('
+- id: DB-query-store-21
+  Topic: QDS0011-How-to-mitigate-Query-Store-shutdown-takes
+  Source: TSG-SQL-DB-QueryStore/TSGs/QDS0011-How-to-mitigate-Query-Store-shutdown-takes.md
+  Prompts:
+  - SQL DB wafl log entries status
+  - SQL DB MonWaflLogEntries AppName TIMESTAMP tag
+  - SQL DB investigate wafl log entries
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonWaflLogEntries
+    ExecutedQuery: 'MonWaflLogEntries
+
+      | where TIMESTAMP > ago(2h)
+
+      | where tag == "Command"
+
+      | extend Cmd = parsejson(message)
+
+      | extend LogicalServerName= tostring(Cmd.LogicalServerName),
+
+      ServerName=tostring(Cmd.ServerName),
+
+      ExecutionStatus = toint(Cmd.ExecutionStatus),
+
+      LogicalDatabaseName= tostring(Cmd.LogicalDatabaseName),
+
+      CommandType = tostring(Cmd.CommandType)
+
+      | where CommandType == "QdsOffCommand" and ExecutionStatus == 4 and AppName == "{AppName}"
+
+      | order by TIMESTAMP desc'
+- id: DB-query-store-22
+  Topic: QDS0011-How-to-mitigate-Query-Store-shutdown-takes
+  Source: TSG-SQL-DB-QueryStore/TSGs/QDS0011-How-to-mitigate-Query-Store-shutdown-takes.md
+  Prompts:
+  - SQL DB query store analysis
+  - SQL DB MonQueryStoreFailures event LogicalServerName
+  - SQL DB investigate query store
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonQueryStoreFailures
+    ExecutedQuery: 'MonQueryStoreFailures
+
+      | where originalEventTimestamp >= datetime({Timestamp1FromAlertKustoQuery})
+
+      | where datetime({Timestamp2FromAlertKustoQuery}) >= originalEventTimestamp
+
+      | where event == "query_stor e_severe_error_shutdown"
+
+      | where AppName == "AppName"
+
+      | project AppName, LogicalServerName, logical_database_name, ClusterName,   shutdown_started=originalEventTimestamp'
+- id: DB-query-store-23
+  Topic: QDS0011-How-to-mitigate-Query-Store-shutdown-takes
+  Source: TSG-SQL-DB-QueryStore/TSGs/QDS0011-How-to-mitigate-Query-Store-shutdown-takes.md
+  Prompts:
+  - SQL DB query store analysis
+  - SQL DB MonQueryStoreInfo event LogicalServerName
+  - SQL DB investigate query store
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonQueryStoreInfo
+    ExecutedQuery: 'MonQueryStoreInfo
+
+      | where originalEventTimestamp >= datetime({Timestamp1FromAlertKustoQuery})
+
+      | where event == "query_store_shutdown_in_error_state_finished"
+
+      | where AppName == "{AppName}"
+
+      | project AppName, LogicalServerName, logical_database_name, ClusterName, shutdown_finished=originalEventTimestamp'
+- id: DB-query-store-24
+  Topic: QDS0011-How-to-mitigate-Query-Store-shutdown-takes
+  Source: TSG-SQL-DB-QueryStore/TSGs/QDS0011-How-to-mitigate-Query-Store-shutdown-takes.md
+  Prompts:
+  - SQL DB query store analysis
+  - SQL DB MonQueryStoreInfo event AppName TIMESTAMP
+  - SQL DB investigate query store
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonQueryStoreInfo
+    ExecutedQuery: 'MonQueryStoreInfo
+
+      | where TIMESTAMP >= datetime({30MinsBeforeIncident})
+
+      | where AppName == "{AppName}"
+
+      | where event contains "query_store_size_retention_cleanup"'
+- id: DB-query-store-25
+  Topic: QDS0019-Cleanup-not-being-performed
+  Source: TSG-SQL-DB-QueryStore/TSGs/QDS0019-Cleanup-not-being-performed.md
+  Prompts:
+  - SQL DB query store analysis
+  - SQL DB MonQueryStoreInfo event LogicalServerName
+  - SQL DB investigate query store
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonQueryStoreInfo
+    ExecutedQuery: 'MonQueryStoreInfo
+
+      | where event startswith ''query_store_size_retention_cleanup''
+
+      | where LogicalServerName =~ ''{ServerName}''
+
+      | where logical_database_name =~ ''{DatabaseName}''
+
+      | project TIMESTAMP, event, current_size_kb, max_size_kb, target_delete_size_kb, estimated_deleted_size_kb
+
+      | order by TIMESTAMP asc'
+- id: DB-query-store-26
+  Topic: QDS0019-Cleanup-not-being-performed
+  Source: TSG-SQL-DB-QueryStore/TSGs/QDS0019-Cleanup-not-being-performed.md
+  Prompts:
+  - SQL DB query store analysis
+  - SQL DB MonQueryStoreInfo event LogicalServerName
+  - SQL DB investigate query store
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonQueryStoreInfo
+    ExecutedQuery: 'MonQueryStoreInfo
+
+      | where event startswith ''query_store_size_retention_cleanup''
+
+      | where LogicalServerName =~ ''{ServerName}''
+
+      | where logical_database_name =~ ''{DatabaseName}''
+
+      | where TIMESTAMP > ago(2h)
+
+      | project TIMESTAMP, event, current_size_kb, max_size_kb, target_delete_size_kb, estimated_deleted_size_kb
+
+      | order by TIMESTAMP asc'
+- id: DB-query-store-27
+  Topic: QDS0020-Readonly_Troubleshooting
+  Source: TSG-SQL-DB-QueryStore/TSGs/QDS0020-Readonly_Troubleshooting.md
+  Prompts:
+  - SQL DB memory pressure analysis
+  - SQL DB MonQueryStoreInfo event LogicalServerName
+  - SQL DB troubleshoot memory pressure
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonQueryStoreInfo
+    ExecutedQuery: 'MonQueryStoreInfo
+
+      | where TIMESTAMP > datetime({StartTime}) and TIMESTAMP < datetime({EndTime})
+
+      | where LogicalServerName =~ ''{ServerName}''
+
+      | where logical_database_name =~ ''{DatabaseName}''
+
+      | where event == ''query_store_db_diagnostics'' // event query_store_db_diagnostics happens every 30 mins.
+
+      | where db_state_actual == 1 // ReadOnly
+
+      | where binary_and(query_store_read_only_reason, 0x8) == 0 // exclude readonly secondary
+
+      | extend current_stmt_hash_map_size_mb=current_stmt_hash_map_size_kb / 1024
+
+      | extend max_stmt_hash_map_size_mb=max_stmt_hash_map_size_kb / 1024
+
+      | extend current_buffered_items_size_mb=current_buffered_items_size_kb / 1024
+
+      | extend max_buffered_items_size_mb=max_buffered_items_size_kb / 1024
+
+      | extend current_size_mb=current_size_kb / 1024
+
+      | extend max_memory_available_mb=max_memory_available_kb / 1024
+
+      | serialize rn=row_number(), dummy=0
+
+      | lookup kind=inner(mapping | extend dummy=0) on dummy
+
+      | where binary_and(query_store_read_only_reason, mask) != 0
+
+      | summarize ReadonlyReason=make_set(name) by
+
+      rn,
+
+      query_store_read_only_reason,
+
+      originalEventTimestamp,
+
+      capture_policy_mode,
+
+      db_state_desired,
+
+      undecided_query_count,
+
+      current_stmt_hash_map_size_mb,
+
+      max_stmt_hash_map_size_mb,
+
+      current_buffered_items_size_mb,
+
+      max_buffered_items_size_mb,
+
+      current_size_mb,
+
+      max_size_mb,
+
+      max_memory_available_mb,
+
+      stale_query_threshold_days,
+
+      flush_interval_seconds'
+- id: DB-query-store-28
+  Topic: QDS0021-BufferedItemsMemory_and_HashMapMemory
+  Source: TSG-SQL-DB-QueryStore/TSGs/QDS0021-BufferedItemsMemory_and_HashMapMemory.md
+  Prompts:
+  - SQL DB memory pressure analysis
+  - SQL DB MonQueryStoreFailures event LogicalServerName
+  - SQL DB troubleshoot memory pressure
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonQueryStoreFailures
+    ExecutedQuery: 'MonQueryStoreFailures
+
+      | where TIMESTAMP > datetime({StartTime}) and TIMESTAMP < datetime({EndTime})
+
+      | where LogicalServerName =~ ''{ServerName}''
+
+      | where logical_database_name =~ ''{DatabaseName}'' // may not work if it''s a db in elastic pool
+
+      | where AppName =~ ''{AppName}''
+
+      | where event == ''query_store_stmt_hash_map_over_memory_limit''
+
+      or (event == ''query_store_resource_total_over_instance_limit'' and query_store_resource_type == ''x_QdsResourceType_StmtHashMapMemory'') // these two are only available in elastic pool
+
+      | extend current_stmt_hash_map_size_mb=current_stmt_hash_map_size_kb / 1024
+
+      | extend max_stmt_hash_map_size_mb=max_stmt_hash_map_size_kb / 1024
+
+      | extend max_memory_available_mb=max_memory_available_kb / 1024
+
+      | extend max_instance_total_resource_size_mb=max_instance_total_resource_size_kb / 1024 // it''s null for DB not in elastic pool
+
+      | extend current_instance_total_resource_size_mb=current_instance_total_resource_size_kb / 1024 // it''s null for DB not in elastic pool
+
+      | project
+
+      TIMESTAMP,
+
+      event,
+
+      query_store_resource_type,
+
+      logical_database_name,
+
+      current_stmt_hash_map_size_mb,
+
+      max_stmt_hash_map_size_mb,
+
+      current_instance_total_resource_size_mb,
+
+      max_instance_total_resource_size_mb,
+
+      max_memory_available_mb'
+- id: DB-query-store-29
+  Topic: QDS0021-BufferedItemsMemory_and_HashMapMemory
+  Source: TSG-SQL-DB-QueryStore/TSGs/QDS0021-BufferedItemsMemory_and_HashMapMemory.md
+  Prompts:
+  - SQL DB memory pressure analysis
+  - SQL DB MonQueryStoreFailures event LogicalServerName
+  - SQL DB troubleshoot memory pressure
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonQueryStoreFailures
+    ExecutedQuery: 'MonQueryStoreFailures
+
+      | where TIMESTAMP > datetime({StartTime}) and TIMESTAMP < datetime({EndTime})
+
+      | where LogicalServerName =~ ''{ServerName}''
+
+      | where logical_database_name =~ ''{DatabaseName}'' // may not work if it''s a db in elastic pool
+
+      | where AppName =~ ''{AppName}''
+
+      | where event == ''query_store_buffered_items_over_memory_limit''
+
+      or (event == ''query_store_resource_total_over_instance_limit'' and query_store_resource_type == ''x_QdsResourceType_BufferedItemsMemory'')
+
+      | extend current_buffered_items_size_mb=current_buffered_items_size_kb / 1024
+
+      | extend max_buffered_items_size_mb=max_buffered_items_size_kb / 1024
+
+      | extend current_instance_total_resource_size_mb=current_instance_total_resource_size_kb / 1024
+
+      | extend max_instance_total_resource_size_mb=max_instance_total_resource_size_kb / 1024
+
+      | extend max_resource_available_mb=max_resource_available_kb / 1024
+
+      | extend max_memory_available_mb=max_memory_available_kb / 1024
+
+      | project
+
+      TIMESTAMP,
+
+      event,
+
+      query_store_resource_type,
+
+      logical_database_name,
+
+      current_buffered_items_size_mb,
+
+      max_buffered_items_size_mb,
+
+      current_instance_total_resource_size_mb,
+
+      max_instance_total_resource_size_mb,
+
+      max_resource_available_mb,
+
+      max_memory_available_mb'
