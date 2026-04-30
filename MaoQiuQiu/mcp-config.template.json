@@ -1,0 +1,42 @@
+{
+  "mcpServers": {
+    "mssql": {
+      "type": "local",
+      "command": "npx",
+      "args": ["-y", "mssql-mcp-server"],
+      "env": {
+        "MSSQL_SERVER": "localhost",
+        "MSSQL_DATABASE": "master",
+        "MSSQL_WINDOWS_AUTH": "true"
+      },
+      "tools": ["*"]
+    },
+    "csswiki": {
+      "type": "local",
+      "command": "npx",
+      "args": ["-y", "@azure-devops/mcp@next", "Supportability"],
+      "tools": ["*"]
+    },
+    "msdata": {
+      "type": "local",
+      "command": "npx",
+      "args": ["-y", "@azure-devops/mcp@next", "msdata"],
+      "tools": ["*"]
+    },
+    "microsoft-learn": {
+      "type": "http",
+      "url": "https://learn.microsoft.com/api/mcp"
+    },
+    "enghub": {
+      "type": "stdio",
+      "command": "enghub-mcp",
+      "args": ["start"],
+      "tools": ["*"]
+    },
+    "azure-mcp": {
+      "type": "stdio",
+      "command": "azmcp",
+      "args": ["server", "start", "--namespace", "kusto"]
+    }
+  }
+}

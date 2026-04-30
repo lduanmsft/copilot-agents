@@ -9,22 +9,46 @@ SQL Server 案例调查 Copilot Agent 系统，支持多源文档搜索、Error 
 ```powershell
 # 1. Clone repo
 git clone https://github.com/lduanmsft/copilot-agents.git
-
-# 2. 进入安装包目录
 cd copilot-agents/MaoQiuQiu
 
-# 3. 运行安装脚本（自动复制到 ~/.copilot/agents/）
+# 2. 检查并安装前置依赖
+.\Setup-Prerequisites.ps1
+
+# 3. 安装 agents + skills + KQL 模板
 .\Install-MaoQiuQiu.ps1
 
-# 4. 配置 MCP servers（见下方 MCP 工具依赖表）
-# 5. 在 VS Code 中输入 @lduan-agent 开始使用
+# 4. 在 VS Code Insiders 中输入 @lduan-agent 开始使用
 ```
 
 ### 前置依赖
-- VS Code Insiders + GitHub Copilot Chat
-- Node.js（ADO MCP 需要 npx）
-- Azure CLI（Kusto 查询认证：`az login`）
-- Python 3.x（审计脚本，非必须）
+
+| 依赖 | 必须 | 安装方式 | 用途 |
+|------|------|---------|------|
+| VS Code Insiders | ✅ | [下载](https://code.visualstudio.com/insiders/) | Copilot Chat 宿主 |
+| GitHub Copilot Chat | ✅ | VS Code 扩展市场安装 | Agent 运行时 |
+| Node.js 22+ | ✅ | `winget install OpenJS.NodeJS.LTS` | ADO MCP server (npx) |
+| Azure CLI | ✅ | `winget install Microsoft.AzureCLI` | Kusto 查询认证 (`az login`) |
+| azmcp | ✅ | `az extension add --name mcp --allow-preview true` | Azure Kusto MCP |
+| enghub-mcp | 推荐 | 见 [docs/setup-enghub-mcp.md](MaoQiuQiu/docs/setup-enghub-mcp.md) | EngHub 文档搜索 |
+| GitHub CLI (gh) | 推荐 | `winget install GitHub.cli` | enghub-mcp 安装需要 |
+| Python 3.x | 可选 | `winget install Python.Python.3.12` | 审计脚本 |
+
+### MCP 配置
+
+安装脚本 `Setup-Prerequisites.ps1` 会自动配置 `~/.copilot/mcp-config.json`。  
+手动配置参考模板: [mcp-config.template.json](MaoQiuQiu/mcp-config.template.json)
+
+### EnghHub MCP 安装
+
+详细步骤见 [docs/setup-enghub-mcp.md](MaoQiuQiu/docs/setup-enghub-mcp.md)，快速版：
+
+```powershell
+# 需要 VPN + gh auth login (azure-core EMU org)
+gh release download --repo azure-core/enghub-mcp-server-tools --pattern "azure-core-enghub-mcp.tgz" --output enghub-mcp.tgz --clobber
+npm install -g enghub-mcp.tgz
+del enghub-mcp.tgz
+enghub-mcp --version   # 验证
+```
 
 ## 架构概览
 
