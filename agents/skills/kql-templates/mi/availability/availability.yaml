@@ -2249,6 +2249,11 @@ SqlSkills:
 
       | where logical_db_name == <dbname>
 
+<<<<<<< Updated upstream
+=======
+      | where LogicalServerName == "{ServerName}" 
+      | where logical_db_name == "{DatabaseName}" 
+>>>>>>> Stashed changes
       | where event == "database_recovery_times"
 
       | project originalEventTimestamp, recovery_time, recovery_step'
@@ -2295,7 +2300,7 @@ SqlSkills:
   - TableName: MonSQLSystemHealth
     ExecutedQuery: 'MonSQLSystemHealth
 
-      | where ClusterName == ''<ClusterName>'' and AppName == ''<AppName>'' and NodeName == ''<PrimaryNode>''
+      | where ClusterName == ''"{ClusterName}"'' and AppName == ''"{AppName}"'' and NodeName == ''"{NodeName}"''
 
       | where originalEventTimestamp >= datetime(2020-05-06T07:40:52.1073189Z) and originalEventTimestamp <= datetime(2020-05-06T09:41:09.1231404Z)
 
@@ -2316,7 +2321,7 @@ SqlSkills:
   - TableName: MonFabricDebug
     ExecutedQuery: 'MonFabricDebug
 
-      | where ClusterName == ''<ClusterName>'' and AppName == ''<AppName>''
+      | where ClusterName == ''"{ClusterName}"'' and AppName == ''"{AppName}"''
 
       | where originalEventTimestamp >= datetime(2020-05-06T07:40:52.1073189Z) and originalEventTimestamp <= datetime(2020-05-06T09:41:09.1231404Z)| where event contains ''hadr_fabric_build'''
 - id: MI-availability-103
@@ -2574,7 +2579,7 @@ SqlSkills:
 
       | where event == ''management_operation_start''
 
-      | extend server_name = extract( @"<ServerName>(.*?)</ServerName>", 1, operation_parameters)
+      | extend server_name = extract( @""{ServerName}"(.*?)</ServerName>", 1, operation_parameters)
 
       | project server_name);'
 - id: MI-availability-110
@@ -3141,11 +3146,11 @@ SqlSkills:
 
       | where ClusterName == ''<cluster_name>''
 
-      | where PreciseTimeStamp >= datetime(<start_time>) and PreciseTimeStamp <= datetime(<end_time>)
+      | where PreciseTimeStamp >= datetime(ago({TimeRange})) and PreciseTimeStamp <= datetime(now())
 
-      | where NodeName == ''<node_name>''
+      | where NodeName == ''"{NodeName}"''
 
-      | where Message contains ''ProcessId: "<process_id>"''
+      | where Message contains ''ProcessId: ""{ProcessId}""''
 
       | project PreciseTimeStamp, Message
 
@@ -3166,7 +3171,11 @@ SqlSkills:
 
       | where AppTypeName == "Worker.CL"
 
+<<<<<<< Updated upstream
       | where AppName == "<app_name>" and database_name == tolower("<database_id>")
+=======
+      | where AppName == ""{AppName}"" and database_name == tolower(""{DatabaseName}"")
+>>>>>>> Stashed changes
 
       | where trace_message startswith "Dirty Page Table summary" or trace_message startswith "Estimate: Redo =" or trace_message == "Starting database recovery." or trace_message startswith "Recovery completed
       for database" or trace_message == "Redo phase done."
@@ -3210,6 +3219,11 @@ SqlSkills:
 
       | where originalEventTimestamp > <start_time>
 
+<<<<<<< Updated upstream
+=======
+      | where originalEventTimestamp < now() 
+      | where originalEventTimestamp > ago({TimeRange}) 
+>>>>>>> Stashed changes
       | project originalEventTimestamp, trace_message, recovery_step, recovery_time'
 - id: MI-availability-129
   Topic: TRDB0102-CL-LongRecovery-RCA
@@ -3225,7 +3239,7 @@ SqlSkills:
   - TableName: MonSQLXStoreIOStats
     ExecutedQuery: 'MonSQLXStoreIOStats
 
-      | where AppName == "<AppName>"
+      | where AppName == ""{AppName}""
 
       | where file_path !contains "managedserverbac" and file_path !contains "managedservertel"
 
@@ -3246,13 +3260,19 @@ SqlSkills:
   - TableName: MonRecoveryTrace
     ExecutedQuery: 'MonRecoveryTrace
 
+<<<<<<< Updated upstream
       | where originalEventTimestamp > <start_time>
 
       | where originalEventTimestamp < <end_time>
 
       | where AppName == "<AppName>"
+=======
+      | where originalEventTimestamp > ago({TimeRange}) 
+      | where originalEventTimestamp < now() 
+      | where AppName == ""{AppName}""
+>>>>>>> Stashed changes
 
-      | where database_name =~ "<logical_db_id>"
+      | where database_name =~ ""{DatabaseGuid}""
 
       | where trace_message startswith "Dirty Page Table summary"
 
@@ -3296,9 +3316,9 @@ SqlSkills:
 
       | where event == "aggregated_virtual_files_io_history"
 
-      | where LogicalServerName == "<LogicalServerName>"
+      | where LogicalServerName == ""{ServerName}""
 
-      | where physical_database_name == "<physical_db_name>"
+      | where physical_database_name == ""{PhysicalDbName}""
 
       | where type_desc in (''ROWS'', ''LOG'')
 
@@ -3344,11 +3364,11 @@ SqlSkills:
   - TableName: MonDmIoVirtualFileStats
     ExecutedQuery: 'MonDmIoVirtualFileStats
 
-      | where originalEventTimestamp >= datetime(<start_of_active_transaction>)
+      | where originalEventTimestamp >= datetime(ago({TimeRange}))
 
-      | where LogicalServerName == "<logical_server_name>"
+      | where LogicalServerName == ""{ServerName}""
 
-      | where db_name == "<db_guid>" and type_desc == "LOG"
+      | where db_name == ""{DatabaseGuid}"" and type_desc == "LOG"
 
       | project originalEventTimestamp, spaceused_mb, max_size_mb
 
@@ -3367,13 +3387,19 @@ SqlSkills:
   - TableName: MonRecoveryTrace
     ExecutedQuery: 'MonRecoveryTrace
 
+<<<<<<< Updated upstream
       | where originalEventTimestamp > <start_time>
 
       | where originalEventTimestamp < <end_time>
 
       | where AppName == "<AppName>"
+=======
+      | where originalEventTimestamp > ago({TimeRange}) 
+      | where originalEventTimestamp < now() 
+      | where AppName == ""{AppName}""
+>>>>>>> Stashed changes
 
-      | where database_name =~ "<logical_db_id>"
+      | where database_name =~ ""{DatabaseGuid}""
 
       | where isnotempty(trace_message) and trace_message !startswith "ProcessCheckpointEnd" and trace_message !startswith "About to log" and trace_message !startswith "Ckpt" and trace_message !startswith
       "MoveUpRedo"
@@ -3399,10 +3425,14 @@ SqlSkills:
 
       | where recovery_step == "HekatonRecoveryTime"
 
-      | where database_name =~ "<logical_db_id>"
+      | where database_name =~ ""{DatabaseGuid}""
 
+<<<<<<< Updated upstream
       | where originalEventTimestamp > <start_time>
 
+=======
+      | where originalEventTimestamp > ago({TimeRange}) 
+>>>>>>> Stashed changes
       | project originalEventTimestamp, NodeName, LogicalServerName, database_name, trace_message, recovery_step, recovery_time
 
       | where recovery_time > 5 * 60 * 1000'
@@ -3420,9 +3450,14 @@ SqlSkills:
   - TableName: MonSQLSystemHealth
     ExecutedQuery: 'MonSQLSystemHealth
 
+<<<<<<< Updated upstream
       | where TIMESTAMP > <incident_start_time>
 
       | where LogicalServerName == "<server_name>"
+=======
+      | where TIMESTAMP > ago({TimeRange}) 
+      | where LogicalServerName == ""{ServerName}""
+>>>>>>> Stashed changes
 
       | summarize dcount(AppName) by LogicalServerName
 
@@ -3491,7 +3526,7 @@ SqlSkills:
 
       | where PreciseTimeStamp > ago(1d)
 
-      | where AppName == "<AppName>"
+      | where AppName == ""{AppName}""
 
       | where message contains "Error: 5120, Severity: 16, State: 5" and message contains "Operating system error 2:"
 
@@ -3514,9 +3549,9 @@ SqlSkills:
   - TableName: MonRecoveryTrace
     ExecutedQuery: 'MonRecoveryTrace
 
-      | where TIMESTAMP > datetime(<start of incident>)
+      | where TIMESTAMP > datetime(ago({TimeRange}))
 
-      | where LogicalServerName == "<logical server name>"
+      | where LogicalServerName == ""{ServerName}""
 
       | where database_name == "<DB guid (optional)>"
 
@@ -3526,7 +3561,7 @@ SqlSkills:
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCL0117-Database-recovery-takes-a-long-time.md
   Prompts:
   - MI storage usage and size
-  - MonDmIoVirtualFileStats ADSNbspwhereADSNbspdb_nameADSNbsp
+  - MonDmIoVirtualFileStats  where db_name 
   - Check MonDmIoVirtualFileStats
   CustomizedParameters:
   - ServerName
@@ -3535,9 +3570,15 @@ SqlSkills:
   - TableName: MonDmIoVirtualFileStats
     ExecutedQuery: 'MonDmIoVirtualFileStats
 
+<<<<<<< Updated upstream
       |ADSNbspwhereADSNbsporiginalEventTimestampADSNbsp>=ADSNbspdatetime(<start of active transaction>)
 
       |ADSNbspwhereADSNbspLogicalServerNameADSNbsp==ADSNbsp"<logical server name>"
+=======
+      | where originalEventTimestamp >= datetime(ago({TimeRange}))
+
+      | where LogicalServerName == ""{ServerName}""
+>>>>>>> Stashed changes
 
       |ADSNbspwhereADSNbspdb_nameADSNbsp==ADSNbsp"<db guid>" and type_desc == "LOG"
 
@@ -3575,9 +3616,9 @@ SqlSkills:
   - TableName: MonSQLSystemHealth
     ExecutedQuery: 'MonSQLSystemHealth
 
-      | where AppName == "<AppName>"
+      | where AppName == ""{AppName}""
 
-      | where NodeName == "<NodeName>"
+      | where NodeName == ""{NodeName}""
 
       | where TIMESTAMP >= ago(1h)
 
@@ -3598,7 +3639,7 @@ SqlSkills:
 
       | where originalEventTimestamp < ago(1h)
 
-      | where LogicalServerName contains "<logical_server_name>"
+      | where LogicalServerName contains ""{ServerName}""
 
       | distinct ClusterName'
 - id: MI-availability-146
@@ -3615,7 +3656,11 @@ SqlSkills:
   - TableName: MonSqlShrinkInfo
     ExecutedQuery: 'MonSqlShrinkInfo
 
+<<<<<<< Updated upstream
       | where LogicalServerName contains "<geo_primary_server>" and logical_database_name == "<database_name>"
+=======
+      | where LogicalServerName contains ""{ServerName}"" and logical_database_name == ""{DatabaseName}""
+>>>>>>> Stashed changes
 
       | where originalEventTimestamp > ago(3h)'
 - id: MI-availability-147
@@ -3717,7 +3762,7 @@ SqlSkills:
 
       | where TIMESTAMP >= ago(2h)
 
-      | where AppName == "<AppName>"
+      | where AppName == ""{AppName}""
 
       | where event == "managed_instance_upgrade_script_failure"'
 - id: MI-availability-153
@@ -3736,7 +3781,7 @@ SqlSkills:
 
       | where TIMESTAMP >= ago(2h)
 
-      | where AppName == "<AppName>"
+      | where AppName == ""{AppName}""
 
       | where message contains "Script level upgrade for database ''msdb'' failed because upgrade step ''Sql.Msdb.Sql'' encountered error"
 
@@ -4334,9 +4379,9 @@ SqlSkills:
 
       | where PreciseTimeStamp > ago(1d)
 
-      | where AppName == "<AppName>"
+      | where AppName == ""{AppName}""
 
-      | where NodeName == "<StuckNodeName>"
+      | where NodeName == ""{NodeName}""
 
       | where message contains "9004"
 
@@ -4361,9 +4406,9 @@ SqlSkills:
 
       | where PreciseTimeStamp > ago(1d)
 
-      | where AppName == "<AppName>"
+      | where AppName == ""{AppName}""
 
-      | where NodeName == "<SecondaryNodeName>"
+      | where NodeName == ""{NodeName}""
 
       | where error_id > 0
 
@@ -4415,7 +4460,7 @@ SqlSkills:
 
       | where PreciseTimeStamp > ago(1d)
 
-      | where AppName == "<AppName>"
+      | where AppName == ""{AppName}""
 
       | project PreciseTimeStamp, NodeName, message
 
@@ -4438,7 +4483,7 @@ SqlSkills:
 
       | where TIMESTAMP > ago(1h)
 
-      | where file_path contains "<managed_server_id>"
+      | where file_path contains ""{ManagedServerId}""
 
       | project error_response, errorcode, http_errorcode, ssl_errorcode, event'
 - id: MI-availability-171
@@ -5063,7 +5108,7 @@ SqlSkills:
 
       | where TIMESTAMP >= ago(30min)
 
-      | where AppName == "<AppName>"
+      | where AppName == ""{AppName}""
 
       | where internal_state_desc contains "PRIMARY"
 
@@ -5363,9 +5408,9 @@ SqlSkills:
 
       | where originalEventTimestamp > ago(3h)
 
-      | where AppName =~ ''<AppName>''
+      | where AppName =~ ''"{AppName}"''
 
-      | where LogicalServerName =~ ''<LogicalServerName>''
+      | where LogicalServerName =~ ''"{ServerName}"''
 
       | where message contains ''ILLEGAL Transition''
 
@@ -5386,10 +5431,15 @@ SqlSkills:
 
       | where TIMESTAMP > ago(30m)
 
-      | where LogicalServerName == ''<managed_server_name>''
+      | where LogicalServerName == ''"{ServerName}"''
 
+<<<<<<< Updated upstream
       | where file_path contains "<managed_database_id>"'
 - id: MI-availability-213
+=======
+      | where file_path contains ""{DatabaseGuid}""'
+- id: MI-availability-179
+>>>>>>> Stashed changes
   Topic: TSGCLAVAIL0013-MI-Data-Movement-Runner
   Source: TSG-SQL-MI-Availability/content/Index/Availability/TSGCLAVAIL0013-MI-Data-Movement-Runner.md
   Prompts:
@@ -5407,7 +5457,7 @@ SqlSkills:
 
       | where LogicalServerName == "<server_name>"
 
-      | where logical_database_name =~ "<managed_database_id>"
+      | where logical_database_name =~ ""{DatabaseGuid}""
 
       | where is_forwarder == 1
 
@@ -5448,7 +5498,11 @@ SqlSkills:
   - TableName: MonSQLSystemHealth
     ExecutedQuery: 'MonSQLSystemHealth
 
+<<<<<<< Updated upstream
       | where PreciseTimeStamp between (<REDO_STOPPED_TIME> - 15m .. <REDO_STOPPED_TIME> + 15m)
+=======
+      | where PreciseTimeStamp between (ago({TimeRange}) - 15m .. ago({TimeRange}) + 15m)
+>>>>>>> Stashed changes
 
       | where LogicalServerName == "<server_name>"
 
@@ -5471,7 +5525,7 @@ SqlSkills:
 
       | where PreciseTimeStamp > ago(3h)
 
-      | where AppName =~ ''<AppName>'' and is_local == 1 and is_primary_replica == 1
+      | where AppName =~ ''"{AppName}"'' and is_local == 1 and is_primary_replica == 1
 
       | summarize min(TIMESTAMP), max(TIMESTAMP) by NodeName, logical_database_name, synchronization_health_desc, synchronization_state_desc'
 - id: MI-availability-217
@@ -5513,7 +5567,7 @@ SqlSkills:
 
       | where TIMESTAMP > ago(10h)
 
-      | where AppName == ''<App_Name>''
+      | where AppName == ''"{AppName}"''
 
       | where error_id == 9002
 
@@ -5750,7 +5804,11 @@ SqlSkills:
 
       | where operation_type contains "DistributedAvailabilityGroupsLinkCreate"
 
+<<<<<<< Updated upstream
       | where operation_parameters contains "<managed_server_name>" and operation_parameters contains "<database_name>"
+=======
+      | where operation_parameters contains ""{ServerName}"" and operation_parameters contains ""{DatabaseName}""
+>>>>>>> Stashed changes
 
       | project originalEventTimestamp, request_id, operation_parameters, event, error_message, error_code, error_severity'
 - id: MI-availability-230
@@ -5769,10 +5827,15 @@ SqlSkills:
 
       | where PreciseTimeStamp >= ago(1d)
 
-      | where LogicalServerName contains "<managed_server_name>"
+      | where LogicalServerName contains ""{ServerName}""
 
+<<<<<<< Updated upstream
       | where database_name contains "<managed_database_id>"'
 - id: MI-availability-231
+=======
+      | where database_name contains ""{DatabaseGuid}""'
+- id: MI-availability-195
+>>>>>>> Stashed changes
   Topic: TSGCHIMERA0001-Establishing-chimera-link-is-stuck
   Source: TSG-SQL-MI-Availability/content/Index/Chimera/TSGCHIMERA0001-Establishing-chimera-link-is-stuck.md
   Prompts:
@@ -5786,9 +5849,9 @@ SqlSkills:
   - TableName: MonSQLSystemHealth
     ExecutedQuery: 'MonSQLSystemHealth
 
-      | where LogicalServerName == "<managed_server_name>"
+      | where LogicalServerName == ""{ServerName}""
 
-      | where message contains "<managed_database_name>" and message contains "ChimeraManagedDatabaseRestoreStarted"
+      | where message contains ""{DatabaseName}"" and message contains "ChimeraManagedDatabaseRestoreStarted"
 
       | where originalEventTimestamp > ago(7d)
 
@@ -5849,7 +5912,7 @@ SqlSkills:
   - TableName: MonManagement
     ExecutedQuery: 'MonManagement
 
-      | where request_id contains "<request_id>"
+      | where request_id contains ""{RequestId}""
 
       | summarize min(PreciseTimeStamp), max(PreciseTimeStamp) by old_state, new_state, state_machine_type, fsm_event'
 - id: MI-availability-235
@@ -5866,7 +5929,7 @@ SqlSkills:
   - TableName: MonManagement
     ExecutedQuery: 'MonManagement
 
-      | where request_id contains "<request_id>"
+      | where request_id contains ""{RequestId}""
 
       | where remote_request_id != ""'
 - id: MI-availability-236
@@ -6041,7 +6104,7 @@ SqlSkills:
   - DatabaseName
   KustoQueries:
   - TableName: MonSQLSystemHealth
-    ExecutedQuery: 'let instanceName = ''<managed_isntance_name>'';
+    ExecutedQuery: 'let instanceName = ''"{ServerName}"'';
 
       MonSQLSystemHealth
 
@@ -6146,7 +6209,7 @@ SqlSkills:
   - DatabaseName
   KustoQueries:
   - TableName: MonManagement
-    ExecutedQuery: 'let serverId = "<managed_server_id>";
+    ExecutedQuery: 'let serverId = ""{ManagedServerId}"";
 
       MonManagement'
 - id: MI-availability-249
@@ -6258,7 +6321,7 @@ SqlSkills:
   - TableName: MonSqlAgent
     ExecutedQuery: 'MonSqlAgent
 
-      | where LogicalServerName == "<serverName>"
+      | where LogicalServerName == ""{ServerName}""
 
       | where originalEventTimestamp > ago(1h)
 
@@ -6277,7 +6340,7 @@ SqlSkills:
   - TableName: MonSqlAgent
     ExecutedQuery: 'MonSqlAgent
 
-      | where LogicalServerName == "<serverName>"
+      | where LogicalServerName == ""{ServerName}""
 
       | where originalEventTimestamp > ago(1d)
 
@@ -6298,7 +6361,7 @@ SqlSkills:
   - TableName: MonSqlAgent
     ExecutedQuery: 'MonSqlAgent
 
-      | where LogicalServerName == "<serverName>"
+      | where LogicalServerName == ""{ServerName}""
 
       | where originalEventTimestamp > ago(1d)
 
@@ -6319,7 +6382,7 @@ SqlSkills:
   - TableName: MonRgLoad
     ExecutedQuery: 'MonRgLoad
 
-      | where application_name contains "<AppName>"
+      | where application_name contains ""{AppName}""
 
       | where TIMESTAMP > ago(1d)
 
@@ -6342,7 +6405,7 @@ SqlSkills:
   - TableName: MonRgLoad
     ExecutedQuery: 'MonRgLoad
 
-      | where application_name contains "<AppName>"
+      | where application_name contains ""{AppName}""
 
       | where TIMESTAMP > ago(1d)
 
@@ -6394,7 +6457,7 @@ SqlSkills:
 
       | where TIMESTAMP > ago(1h)
 
-      | where AppName == "<AppName>"
+      | where AppName == ""{AppName}""
 
       | where application_name contains "sqlagent"
 
@@ -6415,7 +6478,7 @@ SqlSkills:
 
       | where TIMESTAMP > datetime(2025-02-20 06:40:24) and TIMESTAMP < datetime(2025-02-20 10:59:24)
 
-      | where AppName == "<AppName>"
+      | where AppName == ""{AppName}""
 
       | where message contains "Err"
 
@@ -6479,11 +6542,11 @@ SqlSkills:
   - DatabaseName
   KustoQueries:
   - TableName: MonContainerShare
-    ExecutedQuery: 'let StartTime = datetime(''<StartTimeUtc>'');
+    ExecutedQuery: 'let StartTime = datetime(''ago({TimeRange})'');
 
-      let EndTime = datetime(''<EndTimeUtc>'');
+      let EndTime = datetime(''now()'');
 
-      let ServerName = ''<ServerName>'';
+      let ServerName = ''"{ServerName}"'';
 
       MonContainerShare
 
@@ -6723,3 +6786,2813 @@ SqlSkills:
       | where setup_event != ""
 
       | project TIMESTAMP, stream_status, setup_event, address'
+<<<<<<< Updated upstream
+=======
+- id: MI-availability-230
+  Topic: Purchasing-models-(Hybrid-Benefit,-reserved-capacity,-etc)
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Purchasing-models-(Hybrid-Benefit,-reserved-capacity,-etc).md
+  Prompts:
+  - MI Purchasing-models-(Hybrid-Benefit,-reserved-capacity,-etc)
+  - Managed Instance Purchasing-models-(Hybrid-Benefit,-reserved-capacity,-etc)
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonBillingManagedServerStatus
+    ExecutedQuery: 'let MIName = "{ServerName}"; MonBillingManagedServerStatus
+
+      | where LogicalServerName =~ ''"{ServerName}"'' or managed_server_name =~ ''"{ServerName}"''
+
+      | where subscription_id =~ ''"{SubscriptionId}"''
+
+      | summarize max(TIMESTAMP) by managed_server_name=name, current_state=state, managed_server_edition=edition, service_level_objective, sql_server_license'
+- id: MI-availability-231
+  Topic: Error-45336-The-operation-could-not-be-completed-because-is-an-invalid-Server-Key-name
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/ARM-template-issues-or-questions/Error-45336-The-operation-could-not-be-completed-because-is-an-invalid-Server-Key-name.md
+  Prompts:
+  - MI Error-45336-The-operation-could-not-be-completed-because-is-an-invalid-Server-Key-name
+  - Managed Instance Error-45336-The-operation-could-not-be-completed-because-is-an-invalid-Server-Key-name
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagementOperations
+    ExecutedQuery: 'let subscription = ''{SubscriptionId}'';
+
+      let MI = ''>{ResourceName}<'';
+
+      cluster(''{kustoCluster}'').database(''{kustoDatabase}'').MonManagementOperations
+
+      | where subscription_id =~ subscription or SubscriptionId =~ subscription
+
+      | where TIMESTAMP >= datetime(''{StartTimeUTC}'') and TIMESTAMP <= datetime(''{EndTimeUTC}'')
+
+      | where event == ''management_operation_start''
+
+      | where operation_parameters contains MI
+
+      | project PreciseTimeStamp, request_id, operation_type, operation_parameters
+
+      | join kind = leftouter
+
+      (cluster(''{kustoCluster}'').database(''{kustoDatabase}'').MonManagementOperations
+
+      | where subscription_id =~ subscription or SubscriptionId =~ subscription
+
+      | where event != ''management_operation_start''
+
+      | where operation_parameters contains MI
+
+      | project PreciseTimeStamp, request_id, event, error_code, error_message, operation_result
+
+      ) on request_id
+
+      | extend Result=replace(@''management_operation_*'', @''\1'', event)
+
+      | extend Input = tostring(parse_xml(operation_parameters))
+
+      | extend Output = tostring(parse_xml(operation_result))
+
+      | extend Input = replace(@''"@xmlns:xsd":"http://www.w3.org/2001/XMLSchema",'', @''\1'', Input)
+
+      | extend Input = replace(@''"@xmlns:xsi":"http://www.w3.org/2001/XMLSchema-instance",'', @''\1'', Input)
+
+      | extend Output = replace(@''"@xmlns:xsd":"http://www.w3.org/2001/XMLSchema",'', @''\1'', Output)
+
+      | extend Output = replace(@''"@xmlns:xsi":"http://www.w3.org/2001/XMLSchema-instance",'', @''\1'', Output)
+
+      | extend InputParams = iif(Input != '''', parse_json(Input).InputParameters, '''')
+
+      | extend OutputParams = iif(Output != '''', parse_json(Output).OutputParameters, '''')
+
+      | project PreciseTimeStamp, PreciseTimeStamp1, request_id, Result, operation_type, error_code, error_message, InputParams, OutputParams
+
+      | project-rename StartTime = PreciseTimeStamp, EndTime = PreciseTimeStamp1
+
+      
+</br>'
+- id: MI-availability-232
+  Topic: CREATE-DATABASE-fails-when-setting-the-default-collation
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Database/CREATE-DATABASE-fails-when-setting-the-default-collation.md
+  Prompts:
+  - MI CREATE-DATABASE-fails-when-setting-the-default-collation
+  - Managed Instance CREATE-DATABASE-fails-when-setting-the-default-collation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRestoreRequests
+    ExecutedQuery: 'MonRestoreRequests
+
+      | where restore_request_id =~ ""{RestoreRequestId}""'
+- id: MI-availability-233
+  Topic: CREATE-DATABASE-fails-when-setting-the-default-collation
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Database/CREATE-DATABASE-fails-when-setting-the-default-collation.md
+  Prompts:
+  - MI CREATE-DATABASE-fails-when-setting-the-default-collation
+  - Managed Instance CREATE-DATABASE-fails-when-setting-the-default-collation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'MonManagedServers
+
+      | where server_slice_binding_name =~ "server_name"
+
+      | distinct collation'
+- id: MI-availability-234
+  Topic: CREATE-DATABASE-fails-when-setting-the-default-collation
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Database/CREATE-DATABASE-fails-when-setting-the-default-collation.md
+  Prompts:
+  - MI CREATE-DATABASE-fails-when-setting-the-default-collation
+  - Managed Instance CREATE-DATABASE-fails-when-setting-the-default-collation
+  CustomizedParameters:
+  - DatabaseName
+  - ManagedServerId
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagedDatabases
+    ExecutedQuery: 'MonManagedDatabases
+
+      | where managed_server_id =~ "{ManagedServerId}"
+
+      | distinct managed_database_name, collation'
+- id: MI-availability-235
+  Topic: CREATE-DATABASE-fails-when-setting-the-default-collation
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Database/CREATE-DATABASE-fails-when-setting-the-default-collation.md
+  Prompts:
+  - MI CREATE-DATABASE-fails-when-setting-the-default-collation
+  - Managed Instance CREATE-DATABASE-fails-when-setting-the-default-collation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: AlrSQLErrorsReported
+    ExecutedQuery: 'AlrSQLErrorsReported
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where error_number  == 5075
+
+      | where database_name =~ "{DatabaseName}"
+
+      As a result, we have schema-bound objects being created by default on the database when it is being created. This takes us immediately to the [model](https://learn.microsoft.com/sql/relational-databases/databases/model-database?view=sql-server-ver16)
+      database.'
+- id: MI-availability-236
+  Topic: Can't-delete-(doesn't-exist)-can't-create-new-(already-exist)
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Database/Can't-delete-(doesn't-exist)-can't-create-new-(already-exist).md
+  Prompts:
+  - MI Can't-delete-(doesn't-exist)-can't-create-new-(already-exist)
+  - Managed Instance Can't-delete-(doesn't-exist)-can't-create-new-(already-exist)
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'let endTime = now();
+let startTime = ago({TimeRange});
+MonManagement
+
+      | where originalEventTimestamp >= {startTime} and originalEventTimestamp <= {endTime}
+
+      | where request_id =~ ''"{RequestId}"''
+
+      | where action == ''MarkDatabaseDropped''
+
+      | where state_machine_type == ''ManagedDatabaseStateMachine''
+
+      | project originalEventTimestamp, request_id, event, operation_type, elapsed_time, operation_parameters, operation_result, is_user_error, error, error_code, error_message, error_classification, [''state''],
+      state_desc, message, exception_message, deployment_message, action, state_machine_type, exception_type, stack_trace'
+- id: MI-availability-237
+  Topic: Can't-delete-(doesn't-exist)-can't-create-new-(already-exist)
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Database/Can't-delete-(doesn't-exist)-can't-create-new-(already-exist).md
+  Prompts:
+  - MI Can't-delete-(doesn't-exist)-can't-create-new-(already-exist)
+  - Managed Instance Can't-delete-(doesn't-exist)-can't-create-new-(already-exist)
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonBackup
+    ExecutedQuery: 'MonBackup
+
+      | where TIMESTAMP >= ago(5d)
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where tolower(logical_database_id) =~ tolower(managed_database_id)
+
+      | where event contains ''database_backup'' and event_type contains ''error''
+
+      //| where backup_type == ''Full'' //uncomment to see if first full backup was taken successfully
+
+      | project TIMESTAMP, LogicalServerName, AppName, event, event_type, logical_database_id, backup_type, br_exception_message, sql_error_number, sql_error_severity, sql_error_state, sql_error_message,
+      skipped_backup_reason, exception_message, exception_stack, exception_stack_trace, exception_details'
+- id: MI-availability-238
+  Topic: Can't-delete-(doesn't-exist)-can't-create-new-(already-exist)
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Database/Can't-delete-(doesn't-exist)-can't-create-new-(already-exist).md
+  Prompts:
+  - MI Can't-delete-(doesn't-exist)-can't-create-new-(already-exist)
+  - Managed Instance Can't-delete-(doesn't-exist)-can't-create-new-(already-exist)
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where originalEventTimestamp >= ago({TimeRange}) and originalEventTimestamp <= now()
+
+      | where LogicalServerName == "{ServerName}"
+
+      | where message has_cs ''was killed''
+
+      | project originalEventTimestamp, source = ''SQL'', NodeName, process_id, error_id, message = trim(@''\s*'', message)
+
+      | union
+
+      ('
+- id: MI-availability-239
+  Topic: Can't-delete-(doesn't-exist)-can't-create-new-(already-exist)
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Database/Can't-delete-(doesn't-exist)-can't-create-new-(already-exist).md
+  Prompts:
+  - MI Can't-delete-(doesn't-exist)-can't-create-new-(already-exist)
+  - Managed Instance Can't-delete-(doesn't-exist)-can't-create-new-(already-exist)
+  CustomizedParameters:
+  - DatabaseId
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonBackup
+    ExecutedQuery: 'MonBackup
+
+      | where originalEventTimestamp >= ago({TimeRange})
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where logical_database_id == "{DatabaseId}"
+
+      | where event_type == ''BACKUP_ERROR_ABORTED''
+
+      | project originalEventTimestamp, source = ''BackupService'', NodeName, process_id, backup_type, br_exception_message
+
+      )
+
+      | order by originalEventTimestamp asc'
+- id: MI-availability-240
+  Topic: Can't-delete-(doesn't-exist)-can't-create-new-(already-exist)
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Database/Can't-delete-(doesn't-exist)-can't-create-new-(already-exist).md
+  Prompts:
+  - MI Can't-delete-(doesn't-exist)-can't-create-new-(already-exist)
+  - Managed Instance Can't-delete-(doesn't-exist)-can't-create-new-(already-exist)
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where TIMESTAMP >= BACKUP_START_TIMESTAMP
+
+      |where message contains strcat("Backup(",managed_database_id) and message contains "processed"
+
+      |project TIMESTAMP, message'
+- id: MI-availability-241
+  Topic: Database-CRUD-failing-or-hanged-due-to-AKV
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Database/Database-CRUD-failing-or-hanged-due-to-AKV.md
+  Prompts:
+  - MI Database-CRUD-failing-or-hanged-due-to-AKV
+  - Managed Instance Database-CRUD-failing-or-hanged-due-to-AKV
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'let endTime = now();
+let startTime = ago({TimeRange});
+MonSQLSystemHealth
+
+      | where TIMESTAMP > startTime
+
+      | where TIMESTAMP < endTime
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where message contains "Error:"
+
+      | where not(message matches regex "Error: (35262|40613|913|18401|17187),")
+
+      | extend parsed_message = replace("[0-9-]+[ \t]+[0-9:.]+[ \t]+[a-zA-Z0-9]+[ ]+", "", message)
+
+      | summarize count(), min(originalEventTimestamp), max(originalEventTimestamp), any(message) by AppName, NodeName, parsed_message
+
+      | order by count_ desc
+
+      | project min_originalEventTimestamp, max_originalEventTimestamp, count_, AppName, NodeName, parsed_message, any_message'
+- id: MI-availability-242
+  Topic: Database-in-state-SetOwnerSid
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Database/Database-in-state-SetOwnerSid.md
+  Prompts:
+  - MI Database-in-state-SetOwnerSid
+  - Managed Instance Database-in-state-SetOwnerSid
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagementOperations
+    ExecutedQuery: 'let serverName = "{ServerName}"; let databaseName = "{DatabaseName}"; let endTime = now();
+let startTime = ago({TimeRange});
+MonManagementOperations
+
+      | where originalEventTimestamp >= startTime and originalEventTimestamp <= endTime
+
+      | where operation_parameters has serverName and operation_parameters has databaseName
+
+      | project originalEventTimestamp, request_id, event, operation_type, operation_parameters, error_code, error_message , message, elapsed_time, operation_result'
+- id: MI-availability-243
+  Topic: Database-in-state-SetOwnerSid
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Database/Database-in-state-SetOwnerSid.md
+  Prompts:
+  - MI Database-in-state-SetOwnerSid
+  - Managed Instance Database-in-state-SetOwnerSid
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedDatabases
+    ExecutedQuery: 'let serverId = "{ManagedServerId}"; let endTime = now();
+let startTime = ago({TimeRange});
+MonManagedDatabases
+
+      | where PreciseTimeStamp >= startTime and PreciseTimeStamp <= endTime
+
+      | where managed_server_id == serverId
+
+      | where managed_database_name == "{DatabaseName}"
+
+      | summarize arg_max(TIMESTAMP,*) by [''state'']
+
+      | project managed_database_name, managed_server_id, managed_database_id , [''state''], TIMESTAMP
+
+      | join kind = inner ('
+- id: MI-availability-244
+  Topic: Database-in-state-SetOwnerSid
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Database/Database-in-state-SetOwnerSid.md
+  Prompts:
+  - MI Database-in-state-SetOwnerSid
+  - Managed Instance Database-in-state-SetOwnerSid
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'let serverId = "{ManagedServerId}"; MonManagedServers
+
+      | where managed_server_id == serverId
+
+      | distinct managed_server_id, name) on managed_server_id
+
+      | project TIMESTAMP, managed_server_id, managed_server_name = name, managed_database_id, managed_database_name, [''state'']'
+- id: MI-availability-245
+  Topic: Database-in-state-SetOwnerSid
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Database/Database-in-state-SetOwnerSid.md
+  Prompts:
+  - MI Database-in-state-SetOwnerSid
+  - Managed Instance Database-in-state-SetOwnerSid
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedDatabases
+    ExecutedQuery: 'let serverId = "{ManagedServerId}"; let endTime = now();
+let startTime = ago({TimeRange});
+MonManagedDatabases
+
+      | where PreciseTimeStamp >= startTime and PreciseTimeStamp <= endTime
+
+      | where managed_server_id == serverId
+
+      | where managed_database_name == "{DatabaseName}"
+
+      | where [''state''] == ''SetOwnerSid''
+
+      | project PreciseTimeStamp, [''state''], last_exception'
+- id: MI-availability-246
+  Topic: Error-45674-%2D-Cannot-drop-database-because-a-database-operation-is-completing
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Database/Error-45674-%2D-Cannot-drop-database-because-a-database-operation-is-completing.md
+  Prompts:
+  - MI MI Error 45674   Cannot drop database because a database operation is completing
+  - Managed Instance Error-45674---Cannot-drop-database-because-a-database-operation-is-completing
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagementOperations
+    ExecutedQuery: 'MonManagementOperations
+
+      | where TIMESTAMP >= ago(2d)
+
+      | where operation_parameters has ''>MI_Name<'' and operation_parameters has ''>DB_Name<''
+
+      | where operation_type in (''DropManagedDatabase'',''RemoteDropDatabaseCopyLink'',''DropDatabaseCopyLink'',''StartCrossManagedInstanceDatabaseMovement'')
+
+      | project TIMESTAMP, request_id, event, operation_type, elapsed_time, operation_result, error_code, error_message, message, operation_parameters'
+- id: MI-availability-247
+  Topic: Find-who-dropped-the-Database
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Database/Find-who-dropped-the-Database.md
+  Prompts:
+  - MI Find-who-dropped-the-Database
+  - Managed Instance Find-who-dropped-the-Database
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where originalEventTimestamp >= ago({TimeRange}) and originalEventTimestamp <= now()
+
+      | where LogicalServerName =~ ''"{ServerName}"''
+
+      | project originalEventTimestamp, process_id, collect_current_thread_id, message'
+- id: MI-availability-248
+  Topic: '[OnePager]-Cannot-delete-DB-(doesn’t-exist)-and-cannot-create-new-DB-(already-exists)'
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Database/[OnePager]-Cannot-delete-DB-(doesn’t-exist)-and-cannot-create-new-DB-(already-exists).md
+  Prompts:
+  - MI [OnePager]-Cannot-delete-DB-(doesn’t-exist)-and-cannot-create-new-DB-(already-exists)
+  - Managed Instance [OnePager]-Cannot-delete-DB-(doesn’t-exist)-and-cannot-create-new-DB-(already-exists)
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonBackup
+    ExecutedQuery: 'let MIName = "{ServerName}"; MonBackup
+
+      | where LogicalServerName =~ ""{ServerName}""
+
+      | where logical_database_id =~ ""{DatabaseGuid}""
+
+      | where event contains "database_backup" and event_type contains "error"
+
+      | project TIMESTAMP, backup_type, sql_error_message'
+- id: MI-availability-249
+  Topic: Check-the-status-for-customers-instance-creation
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Instance-create-or-drop/Check-the-status-for-customers-instance-creation.md
+  Prompts:
+  - MI Check-the-status-for-customers-instance-creation
+  - Managed Instance Check-the-status-for-customers-instance-creation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedInstanceInfo
+    ExecutedQuery: 'MonManagedInstanceInfo
+
+      | where SubscriptionId == ''Input SubscriptionId''
+
+      | limit 10'
+- id: MI-availability-250
+  Topic: Check-the-status-for-customers-instance-creation
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Instance-create-or-drop/Check-the-status-for-customers-instance-creation.md
+  Prompts:
+  - MI Check-the-status-for-customers-instance-creation
+  - Managed Instance Check-the-status-for-customers-instance-creation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'MonLogin
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where event == "process_login_finish"
+
+      | where originalEventTimestamp >= ago(7d)
+
+      | project PreciseTimeStamp ,event, connection_id , connection_peer_id , is_user_error, error, [''state''], severity'
+- id: MI-availability-251
+  Topic: Create-Instance-failed-due-to-previously-deployed-Azure-SQL-Server
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Instance-create-or-drop/Create-Instance-failed-due-to-previously-deployed-Azure-SQL-Server.md
+  Prompts:
+  - MI Create-Instance-failed-due-to-previously-deployed-Azure-SQL-Server
+  - Managed Instance Create-Instance-failed-due-to-previously-deployed-Azure-SQL-Server
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagementOperations
+    ExecutedQuery: 'let endTime = now();
+let startTime = ago({TimeRange});
+MonManagementOperations
+
+      | where originalEventTimestamp between(startTime .. endTime)
+
+      | where event == ''management_operation_start''
+
+      | where operation_parameters has serverName
+
+      | extend InputParams = tostring(parse_xml(operation_parameters).InputParameters)
+
+      | extend InputParams = iif(isempty(InputParams), operation_parameters, InputParams)
+
+      | extend LogicalDatabaseName = parse_xml(operation_parameters).InputParameters.LogicalDatabaseName
+
+      | extend DatabaseName = parse_xml(operation_parameters).InputParameters.DatabaseName
+
+      | extend ManagedDatabaseName = parse_xml(operation_parameters).InputParameters.ManagedDatabaseName
+
+      | extend HubLogicalDatabaseName = parse_xml(operation_parameters).InputParameters.HubLogicalDatabaseName
+
+      | extend HubDatabaseName = parse_xml(operation_parameters).InputParameters.HubDatabaseName
+
+      | extend TargetDatabase = parse_xml(operation_parameters).InputParameters.TargetDatabase
+
+      | extend TargetLogicalDatabaseName = parse_xml(operation_parameters).InputParameters.TargetLogicalDatabaseName
+
+      | extend TargetManagedDatabaseName = parse_xml(operation_parameters).InputParameters.TargetManagedDatabaseName
+
+      | extend SourceDatabase = parse_xml(operation_parameters).InputParameters.SourceDatabase
+
+      | extend SourceDatabaseName = parse_xml(operation_parameters).InputParameters.SourceDatabaseName
+
+      | extend SourceManagedDatabaseName = parse_xml(operation_parameters).InputParameters.SourceManagedDatabaseName
+
+      | extend Database = iif(isnotempty(database_name), database_name, '''')
+
+      | extend Database = iif(isempty(Database) and isnotempty(logical_database_name), logical_database_name, Database)
+
+      | extend Database = iif(isempty(Database) and isnotempty(LogicalDatabaseName), LogicalDatabaseName, Database)
+
+      | extend Database = iif(isempty(Database) and isnotempty(DatabaseName), DatabaseName, Database)
+
+      | extend Database = iif(isempty(Database) and isnotempty(ManagedDatabaseName), ManagedDatabaseName, Database)
+
+      | extend Database = iif(isempty(Database) and isnotempty(HubLogicalDatabaseName), HubLogicalDatabaseName, Database)
+
+      | extend Database = iif(isempty(Database) and isnotempty(HubDatabaseName), HubDatabaseName, Database)
+
+      | extend Database = iif(isempty(Database) and isnotempty(TargetDatabase), TargetDatabase, Database)
+
+      | extend Database = iif(isempty(Database) and isnotempty(TargetLogicalDatabaseName), TargetLogicalDatabaseName, Database)
+
+      | extend Database = iif(isempty(Database) and isnotempty(TargetManagedDatabaseName), TargetManagedDatabaseName, Database)
+
+      | extend Database = iif(isempty(Database) and isnotempty(SourceDatabase), SourceDatabase, Database)
+
+      | extend Database = iif(isempty(Database) and isnotempty(SourceDatabaseName), SourceDatabaseName, Database)
+
+      | extend Database = iif(isempty(Database) and isnotempty(SourceManagedDatabaseName), SourceManagedDatabaseName, Database)
+
+      | where operation_type != ''ExecuteDatabaseVulnerabilityAssessmentScan''
+
+      | where operation_type != ''SendEmailNotificationsV2''
+
+      | where operation_type != ''GetPurviewScanRunInfo''
+
+      | parse operation_parameters with * ''<SubmitResourceHydration>'' NotViaARM:bool ''</SubmitResourceHydration>'' *
+
+      | extend NotRequestedViaARM = iif(isempty(NotViaARM),'''', iif(NotViaARM == 1, ''True'', ''False''))
+
+      | project originalEventTimestamp, request_id, operation_type, operation_parameters, Database,InputParams, NotRequestedViaARM
+
+      | join kind = leftouter
+
+      ('
+- id: MI-availability-252
+  Topic: Create-Instance-failed-due-to-previously-deployed-Azure-SQL-Server
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Instance-create-or-drop/Create-Instance-failed-due-to-previously-deployed-Azure-SQL-Server.md
+  Prompts:
+  - MI Create-Instance-failed-due-to-previously-deployed-Azure-SQL-Server
+  - Managed Instance Create-Instance-failed-due-to-previously-deployed-Azure-SQL-Server
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagementOperations
+    ExecutedQuery: 'let endTime = now();
+let startTime = ago({TimeRange});
+MonManagementOperations
+
+      | where originalEventTimestamp >= startTime
+
+      and originalEventTimestamp <= endTime //comment out to check for operations completing after EndTime
+
+      | where event != ''management_operation_start''
+
+      | where operation_parameters has serverName
+
+      | project originalEventTimestamp, request_id, event,error_code, error_message, operation_result
+
+      ) on request_id
+
+      | extend Result=replace_regex(event, ''management_operation_(.*)'', @''\1'')
+
+      | extend OutputParams = tostring(parse_xml(operation_result).OutputParameters)
+
+      | extend OutputParams = iif(isempty(OutputParams), operation_result, OutputParams)
+
+      | project originalEventTimestamp, originalEventTimestamp1, Database, request_id, Result, operation_type, error_code, error_message, InputParams, OutputParams, NotRequestedViaARM
+
+      | project-rename StartTime = originalEventTimestamp, EndTime = originalEventTimestamp1
+
+      | project-away InputParams, OutputParams // comment to see InputParams, OutputParams
+
+      //Ring:''Prod'''
+- id: MI-availability-253
+  Topic: Create-Instance-failed-due-to-previously-deployed-Azure-SQL-Server
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Instance-create-or-drop/Create-Instance-failed-due-to-previously-deployed-Azure-SQL-Server.md
+  Prompts:
+  - MI Create-Instance-failed-due-to-previously-deployed-Azure-SQL-Server
+  - Managed Instance Create-Instance-failed-due-to-previously-deployed-Azure-SQL-Server
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonBillingServerStatus2
+    ExecutedQuery: 'MonBillingServerStatus2
+
+      | where TIMESTAMP >= ago(25d)
+
+      | where server_name =~ "{ServerName}"
+
+      // | summarize arg_max(originalEventTimestamp,*) by server_id
+
+      | project originalEventTimestamp, server_id, server_name, current_state, current_state_billability
+
+      | order by originalEventTimestamp asc
+
+      | serialize
+
+      | where prev(current_state) != current_state or next(current_state) != current_state'
+- id: MI-availability-254
+  Topic: Create-Instance-long-running
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Instance-create-or-drop/Create-Instance-long-running.md
+  Prompts:
+  - MI Create-Instance-long-running
+  - Managed Instance Create-Instance-long-running
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where event startswith "nrp_"
+
+      | where TIMESTAMP &gt;= datetime({StartTime}) and TIMESTAMP &lt;= datetime({EndTime})
+
+      | where network_resource_id contains ""
+
+      | project TIMESTAMP, operation, network_resource_id, event, level, nrp_response_body, message, exception_type'
+- id: MI-availability-255
+  Topic: Create-Managed-Instance-stuck-due-to-IPV6-in-route-table
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Instance-create-or-drop/Create-Managed-Instance-stuck-due-to-IPV6-in-route-table.md
+  Prompts:
+  - MI Create-Managed-Instance-stuck-due-to-IPV6-in-route-table
+  - Managed Instance Create-Managed-Instance-stuck-due-to-IPV6-in-route-table
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where event startswith "nrp_fail"
+
+      | where request_uri contains ''"{SubscriptionId}"'' or network_resource_id contains ''"{SubscriptionId}"''
+
+      | extend Response = nrp_response_body
+
+      | project PreciseTimeStamp, operation, request_uri, Response, ClusterName = substring(ClusterName, 4, 30), event
+
+      | take 5'
+- id: MI-availability-256
+  Topic: Drop-Instance-stuck-due-to-disabled-subscription
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Instance-create-or-drop/Drop-Instance-stuck-due-to-disabled-subscription.md
+  Prompts:
+  - MI Drop-Instance-stuck-due-to-disabled-subscription
+  - Managed Instance Drop-Instance-stuck-due-to-disabled-subscription
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'let subscriptionId = "{SubscriptionId}"; MonManagement
+
+      | where event == ''nrp_failed'' and (nrp_request has subscriptionId or nrp_response_body has subscriptionId)
+
+      | summarize min(originalEventTimestamp), max(originalEventTimestamp), count() by nrp_response_body'
+- id: MI-availability-257
+  Topic: Error-45196-%2D-Unable-to-create-Instance
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Instance-create-or-drop/Error-45196-%2D-Unable-to-create-Instance.md
+  Prompts:
+  - MI MI Error 45196   Unable to create Instance
+  - Managed Instance Error-45196---Unable-to-create-Instance
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagementResourceProvider
+    ExecutedQuery: 'MonManagementResourceProvider
+
+      | where request_id == ''A723D10D-1758-4A3C-854D-E355C73AA171''
+
+      | where event == ''mfx_operation_begin''
+
+      | project user_agent'
+- id: MI-availability-258
+  Topic: Error-45440-%2D-Cannot-create-a-Managed-Instance-as-there-are-not-enough-available-ip-addresses
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Instance-create-or-drop/Error-45440-%2D-Cannot-create-a-Managed-Instance-as-there-are-not-enough-available-ip-addresses.md
+  Prompts:
+  - MI MI Error 45440   Cannot create a Managed Instance as there are not enough available ip addresses
+  - Managed Instance Error-45440---Cannot-create-a-Managed-Instance-as-there-are-not-enough-available-ip-addresses
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'let endTime = now();
+let startTime = ago({TimeRange});
+MonManagedServers
+
+      | where TIMESTAMP between (startTime .. endTime)
+
+      and subnet_id =~ subnet
+
+      | summarize arg_max(TIMESTAMP, instance = name, state, edition, zone_redundant, private_cluster_tenant_ring_name) by managed_server_id
+
+      | join kind=leftouter (MonManagedServerInstances
+
+      | where TIMESTAMP between (startTime .. endTime)
+
+      | summarize arg_max(TIMESTAMP, managed_server_id, sql_container_ip_reservation_set_size) by name
+
+      ) on managed_server_id
+
+      | project-away TIMESTAMP1, managed_server_id1
+
+      | summarize sum(sql_container_ip_reservation_set_size) by private_cluster_tenant_ring_name
+
+      | extend PDC_usage_in_theory = 6 //1 for ILB and 5 for WF nodes, which in exceptional cases may not be 5
+
+      | summarize AzureUsage = 5,  PDC_usage_in_theory = sum(PDC_usage_in_theory), SQL_usage = sum(sum_sql_container_ip_reservation_set_size)
+
+      | extend Total = AzureUsage + PDC_usage_in_theory + SQL_usage'
+- id: MI-availability-259
+  Topic: Fast-provisioning
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Instance-create-or-drop/Fast-provisioning.md
+  Prompts:
+  - MI Fast-provisioning
+  - Managed Instance Fast-provisioning
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where TIMESTAMP > ago(1d)
+
+      | where request_id =~ ''BD136DD4-2851-4FA6-BB9E-8A739AC002AC''
+
+      | where event =~ ''preprovisioning_pool_event'' // or event =~''private_capacity_request_event'' // this also could be useful for some specific request id
+
+      | where request_event_type !in~ ("PreProvisioningPoolSizeCalculationStart","PreProvisioningPoolSizeCalculationEnd")
+
+      | project TIMESTAMP, event, request_id, request_event_type, message, preprovisioned_properties_id, preprovisioned_properties, pre_provisioning_engine_id'
+- id: MI-availability-260
+  Topic: Find-who-dropped-the-instance
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Instance-create-or-drop/Find-who-dropped-the-instance.md
+  Prompts:
+  - MI Find-who-dropped-the-instance
+  - Managed Instance Find-who-dropped-the-instance
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'MonManagedServers
+
+      //| where TIMESTAMP >= ago(2d) //If customer knows when the MI was dropped, uncomment this and specify timeframe
+
+      | where name =~ ''"{ServerName}"''
+
+      | summarize TelemetryAt = max(TIMESTAMP) by name, managed_server_id, resource_group, state, service_level_objective, version_edition, is_versioned_instance, create_time, dropped_date, request_id,
+      IsFreeMI = iff(is_freemium==1,"Yes","No"), subnet_id, managed_instance_pool_id, private_cluster_tenant_ring_name'
+- id: MI-availability-261
+  Topic: Find-who-dropped-the-instance
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Instance-create-or-drop/Find-who-dropped-the-instance.md
+  Prompts:
+  - MI Find-who-dropped-the-instance
+  - Managed Instance Find-who-dropped-the-instance
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where TIMESTAMP >= ago({TimeRange})
+
+      | where request_id =~ ''E3BDE7B0-090C-46A8-8913-2AB397AD6675''
+
+      | project TIMESTAMP, PreciseTimeStamp, request_id, message, keys, state_machine_type, state, fsm_event, request_name, caller_state_machine_type, caller_keys, action, old_state, new_state, exception_type,
+      stack_trace'
+- id: MI-availability-262
+  Topic: Getting-Network-Intent-Policy-(NIP)-errors-in-Kusto
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Instance-create-or-drop/Getting-Network-Intent-Policy-(NIP)-errors-in-Kusto.md
+  Prompts:
+  - MI Getting-Network-Intent-Policy-(NIP)-errors-in-Kusto
+  - Managed Instance Getting-Network-Intent-Policy-(NIP)-errors-in-Kusto
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where operation_type =~ ''UpsertManagedServer'' and event == ''management_operation_managed_server''
+
+      |  where state != ''Succeeded''
+
+      | where subscription_id =~ ''"{SubscriptionId}"''
+
+      | project request_id, subscription_id, managed_server_name, elapsed_time,
+
+      request_end_time = TIMESTAMP, request_state = state, error_code, error_message'
+- id: MI-availability-263
+  Topic: Getting-Network-Intent-Policy-(NIP)-errors-in-Kusto
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Instance-create-or-drop/Getting-Network-Intent-Policy-(NIP)-errors-in-Kusto.md
+  Prompts:
+  - MI Getting-Network-Intent-Policy-(NIP)-errors-in-Kusto
+  - Managed Instance Getting-Network-Intent-Policy-(NIP)-errors-in-Kusto
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where nrp_response_body contains ''ConflictWithNetworkIntentPolicy''
+
+      | parse kind=regex network_resource_id with ''/subscriptions/'' subscription_id ''/resourceGroups/'' resource_group ''/providers/Microsoft.Network/networkIntentPolicies/'' network_intent_policy_id
+
+      | where subscription_id =~ ''"{SubscriptionId}"''
+
+      | extend nrp_error_code = extract(''"[cC]ode".*?"(.*?)"'', 1, nrp_response_body), nrp_error_message = extract(''"[mM]essage".*?"(.*?)("|$)'', 1, nrp_response_body)
+
+      | summarize error_count = count(), latest_error_time = max(TIMESTAMP) by subscription_id, resource_group, network_intent_policy_id, operation, nrp_error_code, nrp_error_message
+
+      | order by subscription_id, resource_group, latest_error_time desc'
+- id: MI-availability-264
+  Topic: Getting-Network-Intent-Policy-(NIP)-errors-in-Kusto
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Instance-create-or-drop/Getting-Network-Intent-Policy-(NIP)-errors-in-Kusto.md
+  Prompts:
+  - MI Getting-Network-Intent-Policy-(NIP)-errors-in-Kusto
+  - Managed Instance Getting-Network-Intent-Policy-(NIP)-errors-in-Kusto
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where TIMESTAMP >= ago(7d)
+
+      | where request_id =~ ""{SubscriptionId}""
+
+      | distinct message'
+- id: MI-availability-265
+  Topic: Invalid-DNS-zone-partner-resource-id-specified-in-properties
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Instance-create-or-drop/Invalid-DNS-zone-partner-resource-id-specified-in-properties.md
+  Prompts:
+  - MI Invalid-DNS-zone-partner-resource-id-specified-in-properties
+  - Managed Instance Invalid-DNS-zone-partner-resource-id-specified-in-properties
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagementResourceProvider
+    ExecutedQuery: 'let subscriptionId = "{SubscriptionId}"; MonManagementResourceProvider
+
+      | where TIMESTAMP >= ago(7d)
+
+      | where subscription_id =~ subscriptionId
+
+      | where controller_name =~ ''ManagedInstances'' and action_name =~ ''CreateOrUpdate''
+
+      | project originalEventTimestamp, correlation_id, request_id, extra_parameters'
+- id: MI-availability-266
+  Topic: Managed-Instance-stuck-on-drop-due-to-Policy
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Instance-create-or-drop/Managed-Instance-stuck-on-drop-due-to-Policy.md
+  Prompts:
+  - MI Managed-Instance-stuck-on-drop-due-to-Policy
+  - Managed Instance Managed-Instance-stuck-on-drop-due-to-Policy
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where TIMESTAMP > ago(2d)
+
+      | where request_id  =~ ""{RequestId}""
+
+      | where isnotempty(message)
+
+      | project TIMESTAMP, event, state, message, exception_type, stack_trace
+
+      | order by TIMESTAMP asc
+
+      | limit 1000'
+- id: MI-availability-267
+  Topic: Troubleshoot-Subnet-Move-Operation
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Instance-create-or-drop/Troubleshoot-Subnet-Move-Operation.md
+  Prompts:
+  - MI Troubleshoot-Subnet-Move-Operation
+  - Managed Instance Troubleshoot-Subnet-Move-Operation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'let endTime = now();
+let startTime = ago({TimeRange});
+MonManagement
+
+      | where originalEventTimestamp between (startTime .. endTime)
+
+      and request_id =~ requestId'
+- id: MI-availability-268
+  Topic: Workflow-for-Instance-create-or-drop
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Instance-create-or-drop/Workflow-for-Instance-create-or-drop.md
+  Prompts:
+  - MI Workflow-for-Instance-create-or-drop
+  - Managed Instance Workflow-for-Instance-create-or-drop
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'MonManagedServers
+
+      | where name =~ ''{instanceName}''
+
+      | summarize arg_max(TIMESTAMP,*) by name, state
+
+      | project TIMESTAMP, customer_subscription_id, managed_server_id, name, state, bill_vcores ,state_billability, last_state_billability_change_time, billing_start_time, create_time, dropped_date'
+- id: MI-availability-271
+  Topic: '[OnePager]-Managed-Instance-deployment-failed-due-to-conflicts-with-Network-Intent-Policy-(NIP)'
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Instance-create-or-drop/[OnePager]-Managed-Instance-deployment-failed-due-to-conflicts-with-Network-Intent-Policy-(NIP).md
+  Prompts:
+  - MI [OnePager]-Managed-Instance-deployment-failed-due-to-conflicts-with-Network-Intent-Policy-(NIP)
+  - Managed Instance [OnePager]-Managed-Instance-deployment-failed-due-to-conflicts-with-Network-Intent-Policy-(NIP)
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where TIMESTAMP >= ago(7d)
+
+      | where message has ''NetworkIntentPolicy'' or nrp_response_body has ''ConflictWithNetworkIntentPolicy''
+
+      | project TIMESTAMP, request_id, message
+
+      | order by TIMESTAMP desc'
+- id: MI-availability-272
+  Topic: Workflow-for-Instance-Pools
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Instance-Pools/Workflow-for-Instance-Pools.md
+  Prompts:
+  - MI Workflow-for-Instance-Pools
+  - Managed Instance Workflow-for-Instance-Pools
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagementOperations
+    ExecutedQuery: 'let endTime = now();
+let startTime = ago({TimeRange});
+MonManagementOperations
+
+      | where originalEventTimestamp between(startTime .. endTime)
+
+      | where operation_category =~ ''ManagedInstancePool''
+
+      | where subscription_id =~ subscriptionId
+
+      | where event == ''management_operation_start''
+
+      | extend InputParams = tostring(parse_xml(operation_parameters).InputParameters)
+
+      | extend InputParams = iif(isempty(InputParams), operation_parameters, InputParams)
+
+      | extend InstancePoolName = parse_xml(operation_parameters).InputParameters.InstancePoolName
+
+      | project originalEventTimestamp, request_id, InstancePoolName, operation_type
+
+      , operation_parameters, InputParams
+
+      | join kind = leftouter
+
+      ('
+- id: MI-availability-273
+  Topic: Workflow-for-Instance-Pools
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Instance-Pools/Workflow-for-Instance-Pools.md
+  Prompts:
+  - MI Workflow-for-Instance-Pools
+  - Managed Instance Workflow-for-Instance-Pools
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagementOperations
+    ExecutedQuery: 'let endTime = now();
+let startTime = ago({TimeRange});
+MonManagementOperations
+
+      | where originalEventTimestamp between (startTime .. endTime)
+
+      | where event != ''management_operation_start''
+
+      | where subscription_id =~ subscriptionId
+
+      | project originalEventTimestamp, request_id, event,error_code, error_message, operation_result
+
+      ) on request_id
+
+      | extend Result=replace_regex(event, ''management_operation_(.*)'', @''\1'')
+
+      | extend OutputParams = tostring(parse_xml(operation_result).OutputParameters)
+
+      | extend OutputParams = iif(isempty(OutputParams), operation_result, OutputParams)
+
+      | project originalEventTimestamp, originalEventTimestamp1, InstancePoolName, request_id
+
+      , Result, operation_type, error_code, error_message, InputParams, OutputParams
+
+      | project-rename StartTime = originalEventTimestamp, EndTime = originalEventTimestamp1
+
+      | join kind = leftouter
+
+      ('
+- id: MI-availability-274
+  Topic: Workflow-for-Instance-Pools
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Instance-Pools/Workflow-for-Instance-Pools.md
+  Prompts:
+  - MI Workflow-for-Instance-Pools
+  - Managed Instance Workflow-for-Instance-Pools
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'let endTime = now();
+let startTime = ago({TimeRange});
+MonManagement
+
+      | where originalEventTimestamp between (startTime .. endTime)
+
+      | where isnotempty(error_number) and error_number !in (''40640'')
+
+      | project error_number, message, request_id
+
+      | summarize errorNumbers =  make_set(error_number), messages = make_set(message) by request_id
+
+      ) on request_id
+
+      | project-away request_id1, InputParams, OutputParams'
+- id: MI-availability-275
+  Topic: Error-40673-%2D-The-service-objective-assignment-for-the-database-has-failed
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Instance-scaling-and-service-tier-changes/Error-40673-%2D-The-service-objective-assignment-for-the-database-has-failed.md
+  Prompts:
+  - MI MI Error 40673   The service objective assignment for the database has failed
+  - Managed Instance Error-40673---The-service-objective-assignment-for-the-database-has-failed
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where TIMESTAMP >= ago(7d)
+
+      | where request_id =~ "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
+
+      | where event == ''private_capacity_request_event'' and request_event_type != ''CalculationChatter''
+
+      // | project originalEventTimestamp, message, tenant_ring_name, request_event_type, capacity_response_code, no_capacity_cause
+
+      | project originalEventTimestamp, private_cluster_id, message, request_event_type, capacity_response_code, no_capacity_cause'
+- id: MI-availability-276
+  Topic: Long-running-scale-operation-on-geo%2Dsecondary
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Instance-scaling-and-service-tier-changes/Long-running-scale-operation-on-geo%2Dsecondary.md
+  Prompts:
+  - MI MI Long running scale operation on geo secondary
+  - Managed Instance Long-running-scale-operation-on-geo-secondary
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDbSeedTraces
+    ExecutedQuery: 'let startTime = ago({TimeRange});
+MonDbSeedTraces
+
+      | where PreciseTimeStamp >= startTime
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where database_size_bytes > 0
+
+      | summarize min_time=min(originalEventTimestamp), max_time=max(originalEventTimestamp) by database_name, database_size_bytes
+
+      | project min_time, max_time, database_id=tolower(database_name), database_size_bytes
+
+      | join kind=leftouter(MonAnalyticsDBSnapshot
+
+      | where TIMESTAMP >= startTime
+
+      | where logical_server_name =~ "{ServerName}"
+
+      | summarize arg_max(TIMESTAMP,*) by logical_database_name, database_id=tolower(logical_database_id)) on database_id
+
+      | project min_time, max_time, database_id, logical_database_name, database_size_bytes'
+- id: MI-availability-277
+  Topic: Long-running-scale-operation-on-geo%2Dsecondary
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Instance-scaling-and-service-tier-changes/Long-running-scale-operation-on-geo%2Dsecondary.md
+  Prompts:
+  - MI MI Long running scale operation on geo secondary
+  - Managed Instance Long-running-scale-operation-on-geo-secondary
+  CustomizedParameters:
+  - AppName
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDbSeedTraces
+    ExecutedQuery: 'let endTime = now();
+let startTime = ago({TimeRange});
+let serverName = "{ServerName}";
+MonDbSeedTraces
+
+      | where TIMESTAMP >= startTime
+
+      | where TIMESTAMP <= endTime
+
+      | where AppName =~ "{AppName}" or LogicalServerName =~ "{ServerName}"
+
+      | where database_name =~ "{DatabaseName}"  //database guid for long running seeding from above
+
+      | project originalEventTimestamp, event, new_state, internal_state_desc, transferred_size_bytes, database_size_bytes'
+- id: MI-availability-278
+  Topic: Long-running-scale-operation-on-geo%2Dsecondary
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Instance-scaling-and-service-tier-changes/Long-running-scale-operation-on-geo%2Dsecondary.md
+  Prompts:
+  - MI MI Long running scale operation on geo secondary
+  - Managed Instance Long-running-scale-operation-on-geo-secondary
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlShrinkInfo
+    ExecutedQuery: 'let endTime = now();
+let startTime = ago({TimeRange});
+MonSqlShrinkInfo
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where TIMESTAMP >= startTime
+
+      | where TIMESTAMP <= endTime
+
+      | where logical_database_name =~ "{DatabaseName}" //primary database seeding to secondary database
+
+      | summarize count() by bin(originalEventTimestamp, 1min)
+
+      | render timechart'
+- id: MI-availability-279
+  Topic: Managed-Instance-Scaling-Operation-Taking-Longer-Than-Expected-in-Azure-SQLMI
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Instance-scaling-and-service-tier-changes/Managed-Instance-Scaling-Operation-Taking-Longer-Than-Expected-in-Azure-SQLMI.md
+  Prompts:
+  - MI Managed-Instance-Scaling-Operation-Taking-Longer-Than-Expected-in-Azure-SQLMI
+  - Managed Instance Managed-Instance-Scaling-Operation-Taking-Longer-Than-Expected-in-Azure-SQLMI
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where TIMESTAMP >= ago(4h)
+
+      | where request_id =~ request_Id
+
+      | project originalEventTimestamp, state_machine_type, action, event, error, fsm_event, old_state, new_state, operation_parameters, operation_id, keys, message, stack_trace, request_id, caller_state_machine_type
+      caller_keys, process_id, collect_current_thread_id'
+- id: MI-availability-280
+  Topic: Scaling-stuck-due-to-management-operations-inside-the-same-virtual-cluster
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Instance-scaling-and-service-tier-changes/Scaling-stuck-due-to-management-operations-inside-the-same-virtual-cluster.md
+  Prompts:
+  - MI Scaling-stuck-due-to-management-operations-inside-the-same-virtual-cluster
+  - Managed Instance Scaling-stuck-due-to-management-operations-inside-the-same-virtual-cluster
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'let endTime = now();
+let startTime = ago({TimeRange});
+MonManagedServers
+
+      | where TIMESTAMP >= {startTime} and TIMESTAMP <= {endTime}
+
+      | where private_cluster_tenant_ring_name == {tenantringName} //Tenant Ring where MI resides - can be obtained from ASC
+
+      | summarize arg_max(TIMESTAMP,*) by managed_server_id
+
+      | where customer_subscription_id =~ {customerSubscriptionId}
+
+      | project TIMESTAMP, state, name, managed_server_id, private_cluster_tenant_ring_name, customer_subscription_id, resource_group, subnet_id, edition, service_level_objective, private_cluster_id, dropped_date
+      request_id'
+- id: MI-availability-281
+  Topic: Scaling-stuck-due-to-management-operations-inside-the-same-virtual-cluster
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Instance-scaling-and-service-tier-changes/Scaling-stuck-due-to-management-operations-inside-the-same-virtual-cluster.md
+  Prompts:
+  - MI Scaling-stuck-due-to-management-operations-inside-the-same-virtual-cluster
+  - Managed Instance Scaling-stuck-due-to-management-operations-inside-the-same-virtual-cluster
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRestoreRequests
+    ExecutedQuery: 'let MIName = "{ServerName}"; MonRestoreRequests
+
+      | where subscription_id =~ {customerSubscriptionId}
+
+      | where target_managed_server_name in ({MINames}) //Managed Instances that belong in the same virtual cluster 9from above query)
+
+      | project restore_request_id, target_managed_server_name, restore_start_time = start_time, restore_end_time = end_time'
+- id: MI-availability-282
+  Topic: How-to-check-start-stop-schedule
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Instance-stop-or-start/How-to-check-start-stop-schedule.md
+  Prompts:
+  - MI How-to-check-start-stop-schedule
+  - Managed Instance How-to-check-start-stop-schedule
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServerStartStopSchedules
+    ExecutedQuery: 'MonManagedServerStartStopSchedules
+
+      | where managed_server_id =~ ''"{ManagedServerId}"''
+
+      | summarize min(PreciseTimeStamp), max(PreciseTimeStamp) by create_time, fsm_instance_id'
+- id: MI-availability-283
+  Topic: How-to-check-start-stop-schedule
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Instance-stop-or-start/How-to-check-start-stop-schedule.md
+  Prompts:
+  - MI How-to-check-start-stop-schedule
+  - Managed Instance How-to-check-start-stop-schedule
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServerStartStopSchedules
+    ExecutedQuery: 'MonManagedServerStartStopSchedules
+
+      | where PreciseTimeStamp >= ago(1h)
+
+      | where managed_server_id =~ ''"{ManagedServerId}"''
+
+      | extend result = parse_xml(schedule).InternalStartStopManagedServerSchedule.ScheduleItems
+
+      | mv-expand result
+
+      | summarize min(PreciseTimeStamp), max(PreciseTimeStamp) by create_time, fsm_instance_id, tostring(result)'
+- id: MI-availability-284
+  Topic: How-to-check-start-stop-schedule
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Instance-stop-or-start/How-to-check-start-stop-schedule.md
+  Prompts:
+  - MI How-to-check-start-stop-schedule
+  - Managed Instance How-to-check-start-stop-schedule
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: Monday
+    ExecutedQuery: '| 2025-03-21 15:39:27.1900000 | 1C275027-979E-496C-8CE6-B9B58585DC58 | {"InternalStartStopManagedServerScheduleItem":[{"DayOfWeek":"Monday","Hour":12,"Minute":0,"TimeZone":"UTC","Now":"2025-09-19T23:59:10.1755965Z","Action":"Start","NextActionExecutionTime":"2025-09-22T12:00:00.0000000Z",<span
+      style="background:yellow;color:red">"PairId":0},{"DayOfWeek":"Monday","Hour":23,"Minute":59,"TimeZone":"UTC","Now":"2025-09-19T23:59:10.1755965Z","Action":"Stop","NextActionExecutionTime":"2025-09-22T23:59:00.0000000Z",<span
+      style="background:yellow;color:red">"PairId":0},{"DayOfWeek":"Tuesday","Hour":12,"Minute":0,"TimeZone":"UTC","Now":"2025-09-19T23:59:10.1755965Z","Action":"Start","NextActionExecutionTime":"2025-09-23T12:00:00.0000000Z","PairId":1},{"DayOfWeek":"Tuesday","Hour":23,"Minute":59,"TimeZone":"UTC","Now":"2025-09-19T23:59:10.1755965Z","Action":"Stop","NextActionExecutionTime":"2025-09-23T23:59:00.0000000Z","PairId":1},{"DayOfWeek":"Wednesday","Hour":12,"Minute":0,"TimeZone":"UTC","Now":"2025-09-19T23:59:10.1755965Z","Action":"Start","NextActionExecutionTime":"2025-09-24T12:00:00.0000000Z","PairId":2},{"DayOfWeek":"Wednesday","Hour":23,"Minute":59,"TimeZone":"UTC","Now":"2025-09-19T23:59:10.1755965Z","Action":"Stop","NextActionExecutionTime":"2025-09-24T23:59:00.0000000Z","PairId":2},{"DayOfWeek":"Thursday","Hour":12,"Minute":0,"TimeZone":"UTC","Now":"2025-09-19T23:59:10.1755965Z","Action":"Start","NextActionExecutionTime":"2025-09-25T12:00:00.0000000Z","PairId":3},{"DayOfWeek":"Thursday","Hour":23,"Minute":59,"TimeZone":"UTC","Now":"2025-09-19T23:59:10.1755965Z","Action":"Stop","NextActionExecutionTime":"2025-09-25T23:59:00.0000000Z","PairId":3},{"DayOfWeek":"Friday","Hour":12,"Minute":0,"TimeZone":"UTC","Now":"2025-09-19T23:59:10.1755965Z","Action":"Start","NextActionExecutionTime":"2025-09-26T12:00:00.0000000Z","PairId":4},{"DayOfWeek":"Friday","Hour":23,"Minute":59,"TimeZone":"UTC","Now":"2025-09-19T23:59:10.1755965Z","Action":"Stop","NextActionExecutionTime":"2025-09-26T23:59:00.0000000Z","PairId":4}]}
+      | 2025-09-21 20:02:46.5482610 | 2025-09-22 12:12:51.1276197 |'
+- id: MI-availability-286
+  Topic: Instance-stuck-on-starting-state
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Instance-stop-or-start/Instance-stuck-on-starting-state.md
+  Prompts:
+  - MI Instance-stuck-on-starting-state
+  - Managed Instance Instance-stuck-on-starting-state
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where request_id =~ "request_id"'
+- id: MI-availability-287
+  Topic: Instance-stuck-on-starting-state
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Instance-stop-or-start/Instance-stuck-on-starting-state.md
+  Prompts:
+  - MI Instance-stuck-on-starting-state
+  - Managed Instance Instance-stuck-on-starting-state
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: AlrSQLErrorsReported
+    ExecutedQuery: 'AlrSQLErrorsReported
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where TIMESTAMP > ago(2h)'
+- id: MI-availability-288
+  Topic: Free-SQL-MI-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Reference/Free-SQL-MI-queries.md
+  Prompts:
+  - MI Free-SQL-MI-queries
+  - Managed Instance Free-SQL-MI-queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'MonManagedServers
+
+      | where PreciseTimeStamp > ago(7d)
+
+      | where name =~ ''"{ServerName}"''
+
+      | project PreciseTimeStamp, name, state, managed_server_id, is_freemium'
+- id: MI-availability-290
+  Topic: How-to-check-Managed-Instance-tags
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Reference/How-to-check-Managed-Instance-tags.md
+  Prompts:
+  - MI How-to-check-Managed-Instance-tags
+  - Managed Instance How-to-check-Managed-Instance-tags
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonBillingManagedServerStatus
+    ExecutedQuery: 'MonBillingManagedServerStatus
+
+      | where managed_server_name =~ "{ServerName}"
+
+      | summarize min(TIMESTAMP) by resource_tags'
+- id: MI-availability-291
+  Topic: How-to-check-Managed-Instance-tags
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Reference/How-to-check-Managed-Instance-tags.md
+  Prompts:
+  - MI How-to-check-Managed-Instance-tags
+  - Managed Instance How-to-check-Managed-Instance-tags
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonBillingManagedServerStatus
+    ExecutedQuery: 'MonBillingManagedServerStatus
+
+      | where managed_server_name =~ ServerName
+
+      | project managed_server_id
+
+      | take 1
+
+      | join kind= inner ('
+- id: MI-availability-292
+  Topic: How-to-check-Managed-Instance-tags
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Reference/How-to-check-Managed-Instance-tags.md
+  Prompts:
+  - MI How-to-check-Managed-Instance-tags
+  - Managed Instance How-to-check-Managed-Instance-tags
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedDatabases
+    ExecutedQuery: 'MonManagedDatabases
+
+      | where managed_database_name =~ DatabaseName
+
+      | project managed_server_id, resource_tags, TIMESTAMP) on managed_server_id
+
+      | summarize min(TIMESTAMP) by resource_tags'
+- id: MI-availability-293
+  Topic: Error-46004%3A-DeleteOfVersion2VirtualClusterIsDisabled
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Virtual-cluster/Error-46004%3A-DeleteOfVersion2VirtualClusterIsDisabled.md
+  Prompts:
+  - MI MI Error 46004: DeleteOfVersion2VirtualClusterIsDisabled
+  - Managed Instance Error-46004:-DeleteOfVersion2VirtualClusterIsDisabled
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagementOperations
+    ExecutedQuery: 'MonManagementOperations
+
+      | where TIMESTAMP >= ago (4d)
+
+      | where operation_type != ''ExecuteDatabaseVulnerabilityAssessmentScan''
+
+      | where operation_type != ''SendEmailNotificationsV2''
+
+      | where operation_type != ''GetPurviewScanRunInfo''
+
+      | where operation_parameters contains "{ServerName}" //customer subscription id
+
+      | project-reorder TIMESTAMP, request_id, event, operation_type, elapsed_time, error_code, error_message, dss_error_message,  operation_parameters'
+- id: MI-availability-294
+  Topic: Error-46004%3A-DeleteOfVersion2VirtualClusterIsDisabled
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Virtual-cluster/Error-46004%3A-DeleteOfVersion2VirtualClusterIsDisabled.md
+  Prompts:
+  - MI MI Error 46004: DeleteOfVersion2VirtualClusterIsDisabled
+  - Managed Instance Error-46004:-DeleteOfVersion2VirtualClusterIsDisabled
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonPrivateClusterCapacityManagement
+    ExecutedQuery: 'MonPrivateClusterCapacityManagement
+
+      | where virtual_cluster_name =~ ''VirtualCluster60e1e3e4-1b54-46bf-8e3b-f7a52f3e518a''
+
+      | summarize arg_max(TIMESTAMP,*) by virtual_cluster_name, state, private_cluster_capacity_management_id, subnet_resource_id'
+- id: MI-availability-295
+  Topic: Error-46004%3A-DeleteOfVersion2VirtualClusterIsDisabled
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Virtual-cluster/Error-46004%3A-DeleteOfVersion2VirtualClusterIsDisabled.md
+  Prompts:
+  - MI MI Error 46004: DeleteOfVersion2VirtualClusterIsDisabled
+  - Managed Instance Error-46004:-DeleteOfVersion2VirtualClusterIsDisabled
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'MonManagedServers
+
+      | where subnet_id =~ ''/subscriptions/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx/resourceGroups/rg/providers/Microsoft.Network/virtualNetworks/vnet-westus2/subnets/ManagedInstance''
+
+      | summarize arg_max(TIMESTAMP,*) by name, managed_server_id
+
+      | project TIMESTAMP, name, managed_server_id, state, service_level_objective, state_billability'
+- id: MI-availability-296
+  Topic: Error-46004%3A-DeleteOfVersion2VirtualClusterIsDisabled
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Virtual-cluster/Error-46004%3A-DeleteOfVersion2VirtualClusterIsDisabled.md
+  Prompts:
+  - MI MI Error 46004: DeleteOfVersion2VirtualClusterIsDisabled
+  - Managed Instance Error-46004:-DeleteOfVersion2VirtualClusterIsDisabled
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedInstancePools
+    ExecutedQuery: 'MonManagedInstancePools
+
+      | where subnet_resource_id =~ ''/subscriptions/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx/resourceGroups/rg/providers/Microsoft.Network/virtualNetworks/vnet-westus2/subnets/ManagedInstance''
+
+      | summarize arg_max(TIMESTAMP,*) by managed_instance_pool_name, managed_instance_pool_id
+
+      | project TIMESTAMP, managed_instance_pool_name, managed_instance_pool_id, state, state_billability'
+- id: MI-availability-297
+  Topic: Virtual-cluster-got-deleted
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Create,-Scale,-Stop,-Start-or-Delete-Resources/Virtual-cluster/Virtual-cluster-got-deleted.md
+  Prompts:
+  - MI Virtual-cluster-got-deleted
+  - Managed Instance Virtual-cluster-got-deleted
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'MonManagedServers
+
+      | where TIMESTAMP >= ago(2d)
+
+      | where name =~ ''sqlmi''
+
+      | summarize TelemetryAt = arg_max(TIMESTAMP,*) by name, managed_server_id, is_wcow_managed_server, service_level_objective'
+- id: MI-availability-298
+  Topic: Licensing on-geo%2Dsecondary
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Failover-Groups/Licensing on-geo%2Dsecondary.md
+  Prompts:
+  - MI Licensing on-geo-secondary
+  - Managed Instance Licensing on-geo-secondary
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: Monitoring
+    ExecutedQuery: '|Monitoring     | All monitoring operations that are supported by a readable secondary replica are supported by the standby replica.         |
+
+      |RPO & RTO| The standby replica provides the same RPO and RTO as a readable secondary replica.          |
+
+      |Removing failover group  | If the failover group is removed (using something like [Remove-AzSqlDatabaseInstanceFailoverGroup](https://learn.microsoft.com/powershell/module/az.sql/remove-azsqldatabaseinstancefailovergroup?view=azps-9.1.0)
+      the standby replica becomes a read-write standalone instance, and will now be charged the license price.      |'
+- id: MI-availability-299
+  Topic: Error-40983-%2D-Replication-to-the-partner-managed-instance-could-not-be-established
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Failover-Groups/Configuring-or-using-failover-groups/Error-40983-%2D-Replication-to-the-partner-managed-instance-could-not-be-established.md
+  Prompts:
+  - MI MI Error 40983   Replication to the partner managed instance could not be established
+  - Managed Instance Error-40983---Replication-to-the-partner-managed-instance-could-not-be-established
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagementOperations
+    ExecutedQuery: 'let endTime = now();
+let startTime = ago({TimeRange});
+MonManagementOperations
+
+      | where originalEventTimestamp >= startTime and originalEventTimestamp <= endTime
+
+      | where event == ''management_operation_failure'' and error_code == ''40983''
+
+      | where operation_parameters has serverName
+
+      | project originalEventTimestamp, request_id, event,error_code, error_message
+
+      | join kind = leftouter
+
+      ('
+- id: MI-availability-301
+  Topic: Error-40983-%2D-Replication-to-the-partner-managed-instance-could-not-be-established
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Failover-Groups/Configuring-or-using-failover-groups/Error-40983-%2D-Replication-to-the-partner-managed-instance-could-not-be-established.md
+  Prompts:
+  - MI MI Error 40983   Replication to the partner managed instance could not be established
+  - Managed Instance Error-40983---Replication-to-the-partner-managed-instance-could-not-be-established
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'let endTime = now();
+let startTime = ago({TimeRange});
+MonManagement
+
+      | where originalEventTimestamp >= startTime and originalEventTimestamp <= endTime
+
+      | where message startswith ''Validation of connectivity''
+
+      | project request_id, message
+
+      ) on request_id
+
+      | project-away request_id1
+
+      | parse message with ''Validation of connectivity from '' appname'' to'' *
+
+      | join kind = leftouter
+
+      ('
+- id: MI-availability-302
+  Topic: Error-40983-%2D-Replication-to-the-partner-managed-instance-could-not-be-established
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Failover-Groups/Configuring-or-using-failover-groups/Error-40983-%2D-Replication-to-the-partner-managed-instance-could-not-be-established.md
+  Prompts:
+  - MI MI Error 40983   Replication to the partner managed instance could not be established
+  - Managed Instance Error-40983---Replication-to-the-partner-managed-instance-could-not-be-established
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagementResourceProvider
+    ExecutedQuery: 'let endTime = now();
+let startTime = ago({TimeRange});
+MonManagementResourceProvider
+
+      | where TIMESTAMP >= startTime and TIMESTAMP <= endTime
+
+      | where request_url has ''ValidateGeoDRReplicationFromSourceToTargetReplica''
+
+      | project originalEventTimestamp, request_id, request_url
+
+      | parse request_url with * "ValidateGeoDRReplicationFromSourceToTargetReplica?sourceInstanceName=''" appname "''" *
+
+      ) on appname
+
+      | join kind = leftouter
+
+      ('
+- id: MI-availability-303
+  Topic: Error-40983-%2D-Replication-to-the-partner-managed-instance-could-not-be-established
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Failover-Groups/Configuring-or-using-failover-groups/Error-40983-%2D-Replication-to-the-partner-managed-instance-could-not-be-established.md
+  Prompts:
+  - MI MI Error 40983   Replication to the partner managed instance could not be established
+  - Managed Instance Error-40983---Replication-to-the-partner-managed-instance-could-not-be-established
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonNodeAgentEvents
+    ExecutedQuery: 'let endTime = now();
+let startTime = ago({TimeRange});
+MonNodeAgentEvents
+
+      | where TIMESTAMP >= startTime and TIMESTAMP <= endTime
+
+      | where message startswith "TestTcpConnection"
+
+      | parse message with "TestTcpConnection: RequestId <" TestTcpConnection_RequestId "> Testing connection to HOST " TestTcpConnection_Host " PORT " TestTcpConnection_Port ". Was connection Successful?:
+      " TestTcpConnection_Result ";" *
+
+      | summarize min(originalEventTimestamp), max(originalEventTimestamp), Count = count() by TestTcpConnection_Host, TestTcpConnection_Port, TestTcpConnection_Result, TestTcpConnection_RequestId = toupper(TestTcpConnection_RequestId)
+
+      ) on $left.request_id1 == $right.TestTcpConnection_RequestId
+
+      | summarize TestsRan = sum(Count) by StartTime, EndTime, request_id, TestTcpConnection_Host, TestTcpConnection_Port, TestTcpConnection_Result'
+- id: MI-availability-304
+  Topic: Error-40983-%2D-Replication-to-the-partner-managed-instance-could-not-be-established
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Failover-Groups/Configuring-or-using-failover-groups/Error-40983-%2D-Replication-to-the-partner-managed-instance-could-not-be-established.md
+  Prompts:
+  - MI MI Error 40983   Replication to the partner managed instance could not be established
+  - Managed Instance Error-40983---Replication-to-the-partner-managed-instance-could-not-be-established
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonEffectiveRoutes
+    ExecutedQuery: 'MonEffectiveRoutes
+
+      | where TIMESTAMP > ago(5h)
+
+      | where subnet_resource_id == ''/subscriptions/xxx-xxx-xxx/resourceGroups/xxxxx/providers/Microsoft.Network/virtualNetworks/xxxxx/subnets/xxxx'' //source subnet info
+
+      | where ipv6_is_match( ''172.30.99.96/27'', address_prefixes) or address_prefixes contains ''172.30.99.96/27'' //IP of target subnet
+
+      | project name, source, status, address_prefixes, type'
+- id: MI-availability-305
+  Topic: Error-45600-Failover-Group-deployment-failed-AkvEndpointNotReachableFromNode
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Failover-Groups/Configuring-or-using-failover-groups/Error-45600-Failover-Group-deployment-failed-AkvEndpointNotReachableFromNode.md
+  Prompts:
+  - MI Error-45600-Failover-Group-deployment-failed-AkvEndpointNotReachableFromNode
+  - Managed Instance Error-45600-Failover-Group-deployment-failed-AkvEndpointNotReachableFromNode
+  CustomizedParameters:
+  - DatabaseName
+  - ManagedServerId
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where originalEventTimestamp between (datetime(2023-03-08 20:06:20).. datetime(2023-03-08 20:07:26))
+
+      | where managed_server_id =~ "{ManagedServerId}"     //managed_server_id guid of MI with error 45600 (target MI in the above example)
+
+      | where event =~ ''akv_endpoint_reaching_from_node_failure''
+
+      | project PreciseTimeStamp, originalEventTimestamp, event, target_port, target_host_name, message, elapsed_time'
+- id: MI-availability-306
+  Topic: Error-45912-%2D-The-operation-failed-because-Primary-is-on-newer-version-than-Secondary
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Failover-Groups/Configuring-or-using-failover-groups/Error-45912-%2D-The-operation-failed-because-Primary-is-on-newer-version-than-Secondary.md
+  Prompts:
+  - MI MI Error 45912   The operation failed because Primary is on newer version than Secondary
+  - Managed Instance Error-45912---The-operation-failed-because-Primary-is-on-newer-version-than-Secondary
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'MonManagedServers
+
+      | where TIMESTAMP >= ago(1d)
+
+      | where name in ( ''"{ServerName}"'')
+
+      | summarize TelemetryeAt = arg_max(TIMESTAMP,*) by name, managed_server_id, version_edition
+
+      | extend Update_policy = iff(version_edition == '''',"Always-up-to-date",iff(version_edition == ''SQL22'',"SQL Server 2022",version_edition))
+
+      | project TelemetryeAt, name, managed_server_id, version_edition, Update_policy'
+- id: MI-availability-307
+  Topic: Failing-over-failover-group-stuck-or-failed
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Failover-Groups/Configuring-or-using-failover-groups/Failing-over-failover-group-stuck-or-failed.md
+  Prompts:
+  - MI Failing-over-failover-group-stuck-or-failed
+  - Managed Instance Failing-over-failover-group-stuck-or-failed
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'let endTime = now();
+let startTime = ago({TimeRange});
+MonSQLSystemHealth
+
+      | where originalEventTimestamp >= {startTime} and originalEventTimestamp <= {endTime}
+
+      | where LogicalServerName =~ {MIServerName}
+
+      | where AppTypeName startswith  "Worker.CL"
+
+      | where message has "Error: " and message has "thumbprint"
+
+      | project PreciseTimeStamp, message'
+- id: MI-availability-308
+  Topic: Failover-group-creation-stuck
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Failover-Groups/Configuring-or-using-failover-groups/Failover-group-creation-stuck.md
+  Prompts:
+  - MI Failover-group-creation-stuck
+  - Managed Instance Failover-group-creation-stuck
+  CustomizedParameters:
+  - AppName
+  - ClusterName
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonDbSeedTraces
+    ExecutedQuery: 'MonDbSeedTraces
+
+      | where PreciseTimeStamp > ago({TimeRange}) and PreciseTimeStamp  < now()
+
+      | where ClusterName  == "{ClusterName}" and AppName == "{AppName}" and LogicalServerName == ""{PartnerServerName}""
+
+      //| project PreciseTimeStamp, database_id, database_name, database_size_bytes, internal_state_desc
+
+      | where database_name =~ "{DatabaseName}"
+
+      | summarize by database_size_bytes
+
+      | extend db_size_gb = database_size_bytes / (1024.0 *1024 * 1024)'
+- id: MI-availability-309
+  Topic: Failover-group-creation-stuck
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Failover-Groups/Configuring-or-using-failover-groups/Failover-group-creation-stuck.md
+  Prompts:
+  - MI Failover-group-creation-stuck
+  - Managed Instance Failover-group-creation-stuck
+  CustomizedParameters:
+  - AppName
+  - ClusterName
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonDbSeedTraces
+    ExecutedQuery: 'MonDbSeedTraces
+
+      | where PreciseTimeStamp > ago({TimeRange}) and PreciseTimeStamp  < now()
+
+      | where ClusterName  == "{ClusterName}" and AppName == "{AppName}" and LogicalServerName == ""{PartnerServerName}""
+
+      //| project PreciseTimeStamp, database_id, database_name, database_size_bytes, internal_state_desc
+
+      | where database_name =~ "{DatabaseName}"
+
+      | where event  == "hadr_physical_seeding_failure"'
+- id: MI-availability-310
+  Topic: Failover-group-drop-stuck
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Failover-Groups/Configuring-or-using-failover-groups/Failover-group-drop-stuck.md
+  Prompts:
+  - MI Failover-group-drop-stuck
+  - Managed Instance Failover-group-drop-stuck
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: 'MonAnalyticsDBSnapshot
+
+      | where TIMESTAMP >= ago({TimeRange}) and TIMESTAMP <= now() //timeframe during the drop of the failover group
+
+      | where logical_server_name == ''{ServerName}'' //or search by sql_instance_name =~ "{appname}"
+
+      | summarize max(TIMESTAMP) by logical_database_name, physical_database_id, logical_database_id, state, create_time'
+- id: MI-availability-311
+  Topic: Failover-group-got-dropped
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Failover-Groups/Configuring-or-using-failover-groups/Failover-group-got-dropped.md
+  Prompts:
+  - MI Failover-group-got-dropped
+  - Managed Instance Failover-group-got-dropped
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagementOperations
+    ExecutedQuery: 'MonManagementOperations
+
+      | where TIMESTAMP between (datetime(2023-05-10 06:25)..datetime(2023-05-10 08:00)) //pick the starttime from the time failover group creation request was initiated
+
+      | where operation_parameters contains ">{ServerName}<"
+
+      | project TIMESTAMP, request_id, operation_type, event, error_code, error_message, operation_parameters'
+- id: MI-availability-312
+  Topic: Failover-group-got-dropped
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Failover-Groups/Configuring-or-using-failover-groups/Failover-group-got-dropped.md
+  Prompts:
+  - MI Failover-group-got-dropped
+  - Managed Instance Failover-group-got-dropped
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where request_id == "9B60DAD5-66A9-403F-AADB-CCC3FD2BC393"
+
+      | where state_machine_type == "ManagedFailoverGroupStateMachine"
+
+      | where isnotempty(old_state) and isnotempty(new_state)
+
+      | summarize min(originalEventTimestamp), max(originalEventTimestamp) by old_state, new_state, keys'
+- id: MI-availability-313
+  Topic: Failover-group-got-dropped
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Failover-Groups/Configuring-or-using-failover-groups/Failover-group-got-dropped.md
+  Prompts:
+  - MI Failover-group-got-dropped
+  - Managed Instance Failover-group-got-dropped
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where request_id == "9B60DAD5-66A9-403F-AADB-CCC3FD2BC393"
+
+      | where state_machine_type == "ManagedGeoDrContinuousCopyStateMachine"
+
+      | where keys contains "2086f212-9e19-4d3b-abeb-fa9df7998437" //database guid that showed up on error 45143 (didn''t exist)
+
+      | where isnotempty(old_state) and isnotempty(new_state)
+
+      | summarize min(originalEventTimestamp), max(originalEventTimestamp) by old_state, new_state, keys'
+- id: MI-availability-314
+  Topic: Failover-group-got-dropped
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Failover-Groups/Configuring-or-using-failover-groups/Failover-group-got-dropped.md
+  Prompts:
+  - MI Failover-group-got-dropped
+  - Managed Instance Failover-group-got-dropped
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where request_id == "D332F526-7D44-4D71-8FFD-FC688864089D"
+
+      | where state_machine_type == "ManagedDatabaseStateMachine"
+
+      | where isnotempty(old_state) and isnotempty(new_state)
+
+      | summarize min(originalEventTimestamp), max(originalEventTimestamp) by state_machine_type, old_state, new_state, keys, message'
+- id: MI-availability-315
+  Topic: Global-VNET-Peering
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Failover-Groups/Configuring-or-using-failover-groups/Global-VNET-Peering.md
+  Prompts:
+  - MI Global-VNET-Peering
+  - Managed Instance Global-VNET-Peering
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'MonManagedServers
+
+      | where name == "{ServerName}"
+
+      | summarize arg_max(TIMESTAMP,*) by managed_server_id
+
+      | join kind=leftouter ( MonPrivateClusters
+
+      | summarize arg_max(TIMESTAMP,*) by private_cluster_id
+
+      ) on $left.private_cluster_id == $right.private_cluster_id
+
+      | project TIMESTAMP, InstanceName = name, InstanceCreateTime = create_time
+
+      , VC_Id=private_cluster_id1, VC_Name= name1, VC_CreateTime = create_time1'
+- id: MI-availability-316
+  Topic: How-to-monitor-licensing-on-geo%2Dsecondary
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Failover-Groups/Licensing on-geo%2Dsecondary/How-to-monitor-licensing-on-geo%2Dsecondary.md
+  Prompts:
+  - MI MI How to monitor licensing on geo secondary
+  - Managed Instance How-to-monitor-licensing-on-geo-secondary
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonGeoDRFailoverGroups
+    ExecutedQuery: 'let endTime = now();
+let startTime = ago({TimeRange});
+let serverName = "{ServerName}";
+MonGeoDRFailoverGroups
+
+      | where TIMESTAMP between(startTime..endTime)
+
+      | where logical_server_name =~ "{ServerName}" or partner_server_name =~ "{ServerName}"
+
+      | summarize arg_max(TIMESTAMP, *) by failover_group_id
+
+      | project CreateTime = failover_group_create_time, FailoverGroupId = failover_group_id, Name = failover_group_name
+
+      , Server= logical_server_name, Role=role
+
+      , PartnerServer = partner_server_name, PartnerRegion = partner_region
+
+      , FailoverPolicy = failover_policy, GracePeriodHours = failover_with_data_loss_grace_period_in_minutes/60
+
+      , FreeLicenseGeoSecondary = iff((is_geo_secondary_disaster_recovery_only == 1), ''Yes'', ''No'')
+
+      | order by CreateTime asc'
+- id: MI-availability-317
+  Topic: CMW-ring
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Maintenance/References/CMW-ring.md
+  Prompts:
+  - MI CMW-ring
+  - Managed Instance CMW-ring
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonFabricClusters
+    ExecutedQuery: 'let mi_name = {InstanceName};
+
+      let FabricClusters = MonFabricClusters
+
+      | where TIMESTAMP >= ago(1d)
+
+      | where scheduler_name == ''Custom''
+
+      | summarize by name;
+
+      let PrivateClusters = MonPrivateClusters
+
+      | where maintenance_policy_id == ''''
+
+      | where TIMESTAMP >= ago(1d)
+
+      | summarize by tenant_ring_name;
+
+      let CMWRings = FabricClusters
+
+      | join kind=inner (PrivateClusters) on $left.name == $right.tenant_ring_name
+
+      | summarize by name;
+
+      let Result = MonManagedServers
+
+      | where name == mi_name
+
+      | where private_cluster_tenant_ring_name in (CMWRings);'
+- id: MI-availability-318
+  Topic: CMW-ring
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Maintenance/References/CMW-ring.md
+  Prompts:
+  - MI CMW-ring
+  - Managed Instance CMW-ring
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonFabricClusters
+    ExecutedQuery: 'let mi_name = {InstanceName};
+
+      let subId = {subscripionId};
+
+      let FabricClusters = MonFabricClusters
+
+      | where TIMESTAMP >= ago(1d)
+
+      | where scheduler_name == ''Custom''
+
+      | summarize by name, custom_maintenance_window_recurring_pattern;'
+- id: MI-availability-319
+  Topic: CMW-ring
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Maintenance/References/CMW-ring.md
+  Prompts:
+  - MI CMW-ring
+  - Managed Instance CMW-ring
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'MonManagedServers
+
+      | where TIMESTAMP >= ago(1h)
+
+      | where name =~ mi_name or customer_subscription_id =~ subId
+
+      | join kind=leftouter (FabricClusters) on $left.private_cluster_tenant_ring_name == $right.name
+
+      | extend CMW_pattern = iff(isnotempty(custom_maintenance_window_scheduler_pattern),custom_maintenance_window_scheduler_pattern, custom_maintenance_window_recurring_pattern)
+
+      | summarize TelemetryAt = arg_max(TIMESTAMP,*) by name,managed_server_id, subnet_id, resource_group, maintenance_policy_id,CMW_pattern,custom_maintenance_window_scheduler_pattern, custom_maintenance_window_recurring_pattern
+
+      | extend cmw = parse_xml(CMW_pattern).WindowScheduler.ScheduledDays
+
+      | project name,managed_server_id, maintenance_policy_id, cmw, customer_subscription_id, subnet_id, resource_group, TelemetryAt'
+- id: MI-availability-320
+  Topic: Capacity-related-issues
+  Source: AzureSQLMI/SQL-Managed-Instance/Known-Issues/Active/Capacity-related-issues.md
+  Prompts:
+  - MI Capacity-related-issues
+  - Managed Instance Capacity-related-issues
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonNonPiiAudit
+    ExecutedQuery: 'MonNonPiiAudit
+
+      | where TIMESTAMP >= ago(10d)
+
+      | where request_action == ''UpsertRegionalFeature''
+
+      | where request contains ''AvailableManagedInstance''
+
+      | parse request with * "featureName=''" featureName "''&featureValue=''" featureValue "''"
+
+      | extend region = tostring(split(ClusterName,''.'')[1])
+
+      | project originalEventTimestamp, featureName, featureValue, region
+
+      | extend featureValue = iif(featureValue == "true", 1, 0)
+
+      | where featureName endswith "MultiAZ" //pick from: endswith "MultiAZ" or !endswith "MultiAZ"
+
+      | extend AZ = iif(featureName startswith ''AvailableManagedInstanceHardware'', iif(featureName endswith ''MultiAZ'', ''MultiAZ'', ''SingleAZ''), '''')
+
+      | extend HardwareGen = case(
+
+      featureName in ('
+- id: MI-availability-322
+  Topic: Intermittent-SQL-Agent-connectivity-issues-with-new-ODBC-version
+  Source: AzureSQLMI/SQL-Managed-Instance/Known-Issues/Active/Intermittent-SQL-Agent-connectivity-issues-with-new-ODBC-version.md
+  Prompts:
+  - MI Intermittent-SQL-Agent-connectivity-issues-with-new-ODBC-version
+  - Managed Instance Intermittent-SQL-Agent-connectivity-issues-with-new-ODBC-version
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'MonLogin
+
+      | where TIMESTAMP > ago(12d)
+
+      | where LogicalServerName == ""{ServerName}"" or logical_server_name == ""{ServerName}""
+
+      | where application_name contains "SQLAgent"
+
+      | project TIMESTAMP, driver_version, driver_name'
+- id: MI-availability-323
+  Topic: Memory-leak-with-WinAuth
+  Source: AzureSQLMI/SQL-Managed-Instance/Known-Issues/Active/Memory-leak-with-WinAuth.md
+  Prompts:
+  - MI Memory-leak-with-WinAuth
+  - Managed Instance Memory-leak-with-WinAuth
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlIdleMemCollectorStats
+    ExecutedQuery: 'MonSqlIdleMemCollectorStats
+
+      | where TIMESTAMP > ago(7d)
+
+      | where LogicalServerName == ""{ServerName}""
+
+      | where AppTypeName == "Worker.CL"
+
+      | project TIMESTAMP, AppName, NodeName, non_sos_usage_kb=non_sos_usage*8; //, initial_job_memory_cap_kb = initial_job_memory_cap *8  ; //, initial_job_memory_cap_kb = initial_job_memory_cap *8;
+
+      let WinAuthlogins ='
+- id: MI-availability-324
+  Topic: Memory-leak-with-WinAuth
+  Source: AzureSQLMI/SQL-Managed-Instance/Known-Issues/Active/Memory-leak-with-WinAuth.md
+  Prompts:
+  - MI Memory-leak-with-WinAuth
+  - Managed Instance Memory-leak-with-WinAuth
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'MonLogin
+
+      | where LogicalServerName == ""{ServerName}""
+
+      | where event == "process_login_finish"
+
+      | where AppTypeName contains  ''Worker.CL''
+
+      | where fedauth_library_type == 4
+
+      | where TIMESTAMP > ago (7d)
+
+      | summarize winauth_logins = count() by bin(TIMESTAMP, 30m);'
+- id: MI-availability-325
+  Topic: Msg-195,-Level-15,-State-10,-Line-1-JSON_ARRAY-is-not-a-recognized-built%2Din-function-name
+  Source: AzureSQLMI/SQL-Managed-Instance/Known-Issues/Active/Msg-195,-Level-15,-State-10,-Line-1-JSON_ARRAY-is-not-a-recognized-built%2Din-function-name.md
+  Prompts:
+  - MI MI Msg 195, Level 15, State 10, Line 1 JSON_ARRAY is not a recognized built in function name
+  - Managed Instance Msg-195,-Level-15,-State-10,-Line-1-JSON_ARRAY-is-not-a-recognized-built-in-function-name
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'MonManagedServers
+
+      | where LogicalServerName =~ "{ServerName}" or name =~ "{ServerName}"
+
+      | extend config_params = parse_xml(configuration_parameters).ConfigurationParameters
+
+      | summarize arg_max(TIMESTAMP,*) by  name
+
+      | project name, config_params'
+- id: MI-availability-326
+  Topic: PREEMPTIVE_HTTP_REQUEST-waits
+  Source: AzureSQLMI/SQL-Managed-Instance/Known-Issues/Active/PREEMPTIVE_HTTP_REQUEST-waits.md
+  Prompts:
+  - MI PREEMPTIVE_HTTP_REQUEST-waits
+  - Managed Instance PREEMPTIVE_HTTP_REQUEST-waits
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsWaitStats
+    ExecutedQuery: 'MonWiQdsWaitStats
+
+      | where TIMESTAMP between (datetime(2025-02-21 18:00) .. datetime(2025-02-22 12:00))
+
+      | where SubscriptionId =~ SubID
+
+      | where wait_category =~ "PREEMPTIVE"
+
+      | summarize sum(total_query_wait_time_ms) by bin(TIMESTAMP, 10m), LogicalServerName
+
+      | render timechart'
+- id: MI-availability-327
+  Topic: PREEMPTIVE_HTTP_REQUEST-waits
+  Source: AzureSQLMI/SQL-Managed-Instance/Known-Issues/Active/PREEMPTIVE_HTTP_REQUEST-waits.md
+  Prompts:
+  - MI PREEMPTIVE_HTTP_REQUEST-waits
+  - Managed Instance PREEMPTIVE_HTTP_REQUEST-waits
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'let ServerName = "";
+
+      let StartDate = datetime(2025-02-20 00:00);
+
+      let EndDate = datetime(2025-02-26 00:00);
+
+      let _AppName = MonLogin
+
+      | where PreciseTimeStamp between (StartDate .. EndDate)
+
+      | where logical_server_name =~ ServerName
+
+      | where AppTypeName startswith "Worker.CL.WCOW"
+
+      | distinct AppName;'
+- id: MI-availability-328
+  Topic: PREEMPTIVE_HTTP_REQUEST-waits
+  Source: AzureSQLMI/SQL-Managed-Instance/Known-Issues/Active/PREEMPTIVE_HTTP_REQUEST-waits.md
+  Prompts:
+  - MI PREEMPTIVE_HTTP_REQUEST-waits
+  - Managed Instance PREEMPTIVE_HTTP_REQUEST-waits
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: 'MonSqlRgHistory
+
+      | where PreciseTimeStamp between (StartDate .. EndDate)
+
+      | where AppName in (_AppName)
+
+      | where event =~ ''aggregated_workload_groups_plus_history''
+
+      | where group_name =~ ''PVSCleanerGroup''
+
+      | project originalEventTimestamp, group_name, delta_total_cpu_active_ms
+
+      | summarize sum(delta_total_cpu_active_ms) by bin(originalEventTimestamp, 1h)
+
+      | render timechart'
+- id: MI-availability-329
+  Topic: PREEMPTIVE_HTTP_REQUEST-waits
+  Source: AzureSQLMI/SQL-Managed-Instance/Known-Issues/Active/PREEMPTIVE_HTTP_REQUEST-waits.md
+  Prompts:
+  - MI PREEMPTIVE_HTTP_REQUEST-waits
+  - Managed Instance PREEMPTIVE_HTTP_REQUEST-waits
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'let SubID = "";
+
+      let StartDate = datetime(2025-02-20 00:00);
+
+      let EndDate = datetime(2025-02-26 00:00);
+
+      let _Apps = MonLogin
+
+      | where PreciseTimeStamp between (StartDate .. EndDate)
+
+      | where SubscriptionId =~ SubID
+
+      | where AppTypeName startswith "Worker.CL.WCOW"
+
+      | distinct AppName;'
+- id: MI-availability-330
+  Topic: PREEMPTIVE_HTTP_REQUEST-waits
+  Source: AzureSQLMI/SQL-Managed-Instance/Known-Issues/Active/PREEMPTIVE_HTTP_REQUEST-waits.md
+  Prompts:
+  - MI PREEMPTIVE_HTTP_REQUEST-waits
+  - Managed Instance PREEMPTIVE_HTTP_REQUEST-waits
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlTransactions
+    ExecutedQuery: 'MonSqlTransactions
+
+      | where PreciseTimeStamp between (StartDate .. EndDate)
+
+      | where AppName in (_Apps)
+
+      | project originalEventTimestamp, current_abort_count, nest_aborted_count, AppName, code_package_version
+
+      | summarize sum(current_abort_count) by bin(originalEventTimestamp, 15min)
+
+      | render timechart'
+- id: MI-availability-331
+  Topic: Replication-Agent-failures-due-to-SQL-Agent-Memory-Leak
+  Source: AzureSQLMI/SQL-Managed-Instance/Known-Issues/Active/Replication-Agent-failures-due-to-SQL-Agent-Memory-Leak.md
+  Prompts:
+  - MI Replication-Agent-failures-due-to-SQL-Agent-Memory-Leak
+  - Managed Instance Replication-Agent-failures-due-to-SQL-Agent-Memory-Leak
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRgLoad
+    ExecutedQuery: 'MonRgLoad
+
+      | where application_name contains ""{AppName}""
+
+      | where TIMESTAMP >= now(-30d)
+
+      | where event contains "instance_load" and code_package_name == "SqlAgent"
+
+      | where memory_load > 100
+
+      | summarize max(memory_load), min(memory_load) by bin(TIMESTAMP, 10min)
+
+      | render timechart'
+- id: MI-availability-332
+  Topic: Replication-jobs-failing-with-SSPI-handshake-failed-error
+  Source: AzureSQLMI/SQL-Managed-Instance/Known-Issues/Active/Replication-jobs-failing-with-SSPI-handshake-failed-error.md
+  Prompts:
+  - MI Replication-jobs-failing-with-SSPI-handshake-failed-error
+  - Managed Instance Replication-jobs-failing-with-SSPI-handshake-failed-error
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where message contains "SSPI Handshake" or message contains "The login is from an untrusted domain"
+
+      | where originalEventTimestamp > ago(5d)
+
+      | order by originalEventTimestamp desc
+
+      | project originalEventTimestamp, LogicalServerName, message'
+- id: MI-availability-333
+  Topic: Replication-jobs-failing-with-SSPI-handshake-failed-error
+  Source: AzureSQLMI/SQL-Managed-Instance/Known-Issues/Active/Replication-jobs-failing-with-SSPI-handshake-failed-error.md
+  Prompts:
+  - MI Replication-jobs-failing-with-SSPI-handshake-failed-error
+  - Managed Instance Replication-jobs-failing-with-SSPI-handshake-failed-error
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'MonLogin
+
+      | where TIMESTAMP > ago(3d)
+
+      | where logical_server_name =~ "{ServerName}" or LogicalServerName =~ "{ServerName}"
+
+      | where event =~ "process_login_finish"
+
+      | where application_name =~ "Replication Distribution History"
+
+      | summarize count_distinct(connection_id) by bin(TIMESTAMP, 12h), package, error, state, application_name'
+- id: MI-availability-334
+  Topic: SQL-Server-Agent-restarts-while-trying-to-run-Transactional-Replication-jobs
+  Source: AzureSQLMI/SQL-Managed-Instance/Known-Issues/Active/SQL-Server-Agent-restarts-while-trying-to-run-Transactional-Replication-jobs.md
+  Prompts:
+  - MI SQL-Server-Agent-restarts-while-trying-to-run-Transactional-Replication-jobs
+  - Managed Instance SQL-Server-Agent-restarts-while-trying-to-run-Transactional-Replication-jobs
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlAgent
+    ExecutedQuery: 'MonSqlAgent
+
+      | where AppName == ""{AppName}""
+
+      | where resource_id == 94
+
+      | where TIMESTAMP > now(-48h)
+
+      | summarize restart_48h = count()-1 by LogicalServerName , AppName , NodeName , ClusterName'
+- id: MI-availability-335
+  Topic: SQL-Server-Agent-restarts-while-trying-to-run-Transactional-Replication-jobs
+  Source: AzureSQLMI/SQL-Managed-Instance/Known-Issues/Active/SQL-Server-Agent-restarts-while-trying-to-run-Transactional-Replication-jobs.md
+  Prompts:
+  - MI SQL-Server-Agent-restarts-while-trying-to-run-Transactional-Replication-jobs
+  - Managed Instance SQL-Server-Agent-restarts-while-trying-to-run-Transactional-Replication-jobs
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: AlrWinFabHealthDeployedAppEvent
+    ExecutedQuery: 'AlrWinFabHealthDeployedAppEvent
+
+      | where ClusterName contains "cluster_name"
+
+      | where Description contains "exited with code 0xC0000374" and Description contains "sqlagent.exe"
+
+      | summarize count() by ApplicationName, TIMESTAMP'
+- id: MI-availability-336
+  Topic: Snapshot-Distribution-agent-fails-with-Failed-to-decrypt-Azure-storage-key
+  Source: AzureSQLMI/SQL-Managed-Instance/Known-Issues/Active/Snapshot-Distribution-agent-fails-with-Failed-to-decrypt-Azure-storage-key.md
+  Prompts:
+  - MI Snapshot-Distribution-agent-fails-with-Failed-to-decrypt-Azure-storage-key
+  - Managed Instance Snapshot-Distribution-agent-fails-with-Failed-to-decrypt-Azure-storage-key
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedDatabaseInfo
+    ExecutedQuery: 'MonManagedDatabaseInfo
+
+      | where TIMESTAMP > ago(1h)
+
+      | where AppTypeName contains "Worker.CL"
+
+      | where LogicalServerName =~ "server name"
+
+      | project LogicalServerName, collation_name
+
+      | take 1'
+- id: MI-availability-337
+  Topic: Snapshot-Distribution-agent-fails-with-Failed-to-decrypt-Azure-storage-key
+  Source: AzureSQLMI/SQL-Managed-Instance/Known-Issues/Active/Snapshot-Distribution-agent-fails-with-Failed-to-decrypt-Azure-storage-key.md
+  Prompts:
+  - MI Snapshot-Distribution-agent-fails-with-Failed-to-decrypt-Azure-storage-key
+  - Managed Instance Snapshot-Distribution-agent-fails-with-Failed-to-decrypt-Azure-storage-key
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonTranReplTraces
+    ExecutedQuery: 'MonTranReplTraces
+
+      | where TIMESTAMP > ago(1h)
+
+      | where LogicalServerName =~ "server name"
+
+      | project TIMESTAMP, LogicalServerName, code_package_version
+
+      | top 1 by TIMESTAMP'
+- id: MI-availability-338
+  Topic: Unable-to-see-backup-history-in-msdb
+  Source: AzureSQLMI/SQL-Managed-Instance/Known-Issues/Active/Unable-to-see-backup-history-in-msdb.md
+  Prompts:
+  - MI Unable-to-see-backup-history-in-msdb
+  - Managed Instance Unable-to-see-backup-history-in-msdb
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'MonManagedServers
+
+      | where name has ''{MIName}''
+
+      | summarize TelemetryeAt = arg_max(TIMESTAMP,managed_server_id) by name, managed_server_id, edition'
+- id: MI-availability-339
+  Topic: Unable-to-see-backup-history-in-msdb
+  Source: AzureSQLMI/SQL-Managed-Instance/Known-Issues/Active/Unable-to-see-backup-history-in-msdb.md
+  Prompts:
+  - MI Unable-to-see-backup-history-in-msdb
+  - Managed Instance Unable-to-see-backup-history-in-msdb
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonBackup
+    ExecutedQuery: 'MonBackup
+
+      | where LogicalServerName == "{MIName}" and (logical_database_id =~ "{DBGuid}") //DBGuid if looking for a specific database
+
+      | where event_type == "BACKUP_START" or event_type == "BACKUP_END"
+
+      | where backup_type == "Full" //Backup type that customer claims is missing - Full, Diff or Log
+
+      | project originalEventTimestamp, NodeName, event_type, database_name'
+- id: MI-availability-340
+  Topic: Unable-to-see-backup-history-in-msdb
+  Source: AzureSQLMI/SQL-Managed-Instance/Known-Issues/Active/Unable-to-see-backup-history-in-msdb.md
+  Prompts:
+  - MI Unable-to-see-backup-history-in-msdb
+  - Managed Instance Unable-to-see-backup-history-in-msdb
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'let endTime = now();
+let startTime = ago({TimeRange});
+MonSQLSystemHealth
+
+      | where originalEventTimestamp between (startTime .. endTime)
+
+      | where LogicalServerName == "{ServerName}"
+
+      | where message has ''HaDrDbMgr::ProcessBackupBmsUpdateMsg - Fail to insert BMS record to database''
+
+      and not(message has ''Backup was not committed'')
+
+      | parse message with * ''HaDrDbMgr::ProcessBackupBmsUpdateMsg - Fail to insert BMS record to database ['' logical_database_id ''] id '' sql_database_id: long ''. SQL error Major '' sql_major: long
+      '', Minor '' sql_minor: long '', Severity '' sql_severity: long '', State '' sql_state: long ''.'' *
+
+      | project logical_database_id = toupper(logical_database_id), sql_error_timestamp = originalEventTimestamp, sql_code = sql_major * 100 + sql_minor, sql_state, sql_severity
+
+      | summarize error_count = count(), min(sql_error_timestamp), max(sql_error_timestamp) by logical_database_id, sql_code, sql_state, sql_severity'
+- id: MI-availability-341
+  Topic: UpdateLocationOnCosmosDbAccount-failure-results-in-Creation-of-ZoneRedundant-SQL-MI-is-temporarily-disabled-on-this-region
+  Source: AzureSQLMI/SQL-Managed-Instance/Known-Issues/Active/UpdateLocationOnCosmosDbAccount-failure-results-in-Creation-of-ZoneRedundant-SQL-MI-is-temporarily-disabled-on-this-region.md
+  Prompts:
+  - MI UpdateLocationOnCosmosDbAccount-failure-results-in-Creation-of-ZoneRedundant-SQL-MI-is-temporarily-disabled-on-this-region
+  - Managed Instance UpdateLocationOnCosmosDbAccount-failure-results-in-Creation-of-ZoneRedundant-SQL-MI-is-temporarily-disabled-on-this-region
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where TIMESTAMP >= ago(40d)
+
+      |where state_machine_type == ''CosmosDbAccountUpdateStateMachine'' and old_state == "AddOriginalLocationWithPreferredZoneRedundance" and new_state == "Failed"
+
+      | where request_id =~ ""{RequestId}""
+
+      | project PreciseTimeStamp, request_id, event, state_machine_type, old_state, new_state, state, action, caller_state_machine, last_exception, error_message, message'
+- id: MI-availability-342
+  Topic: Connectivity-issues-after-performing-service-management-operations
+  Source: AzureSQLMI/SQL-Managed-Instance/Known-Issues/Resolved/Connectivity-issues-after-performing-service-management-operations.md
+  Prompts:
+  - MI Connectivity-issues-after-performing-service-management-operations
+  - Managed Instance Connectivity-issues-after-performing-service-management-operations
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'let serverName = "{ServerName}";
+
+      let windowToCheck = ago(1h);
+
+      let TR = MonManagedServers | where TIMESTAMP >= windowToCheck and name =~ "{ServerName}"
+
+      | summarize arg_max(create_time, private_cluster_tenant_ring_name, private_cluster_id)
+
+      | distinct private_cluster_tenant_ring_name;
+
+      let dataSet = MonFabricClusters | where TIMESTAMP >= windowToCheck and name in (TR)
+
+      | summarize arg_max(TIMESTAMP, hosted_service_subscription_id, hosted_service_name, deployment_id, hosted_service_pinned_cluster_name);
+
+      let HostedServiceDeploymentId = toscalar(dataSet | distinct deployment_id);
+
+      let ring = toscalar(TR | distinct private_cluster_tenant_ring_name);
+
+      cluster(''azcore.centralus.kusto.windows.net'').database(''Fa'').GuestAgentExtensionEvents
+
+      | where TIMESTAMP >= ago({TimeRange}) and isnotempty(HostedServiceDeploymentId) and TenantName == HostedServiceDeploymentId
+
+      | summarize min(TIMESTAMP) by TenantName, ContainerId, RoleInstanceName, GAVersion
+
+      | project TenantRing = ring, ContainerId, RoleInstanceName, GuestAgentVersion = GAVersion, GuestAgentVersionSince = min_TIMESTAMP
+
+      | extend IsFixedVersion_2_7_32402_6 = iif(GuestAgentVersion == ''2.7.32402.6'', ''Yes'', ''No'')'
+- id: MI-availability-343
+  Topic: Database-restore-keeps-ongoing-with-multiple-Dumps
+  Source: AzureSQLMI/SQL-Managed-Instance/Known-Issues/Resolved/Database-restore-keeps-ongoing-with-multiple-Dumps.md
+  Prompts:
+  - MI Database-restore-keeps-ongoing-with-multiple-Dumps
+  - Managed Instance Database-restore-keeps-ongoing-with-multiple-Dumps
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRestoreRequests
+    ExecutedQuery: 'MonRestoreRequests
+
+      | where start_time >= datetime(2021-10-29 00:00:00) and start_time <= datetime(2021-11-05 13:27:00)
+
+      | extend SourceServer = iif(archived_backup_resource_id != '''',                extract(''/longTermRetentionManagedInstances/(.*)/longTermRetentionDatabases/'', 1, archived_backup_resource_id)
+
+      source_managed_server_name)
+
+      | extend SourceDatabase = iif(archived_backup_resource_id != '''',         extract(''/longTermRetentionDatabases/(.*)/longTermRetentionManagedInstanceBackups/'', 1, archived_backup_resource_id)
+
+      source_managed_database_name)
+
+      | extend TargetServer = target_managed_server_name, TargetDatabase = target_managed_database_name
+
+      | where (SourceServer =~ ''server''
+
+      and (isempty('''') or SourceDatabase =~ '''')
+
+      ) or
+
+      (TargetServer =~ ''server''
+
+      and (isempty('''') or TargetDatabase =~ '''')
+
+      )
+
+      | summarize arg_max(TIMESTAMP, *) by restore_request_id
+
+      | project restore_request_id = tolower(restore_request_id), TargetServer, TargetDatabase
+
+      | join kind=inner ('
+- id: MI-availability-344
+  Topic: Database-restore-keeps-ongoing-with-multiple-Dumps
+  Source: AzureSQLMI/SQL-Managed-Instance/Known-Issues/Resolved/Database-restore-keeps-ongoing-with-multiple-Dumps.md
+  Prompts:
+  - MI Database-restore-keeps-ongoing-with-multiple-Dumps
+  - Managed Instance Database-restore-keeps-ongoing-with-multiple-Dumps
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRestoreEvents
+    ExecutedQuery: 'MonRestoreEvents
+
+      | project originalEventTimestamp, restore_request_id = tolower(restore_request_id), restore_database_progress, [''details''], event, message, restore_configuration_info, restore_database_result, exception_type
+      exception, stack_trace, level
+
+      ) on restore_request_id
+
+      | sort by originalEventTimestamp desc nulls last
+
+      | project originalEventTimestamp, restore_request_id = tolower(restore_request_id), TargetServer, TargetDatabase, restore_database_progress, [''details''], event, message, restore_configuration_info
+      restore_database_result, exception_type, exception, stack_trace, level
+
+      | limit 100'
+- id: MI-availability-345
+  Topic: Database-restore-keeps-ongoing-with-multiple-Dumps
+  Source: AzureSQLMI/SQL-Managed-Instance/Known-Issues/Resolved/Database-restore-keeps-ongoing-with-multiple-Dumps.md
+  Prompts:
+  - MI Database-restore-keeps-ongoing-with-multiple-Dumps
+  - Managed Instance Database-restore-keeps-ongoing-with-multiple-Dumps
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: 'MonAnalyticsDBSnapshot
+
+      | where PreciseTimeStamp >= ago(7d)
+
+      | where logical_server_name =~ "{ServerName}"
+
+      |where logical_database_name like ''database_name''
+
+      | summarize by logical_database_name, customer_subscription_id, resource_group, logical_server_name, service_level_objective, state, TIMESTAMP
+
+      //| extend ResourceUri = strcat(''/subscriptions/'', customer_subscription_id ,''/resourcegroups/'', resource_group ,''/providers/Microsoft.Sql/servers/'', logical_server_name, ''/databases/'', logical_database_name)
+
+      | project Database = logical_database_name,
+
+      SLO = service_level_objective,
+
+      FsmState = state'
+- id: MI-availability-346
+  Topic: Dropping-geo%2Dsecondary-database-or-Managed-Instance-is-taking-long-or-stuck-in-TailLogBackupInProgress
+  Source: AzureSQLMI/SQL-Managed-Instance/Known-Issues/Resolved/Dropping-geo%2Dsecondary-database-or-Managed-Instance-is-taking-long-or-stuck-in-TailLogBackupInProgress.md
+  Prompts:
+  - MI MI Dropping geo secondary database or Managed Instance is taking long or stuck in TailLogBackupInProgress
+  - Managed Instance Dropping-geo-secondary-database-or-Managed-Instance-is-taking-long-or-stuck-in-TailLogBackupInProgress
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: 'let server = "{ServerName}"; MonAnalyticsDBSnapshot
+
+      | where PreciseTimeStamp >= {Datetime}
+
+      | where logical_server_name == "{ServerName}"
+
+      | where logical_database_name == "{DatabaseName}"
+
+      | summarize by logical_database_name, customer_subscription_id, resource_group, logical_server_name, service_level_objective, state
+
+      | extend ResourceUri = strcat(''/subscriptions/'', customer_subscription_id ,''/resourcegroups/'', resource_group ,''/providers/Microsoft.Sql/servers/'', logical_server_name, ''/databases/'', logical_database_name)
+
+      | project Database = logical_database_name
+
+      SLO = service_level_objective
+
+      FsmState = state'
+- id: MI-availability-347
+  Topic: Dropping-geo%2Dsecondary-database-or-Managed-Instance-is-taking-long-or-stuck-in-TailLogBackupInProgress
+  Source: AzureSQLMI/SQL-Managed-Instance/Known-Issues/Resolved/Dropping-geo%2Dsecondary-database-or-Managed-Instance-is-taking-long-or-stuck-in-TailLogBackupInProgress.md
+  Prompts:
+  - MI MI Dropping geo secondary database or Managed Instance is taking long or stuck in TailLogBackupInProgress
+  - Managed Instance Dropping-geo-secondary-database-or-Managed-Instance-is-taking-long-or-stuck-in-TailLogBackupInProgress
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonBackup
+    ExecutedQuery: 'let endTime = now();
+let startTime = ago({TimeRange});
+MonBackup
+
+      | where TIMESTAMP > startTime
+
+      | where TIMESTAMP < endTime
+
+      | where LogicalServerName == "{ServerName}"
+
+      | where event == "database_backup_error"
+
+      | project TIMESTAMP, LogicalServerName, event_type, logical_database_id, physical_database_id, backup_type, sql_error_number, sql_error_severity, sql_error_state, sql_error_message, database_name
+      logical_database_name
+
+      //| where logical_database_id contains ''{database guid}'''
+- id: MI-availability-348
+  Topic: Dropping-geo%2Dsecondary-database-or-Managed-Instance-is-taking-long-or-stuck-in-TailLogBackupInProgress
+  Source: AzureSQLMI/SQL-Managed-Instance/Known-Issues/Resolved/Dropping-geo%2Dsecondary-database-or-Managed-Instance-is-taking-long-or-stuck-in-TailLogBackupInProgress.md
+  Prompts:
+  - MI MI Dropping geo secondary database or Managed Instance is taking long or stuck in TailLogBackupInProgress
+  - Managed Instance Dropping-geo-secondary-database-or-Managed-Instance-is-taking-long-or-stuck-in-TailLogBackupInProgress
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where TIMESTAMP >= ago({TimeRange}) and TIMESTAMP <= now()
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | project TIMESTAMP, message'
+- id: MI-availability-349
+  Topic: Geo%2DRestore-failing-for-non%2Ddefault-language
+  Source: AzureSQLMI/SQL-Managed-Instance/Known-Issues/Resolved/Geo%2DRestore-failing-for-non%2Ddefault-language.md
+  Prompts:
+  - MI MI Geo Restore failing for non default language
+  - Managed Instance Geo-Restore-failing-for-non-default-language
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonRestoreEvents
+    ExecutedQuery: 'MonRestoreEvents
+
+      | where TIMESTAMP >= ago({TimeRange})
+
+      | where restore_request_id == "597d7af9-3064-42f4-acd4-060eec1d5b0b"
+
+      | project originalEventTimestamp, message, restore_database_progress, exception_type, stack_trace'
+- id: MI-availability-350
+  Topic: InlineUDF-dumps-during-restore-of-database-to-SQL-MI
+  Source: AzureSQLMI/SQL-Managed-Instance/Known-Issues/Resolved/InlineUDF-dumps-during-restore-of-database-to-SQL-MI.md
+  Prompts:
+  - MI InlineUDF-dumps-during-restore-of-database-to-SQL-MI
+  - Managed Instance InlineUDF-dumps-during-restore-of-database-to-SQL-MI
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlDump
+    ExecutedQuery: 'MonSqlDump
+
+      | where LogicalServerName =~ ''{ServerName}''
+
+      | extend BucketString = extract(''.*SQLDmpr\\.(.*)\\.GMT-.*'', 1, CompleteFileName)
+
+      | where isnotempty(BucketString)
+
+      | summarize count() by BucketString, ClusterName, AppName, AppTypeName
+
+      | join kind = inner
+
+      (
+
+      cluster(''SqlAdHoc'').database(''sqlazure1'').StackDumpSignature
+
+      | where FaultingProcessVer == ''NULL_CLASS_PTR_READ_c0000005_sqllang.dll!UnsafeOpFinder::operator''
+
+      | distinct BucketString
+
+      ) on BucketString'
+- id: MI-availability-352
+  Topic: SQL-Agent-becomes-unresponsive
+  Source: AzureSQLMI/SQL-Managed-Instance/Known-Issues/Resolved/SQL-Agent-becomes-unresponsive.md
+  Prompts:
+  - MI SQL-Agent-becomes-unresponsive
+  - Managed Instance SQL-Agent-becomes-unresponsive
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRgLoad
+    ExecutedQuery: 'MonRgLoad
+
+      | where application_name contains "{AppName}"
+
+      | where event == "instance_load" and code_package_name == "SqlAgent"
+
+      | project TIMESTAMP, cpu_load, cpu_load_peak, cpu_load_cap
+
+      | render timechart'
+- id: MI-availability-353
+  Topic: SQL-Agent-becomes-unresponsive
+  Source: AzureSQLMI/SQL-Managed-Instance/Known-Issues/Resolved/SQL-Agent-becomes-unresponsive.md
+  Prompts:
+  - MI SQL-Agent-becomes-unresponsive
+  - Managed Instance SQL-Agent-becomes-unresponsive
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlAgent
+    ExecutedQuery: 'MonSqlAgent
+
+      | where AppName contains "{AppName}"
+
+      | where TIMESTAMP >= ago(3d) // or more, depends when agent stopped working
+
+      | order by TIMESTAMP desc'
+- id: MI-availability-354
+  Topic: SQL-Managed-Instance-provisioning-via-portal-stuck-on-external-admin-States
+  Source: AzureSQLMI/SQL-Managed-Instance/Known-Issues/Resolved/SQL-Managed-Instance-provisioning-via-portal-stuck-on-external-admin-States.md
+  Prompts:
+  - MI SQL-Managed-Instance-provisioning-via-portal-stuck-on-external-admin-States
+  - Managed Instance SQL-Managed-Instance-provisioning-via-portal-stuck-on-external-admin-States
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'let req_id = "{RequestId}"; MonManagement
+
+      | where TIMESTAMP > ago(3h)
+
+      | where request_id contains req_id
+
+      | project TIMESTAMP, error, exception, exception_message, stack_trace, error_message, message,ClusterName
+
+      | where stack_trace != "" or message != ""
+
+      | order by TIMESTAMP desc'
+
+>>>>>>> Stashed changes

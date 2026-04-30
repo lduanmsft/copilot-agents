@@ -1136,7 +1136,7 @@ SqlSkills:
 
       let endTime = now(); // issue end time (scope this as much as possible)
 
-      let serverName = ''<managed_server_name>'';
+      let serverName = ''"{ServerName}"'';
 
       let StorageAccountQuotaGB = 35 * 1024; // XIO allows storage account to allocate up to 35 GB of data
 
@@ -1163,9 +1163,9 @@ SqlSkills:
   - DatabaseName
   KustoQueries:
   - TableName: MonDmIoVirtualFileStats
-    ExecutedQuery: 'let managedServerName = ''<managed_server_name>'';
+    ExecutedQuery: 'let managedServerName = ''"{ServerName}"'';
 
-      let managedDatabaseId = ''<managed_database_id>'';
+      let managedDatabaseId = ''"{DatabaseGuid}"'';
 
       MonDmIoVirtualFileStats
 
@@ -1198,9 +1198,9 @@ SqlSkills:
 
       let endTime = <endTime>;
 
-      let managedServerName = "<managedServerName>";
+      let managedServerName = ""{ServerName}"";
 
-      let managedDatabaseId = "<managedDatabaseId>";
+      let managedDatabaseId = ""{DatabaseGuid}"";
 
       MonSqlRgHistory
 
@@ -1241,9 +1241,9 @@ SqlSkills:
 
       let endTime = <endTime>;
 
-      let managedServerName = "<managedServerName>";
+      let managedServerName = ""{ServerName}"";
 
-      let managedDatabaseId = "<managedDatabaseId>";
+      let managedDatabaseId = ""{DatabaseGuid}"";
 
       MonSqlRgHistory
 
@@ -1370,9 +1370,9 @@ SqlSkills:
 
       let endTime = <endTime>;
 
-      let managedServerName = "<managedServerName>";
+      let managedServerName = ""{ServerName}"";
 
-      let managedDatabaseId = "<managedDatabaseId>";
+      let managedDatabaseId = ""{DatabaseGuid}"";
 
       MonSQLXStoreIOStats
 
@@ -1401,7 +1401,7 @@ SqlSkills:
   - DatabaseName
   KustoQueries:
   - TableName: MonManagedInstanceResourceStats
-    ExecutedQuery: 'let managedServerName = "<managedServerName>";
+    ExecutedQuery: 'let managedServerName = ""{ServerName}"";
 
       MonManagedInstanceResourceStats
 
@@ -1426,7 +1426,7 @@ SqlSkills:
 
       let endTime = datetime(2022-08-08 03:10:57.6606841);
 
-      let tenantRingName = "<tenantRingName>";
+      let tenantRingName = ""{ClusterName}"";
 
       let networkBandwidthPerNodeCoreMBps = 62.5;
 
@@ -1471,9 +1471,9 @@ SqlSkills:
   - DatabaseName
   KustoQueries:
   - TableName: MonSQLSystemHealth
-    ExecutedQuery: 'let managedServerName = "<managedServerName>";
+    ExecutedQuery: 'let managedServerName = ""{ServerName}"";
 
-      let managedDatabaseId = "<managedDatabaseId>";
+      let managedDatabaseId = ""{DatabaseGuid}"";
 
       MonSQLSystemHealth
 
@@ -1498,7 +1498,7 @@ SqlSkills:
   - TableName: MonSQLSystemHealth
     ExecutedQuery: 'MonSQLSystemHealth
 
-      | where TIMESTAMP >= ago(30m) and AppName contains "<app_name>" and message contains "Error: 33183, Severity: 16, State: 1"
+      | where TIMESTAMP >= ago(30m) and AppName contains ""{AppName}"" and message contains "Error: 33183, Severity: 16, State: 1"
 
       | project ClusterName, LogicalServerName, NodeName, AppName, database_id, error_code,message
 
@@ -1544,7 +1544,7 @@ SqlSkills:
   - DatabaseName
   KustoQueries:
   - TableName: MonBackup
-    ExecutedQuery: 'let vAppName = ''<AppName>'';
+    ExecutedQuery: 'let vAppName = ''"{AppName}"'';
 
       let vLogicalServerName = ''<server_name>'';
 
@@ -1579,7 +1579,7 @@ SqlSkills:
   - DatabaseName
   KustoQueries:
   - TableName: MonSqlDump
-    ExecutedQuery: 'let ClusterName = ''<ClusterName>'';
+    ExecutedQuery: 'let ClusterName = ''"{ClusterName}"'';
 
       MonSqlDump
 
@@ -1676,9 +1676,9 @@ SqlSkills:
   - DatabaseName
   KustoQueries:
   - TableName: MonBackup
-    ExecutedQuery: 'let LastFailoverTime = <last_failover_time_from_icm>; // change this
+    ExecutedQuery: 'let LastFailoverTime = ago({TimeRange}); // change this
 
-      let ManagedServerName = ''<managed_server_name_from_icm>''; // change this
+      let ManagedServerName = ''"{ServerName}"''; // change this
 
       let DatabasesWithFullBackupAfterFailover = MonBackup
 
@@ -1779,7 +1779,7 @@ SqlSkills:
 
       let EndTime = <end_time>;
 
-      let ManagedServerName = ''<managed_server_name>'';
+      let ManagedServerName = ''"{ServerName}"'';
 
       MonManagementOperations
 
@@ -1853,11 +1853,11 @@ SqlSkills:
   - DatabaseName
   KustoQueries:
   - TableName: MonBackup
-    ExecutedQuery: 'let LastFailoverTime = ''<StartTime_from_previous_result>''; // change this
+    ExecutedQuery: 'let LastFailoverTime = ''ago({TimeRange})''; // change this
 
-      let ManagedServerName = ''<managed_server_name>''; // change this
+      let ManagedServerName = ''"{ServerName}"''; // change this
 
-      let BackupServiceDatabaseId = ''<managed_database_id_or_backup_service_db_id_for_system_dbs>''; // change this
+      let BackupServiceDatabaseId = ''"{DatabaseGuid}"backup_service_db_id_for_system_dbs>''; // change this
 
       let FirstFullBackupAfterFailoverTime = MonBackup
 
@@ -2013,9 +2013,13 @@ SqlSkills:
   - DatabaseName
   KustoQueries:
   - TableName: MonBackup
+<<<<<<< Updated upstream
     ExecutedQuery: 'let lastFailoverTime = datetime(<last_failover_time>);
+=======
+    ExecutedQuery: 'let db = "{DatabaseName}"; let lastFailoverTime = datetime(ago({TimeRange}));
+>>>>>>> Stashed changes
 
-      let serverName = ''<managed_server_name>'';
+      let serverName = ''"{ServerName}"'';
 
       MonBackup
 
@@ -2135,7 +2139,7 @@ SqlSkills:
 
       | where originalEventTimestamp > ago(1d)
 
-      | where LogicalServerName == ''<Managed_Server_Name>''
+      | where LogicalServerName == ''"{ServerName}"''
 
       | where event == ''database_backup''
 
@@ -2158,7 +2162,7 @@ SqlSkills:
 
       | where originalEventTimestamp > ago(3d)
 
-      | where LogicalServerName == ''<Managed_Server_Name>''
+      | where LogicalServerName == ''"{ServerName}"''
 
       | where br_exception_message startswith ''Authorization token not loaded for accessing container'''
 - id: MI-backup_restore-91
@@ -2177,7 +2181,7 @@ SqlSkills:
 
       | where originalEventTimestamp > ago(3d)
 
-      | where LogicalServerName == ''<Managed_Server_Name>''
+      | where LogicalServerName == ''"{ServerName}"''
 
       | summarize min(originalEventTimestamp), max(originalEventTimestamp) by process_id'
 - id: MI-backup_restore-92
@@ -2256,12 +2260,16 @@ SqlSkills:
 
       | where TIMESTAMP > ago(1d)
 
-      | where LogicalServerName == "<Managed_Server_Name>"
+      | where LogicalServerName == ""{ServerName}""
 
       | where query_api_name == "QueryBackupMetadataFromRestoreHeaderOnly"
 
+<<<<<<< Updated upstream
       | where collect_current_thread_id == <thread id from the first Kusto Query>
 
+=======
+      | where collect_current_thread_id == "{ThreadId}" 
+>>>>>>> Stashed changes
       | project TIMESTAMP, exception_message'
 - id: MI-backup_restore-96
   Topic: TSGMIBR0080-Backup-LTR-Errors
@@ -2279,7 +2287,7 @@ SqlSkills:
 
       | where TIMESTAMP > ago(1d)
 
-      | where LogicalServerName == "<Managed_Server_Name>"
+      | where LogicalServerName == ""{ServerName}""
 
       | where message contains "InitAKVUsingThumbprintAndRsaKey"
 
@@ -2329,7 +2337,7 @@ SqlSkills:
 
       | where originalEventTimestamp >= ago(1d)
 
-      | where LogicalServerName == ''<Managed_Server_Name>''
+      | where LogicalServerName == ''"{ServerName}"''
 
       | where event == ''database_backup'' and event_type == ''BACKUP_LTR_ERROR''
 
@@ -2354,13 +2362,13 @@ SqlSkills:
   - TableName: MonBackup
     ExecutedQuery: 'MonBackup
 
-      | where LogicalServerName ==''<managed server name>''
+      | where LogicalServerName ==''"{ServerName}"''
 
       | where event == "database_backup"
 
       | where backup_type == "Full"
 
-      | where TIMESTAMP >= ''<redundancy_change_start_time>''
+      | where TIMESTAMP >= ''ago({TimeRange})''
 
       | project TIMESTAMP, logical_database_name,backup_type,event_type'
 - id: MI-backup_restore-100
@@ -2379,10 +2387,15 @@ SqlSkills:
 
       | where originalEventTimestamp > ago(7d)
 
+<<<<<<< Updated upstream
       | where AppName =~ <AppName>
 
       | where database_name =~ <DatabaseName>
 
+=======
+      | where AppName =~ "{AppName}" 
+      | where database_name =~ "{DatabaseName}" 
+>>>>>>> Stashed changes
       | summarize count(), max(originalEventTimestamp) by backup_type, event_type, br_exception_message, exception_stack_trace'
 - id: MI-backup_restore-101
   Topic: TSGMIBR0084-Worker-CL-Page-Corruption-error
@@ -2442,7 +2455,7 @@ SqlSkills:
   - TableName: MonDwBilling
     ExecutedQuery: 'MonDwBilling
 
-      | where LogicalServerName == ''<managed server name>'' and AppTypeName contains "CL"
+      | where LogicalServerName == ''"{ServerName}"'' and AppTypeName contains "CL"
 
       | where event == ''billing_metric_calculated''
 
@@ -2467,7 +2480,7 @@ SqlSkills:
   - TableName: MonAnalyticsDBSnapshot
     ExecutedQuery: 'MonAnalyticsDBSnapshot
 
-      | where logical_server_name contains ''<managed server name>''
+      | where logical_server_name contains ''"{ServerName}"''
 
       | summarize max_timestamp = max(TIMESTAMP) by logical_database_id, logical_database_name, create_time
 
@@ -2496,9 +2509,14 @@ SqlSkills:
   - TableName: MonBackup
     ExecutedQuery: 'let BackupData = MonBackup
 
+<<<<<<< Updated upstream
       | where TIMESTAMP > <Time segment we are analyzing>
 
       | where LogicalServerName contains "<ServerName>"
+=======
+      | where TIMESTAMP > ago({TimeRange}) 
+      | where LogicalServerName contains ""{ServerName}""
+>>>>>>> Stashed changes
 
       | where event_type == "BACKUP_METADATA_DETAILS"
 
@@ -2615,7 +2633,7 @@ SqlSkills:
   - DatabaseName
   KustoQueries:
   - TableName: MonBackup
-    ExecutedQuery: 'let managed_server_name = ''<ManagedServerName>'';
+    ExecutedQuery: 'let managed_server_name = ''"{ServerName}"'';
 
       let threads = MonBackup
 
@@ -2715,7 +2733,7 @@ SqlSkills:
   - DatabaseName
   KustoQueries:
   - TableName: MonBackup
-    ExecutedQuery: 'let managed_server_name = "<ServerName>";
+    ExecutedQuery: 'let managed_server_name = ""{ServerName}"";
 
       MonBackup
 
@@ -2778,7 +2796,7 @@ SqlSkills:
   - DatabaseName
   KustoQueries:
   - TableName: MonDmIoVirtualFileStats
-    ExecutedQuery: 'let logicalServerName = ''<instance_name>'';
+    ExecutedQuery: 'let logicalServerName = ''"{ServerName}"'';
 
       MonDmIoVirtualFileStats
 
@@ -2894,9 +2912,9 @@ SqlSkills:
 
       let clusterName = ''<cluster_name>''; // cluster name in the specified period
 
-      let appName = ''<app_name>''; // app name in the specified period
+      let appName = ''"{AppName}"''; // app name in the specified period
 
-      let nodeName = ''<primary_node_name>''; // primary node name
+      let nodeName = ''"{NodeName}"''; // primary node name
 
       MonSqlRgHistory
 
@@ -3667,7 +3685,7 @@ SqlSkills:
 
       | where TIMESTAMP > ago(15d)
 
-      | where LogicalServerName == ''<logical_server_name>''
+      | where LogicalServerName == ''"{ServerName}"''
 
       | where event_type == "BACKUP_SQL_ERROR"'
 - id: MI-backup_restore-145
@@ -3743,9 +3761,9 @@ SqlSkills:
 
       let impactedServerName = ''<server_name>'';
 
-      let impactedDatabaseId = ''<managed_database_id>'';
+      let impactedDatabaseId = ''"{DatabaseGuid}"'';
 
-      let badBackupChainTime = datetime(<bad_backup_chain_time>);
+      let badBackupChainTime = datetime(ago({TimeRange}));
 
       MonBackup
 
@@ -4291,7 +4309,7 @@ SqlSkills:
   - DatabaseName
   KustoQueries:
   - TableName: Monitor
-    ExecutedQuery: 'let runnerInstanceName = ''<instance_name>''; // Monitor Id from ICM (usually ends with Prod<RegionName>a; remove any hyphens ''-'')
+    ExecutedQuery: 'let runnerInstanceName = ''"{ServerName}"''; // Monitor Id from ICM (usually ends with Prod"{RegionName}"a; remove any hyphens ''-'')
 
       let serverName = ''<server_name>'';
 
@@ -4664,7 +4682,7 @@ SqlSkills:
 
       | where LogicalServerName =~ "<server_name>"
 
-      | where * contains "<db_id>"
+      | where * contains ""{DatabaseGuid}""
 
       | where event_type != "BACKUP_SKIPPED_DATABASE_BACKUP"'
 - id: MI-backup_restore-182
@@ -4806,8 +4824,12 @@ SqlSkills:
 
       | where AppTypeName startswith  "Worker.CL"
 
+<<<<<<< Updated upstream
       | where LogicalServerName contains <server>
 
+=======
+      | where LogicalServerName contains "{ServerName}" 
+>>>>>>> Stashed changes
       | where message contains "BACKUP DATABASE started"
 
       | parse message with notNeeded "Backup(" database "): BACKUP DATABASE started" rand
@@ -4860,8 +4882,12 @@ SqlSkills:
   - TableName: MonManagedDatabases
     ExecutedQuery: 'MonManagedDatabases
 
+<<<<<<< Updated upstream
       | where managed_server_id contains <server_id>
 
+=======
+      | where managed_server_id contains "{ManagedServerId}" 
+>>>>>>> Stashed changes
       | distinct managed_database_id, bin(TIMESTAMP, 1d)
 
       | summarize count() by bin(TIMESTAMP, 1d)'
@@ -4883,7 +4909,7 @@ SqlSkills:
 
       | where AppTypeName startswith  "Worker.CL"
 
-      | where LogicalServerName in(<server1>, <server2>)
+      | where LogicalServerName in("{ServerName}", "{PartnerServerName}")
 
       | where message contains "BACKUP DATABASE finished"
 
@@ -4929,6 +4955,10 @@ SqlSkills:
 
       | where customer_subscription_id contains <sub_id>
 
+<<<<<<< Updated upstream
+=======
+      | where customer_subscription_id contains "{SubscriptionId}" 
+>>>>>>> Stashed changes
       | distinct  name, managed_server_id)
 
       |where message contains "BACKUP DATABASE finished"
@@ -5376,7 +5406,11 @@ SqlSkills:
   - DatabaseName
   KustoQueries:
   - TableName: MonSQLSystemHealth
+<<<<<<< Updated upstream
     ExecutedQuery: 'let managedServerName = "<ServerName>";
+=======
+    ExecutedQuery: 'let db = "{DatabaseName}"; let managedServerName = ""{ServerName}"";
+>>>>>>> Stashed changes
 
       MonSQLSystemHealth
 
@@ -5764,7 +5798,7 @@ SqlSkills:
 
       | where AppTypeName == "Worker.CL"
 
-      | where LogicalServerName == "<your instance name>"
+      | where LogicalServerName == ""{ServerName}""
 
       | where originalEventTimestamp > now(-1h)
 
@@ -5821,7 +5855,7 @@ SqlSkills:
   - TableName: MonSQLSystemHealth
     ExecutedQuery: 'MonSQLSystemHealth
 
-      | where AppName == "<app name of your managed instance in SF>"
+      | where AppName == ""{AppName}""
 
       | where event == "errorlog_written"
 
@@ -5842,7 +5876,7 @@ SqlSkills:
   - TableName: MonManagement
     ExecutedQuery: 'MonManagement
 
-      | where request_id =~ ''<request_id>''
+      | where request_id =~ ''"{RequestId}"''
 
       | project PreciseTimeStamp, event, state, message, caller_state_machine_type, caller_keys, action, state_machine_type, keys, elapsed_time_milliseconds, exception_type, stack_trace, old_state, new_state'
 - id: MI-backup_restore-226
@@ -5918,7 +5952,7 @@ SqlSkills:
 
       | where originalEventTimestamp > ago(20m)
 
-      | where AppName =~ "<AppName>"
+      | where AppName =~ ""{AppName}""
 
       | project originalEventTimestamp, message'
 - id: MI-backup_restore-230
@@ -5937,6 +5971,10 @@ SqlSkills:
 
       | where logical_server_name =~ <source_managed_server_name>
 
+<<<<<<< Updated upstream
+=======
+      | where logical_server_name =~ "{ServerName}" 
+>>>>>>> Stashed changes
       | where logical_database_name !in ("msdb", "managed_model", "replicatedmaster")
 
       | summarize by source_server_name=logical_server_name, source_database_name=logical_database_name, source_database_id=logical_database_id, customer_subscription_id, source_server_id=logical_server_id
@@ -5958,7 +5996,7 @@ SqlSkills:
 
       | where state_machine_type == ''ManagedServerStateMachine''
 
-      | where * contains "<insert your managed server id here>"
+      | where * contains ""{ManagedServerId}""
 
       | summarize by request_id'
 - id: MI-backup_restore-232
@@ -5975,7 +6013,7 @@ SqlSkills:
   - TableName: MonManagement
     ExecutedQuery: 'MonManagement // you should limit the search timeline to get the results faster (or at all)
 
-      | where request_id == ''<insert your request id here>''
+      | where request_id == ''"{RequestId}"''
 
       | project originalEventTimestamp, state_machine_type, event, state, fsm_event, action, old_state, new_state'
 - id: MI-backup_restore-233
@@ -5994,7 +6032,7 @@ SqlSkills:
 
       | where LogicalServerName =~ ''<server_name>''
 
-      | where restore_request_id =~ ''<restore_id>'' //You can see this from managed_restore_request view in CMS for the problematic database
+      | where restore_request_id =~ ''"{RestoreId}"'' //You can see this from managed_restore_request view in CMS for the problematic database
 
       | where details contains "Maximum point-in-time can restore to is"
 
@@ -6015,6 +6053,7 @@ SqlSkills:
   - TableName: MonRestoreEvents
     ExecutedQuery: 'MonRestoreEvents
 
+<<<<<<< Updated upstream
       | where restore_request_id =~ "<restore_request_guid>"'
 - id: MI-backup_restore-235
   Topic: TSGMIBR0039A-Passive-runner-RestoreSuspension-degraded
@@ -6066,6 +6105,10 @@ SqlSkills:
 
       | summarize by tenant_ring_name'
 - id: MI-backup_restore-236
+=======
+      | where restore_request_id =~ ""{RestoreRequestId}""'
+- id: MI-backup_restore-205
+>>>>>>> Stashed changes
   Topic: TSGMIBR0039C-Force-resize-through-if-deployment-impacted-by-restore
   Source: TSG-SQL-MI-BackupRestore/content/Deprecated/TSGMIBR0039C-Force-resize-through-if-deployment-impacted-by-restore.md
   Prompts:
@@ -6077,7 +6120,7 @@ SqlSkills:
   - DatabaseName
   KustoQueries:
   - TableName: MonDeploymentAutomation
-    ExecutedQuery: 'let InstanceName = "<deployment_automation_instance_id_from_the_incident>";
+    ExecutedQuery: 'let InstanceName = ""{DeploymentId}"";
 
       let RingNames = (
 
@@ -6595,7 +6638,7 @@ SqlSkills:
   - TableName: MonManagement
     ExecutedQuery: 'MonManagement
 
-      | where keys contains "<database id>"
+      | where keys contains ""{DatabaseGuid}""
 
       | where state_machine_type == "ManagedDatabaseStateMachine"
 
@@ -6636,7 +6679,7 @@ SqlSkills:
 
       | extend cleanup_backup_retention_days = floor((cleanupPolicyTime - cleanupPolicy)/1d, 1)
 
-      | where logical_database_id contains "<database id>"
+      | where logical_database_id contains ""{DatabaseGuid}""
 
       | summarize by cleanupPolicyTime, logical_database_id, cleanup_backup_retention_days'
 - id: MI-backup_restore-254
@@ -6833,7 +6876,7 @@ SqlSkills:
   - TableName: MonAnalyticsDBSnapshot
     ExecutedQuery: 'MonAnalyticsDBSnapshot
 
-      | where logical_database_id contains "<managed_database_id>"
+      | where logical_database_id contains ""{DatabaseGuid}""
 
       | project CMS_snapshot_timestamp = PreciseTimeStamp, backup_retention_days'
 - id: MI-backup_restore-262
@@ -6848,13 +6891,17 @@ SqlSkills:
   - DatabaseName
   KustoQueries:
   - TableName: MonBackup
+<<<<<<< Updated upstream
     ExecutedQuery: 'let lookBackPeriodStart = <impact_start> - 12h;
+=======
+    ExecutedQuery: 'let lookBackPeriodStart = ago({TimeRange}) - 12h;
+>>>>>>> Stashed changes
 
       let lookBackPeriodEnd = now();
 
-      let serverName = ''<managed_server_name>'';
+      let serverName = ''"{ServerName}"'';
 
-      let databaseId = ''<managed_database_id>'';
+      let databaseId = ''"{DatabaseGuid}"'';
 
       MonBackup
 
@@ -6890,7 +6937,7 @@ SqlSkills:
 
       | where originalEventTimestamp >= ago(1d)
 
-      | where AppName == "<AppName>"
+      | where AppName == ""{AppName}""
 
       | where details contains "CleanupFiles"
 
@@ -6980,11 +7027,15 @@ SqlSkills:
   - DatabaseName
   KustoQueries:
   - TableName: MonManagedServers
+<<<<<<< Updated upstream
     ExecutedQuery: 'let startTime = <IcM_start_time> - 6h;
+=======
+    ExecutedQuery: 'let startTime = ago({TimeRange}) - 6h;
+>>>>>>> Stashed changes
 
       let endTime = now();
 
-      let managed_server_name = ''<managed_server_name>'';
+      let managed_server_name = ''"{ServerName}"'';
 
       MonManagedServers
 
@@ -7216,11 +7267,15 @@ SqlSkills:
   - DatabaseName
   KustoQueries:
   - TableName: MonManagementOperations
+<<<<<<< Updated upstream
     ExecutedQuery: 'let startTime = <IcM_start_time> - 6h;
+=======
+    ExecutedQuery: 'let startTime = ago({TimeRange}) - 6h;
+>>>>>>> Stashed changes
 
       let endTime = now();
 
-      let server_name = ''<managed_server_name>'';
+      let server_name = ''"{ServerName}"'';
 
       MonManagementOperations
 
@@ -7609,7 +7664,7 @@ SqlSkills:
 
       let clusterName = ''<cluster_name>'';
 
-      let appName = ''<app_name>'';
+      let appName = ''"{AppName}"'';
 
       MonSqlDumperActivity
 
@@ -7621,6 +7676,7 @@ SqlSkills:
 
       | where IsDumpAvoided == 0
 
+<<<<<<< Updated upstream
       | project DumperStartTime, BranchName, TargetProductVersion,'
 - id: MI-backup_restore-291
   Topic: TSGMIBR0091A-Backup-Watchdog-alert-NO_FULL_BACKUP_FOR_NEW_DATABASE
@@ -7721,6 +7777,10 @@ SqlSkills:
       | ·         GeoDR seeding clashing with first full backup.<br> | Runner sometimes fails to detect this case and does not append \_SEEDING suffix. Check [TSGMIBR0091B: Backup Watchdog alert - NO\_FULL\_BACKUP\_FOR\_NEW\_DATABASE\_SEEDING](./TSGMIBR0091B-Backup-Watchdog-alert-NO_FULL_BACKUP_FOR_NEW_DATABASE_SEEDING.md)
       for more information.<br> | [271524175](https://portal.microsofticm.com/imp/v3/incidents/details/271524175/home)<br> |'
 - id: MI-backup_restore-292
+=======
+      | project DumperStartTime, BranchName, TargetProductVersion'
+- id: MI-backup_restore-253
+>>>>>>> Stashed changes
   Topic: TSGMIBR0091B-Backup-Watchdog-alert-NO_FULL_BACKUP_FOR_NEW_DATABASE_SEEDING
   Source: TSG-SQL-MI-BackupRestore/content/Deprecated/TSGMIBR0091-Backup-Watchdog-alerts/TSGMIBR0091B-Backup-Watchdog-alert-NO_FULL_BACKUP_FOR_NEW_DATABASE_SEEDING.md
   Prompts:
@@ -7734,7 +7794,7 @@ SqlSkills:
   - TableName: MonManagement
     ExecutedQuery: 'MonManagement
 
-      | where operation_parameters contains "<managed_server_name>" and operation_parameters contains "<managed_database_id>"
+      | where operation_parameters contains ""{ServerName}"" and operation_parameters contains ""{DatabaseGuid}""
 
       | where operation_type == "AutomaticGeoSecondaryCreate"
 
@@ -7755,7 +7815,7 @@ SqlSkills:
   - TableName: MonBackup
     ExecutedQuery: 'MonBackup
 
-      | where LogicalServerName == "<managed_server_name>" and database_name =~ "<logical_database_id>"
+      | where LogicalServerName == ""{ServerName}"" and database_name =~ ""{DatabaseGuid}""
 
       | where event == "database_backup"
 
@@ -7780,7 +7840,7 @@ SqlSkills:
   - TableName: MonDbSeedTraces
     ExecutedQuery: 'MonDbSeedTraces
 
-      | where database_name =~ "<managed_database_id>" and internal_state_desc in ("Success", "Failed") and role_desc == "Source"
+      | where database_name =~ ""{DatabaseGuid}"" and internal_state_desc in ("Success", "Failed") and role_desc == "Source"
 
       | project originalEventTimestamp, event, seeding_start_time, seeding_end_time, seedintTimeSec = (seeding_end_time - seeding_start_time) / time(1s), old_state, new_state, internal_state_desc'
 - id: MI-backup_restore-295
@@ -7797,7 +7857,7 @@ SqlSkills:
   - TableName: MonBackup
     ExecutedQuery: 'MonBackup
 
-      | where LogicalServerName == "<managed_server_name>" and database_name =~ "<managed_database_id>"
+      | where LogicalServerName == ""{ServerName}"" and database_name =~ ""{DatabaseGuid}""
 
       | where event == "database_backup"
 
@@ -7824,7 +7884,7 @@ SqlSkills:
 
       | where TIMESTAMP > ago(1h)
 
-      | where AppName == "<app_name>"
+      | where AppName == ""{AppName}""
 
       | where message contains "Error: 1133"
 
@@ -7847,7 +7907,7 @@ SqlSkills:
   - TableName: MonDmIoVirtualFileStats
     ExecutedQuery: 'MonDmIoVirtualFileStats
 
-      | where db_name =~ "<managed_database_id>"
+      | where db_name =~ ""{DatabaseGuid}""
 
       | where is_primary_replica == "1" and type_desc == "LOG"
 
@@ -7872,11 +7932,13 @@ SqlSkills:
 
       | Scenario | Validation | Mitigation | Original incident |
 
-      | MI cannot connect to backup storage due to DNS issues | Backup service errors looking like this:<br>"Cannot open backup device ''[https://wasdpcace1abakmi8727.blob.core.windows.net/bkpmi-sqlmidev001-e7ba02dd-ddf5-4206-8ab4-5c0ac82942d9/backup/528b6bd2-aac0-4d6e-b12d-d1be4692ba6e/Log/2024-10-30T21-06-00/2024-11-06T15-55-16_2024-10-30T21-06-00_S1_0.log''.](https://wasdpcace1abakmi8727.blob.core.windows.net/bkpmi-sqlmidev001-e7ba02dd-ddf5-4206-8ab4-5c0ac82942d9/backup/528b6bd2-aac0-4d6e-b12d-d1be4692ba6e/Log/2024-10-30T21-06-00/2024-11-06T15-55-16_2024-10-30T21-06-00_S1_0.log%27.
+      | MI cannot connect to backup storage due to DNS issues | Backup service errors looking like this:
+"Cannot open backup device ''[https://wasdpcace1abakmi8727.blob.core.windows.net/bkpmi-sqlmidev001-e7ba02dd-ddf5-4206-8ab4-5c0ac82942d9/backup/528b6bd2-aac0-4d6e-b12d-d1be4692ba6e/Log/2024-10-30T21-06-00/2024-11-06T15-55-16_2024-10-30T21-06-00_S1_0.log''.](https://wasdpcace1abakmi8727.blob.core.windows.net/bkpmi-sqlmidev001-e7ba02dd-ddf5-4206-8ab4-5c0ac82942d9/backup/528b6bd2-aac0-4d6e-b12d-d1be4692ba6e/Log/2024-10-30T21-06-00/2024-11-06T15-55-16_2024-10-30T21-06-00_S1_0.log%27.
       "https://wasdpcace1abakmi8727.blob.core.windows.net/bkpmi-sqlmidev001-e7ba02dd-ddf5-4206-8ab4-5c0ac82942d9/backup/528b6bd2-aac0-4d6e-b12d-d1be4692ba6e/log/2024-10-30t21-06-00/2024-11-06t15-55-16_2024-10-30t21-06-00_s1_0.log%27.") Operating
       system error 50(The request is not supported.)." | Follow [TSGMIBR0009 Errors accessing storage account](https://msdata.visualstudio.com/Database%20Systems/_wiki/wikis/TSG-SQL-MI-BackupRestore/64755/TSGMIBR0009-Errors-accessing-storage-account)
       | Not the original incident, but pasting this one [Incident-562717013](https://portal.microsofticm.com/imp/v5/incidents/details/562717013/summary) |
 
+<<<<<<< Updated upstream
       | Replica issues causing delay in BoS queries | sql_error_message: Execution Timeout Expired. The timeout period elapsed prior to completion of the operation or the server is not responding. <br><br>MonBackup<br>\|
       where query_api_name == "GetHealthySecondaryReplicaInfo"<br>\| where sql_error_message == "Execution Timeout Expired.  The timeout period elapsed prior to completion of the operation or the server
       is not responding."<br>\| summarize count() by LogicalServerName, AppTypeName, ClusterName, AppName | Underlying issues are usually not B/R related. As temporary backup mitigation turn off BoS. Once
@@ -7924,8 +7986,115 @@ SqlSkills:
       due to active backup or file mainpulation operation](https://eng.ms/docs/cloud-ai-platform/azure-data/azure-data-azure-databases/sql-/sql-backup-restore/sql-backup-restore-mi/tsgcl0048h_log_backup_failure_due_backup_or_file_manipulation_operation)
       | [Incident 220494343](https://portal.microsofticm.com/imp/v3/incidents/details/220494343/home) : \[ProdEus1aTR4018\]\[BRDB0017\]: LOG\_BACKUP\_OUT\_OF\_SLA alert discovered on SQL instance ce829fff53b8,
       server test-bsainstance, database id 1EB47E9C-951E-43EF-994F-D5712B331E6C<br>Link incidents once mitigated to this parent<br> |
+=======
+      | Replica issues causing delay in BoS queries | sql_error_message: Execution Timeout Expired. The timeout period elapsed prior to completion of the operation or the server is not responding. 
 
-      | Writing to the backup file is failing | Query MonBackup, sql_error_message should look like this: Write on "<path_to_backup_file>" failed: 12030(failed to retrieve text for this error. Reason: 317)
+MonBackup
+\|
+      where query_api_name == "GetHealthySecondaryReplicaInfo"
+\| where sql_error_message == "Execution Timeout Expired.  The timeout period elapsed prior to completion of the operation or the server
+      is not responding."
+\| summarize count() by LogicalServerName, AppTypeName, ClusterName, AppName | Underlying issues are usually not B/R related. As temporary backup mitigation turn off BoS. Once
+      issue is fixed you can turn it back on. Command example: 
+
+Set-ManagedServerConfigurationParameters 
+-ManagedServerName bsacloud-db 
+-Parameters @(
+''SQL.Config_FeatureSwitches_EnableFullBackupOnSecondaryReplicaInBackupService''
+      
+''SQL.Config_FeatureSwitches_EnableDiffBackupOnSecondaryReplicaInBackupService'', 
+''SQL.Config_FeatureSwitches_EnableLogBackupOnSecondaryReplicaInBackupService''
+) 
+-Values @(''off''
+      ''off'', ''off'') 
+-ClientTimeoutInSecs 15 | [Incident 593360507](https://portal.microsofticm.com/imp/v5/incidents/details/593360507/summary) |
+
+      | Log backup stuck in writing the leading metadata
+ | Follow the Triage instructions in the TSG below to identify if the last attempted log backup got stuck with last log output:
+Backup(\<logical\_db\_id\>):
+      Writing the leading metadata
+[TSGCL0049BG: Log backup stuck in "Writing the leading metadata"](https://eng.ms/docs/cloud-ai-platform/azure-data/azure-data-azure-databases/sql-/sql-backup-restore/sql-backup-restore-mi/tsgcl0049bg-log-backup-stuck-in-_writing-the-leadi)
+      | follow this TSG bellow in the part: **Log backup thread is stuck on a certain log backup
+
+      | [Incident 204534373](https://portal.microsofticm.com/imp/v3/incidents/details/204534373/home) : \[Regression:T?\]\[Fix:T?\] Log backup stuck in "Writing the leading metadata"
+Link incidents once
+      mitigated to this parent
+ |
+
+      | Msdb (00000000-0000-0000-0000-000000000004) backup is stuck during update SLO switch.
+
+ | Validate that the DB name in the incident is 00000000-0000-0000-0000-000000000004 which is MSDB.
+Validate
+      that msdb is switching during update SLO:
+select \* into #tmp from active\_workflows
+
+select \* from #tmp where request\_id = ''\<request\_id\>''
+Take managed_database_id from stuck tbl\_move\_managed\_database\_requests
+
+select
+      \* from managed\_databases where managed\_database\_id = ''&lt;real_managed_database_id&gt;''
+
+Validate that it’s name is msdb. | **NOTE: Please take a dump first on SLO source and then on SLO
+      target before doing mitigation and make sure dumps are uploaded or grab them from the nodes. These are needed for RCA.**
+
+Mitigation is failover, but as of writing this TSG, the issue is not
+      understood yet (check incident on the right for latest). Transfer to **SQL Managed Instance: Availability and GeoDR.
+ | [Incident 155324463](https://icm.ad.msft.net/imp/v3/incidents/details/155324463/home)
+      : \[ProdCnEa2aTR16\]\[BRDB0017\]: LOG\_BACKUP\_OUT\_OF\_SLA alert discovered on SQL instance b31e38150b88, server autobot-managed-instance-v12, database id 00000000-0000-0000-0000-000000000004
+       |
+
+      | While getting the metadata from MSDB in  /[Sql](http://sqlsrc/ds_main_dev/xref/Sql/)/[xdb](http://sqlsrc/ds_main_dev/xref/Sql/xdb/)/[manifest](http://sqlsrc/ds_main_dev/xref/Sql/xdb/manifest/)/[svc](http://sqlsrc/ds_main_dev/xref/Sql/xdb/manifest/svc/)/[backuprestore](http://sqlsrc/ds_main_dev/xref/Sql/xdb/manifest/svc/backuprestore/)/[BackupService](http://sqlsrc/ds_main_dev/xref/Sql/xdb/manifest/svc/backuprestore/BackupService/)/[BackupService.cs](http://sqlsrc/ds_main_dev/xref/Sql/xdb/manifest/svc/backuprestore/BackupService/BackupService.cs):
+[6043](http://sqlsrc/ds_main_dev/xref/Sql/xdb/manifest/svc/backuprestore/BackupService/BackupService.cs#6043)
+      /// &lt;summary&gt;
+[6044](http://sqlsrc/ds_main_dev/xref/Sql/xdb/manifest/svc/backuprestore/BackupService/BackupService.cs#6044) /// Get backup metadata by querying the MSDB database for the most
+      recent backup
+[6045](http://sqlsrc/ds_main_dev/xref/Sql/xdb/manifest/svc/backuprestore/BackupService/BackupService.cs#6045) /// &lt;/summary&gt;
+[6046](http://sqlsrc/ds_main_dev/xref/Sql/xdb/manifest/svc/backuprestore/BackupService/BackupService.cs#6046)
+      /// &lt;param name="connectionString"&gt;&lt;/param&gt;
+[6047](http://sqlsrc/ds_main_dev/xref/Sql/xdb/manifest/svc/backuprestore/BackupService/BackupService.cs#6047) /// &lt;param name="databaseInfo"&gt;&lt;/param&gt;
+[6048](http://sqlsrc/ds_main_dev/xref/Sql/xdb/manifest/svc/backuprestore/BackupService/BackupService.cs#6048)
+      /// &lt;param name="backupType"&gt;&lt;/param&gt;
+[6049](http://sqlsrc/ds_main_dev/xref/Sql/xdb/manifest/svc/backuprestore/BackupService/BackupService.cs#6049) /// &lt;param name="backupFiles"&gt;&lt;/param&gt;
+[6050](http://sqlsrc/ds_main_dev/xref/Sql/xdb/manifest/svc/backuprestore/BackupService/BackupService.cs#6050)
+      /// &lt;returns&gt;&lt;/returns&gt;
+[6051](http://sqlsrc/ds_main_dev/xref/Sql/xdb/manifest/svc/backuprestore/BackupService/BackupService.cs#6051) **private [BackupMetadata ](http://sqlsrc/ds_main_dev/s?defs=BackupMetadata)
+      [**DoGetBackupMetadata](http://sqlsrc/ds_main_dev/xref/Sql/xdb/manifest/svc/backuprestore/BackupService/BackupService.cs#DoGetBackupMetadata)(**string [connectionString](http://sqlsrc/ds_main_dev/s?defs=connectionString)
+      [DatabaseInfo ](http://sqlsrc/ds_main_dev/s?defs=DatabaseInfo) [databaseInfo](http://sqlsrc/ds_main_dev/s?defs=databaseInfo), **char [backupType](http://sqlsrc/ds_main_dev/s?defs=backupType), [List](http://sqlsrc/ds_main_dev/s?defs=List)&lt;string&gt;  [backupFiles](http://sqlsrc/ds_main_dev/s?defs=backupFiles))
+We
+      are setting infinite timeout on that query. Since customer has access to MSDB he can get a lock on the rows we are trying to select and we would be infinitely stuck. The most interesting part is that
+      we are currently expected to get 0 rows, as we do not log any history for automated backups in MSDB. We should put a very small timeout here so we do not affect current backup loop. With the current
+      design no backups would happen on the database if only one backup is stuck.
+[6064](http://sqlsrc/ds_main_dev/xref/Sql/xdb/manifest/svc/backuprestore/BackupService/BackupService.cs#6064) [sqlCmd](http://sqlsrc/ds_main_dev/s?defs=sqlCmd).[CommandTimeout](http://sqlsrc/ds_main_dev/s?defs=CommandTimeout)
+      = [**BackupCommandTimeout](http://sqlsrc/ds_main_dev/xref/Sql/xdb/manifest/svc/backuprestore/BackupService/BackupService.cs#BackupCommandTimeout);
+[472](http://sqlsrc/ds_main_dev/xref/Sql/xdb/manifest/svc/backuprestore/BackupService/BackupService.cs#472)
+      **private const int [**BackupCommandTimeout](http://sqlsrc/ds_main_dev/xref/Sql/xdb/manifest/svc/backuprestore/BackupService/BackupService.cs#BackupCommandTimeout) = 0; // no timeout.
+From
+      &lt;[_https://icm.ad.msft.net/imp/v3/incidents/details/133487713/home_](https://icm.ad.msft.net/imp/v3/incidents/details/133487713/home)&gt;
+ | With the following query you can see last state for
+      all databases on the instance. If they all stopped at some particular point in the past (that is way beyond the SLA of 5 minutes - hours in the past) and if one of them is stuck in state BACKUP\_METADATA\_UPLOAD\_START
+      that means that is stuck due to locking on MSDB. See original incident on the right side for more details.
+MonBackup
+ | here  AppName == "&lt;app_name&gt;"
+ | here  event == "database_backup"
+       |
+
+      | Log backup cannot be taken due to an error 3023 in BackupService:
+"Backup, file manipulation operations (such as ALTER DATABASE ADD FILE) and encryption changes on a database must
+      be serialized. Reissue the statement after the current backup or file manipulation operation is completed."
+ | Follow the Triage instructions in the TSG below to identify if this
+      it the issue in question:
+[TSGCL0048H: Log Backup failure due to active backup or file manipulation operation](https://eng.ms/docs/cloud-ai-platform/azure-data/azure-data-azure-databases/sql-/sql-backup-restore/sql-backup-restore-mi/tsgcl0048h_log_backup_failure_due_backup_or_file_manipulation_operation)
+      | Take the dump and kill user session. We need to see what is holding the lock on the log file.
+Take care if it''s protected customer, see details to follow-up
+[TSGCL0048H: Log Backup failure
+      due to active backup or file mainpulation operation](https://eng.ms/docs/cloud-ai-platform/azure-data/azure-data-azure-databases/sql-/sql-backup-restore/sql-backup-restore-mi/tsgcl0048h_log_backup_failure_due_backup_or_file_manipulation_operation)
+      | [Incident 220494343](https://portal.microsofticm.com/imp/v3/incidents/details/220494343/home) : \[ProdEus1aTR4018\]\[BRDB0017\]: LOG\_BACKUP\_OUT\_OF\_SLA alert discovered on SQL instance ce829fff53b8
+      server test-bsainstance, database id 1EB47E9C-951E-43EF-994F-D5712B331E6C
+Link incidents once mitigated to this parent
+ |
+>>>>>>> Stashed changes
+
+      | Writing to the backup file is failing | Query MonBackup, sql_error_message should look like this: Write on ""{BackupFilePath}"" failed: 12030(failed to retrieve text for this error. Reason: 317)
       | Move primary to a new node | [Incident 594553941](https://portal.microsofticm.com/imp/v5/incidents/details/594553941/summary) : [ProdAuse1aTR3065][TSGMIBR0091D]: LOG_BACKUP_OUT_OF_SLA alert discovered
       on SQL instance aa64e5520771, server rauraungaehe-prod-sqlmi-failover, database id 00000000-0000-0000-0000-000000000004'
 - id: MI-backup_restore-299
@@ -8123,7 +8292,7 @@ SqlSkills:
   - TableName: MonBackup
     ExecutedQuery: 'MonBackup
 
-      | where AppName contains "<app_name>"
+      | where AppName contains ""{AppName}""
 
       | where backup_type == "Log"
 
@@ -8146,7 +8315,7 @@ SqlSkills:
   - TableName: MonSQLSystemHealth
     ExecutedQuery: 'MonSQLSystemHealth
 
-      | where AppName has "<app_name>"
+      | where AppName has ""{AppName}""
 
       | where message contains "Error: 41640"
 
@@ -8165,11 +8334,16 @@ SqlSkills:
   - TableName: MonSQLXStoreIOStats
     ExecutedQuery: 'MonSQLXStoreIOStats
 
+<<<<<<< Updated upstream
       | where originalEventTimestamp >= <backup_start_time>  and originalEventTimestamp <= <backup_end_time>
 
       | where AppName contains "<app_name>"
+=======
+      | where originalEventTimestamp >= ago({TimeRange})  and originalEventTimestamp <= now() 
+      | where AppName contains ""{AppName}""
+>>>>>>> Stashed changes
 
-      | where file_path contains "<managed_database_id>"
+      | where file_path contains ""{DatabaseGuid}""
 
       | where //file_path endswith ".ldf" or'
 - id: MI-backup_restore-309
@@ -8186,13 +8360,17 @@ SqlSkills:
   - TableName: MonBackup
     ExecutedQuery: 'MonBackup
 
-      | where AppName contains "<app_name>"
+      | where AppName contains ""{AppName}""
 
+<<<<<<< Updated upstream
       | where originalEventTimestamp >= <backup_start_time>  and originalEventTimestamp <= <backup_end_time>
 
+=======
+      | where originalEventTimestamp >= ago({TimeRange})  and originalEventTimestamp <= now() 
+>>>>>>> Stashed changes
       | where event == "database_backup"
 
-      | where logical_database_id contains "<managed_database_id>"
+      | where logical_database_id contains ""{DatabaseGuid}""
 
       | where event_type == "BACKUP_METADATA_DETAILS"
 
@@ -8211,7 +8389,7 @@ SqlSkills:
   - TableName: MonBackup
     ExecutedQuery: 'MonBackup
 
-      | where AppName == "<app_name>"
+      | where AppName == ""{AppName}""
 
       | where event == "database_backup"
 
@@ -9078,7 +9256,7 @@ SqlSkills:
 
       | extend parsedXML = iff(isnull(parsedXML) or isempty(parsedXML), parse_xml(operation_result).OutputParameters, parsedXML)
 
-      | parse operation_parameters with something  ''<TargetManagedServerName>'' ManagedServerName ''</TargetManagedServerName>'' * ''<RestoreType>'' RestoreType ''</RestoreType>'' something_else
+      | parse operation_parameters with something  ''"{ServerName}"'' ManagedServerName ''</TargetManagedServerName>'' * ''<RestoreType>'' RestoreType ''</RestoreType>'' something_else
 
       | extend RestoreType = iff (operation_type == ''CreateExternalManagedBackupRestoreV2Request'', ''LogReplay'','
 - id: MI-backup_restore-341
@@ -10432,7 +10610,7 @@ SqlSkills:
   - DatabaseName
   KustoQueries:
   - TableName: MonManagementOperations
-    ExecutedQuery: 'let parameterValue= ''<value_of_any_expected_operation_parameter>'';
+    ExecutedQuery: 'let parameterValue= ''"{OperationParameter}"'';
 
       MonManagementOperations
 
@@ -10531,7 +10709,7 @@ SqlSkills:
 
       | where AppName == "<sql_instance_name>"
 
-      | where LogicalServerName == ''<managed_server_name>''
+      | where LogicalServerName == ''"{ServerName}"''
 
       | where PreciseTimeStamp between (datetime(2020-10-07 21:29:36.98) .. datetime(2020-10-08 07:27:36.8429545))
 
@@ -10567,7 +10745,7 @@ SqlSkills:
   - TableName: MonManagement
     ExecutedQuery: 'MonManagement
 
-      | where request_id = ''<request_id>''
+      | where request_id = ''"{RequestId}"''
 
       | where state_machine_type == ''ManagedDatabaseStateMachine''
 
@@ -10588,11 +10766,11 @@ SqlSkills:
   - TableName: MonManagement
     ExecutedQuery: 'MonManagement
 
-      | where TIMESTAMP >= datetime("<IncidentStartTime>")
+      | where TIMESTAMP >= datetime("ago({TimeRange})")
 
-      | wher TIMESTAMP <= datetime("<IncidentEndTime>")
+      | wher TIMESTAMP <= datetime("now()")
 
-      | where managed_restore_id =~ "<managed_restore_id>"
+      | where managed_restore_id =~ ""{RestoreId}""
 
       | where event startswith "rvd"'
 - id: MI-backup_restore-400
@@ -10653,7 +10831,7 @@ SqlSkills:
   - DatabaseName
   KustoQueries:
   - TableName: MonRestoreEvents
-    ExecutedQuery: 'let restoreId = "<restore_id>";
+    ExecutedQuery: 'let restoreId = ""{RestoreId}"";
 
       MonRestoreEvents
 
@@ -10674,7 +10852,7 @@ SqlSkills:
   - DatabaseName
   KustoQueries:
   - TableName: MonRestoreEvents
-    ExecutedQuery: 'let restoreId = "<restore_id>";
+    ExecutedQuery: 'let restoreId = ""{RestoreId}"";
 
       MonRestoreEvents
 
@@ -10699,7 +10877,7 @@ SqlSkills:
   - DatabaseName
   KustoQueries:
   - TableName: MonSQLSystemHealth
-    ExecutedQuery: 'let dbId = "<managed_database_id>";
+    ExecutedQuery: 'let dbId = ""{DatabaseGuid}"";
 
       let serverName = "<server_name>";
 
@@ -11001,8 +11179,13 @@ SqlSkills:
 
       | where TIMESTAMP > ago(1d)
 
+<<<<<<< Updated upstream
       | where ClusterName == ''<tr-TenantRing>'''
 - id: MI-backup_restore-416
+=======
+      | where ClusterName == ''"{ClusterName}"'''
+- id: MI-backup_restore-358
+>>>>>>> Stashed changes
   Topic: TSGMIBR0053-LogReplay-Incompatible-physical-layout
   Source: TSG-SQL-MI-BackupRestore/content/Restore/TSGMIBR0053-LogReplay-Incompatible-physical-layout.md
   Prompts:
@@ -11018,9 +11201,9 @@ SqlSkills:
 
       | where table_name contains "sysprufiles"
 
-      | where LogicalServerName == "<managed_server_name>"
+      | where LogicalServerName == ""{ServerName}""
 
-      | where logical_db_name == "<managed_database_id>"
+      | where logical_db_name == ""{DatabaseGuid}""
 
       | project LogicalServerName, table_name, status, fileid, pname, filetype, filestate'
 - id: MI-backup_restore-417
@@ -11121,7 +11304,7 @@ SqlSkills:
   - TableName: MonRestoreEvents
     ExecutedQuery: 'MonRestoreEvents
 
-      | where restore_request_id contains "<restore_id>"
+      | where restore_request_id contains ""{RestoreId}""
 
       | where message contains " - 3234 Logical file "
 
@@ -11165,7 +11348,7 @@ SqlSkills:
 
       | where message startswith "Retriable error occurred while restoring 1. Sql error code is 3202."
 
-      | where restore_request_id =~ "<restore_id>"
+      | where restore_request_id =~ ""{RestoreId}""
 
       | summarize count() by originalEventTimestamp, message, restore_request_id
 
@@ -11220,7 +11403,7 @@ SqlSkills:
   - TableName: MonRestoreEvents
     ExecutedQuery: 'MonRestoreEvents
 
-      |where restore_request_id contains "<restore_request_id>"
+      |where restore_request_id contains ""{RestoreRequestId}""
 
       |summarize arg_max(originalEventTimestamp,*)
 
@@ -11260,8 +11443,13 @@ SqlSkills:
 
       | where TIMESTAMP > ago(3d)
 
+<<<<<<< Updated upstream
       | where restore_request_id =~ ''<restore_id>'''
 - id: MI-backup_restore-429
+=======
+      | where restore_request_id =~ ''"{RestoreId}"'''
+- id: MI-backup_restore-367
+>>>>>>> Stashed changes
   Topic: TSGMIBR0064-Long-running-restore
   Source: TSG-SQL-MI-BackupRestore/content/Restore/TSGMIBR0064-Long-running-restore.md
   Prompts:
@@ -11376,8 +11564,12 @@ SqlSkills:
   - TableName: MonRestoreEvents
     ExecutedQuery: 'MonRestoreEvents
 
+<<<<<<< Updated upstream
       | where restore_request_id contains <restore_request_id>
 
+=======
+      | where restore_request_id contains "{RestoreRequestId}" 
+>>>>>>> Stashed changes
       | where details contains "The restore plan has been Verified. It has "'
 - id: MI-backup_restore-435
   Topic: TSGMIBR0067-Slow-PITR
@@ -11393,8 +11585,12 @@ SqlSkills:
   - TableName: MonRestoreEvents
     ExecutedQuery: 'MonRestoreEvents
 
+<<<<<<< Updated upstream
       | where restore_request_id contains <restore_request_id>
 
+=======
+      | where restore_request_id contains "{RestoreRequestId}" 
+>>>>>>> Stashed changes
       | where restore_database_progress contains " has been restored in "
 
       | project restore_database_progress,compressed_backup_size, uncompressed_backup_size'
@@ -11594,9 +11790,9 @@ SqlSkills:
   - TableName: MonBackup
     ExecutedQuery: 'MonBackup
 
-      | where TIMESTAMP < datetime(<found PIT>)
+      | where TIMESTAMP < datetime(ago({TimeRange}))
 
-      | where logical_database_id contains "<logical_db_id>"
+      | where logical_database_id contains ""{DatabaseGuid}""
 
       | where backup_type == "Full"
 
@@ -11638,13 +11834,13 @@ SqlSkills:
   - TableName: MonBackup
     ExecutedQuery: 'MonBackup
 
-      | where AppName contains "<app_name>"
+      | where AppName contains ""{AppName}""
 
-      | where TIMESTAMP < datetime(<PIT>)
+      | where TIMESTAMP < datetime(ago({TimeRange}))
 
-      | where TIMESTAMP > datetime(<Full backup end time>)
+      | where TIMESTAMP > datetime(now())
 
-      | where [''details''] contains "<logical_db_id>"
+      | where [''details''] contains ""{DatabaseGuid}""
 
       | where [''details''] contains "Skipping diff backup of database"'
 - id: MI-backup_restore-446
@@ -11852,6 +12048,10 @@ SqlSkills:
 
       | where logical_server_name =~ <source_managed_server_name>
 
+<<<<<<< Updated upstream
+=======
+      | where logical_server_name =~ "{ServerName}" 
+>>>>>>> Stashed changes
       | where logical_database_name !in ("msdb", "managed_model", "replicatedmaster")
 
       | summarize by source_server_name=logical_server_name, source_database_name=logical_database_name, source_database_id=logical_database_id, customer_subscription_id, source_server_id=logical_server_id
@@ -11894,8 +12094,12 @@ SqlSkills:
 
       | where originalEventTimestamp > ago(2h)
 
+<<<<<<< Updated upstream
       | where LogicalServerName =~ <INSERT SERVER NAME>
 
+=======
+      | where LogicalServerName =~ "{ServerName}" 
+>>>>>>> Stashed changes
       | where message contains "GETSASKEYFROMREPLICATEDMASTERVIAMS" and message contains "s3"
 
       | summarize count() by bin(TIMESTAMP, 20min)'
@@ -11961,7 +12165,7 @@ SqlSkills:
   - TableName: MonRestoreEvents
     ExecutedQuery: 'MonRestoreEvents
 
-      | where restore_request_id =~ ''<restore_request_id>''
+      | where restore_request_id =~ ''"{RestoreRequestId}"''
 
       | project originalEventTimestamp, message, restore_database_progress, elapsed_time, restore_database_result, exception_type, stack_trace
 
@@ -12014,7 +12218,7 @@ SqlSkills:
 
       | where TIMESTAMP > ago(3d)
 
-      | where restore_request_id == ''<restore_id>''
+      | where restore_request_id == ''"{RestoreId}"''
 
       | where event == ''sql_connection_query_error''
 
@@ -12037,9 +12241,9 @@ SqlSkills:
 
       | where originalEventTimestamp > datetime(2026-04-04 16:41:24.1314216)
 
-      | where LogicalServerName =~ "<ServerName>"
+      | where LogicalServerName =~ ""{ServerName}""
 
-      | where * contains "<DB_ID>"
+      | where * contains ""{DatabaseGuid}""
 
       | where event_type != "BACKUP_SKIPPED_DATABASE_BACKUP"
 
@@ -12121,7 +12325,7 @@ SqlSkills:
 
       | where event == "database_backup"
 
-      | where logical_database_id contains "<logical_database_id>"
+      | where logical_database_id contains ""{DatabaseGuid}""
 
       | where event_type == "BACKUP_END"
 
@@ -12406,7 +12610,7 @@ SqlSkills:
   - TableName: MonSQLSystemHealth
     ExecutedQuery: 'MonSQLSystemHealth
 
-      | where logical_database_guid =~ ''<logical_database_id_from_IcM>''
+      | where logical_database_guid =~ ''"{DatabaseGuid}"''
 
       | summarize min(TIMESTAMP), max(TIMESTAMP) by TridentServerType'
 - id: MI-backup_restore-480
@@ -12423,9 +12627,9 @@ SqlSkills:
   - TableName: MonBackup
     ExecutedQuery: 'MonBackup
 
-      | where originalEventTimestamp > datetime(<time_of_IcM_occurrence>)
+      | where originalEventTimestamp > datetime(ago({TimeRange}))
 
-      | where LogicalServerName =~ ''<server_name_from_IcM>''
+      | where LogicalServerName =~ ''"{ServerName}"''
 
       | where backup_type == ''Log''
 
@@ -12607,3 +12811,2439 @@ SqlSkills:
       | project Timestamp, Service, WorkType, SubWorkType, SubworkDetail, activity_request_id, message, elapsed_time_milliseconds
 
       | render timepivot with (series = Service, WorkType, SubWorkType)'
+<<<<<<< Updated upstream
+=======
+- id: MI-backup_restore-414
+  Topic: Automated-backups-leading-to-Performance-issue
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Automated-backups-or-point%2Din%2Dtime-restore/Automated-backups-leading-to-Performance-issue.md
+  Prompts:
+  - MI Automated-backups-leading-to-Performance-issue
+  - Managed Instance Automated-backups-leading-to-Performance-issue
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmIoVirtualFileStats
+    ExecutedQuery: 'MonDmIoVirtualFileStats
+
+      | where AppName =~ {AppName}
+
+      | where db_name =~ "{logical_database_id}"    //can be fetched from ASC Resource Explorer under MI/DB properties as ''Managed Database Id''
+
+      | where type_desc == "ROWS"
+
+      | filter db_name !in ("master", "tempdb", "model", "msdb")
+
+      | filter end_utc_date >= ago(1h)
+
+      | filter is_primary_replica == 1
+
+      | extend SizeMB = todouble(size_on_disk_bytes/1024/1024)
+
+      | extend SizeGB = bin(SizeMB/1024, 0.01)
+
+      | extend SpaceUsedGB = bin(todouble(spaceused_mb)/1024, 0.01)
+
+      | project end_utc_date, file_id, type_desc, SizeMB, SizeGB, SpaceUsedGB
+
+      | sort by end_utc_date asc'
+- id: MI-backup_restore-415
+  Topic: Automated-backups-long-running
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Automated-backups-or-point%2Din%2Dtime-restore/Automated-backups-long-running.md
+  Prompts:
+  - MI Automated-backups-long-running
+  - Managed Instance Automated-backups-long-running
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where (TIMESTAMP >= {StartDateTime} and TIMESTAMP <= {EndDateTime})
+
+      or (PreciseTimeStamp >= {StartDateTime} and PreciseTimeStamp <= {EndDateTime})
+
+      or (originalEventTimestamp >= {StartDateTime} and originalEventTimestamp <= {EndDateTime})
+
+      | where AppName == {AppName}
+
+      | where message contains @''TestDb_01.bak'' or message contains @''blob.core.windows.net''
+
+      | project TIMESTAMP , PreciseTimeStamp , ClusterName ,AppName , AppTypeName , LogicalServerName, originalEventTimestamp , error_id, message
+
+      | limit 1000'
+- id: MI-backup_restore-416
+  Topic: Backup-storage-redundancy-update-operation-is-stuck
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Automated-backups-or-point%2Din%2Dtime-restore/Backup-storage-redundancy-update-operation-is-stuck.md
+  Prompts:
+  - MI Backup-storage-redundancy-update-operation-is-stuck
+  - Managed Instance Backup-storage-redundancy-update-operation-is-stuck
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonBackup
+    ExecutedQuery: 'MonBackup
+
+      | where TIMESTAMP >= ago(2d)
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where event == "database_backup"
+
+      | where backup_type == "Full"
+
+      | where event_type in ("BACKUP_START", "BACKUP_END")
+
+      | summarize count() by event_type, logical_database_name
+
+      | order by logical_database_name'
+- id: MI-backup_restore-417
+  Topic: Backup-storage-redundancy-update-operation-is-stuck
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Automated-backups-or-point%2Din%2Dtime-restore/Backup-storage-redundancy-update-operation-is-stuck.md
+  Prompts:
+  - MI Backup-storage-redundancy-update-operation-is-stuck
+  - Managed Instance Backup-storage-redundancy-update-operation-is-stuck
+  CustomizedParameters:
+  - DatabaseId
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonBackup
+    ExecutedQuery: 'MonBackup
+
+      | where TIMESTAMP >= datetime("12/1/2024 2:28:50")
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where event == "database_backup"
+
+      | where backup_type == "Full"
+
+      | where logical_database_id =~ "{DatabaseId}"
+
+      | project originalEventTimestamp, NodeName, process_id, collect_current_thread_id, logical_database_id,logical_database_name, event, event_type, backup_type, skipped_backup_reason, details, exception
+      br_exception_message, br_exception_stack_trace, sql_error_message'
+- id: MI-backup_restore-421
+  Topic: Backups-are-missing(slash)Restore-failing-due-to-missing-backups
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Automated-backups-or-point%2Din%2Dtime-restore/Backups-are-missing(slash)Restore-failing-due-to-missing-backups.md
+  Prompts:
+  - MI Backups-are-missing(slash)Restore-failing-due-to-missing-backups
+  - Managed Instance Backups-are-missing(slash)Restore-failing-due-to-missing-backups
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonBackup
+    ExecutedQuery: 'MonBackup
+
+      | where LogicalServerName =~ ""{ServerName}""
+
+      |where TIMESTAMP >= ago(5d)
+
+      |where event =~ "database_backup"
+
+      |where backup_type =~ "full"
+
+      | where logical_database_id contains ""{DatabaseGuid}""
+
+      | project originalEventTimestamp, event_type, backup_type, br_error_details, br_exception_message, sql_error_message'
+- id: MI-backup_restore-422
+  Topic: Backups-are-missing(slash)Restore-failing-due-to-missing-backups
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Automated-backups-or-point%2Din%2Dtime-restore/Backups-are-missing(slash)Restore-failing-due-to-missing-backups.md
+  Prompts:
+  - MI Backups-are-missing(slash)Restore-failing-due-to-missing-backups
+  - Managed Instance Backups-are-missing(slash)Restore-failing-due-to-missing-backups
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where LogicalServerName == ""{ServerName}""
+
+      | where message contains "Backup("{DatabaseName}"): BACKUP DATABASE started" or message contains "Backup("{DatabaseName}"): BACKUP DATABASE finished"
+
+      | extend flag = iff(message contains "Backup("{DatabaseName}"): BACKUP DATABASE started", 0, 1)
+
+      | summarize by TIMESTAMP, flag
+
+      | render timechart'
+- id: MI-backup_restore-423
+  Topic: Earliest-Restore-Time-not-available-for-existing-databases
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Automated-backups-or-point%2Din%2Dtime-restore/Earliest-Restore-Time-not-available-for-existing-databases.md
+  Prompts:
+  - MI Earliest-Restore-Time-not-available-for-existing-databases
+  - Managed Instance Earliest-Restore-Time-not-available-for-existing-databases
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonBackup
+    ExecutedQuery: 'MonBackup
+
+      | where originalEventTimestamp >= ago (1d)
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where database_name =~ "{DatabaseName}"
+
+      | where event_type == "BACKUP_START" or event_type == "BACKUP_END"
+
+      | summarize count() by LogicalServerName, database_name, event_type, backup_type'
+- id: MI-backup_restore-424
+  Topic: Get-Backup-information
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Automated-backups-or-point%2Din%2Dtime-restore/Get-Backup-information.md
+  Prompts:
+  - MI Get-Backup-information
+  - Managed Instance Get-Backup-information
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonBackup
+    ExecutedQuery: 'let MIName = "{ServerName}";
+MonBackup
+
+      | where TIMESTAMP > lookBack
+
+      | where logical_server_name =~ MIName
+
+      | where backup_type =~ backuptype or backuptype == ''''
+
+      | where event_type == ''BACKUP_METADATA_DETAILS''
+
+      | where toupper(logical_database_id) == toupper(logical_database_name)//To include system DBs, comment this line
+
+      | extend BackupSizeMB = round(todecimal(backup_size)/1024/1024,2)
+
+      | extend backup_size_GB = round(todecimal(backup_size)/1024/1024/1024,2)
+
+      | project PreciseTimeStamp, logical_database_id=tolower(logical_database_name), BackupSizeMB, backup_size_GB, backup_start_date, backup_end_date, backup_type
+
+      | join kind=leftouter
+
+      ('
+- id: MI-backup_restore-425
+  Topic: Get-Backup-information
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Automated-backups-or-point%2Din%2Dtime-restore/Get-Backup-information.md
+  Prompts:
+  - MI Get-Backup-information
+  - Managed Instance Get-Backup-information
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: 'let MIName = "{ServerName}";
+MonAnalyticsDBSnapshot
+
+      | where logical_server_name =~ MIName
+
+      | summarize arg_max(TIMESTAMP,*) by logical_database_id
+
+      | project logical_database_id=tolower(logical_database_id), logical_database_name
+
+      ) on logical_database_id
+
+      | extend DatabaseName = iif(logical_database_name != '''', logical_database_name, logical_database_id)
+
+      | project PreciseTimeStamp, logical_database_id, DatabaseName, backup_type, BackupSizeMB, backup_size_GB, backup_start_date, backup_end_date
+
+      | order by DatabaseName, PreciseTimeStamp'
+- id: MI-backup_restore-426
+  Topic: Get-Restore-information
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Automated-backups-or-point%2Din%2Dtime-restore/Get-Restore-information.md
+  Prompts:
+  - MI Get-Restore-information
+  - Managed Instance Get-Restore-information
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonRestoreEvents
+    ExecutedQuery: 'MonRestoreEvents
+
+      |where TIMESTAMP >=ago({TimeRange})
+
+      |where TIMESTAMP <now()
+
+      //|where restore_request_id contains "26fddf01-c552-4600-9f49-859925a37eb2" //If we have the restore request id we should use it instead of using the LogicalServerName
+
+      | where LogicalServerName == ""{ServerName}""
+
+      //| where restore_database_progress contains "Executing restore query RESTORE DATABASE" //uncomment this line to get the database id without having to look in all the output
+
+      | project originalEventTimestamp, LogicalServerName, AppName, event, restore_database_progress, message, restore_configuration_info, restore_database_result, exception_type, stack_trace, level'
+- id: MI-backup_restore-427
+  Topic: Get-Restore-information
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Automated-backups-or-point%2Din%2Dtime-restore/Get-Restore-information.md
+  Prompts:
+  - MI Get-Restore-information
+  - Managed Instance Get-Restore-information
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where AppName ==""
+
+      |where TIMESTAMP >=ago({TimeRange})
+
+      |where TIMESTAMP <now()
+
+      |where message contains "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" //database name while restoring, get it from MonRestoreEvents
+
+      | where message contains "restore"'
+- id: MI-backup_restore-428
+  Topic: Initial-Backup-Delay-After-Database-Creation
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Automated-backups-or-point%2Din%2Dtime-restore/Initial-Backup-Delay-After-Database-Creation.md
+  Prompts:
+  - MI Initial-Backup-Delay-After-Database-Creation
+  - Managed Instance Initial-Backup-Delay-After-Database-Creation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonBackup
+    ExecutedQuery: 'let startTime = ago({TimeRange});
+MonBackup
+
+      | where originalEventTimestamp >= startTime
+
+      | where LogicalServerName contains "{ServerName}"
+
+      | where event_type in (''BACKUP_START'',''BACKUP_END'')
+
+      //| where logical_database_name =~ "{DatabaseName}"
+
+      | extend db_Id=toupper(database_name)
+
+      | where backup_type == ''Full''
+
+      | project originalEventTimestamp, backup_start_date, backup_end_date, db_Id, logical_database_name, event, event_type, backup_type, physical_database_id, sql_error_number, sql_error_severity, sql_error_state,
+      sql_error_message
+
+      | join kind=leftouter (MonAnalyticsDBSnapshot
+
+      | where TIMESTAMP >= startTime
+
+      | where logical_server_name =~ serverName
+
+      | summarize max_timestamp = max(TIMESTAMP) by DatabaseName=logical_database_name, db_Id=toupper(logical_database_id)
+
+      ) on db_Id
+
+      | project TIMESTAMP_UTC = originalEventTimestamp, logical_database_name, DatabaseName, event_type, backup_type, sql_error_number, sql_error_severity, sql_error_state, sql_error_message'
+- id: MI-backup_restore-431
+  Topic: Log-backups-were-skipped
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Automated-backups-or-point%2Din%2Dtime-restore/Log-backups-were-skipped.md
+  Prompts:
+  - MI Log-backups-were-skipped
+  - Managed Instance Log-backups-were-skipped
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: 'MonWiQdsExecStats
+
+      | where LogicalServerName =~ ''{ServerName}''
+
+      | where originalEventTimestamp >= ago(2d)
+
+      | summarize sum(execution_count) by bin(TIMESTAMP, 1h), database_name
+
+      | render timechart'
+- id: MI-backup_restore-432
+  Topic: PITR-Backup-Billing-Charges-%2D-Investigation
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Automated-backups-or-point%2Din%2Dtime-restore/PITR-Backup-Billing-Charges-%2D-Investigation.md
+  Prompts:
+  - MI MI PITR Backup Billing Charges   Investigation
+  - Managed Instance PITR-Backup-Billing-Charges---Investigation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'let serverName = "{ServerName}";
+MonManagedServers
+
+      | where name =~ "{ServerName}"
+
+      | project snapshot_time = start_utc_date, state, reserved_storage_size_gb, backup_storage_usage_gb
+
+      | order by snapshot_time asc
+
+      | where reserved_storage_size_gb != prev(reserved_storage_size_gb)
+
+      or backup_storage_usage_gb != prev(backup_storage_usage_gb)
+
+      | render timechart'
+- id: MI-backup_restore-433
+  Topic: PITR-Backup-Billing-Charges-%2D-Investigation
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Automated-backups-or-point%2Din%2Dtime-restore/PITR-Backup-Billing-Charges-%2D-Investigation.md
+  Prompts:
+  - MI MI PITR Backup Billing Charges   Investigation
+  - Managed Instance PITR-Backup-Billing-Charges---Investigation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'let serverName = "{ServerName}";
+MonManagedServers
+
+      | where name =~ "{ServerName}"
+
+      | summarize arg_max(end_utc_date, state, reserved_storage_size_gb, backup_storage_usage_gb)'
+- id: MI-backup_restore-434
+  Topic: PITR-Backup-Billing-Charges-%2D-Investigation
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Automated-backups-or-point%2Din%2Dtime-restore/PITR-Backup-Billing-Charges-%2D-Investigation.md
+  Prompts:
+  - MI MI PITR Backup Billing Charges   Investigation
+  - Managed Instance PITR-Backup-Billing-Charges---Investigation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'let endTime = now();
+let serverName = "{ServerName}";
+MonManagedServers
+
+      | where start_utc_date between ((endTime - 6h) .. endTime)
+
+      | where name =~ "{ServerName}" and dropped_date == datetime(1601-01-01 00:00:00.0000000)
+
+      | distinct managed_server_id
+
+      | take 1);
+
+      let DatabaseInfo ='
+- id: MI-backup_restore-435
+  Topic: PITR-Backup-Billing-Charges-%2D-Investigation
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Automated-backups-or-point%2Din%2Dtime-restore/PITR-Backup-Billing-Charges-%2D-Investigation.md
+  Prompts:
+  - MI MI PITR Backup Billing Charges   Investigation
+  - Managed Instance PITR-Backup-Billing-Charges---Investigation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedDatabases
+    ExecutedQuery: 'let endTime = now();
+MonManagedDatabases
+
+      | where end_utc_date <= endTime
+
+      | where managed_server_id == ManagedServerId
+
+      | summarize arg_max(start_utc_date, *) by managed_database_id
+
+      | where dropped_time == datetime(1601-01-01 00:00:00.0000000) or dropped_time >= ago(droppedDatabaseRetention)
+
+      | extend logical_database_id = case(
+
+      database_type == ''SQL.ManagedReplicatedMasterDb'', ''00000000-0000-0000-0000-000000032763''
+
+      database_type == ''SQL.ManagedModelDb'', ''00000000-0000-0000-0000-000000032760''
+
+      database_type == ''SQL.Msdb'', ''00000000-0000-0000-0000-000000000004''
+
+      managed_database_id)
+
+      | project snapshot_time = start_utc_date, managed_database_name, logical_database_id, managed_database_id, state, create_mode, created_time, dropped_time, first_backup_time, backup_retention_days
+
+      | order by created_time asc;'
+- id: MI-backup_restore-436
+  Topic: PITR-Backup-Billing-Charges-%2D-Investigation
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Automated-backups-or-point%2Din%2Dtime-restore/PITR-Backup-Billing-Charges-%2D-Investigation.md
+  Prompts:
+  - MI MI PITR Backup Billing Charges   Investigation
+  - Managed Instance PITR-Backup-Billing-Charges---Investigation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonBackup
+    ExecutedQuery: 'let endTime = now();
+MonBackup
+
+      | where originalEventTimestamp <= endTime
+
+      | where LogicalServerName == "{ServerName}"
+
+      | where event_type == ''BACKUP_METADATA_DETAILS''
+
+      | project originalEventTimestamp, logical_database_id, backup_type, backup_size_GB = todouble(backup_size) / 1024. / 1024. / 1024., backup_relative_path
+
+      | extend backup_chain = todatetime(extract(@''/(Full|Diff|Log)/(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2})'', 2, backup_relative_path))
+
+      | summarize
+
+      last_log_backup_time = maxif(originalEventTimestamp, backup_type == ''Log''),
+
+      full_backup_count = countif(backup_type == ''Full''),
+
+      diff_backup_count = countif(backup_type == ''Diff''),
+
+      log_backup_count = countif(backup_type == ''Log''),
+
+      full_backup_size = sumif(backup_size_GB, backup_type == ''Full''),
+
+      diff_backup_size = sumif(backup_size_GB, backup_type == ''Diff''),
+
+      log_backup_size = sumif(backup_size_GB, backup_type == ''Log'')
+
+      by logical_database_id, backup_chain
+
+      | where full_backup_count > 0
+
+      | lookup kind = inner DatabaseInfo on logical_database_id
+
+      | where last_log_backup_time >= datetime_add(''day'', -backup_retention_days, now())
+
+      | order by logical_database_id asc, backup_chain asc
+
+      | summarize
+
+      last_backup_chain = arg_max(backup_chain, snapshot_time, managed_database_name, managed_database_id, state, create_mode, created_time, dropped_time, first_backup_time, backup_retention_days),
+
+      backup_chain_count = count(),
+
+      last_log_backup_time = max(last_log_backup_time),
+
+      full_backup_count = sum(full_backup_count),
+
+      diff_backup_count = sum(diff_backup_count),
+
+      log_backup_count = sum(log_backup_count),
+
+      full_backup_size = sum(full_backup_size),
+
+      diff_backup_size = sum(diff_backup_size),
+
+      log_backup_size = sum(log_backup_size)'
+- id: MI-backup_restore-437
+  Topic: Restore-error-%2D-Restore-plan-is-broken
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Automated-backups-or-point%2Din%2Dtime-restore/Restore-error-%2D-Restore-plan-is-broken.md
+  Prompts:
+  - MI MI Restore error   Restore plan is broken
+  - Managed Instance Restore-error---Restore-plan-is-broken
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagementOperations
+    ExecutedQuery: 'MonManagementOperations
+
+      | where TIMESTAMP >= ago(3d)
+
+      | where operation_parameters contains "{ServerName}"
+
+      | where operation_type == ''CreateManagedRestoreRequest''
+
+      | extend pointintime = parse_xml(operation_parameters).InputParameters.PointInTime
+
+      | extend OperationDetails = parse_xml(operation_result).OutputParameters.OperationDetails
+
+      | project TIMESTAMP , request_id , operation_type , event, elapsed_time, error_code , error_severity , error_message, pointintime , OperationDetails, operation_parameters , operation_result'
+- id: MI-backup_restore-438
+  Topic: Restore-taking-too-long-%2D-Roll%2DForward
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Automated-backups-or-point%2Din%2Dtime-restore/Restore-taking-too-long-%2D-Roll%2DForward.md
+  Prompts:
+  - MI MI Restore taking too long   Roll Forward
+  - Managed Instance Restore-taking-too-long---Roll-Forward
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where AppName =="xxxxx"
+
+      | where TIMESTAMP >=ago({TimeRange})
+
+      | where TIMESTAMP <now()
+
+      | project message'
+- id: MI-backup_restore-439
+  Topic: Restore-taking-too-long-%2D-Roll%2DForward
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Automated-backups-or-point%2Din%2Dtime-restore/Restore-taking-too-long-%2D-Roll%2DForward.md
+  Prompts:
+  - MI MI Restore taking too long   Roll Forward
+  - Managed Instance Restore-taking-too-long---Roll-Forward
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRecoveryTrace
+    ExecutedQuery: 'MonRecoveryTrace
+
+      | where TIMESTAMP between (v_start_time .. v_end_time)
+
+      | where event == "buffer_pool_flush_cache"
+
+      | where AppName == v_appname
+
+      | project TIMESTAMP, AppTypeName, LogicalServerName, AppName, NodeName, database_id, parallel_tasks, elapsed_time_ms, wait_time_ms, total_writes, pages_written, total_iterated_buffers
+
+      toint(average_throughput_per_second), toint(average_writes_per_second), checkpoint_rate_mb, checkpoint_rate_iops, io_throttle_stalls, io_throttle_stall_ms, io_saturation
+
+      | sort by TIMESTAMP asc
+
+      **pages_written column from the results indicates how many pages were Redone. If more than 100k pages were redone, that is a lot.'
+- id: MI-backup_restore-440
+  Topic: Transaction-Log-full-due-to-backups
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Automated-backups-or-point%2Din%2Dtime-restore/Transaction-Log-full-due-to-backups.md
+  Prompts:
+  - MI Transaction-Log-full-due-to-backups
+  - Managed Instance Transaction-Log-full-due-to-backups
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonBackup
+    ExecutedQuery: 'MonBackup
+
+      | where logical_server_name =~ ''"{ServerName}"''
+
+      | where event_type == ''BACKUP_METADATA_DETAILS''
+
+      | summarize max(PreciseTimeStamp) by logical_database_name, backup_type
+
+      | order by logical_database_name'
+- id: MI-backup_restore-441
+  Topic: Transaction-Log-full-due-to-backups
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Automated-backups-or-point%2Din%2Dtime-restore/Transaction-Log-full-due-to-backups.md
+  Prompts:
+  - MI Transaction-Log-full-due-to-backups
+  - Managed Instance Transaction-Log-full-due-to-backups
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where TIMESTAMP > ago({TimeRange}) //place the same timestamp as the last backup
+
+      | where SubscriptionId =~ ""{SubscriptionId}""
+
+      | where LogicalServerName =~ ""{ServerName}""
+
+      | where message contains "corruption in database"
+
+      | project originalEventTimestamp, LogicalServerName, AppName, SubscriptionId, message'
+- id: MI-backup_restore-442
+  Topic: '[One-Pager]-Restore-taking-too-long-%2D-Roll%2DForward'
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Automated-backups-or-point%2Din%2Dtime-restore/[One-Pager]-Restore-taking-too-long-%2D-Roll%2DForward.md
+  Prompts:
+  - MI MI [One Pager] Restore taking too long   Roll Forward
+  - Managed Instance [One-Pager]-Restore-taking-too-long---Roll-Forward
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRestoreEvents
+    ExecutedQuery: 'MonRestoreEvents
+
+      | where restore_request_id contains "ee84363e-80a1-45e6-84c1-e341358ce3cd"
+
+      | where restore_database_progress contains "has been restored in"
+
+      | project TIMESTAMP, restore_database_progress
+
+      uncompressed_backup_size_GB = round(tolong(uncompressed_backup_size) / 1024. / 1024. / 1024., 3)
+
+      compressed_backup_size_GB = round(tolong(compressed_backup_size) / 1024. / 1024. / 1024., 3)'
+- id: MI-backup_restore-444
+  Topic: Backup-aborted-%2D-Execution-Timeout-Expired
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Backup-database-to-URL/Backup-aborted-%2D-Execution-Timeout-Expired.md
+  Prompts:
+  - MI MI Backup aborted   Execution Timeout Expired
+  - Managed Instance Backup-aborted---Execution-Timeout-Expired
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonBackup
+    ExecutedQuery: 'MonBackup
+
+      | where originalEventTimestamp >= ago(10d)
+
+      | where LogicalServerName =~ ''{MIName}''
+
+      | where logical_database_id =~ ''{logical_database_guid}''
+
+      | where event =~ "database_backup" and event_type != "BACKUP_SKIPPED_DATABASE_BACKUP" // and event_type =~ "backup_end"
+
+      | where backup_type =~ "full"
+
+      | project originalEventTimestamp, event_type, backup_path, sql_query'
+- id: MI-backup_restore-445
+  Topic: Error%3A-1117-(The-request-could-not-be-performed-because-of-an-IO-device-error)-In-Azure-SQLMI
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Backup-database-to-URL/Error%3A-1117-(The-request-could-not-be-performed-because-of-an-IO-device-error)-In-Azure-SQLMI.md
+  Prompts:
+  - MI MI Error: 1117 (The request could not be performed because of an IO device error) In Azure SQLMI
+  - Managed Instance Error:-1117-(The-request-could-not-be-performed-because-of-an-IO-device-error)-In-Azure-SQLMI
+  CustomizedParameters:
+  - AppName
+  - ClusterName
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where AppName == {AppName}
+
+      | where ClusterName =~ "{ClusterName}"
+
+      | wherewhere (TIMESTAMP >= {StartDateTime} and TIMESTAMP <= {EndDateTime})
+
+      or (PreciseTimeStamp >= {StartDateTime} and PreciseTimeStamp <= {EndDateTime})
+
+      or (originalEventTimestamp >= {StartDateTime} and originalEventTimestamp <= {EndDateTime})
+
+      | where message has "spid323"
+
+      | project message'
+- id: MI-backup_restore-446
+  Topic: Error%3A-1117-(The-request-could-not-be-performed-because-of-an-IO-device-error)-In-Azure-SQLMI
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Backup-database-to-URL/Error%3A-1117-(The-request-could-not-be-performed-because-of-an-IO-device-error)-In-Azure-SQLMI.md
+  Prompts:
+  - MI MI Error: 1117 (The request could not be performed because of an IO device error) In Azure SQLMI
+  - Managed Instance Error:-1117-(The-request-could-not-be-performed-because-of-an-IO-device-error)-In-Azure-SQLMI
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmIoVirtualFileStats
+    ExecutedQuery: 'MonDmIoVirtualFileStats
+
+      | where TIMESTAMP >= {StartDateTime} and TIMESTAMP <= {EndDateTime}
+
+      | where LogicalServerName == "{ServerName}"
+
+      | extend spaceused_gb = spaceused_mb*1.0/(1024)
+
+      | where db_name =~ ''D062375D-3A94-4AB7-9560-2E954742E848'' //collected database_logical_id from ASC
+
+      | project TIMESTAMP, LogicalServerName, db_name, logical_database_id, spaceused_gb'
+- id: MI-backup_restore-447
+  Topic: Error-41937%3A-BACKUP-WITH-COPY_ONLY-cannot-be-performed-until-after-the-next-automatic-BACKUP-LOG-operation
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Backup-database-to-URL/Error-41937%3A-BACKUP-WITH-COPY_ONLY-cannot-be-performed-until-after-the-next-automatic-BACKUP-LOG-operation.md
+  Prompts:
+  - MI MI Error 41937: BACKUP WITH COPY_ONLY cannot be performed until after the next automatic BACKUP LOG operation
+  - Managed Instance Error-41937:-BACKUP-WITH-COPY_ONLY-cannot-be-performed-until-after-the-next-automatic-BACKUP-LOG-operation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'MonManagedServers
+
+      | where LogicalServerName == {MIName} or name == {MIName}
+
+      | summarize arg_min(TIMESTAMP,*) by  encryption_protector_type'
+- id: MI-backup_restore-448
+  Topic: Error-41937%3A-BACKUP-WITH-COPY_ONLY-cannot-be-performed-until-after-the-next-automatic-BACKUP-LOG-operation
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Backup-database-to-URL/Error-41937%3A-BACKUP-WITH-COPY_ONLY-cannot-be-performed-until-after-the-next-automatic-BACKUP-LOG-operation.md
+  Prompts:
+  - MI MI Error 41937: BACKUP WITH COPY_ONLY cannot be performed until after the next automatic BACKUP LOG operation
+  - Managed Instance Error-41937:-BACKUP-WITH-COPY_ONLY-cannot-be-performed-until-after-the-next-automatic-BACKUP-LOG-operation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDatabaseEncryptionKeys
+    ExecutedQuery: 'MonDatabaseEncryptionKeys
+
+      | where TIMESTAMP >= {StartDateTime} and TIMESTAMP <= {EndDateTime}
+
+      | where LogicalServerName == {MIName}
+
+      | where logical_database_id =~ {DB_guid}
+
+      | project TIMESTAMP, LogicalServerName, logical_database_id, database_id, is_encrypted, encryption_state'
+- id: MI-backup_restore-449
+  Topic: Error-41937%3A-BACKUP-WITH-COPY_ONLY-cannot-be-performed-until-after-the-next-automatic-BACKUP-LOG-operation
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Backup-database-to-URL/Error-41937%3A-BACKUP-WITH-COPY_ONLY-cannot-be-performed-until-after-the-next-automatic-BACKUP-LOG-operation.md
+  Prompts:
+  - MI MI Error 41937: BACKUP WITH COPY_ONLY cannot be performed until after the next automatic BACKUP LOG operation
+  - Managed Instance Error-41937:-BACKUP-WITH-COPY_ONLY-cannot-be-performed-until-after-the-next-automatic-BACKUP-LOG-operation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonFabricThrottle
+    ExecutedQuery: 'MonFabricThrottle
+
+      | where TIMESTAMP >= {StartDateTime} and TIMESTAMP <= {EndDateTime}
+
+      | where LogicalServerName == {MIName}
+
+      | where database_name == {DB_guid}
+
+      | summarize count() by bin(TIMESTAMP,1h), log_truncation_holdup'
+- id: MI-backup_restore-450
+  Topic: Error-41937%3A-BACKUP-WITH-COPY_ONLY-cannot-be-performed-until-after-the-next-automatic-BACKUP-LOG-operation
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Backup-database-to-URL/Error-41937%3A-BACKUP-WITH-COPY_ONLY-cannot-be-performed-until-after-the-next-automatic-BACKUP-LOG-operation.md
+  Prompts:
+  - MI MI Error 41937: BACKUP WITH COPY_ONLY cannot be performed until after the next automatic BACKUP LOG operation
+  - Managed Instance Error-41937:-BACKUP-WITH-COPY_ONLY-cannot-be-performed-until-after-the-next-automatic-BACKUP-LOG-operation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonBackup
+    ExecutedQuery: 'MonBackup
+
+      | where originalEventTimestamp > ago(6h)
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where database_name =~ "{DatabaseName}"
+
+      | where backup_type == ''Log''
+
+      | where event_type in (''BACKUP_START'', ''BACKUP_END'', ''BACKUP_SKIPPED_DATABASE_BACKUP'', ''BACKUP_COPY_LOG_FAILED'') or (event_type contains ''ERROR'' and event_type !contains ''METADATA'')
+
+      | project DB_backup = strcat(database_name,''___'', backup_type), originalEventTimestamp,
+
+      case(event_type == ''BACKUP_START'', 0,
+
+      event_type == ''BACKUP_END'', 1,
+
+      event_type == ''BACKUP_SKIPPED_DATABASE_BACKUP'', 2,
+
+      event_type contains ''ERROR'' or event_type == ''BACKUP_COPY_LOG_FAILED'', -1,
+
+      5)
+
+      | render timechart'
+- id: MI-backup_restore-451
+  Topic: Error-41937%3A-BACKUP-WITH-COPY_ONLY-cannot-be-performed-until-after-the-next-automatic-BACKUP-LOG-operation
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Backup-database-to-URL/Error-41937%3A-BACKUP-WITH-COPY_ONLY-cannot-be-performed-until-after-the-next-automatic-BACKUP-LOG-operation.md
+  Prompts:
+  - MI MI Error 41937: BACKUP WITH COPY_ONLY cannot be performed until after the next automatic BACKUP LOG operation
+  - Managed Instance Error-41937:-BACKUP-WITH-COPY_ONLY-cannot-be-performed-until-after-the-next-automatic-BACKUP-LOG-operation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmLogSpaceInfo
+    ExecutedQuery: 'MonDmLogSpaceInfo
+
+      | where TIMESTAMP between (datetime(2023-09-08 19:05:30) .. datetime(2023-09-09 12:05:30))
+
+      | where instance_name startswith ''95C51E8F-1376-4B37-97BB-EB0760AA77D4'' and counter_name  startswith "Log File(s) Used Size (KB)" //and instance_name is logical_database_id
+
+      | project end_utc_date, SpaceusedGB = cntr_value/1024.0/1024.0
+
+      | render timechart
+
+      Notice a few things here (from top to bottom):'
+- id: MI-backup_restore-452
+  Topic: Error-41937%3A-BACKUP-WITH-COPY_ONLY-cannot-be-performed-until-after-the-next-automatic-BACKUP-LOG-operation
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Backup-database-to-URL/Error-41937%3A-BACKUP-WITH-COPY_ONLY-cannot-be-performed-until-after-the-next-automatic-BACKUP-LOG-operation.md
+  Prompts:
+  - MI MI Error 41937: BACKUP WITH COPY_ONLY cannot be performed until after the next automatic BACKUP LOG operation
+  - Managed Instance Error-41937:-BACKUP-WITH-COPY_ONLY-cannot-be-performed-until-after-the-next-automatic-BACKUP-LOG-operation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogReaderTraces
+    ExecutedQuery: 'MonLogReaderTraces
+
+      //| where originalEventTimestamp > ago(6h)  //uncommment if looking for a specific time
+
+      | where LogicalServerName =~ ''{ServerName}''
+
+      | where logical_database_name =~ ''{DatabaseName}'''
+- id: MI-backup_restore-453
+  Topic: Error-41937%3A-BACKUP-WITH-COPY_ONLY-cannot-be-performed-until-after-the-next-automatic-BACKUP-LOG-operation
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Backup-database-to-URL/Error-41937%3A-BACKUP-WITH-COPY_ONLY-cannot-be-performed-until-after-the-next-automatic-BACKUP-LOG-operation.md
+  Prompts:
+  - MI MI Error 41937: BACKUP WITH COPY_ONLY cannot be performed until after the next automatic BACKUP LOG operation
+  - Managed Instance Error-41937:-BACKUP-WITH-COPY_ONLY-cannot-be-performed-until-after-the-next-automatic-BACKUP-LOG-operation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCDCTraces
+    ExecutedQuery: 'MonCDCTraces
+
+      | where LogicalServerName =~ ''{ServerName}''
+
+      | where logical_database_name =~ ''{DatabaseName}'''
+- id: MI-backup_restore-454
+  Topic: '[One-Pager]-Error%3A-3023-when-executing-copy_only-Backup-to-URL'
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Backup-database-to-URL/[One-Pager]-Error%3A-3023-when-executing-copy_only-Backup-to-URL.md
+  Prompts:
+  - MI MI [One Pager] Error: 3023 when executing copy_only Backup to URL
+  - Managed Instance [One-Pager]-Error:-3023-when-executing-copy_only-Backup-to-URL
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where PreciseTimeStamp >= ago({TimeRange})
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      |where message contains "error: 3023"
+
+      |project PreciseTimeStamp, message'
+- id: MI-backup_restore-455
+  Topic: '[One-Pager]-Error%3A-3023-when-executing-copy_only-Backup-to-URL'
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Backup-database-to-URL/[One-Pager]-Error%3A-3023-when-executing-copy_only-Backup-to-URL.md
+  Prompts:
+  - MI MI [One Pager] Error: 3023 when executing copy_only Backup to URL
+  - Managed Instance [One-Pager]-Error:-3023-when-executing-copy_only-Backup-to-URL
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonBackup
+    ExecutedQuery: 'MonBackup
+
+      | where PreciseTimeStamp >= ago({TimeRange})
+
+      | where PreciseTimeStamp <= now()
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where event == "database_backup"
+
+      | where database_name =~ "{DatabaseName}" //logical database guid
+
+      | where backup_type == "Diff"
+
+      |project PreciseTimeStamp, event_type'
+- id: MI-backup_restore-456
+  Topic: Backup-retention-policy-keeps-Loading-on-portal
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/How-to-questions-or-planning-a-recovery-strategy/Backup-retention-policy-keeps-Loading-on-portal.md
+  Prompts:
+  - MI Backup-retention-policy-keeps-Loading-on-portal
+  - Managed Instance Backup-retention-policy-keeps-Loading-on-portal
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: 'MonAnalyticsDBSnapshot
+
+      | where PreciseTimeStamp >= ago(2d)
+
+      | where logical_server_name == {MIName}
+
+      | summarize by logical_database_name, customer_subscription_id, resource_group, logical_server_name, service_level_objective, state
+
+      | project Database = logical_database_name
+
+      SLO = service_level_objective
+
+      FsmState = state'
+- id: MI-backup_restore-458
+  Topic: Change-LTR-backup-schedule
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Long%2Dterm-backup-retention/Change-LTR-backup-schedule.md
+  Prompts:
+  - MI Change-LTR-backup-schedule
+  - Managed Instance Change-LTR-backup-schedule
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonBackup
+    ExecutedQuery: 'MonBackup
+
+      | where SubscriptionId =~ {subscriptionId}
+
+      | where LogicalServerName =~ {MIName}
+
+      | where isempty('''') or logical_database_id =~ ''''
+
+      | where event_type == ''BACKUP_LTR_COPY_START''
+
+      | join kind= leftouter
+
+      ('
+- id: MI-backup_restore-460
+  Topic: Change-LTR-backup-schedule
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Long%2Dterm-backup-retention/Change-LTR-backup-schedule.md
+  Prompts:
+  - MI Change-LTR-backup-schedule
+  - Managed Instance Change-LTR-backup-schedule
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: 'MonAnalyticsDBSnapshot
+
+      | where logical_server_name =~ {MIName}
+
+      | summarize arg_max(TIMESTAMP, logical_database_name) by logical_database_id
+
+      | extend logical_database_id = tolower(logical_database_id)
+
+      ) on logical_database_id
+
+      | project-rename Database = logical_database_name
+
+      | project Start, End, Database, logical_database_id, Result, ExceptionMessage, StackTrace'
+- id: MI-backup_restore-461
+  Topic: Customer-not-able-to-see-LTR
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Long%2Dterm-backup-retention/Customer-not-able-to-see-LTR.md
+  Prompts:
+  - MI Customer-not-able-to-see-LTR
+  - Managed Instance Customer-not-able-to-see-LTR
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLtrConfiguration
+    ExecutedQuery: 'MonLtrConfiguration
+
+      | where logical_server_name == ''{ServerName}''
+
+      | where logical_database_name == ''{DatabaseName}'' //Database for which the customer expects to have an LTR'
+- id: MI-backup_restore-462
+  Topic: Delete-LTR-backup-is-long-running
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Long%2Dterm-backup-retention/Delete-LTR-backup-is-long-running.md
+  Prompts:
+  - MI Delete-LTR-backup-is-long-running
+  - Managed Instance Delete-LTR-backup-is-long-running
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonthlyRetention
+    ExecutedQuery: '| 2025-10-13 15:19:19.2503666 | 30C73065-04D1-4087-A9F2-70B1651585AF | DeleteLTRBackup | management_operation_start | <?xml version="1.0"?>  
+<InputParameters xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">  
+"{RequestId}"30c73065-04d1-4087-a9f2-70b1651585af</RequestId >  
+"{ServerName}"MI-Name</LogicalServerName >  
+"{DatabaseName}"Database-Name</LogicalDatabaseName >  
+"{ManagedServerId}"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx</LogicalServerId >  
+"{DatabaseGuid}"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx</LogicalDatabaseId >  
+<OperationType>DeleteLTRBackup</OperationType >  
+"{SubscriptionId}"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx</SubscriptionId >  
+"{SubscriptionId}"00000000-0000-0000-0000-000000000000</VaultSubscriptionId >  
+<IsEnablePolicy>false</IsEnablePolicy >  
+<WeeklyRetention>PT0S</WeeklyRetention >  
+<MonthlyRetention>PT0S</MonthlyRetention >  
+<YearlyRetention>PT0S</YearlyRetention >  
+<WeekOfYear>0</WeekOfYear >  
+<span
+      style=''background:yellow; color:red''>ago({TimeRange})1643-06-05T18:23:29.5Z</BackupTime></span >  
+<ServerType>ManagedInstance</ServerType >  
+<ForceUpdate>false</ForceUpdate >  
+<BackupStorageAccessTier>Hot</BackupStorageAccessTier >  
+<MakeBackupsImmutable>false</MakeBackupsImmutable >  
+<HasLegalHold>false</HasLegalHold >  
+<IsImmutabilityLocked>false</IsImmutabilityLocked >  
+</InputParameters >       |'
+- id: MI-backup_restore-463
+  Topic: Troubleshooting-LTR-backups
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Long%2Dterm-backup-retention/Troubleshooting-LTR-backups.md
+  Prompts:
+  - MI Troubleshooting-LTR-backups
+  - Managed Instance Troubleshooting-LTR-backups
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonBackup
+    ExecutedQuery: 'MonBackup
+
+      | where AppName == ''{AppName}''
+
+      | where details contains ''[LTR'''
+- id: MI-backup_restore-464
+  Topic: Troubleshooting-LTR-billing
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Long%2Dterm-backup-retention/Troubleshooting-LTR-billing.md
+  Prompts:
+  - MI Troubleshooting-LTR-billing
+  - Managed Instance Troubleshooting-LTR-billing
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonBillingLtrBackup
+    ExecutedQuery: 'MonBillingLtrBackup
+
+      | where server_name =~ ''{ServerName}''
+
+      // | where database_name =~ ''{DatabaseName}''
+
+      | where server_type == ''ManagedInstance''
+
+      | project originalEventTimestamp, server_name, database_name, server_id, database_id, max_size_mb, server_type, storage_account_type'
+- id: MI-backup_restore-465
+  Topic: Troubleshooting-LTR-restore-issue
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Long%2Dterm-backup-retention/Troubleshooting-LTR-restore-issue.md
+  Prompts:
+  - MI Troubleshooting-LTR-restore-issue
+  - Managed Instance Troubleshooting-LTR-restore-issue
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagementOperations
+    ExecutedQuery: 'MonManagementOperations
+
+      | where TIMESTAMP > datetime({StartTime}) and TIMESTAMP < datetime({EndTime})
+
+      | where operation_type == ''CreateManagedRestoreFromLtrBackupRequest''
+
+      | where event == ''management_operation_start''
+
+      | extend inputParams = parse_xml(operation_parameters)
+
+      | extend restore_request_id = inputParams.InputParameters.RestoreId
+
+      | extend TargetServerName = inputParams.InputParameters.TargetManagedServerName
+
+      | extend TargetDatabaseName = inputParams.InputParameters.TargetManagedDatabaseName
+
+      | extend ArchivedBackupResourceId = inputParams.InputParameters.ArchivedBackupResourceId
+
+      | extend StartTime = originalEventTimestamp
+
+      | extend SourceServer = extract(''/longTermRetentionManagedInstances/(.*)/longTermRetentionDatabases/'', 1, operation_parameters)
+
+      | extend SourceDatabase = extract(''/longTermRetentionDatabases/(.*)/longTermRetentionManagedInstanceBackups/'', 1, operation_parameters)
+
+      | project request_id, restore_request_id, StartTime, TargetServerName, TargetDatabaseName, ArchivedBackupResourceId, SourceServer, SourceDatabase
+
+      | where TargetServerName =~ ''{ServerName}'' or SourceServer =~ ''{ServerName}''
+
+      | where isempty(''{DatabaseName}'') or TargetDatabaseName =~ ''{DatabaseName}'' or SourceDatabase =~ ''{DatabaseName}''
+
+      | join ('
+- id: MI-backup_restore-466
+  Topic: Troubleshooting-LTR-restore-issue
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Long%2Dterm-backup-retention/Troubleshooting-LTR-restore-issue.md
+  Prompts:
+  - MI Troubleshooting-LTR-restore-issue
+  - Managed Instance Troubleshooting-LTR-restore-issue
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagementOperations
+    ExecutedQuery: 'MonManagementOperations
+
+      | where operation_type == ''CreateManagedRestoreFromLtrBackupRequest''
+
+      | where event contains ''management_operation_''
+
+      | where event !in (''management_operation_start'', ''management_operation_progress'')
+
+      | extend EndTime = originalEventTimestamp
+
+      | extend end_event = event
+
+      | extend opResult = parse_xml(operation_result)
+
+      | extend OperationDetails = opResult.OutputParameters.OperationDetails
+
+      | extend CreatedDate = opResult.OutputParameters.CreatedDate
+
+      | extend Result=replace(@''management_operation_*'', @''\1'', event)
+
+      ) on request_id
+
+      | project StartTime, EndTime, Result, request_id, restore_request_id
+
+      , TargetDatabaseName, SourceServer, SourceDatabase, OperationDetails, CreatedDate, ArchivedBackupResourceId
+
+      , error_message, error_classification
+
+      | sort by StartTime asc'
+- id: MI-backup_restore-467
+  Topic: Troubleshooting-LTR-restore-issue
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Long%2Dterm-backup-retention/Troubleshooting-LTR-restore-issue.md
+  Prompts:
+  - MI Troubleshooting-LTR-restore-issue
+  - Managed Instance Troubleshooting-LTR-restore-issue
+  CustomizedParameters:
+  - ClusterName
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where TIMESTAMP >= ago(3d)
+
+      | where ClusterName startswith "{ClusterName}"
+
+      | where event contains "management_workflow_restore_request_"
+
+      | where logical_server_name =~ searchParameter or target_server_name =~ searchParameter or restore_request_id =~ searchParameter
+
+      | project originalEventTimestamp, event, request_id, restore_request_id, logical_server_name, target_server_name, restore_type, point_in_time, source_database_name, target_database_name, message
+      exception_message, stack_trace
+
+      | order by originalEventTimestamp desc'
+- id: MI-backup_restore-469
+  Topic: Issues-with-restoring-dropped-instance-via-ASC
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Recover-deleted-database-or-instance/Issues-with-restoring-dropped-instance-via-ASC.md
+  Prompts:
+  - MI Issues-with-restoring-dropped-instance-via-ASC
+  - Managed Instance Issues-with-restoring-dropped-instance-via-ASC
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRestoreEvents
+    ExecutedQuery: 'MonRestoreEvents
+
+      | where originalEventTimestamp >= ago(1d)
+
+      | where LogicalServerName =~ ''"{ServerName}"''
+
+      | where restore_request_id =~ ''0fefcb6e-c54d-4520-b059-88ad23220dbf''
+
+      | extend message_source =
+
+      iff(isnotempty(details), ''details'',
+
+      iff(isnotempty(details_with_customer_data), ''details_with_customer_data'',
+
+      iff(isnotempty(restore_database_progress), ''restore_database_progress'',
+
+      iff(isnotempty(restore_database_result), ''restore_database_result'',
+
+      iff(isnotempty(message), ''message'', '''')))))
+
+      | extend message = coalesce(details, details_with_customer_data, restore_database_progress, restore_database_result, message)
+
+      | project restore_request_id, originalEventTimestamp, event, message_source, message, query_api_name, query_parameters, exception_type, exception_message, exception, exception_stack, stack_trace'
+- id: MI-backup_restore-470
+  Topic: Issues-with-restoring-dropped-instance-via-ASC
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Recover-deleted-database-or-instance/Issues-with-restoring-dropped-instance-via-ASC.md
+  Prompts:
+  - MI Issues-with-restoring-dropped-instance-via-ASC
+  - Managed Instance Issues-with-restoring-dropped-instance-via-ASC
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'MonManagedServers
+
+      | where TIMESTAMP >= ago(12d)
+
+      | where name =~ ''sqlmi''
+
+      | summarize arg_max(TIMESTAMP,*) by managed_server_id
+
+      | summarize max(TIMESTAMP) by name, managed_server_id, state, create_time, dropped_date'
+- id: MI-backup_restore-471
+  Topic: Managed-Instance-Restore
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Recover-deleted-database-or-instance/Managed-Instance-Restore.md
+  Prompts:
+  - MI Managed-Instance-Restore
+  - Managed Instance Managed-Instance-Restore
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagementOperations
+    ExecutedQuery: 'MonManagementOperations
+
+      | where operation_parameters contains ''{ServerName}''
+
+      | where operation_type == ''DropManagedServer''
+
+      | project TIMESTAMP , subscription_id , request_id , operation_type , event, database_name , operation_parameters , operation_result , error_code , error_severity , error_message'
+- id: MI-backup_restore-472
+  Topic: Managed-Instance-Restore
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Recover-deleted-database-or-instance/Managed-Instance-Restore.md
+  Prompts:
+  - MI Managed-Instance-Restore
+  - Managed Instance Managed-Instance-Restore
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'MonManagedServers
+
+      | where LogicalServerName == ''{ServerName}'' or name == ''{ServerName}''
+
+      | where state == ''WaitingForCleanup'' //this implies that the managed instance was successfully dropped in the past 7 days
+
+      | summarize arg_max(TIMESTAMP,*) by name
+
+      | extend result = parse_xml(fsm_extension_data).FiniteStateMachineExtensionData.Properties.PropertyExtendedData
+
+      | mv-expand result
+
+      | where result contains "CleanupServerExpiry"
+
+      | extend CleanupServerExpiryDate = tostring(parse_xml(result).Value)
+
+      | project TIMESTAMP, customer_subscription_id, managed_server_id, name, CleanupServerExpiryDate, dropped_date, encryption_protector_type'
+- id: MI-backup_restore-473
+  Topic: Managed-Instance-Restore
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Recover-deleted-database-or-instance/Managed-Instance-Restore.md
+  Prompts:
+  - MI Managed-Instance-Restore
+  - Managed Instance Managed-Instance-Restore
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'let server = "{ServerName}"; MonManagedServers
+
+      | where end_utc_date >= timeframe
+
+      | where name == ServerName
+
+      | summarize arg_max(end_utc_date, *) by managed_server_id
+
+      //
+
+      // Check only the dropped server, not the newly created one.
+
+      //
+
+      | where dropped_date != datetime(1601-01-01 00:00:00.0000000)
+
+      | extend PropertyExtendedData = parse_xml(fsm_extension_data).FiniteStateMachineExtensionData.Properties.PropertyExtendedData
+
+      | extend Key = tostring(bag_pack_columns(managed_server_id))
+
+      | as sourceTable
+
+      | join kind = leftouter (ExtendWithFSMExtendedPropertyOrDefaultValue(sourceTable, ''CleanupServerExpiry'')) on Key
+
+      | project
+
+      ServerName = name
+
+      ServerId = managed_server_id
+
+      ServerState = state
+
+      SLO = service_level_objective
+
+      ServerCreateTime = create_time
+
+      ServerDroppedTime = dropped_date
+
+      ServerCleanupExpiryTime = todatetime(Value)
+
+      | extend ServerBackupRetentionDays = floor((bin(ServerCleanupExpiryTime, 1s) - bin(ServerDroppedTime, 1s)) / 1d, 1)
+
+      | as serverInfo
+
+      | join kind = fullouter
+
+      ('
+- id: MI-backup_restore-475
+  Topic: Managed-Instance-Restore
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Recover-deleted-database-or-instance/Managed-Instance-Restore.md
+  Prompts:
+  - MI Managed-Instance-Restore
+  - Managed Instance Managed-Instance-Restore
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonRestoreEvents
+    ExecutedQuery: 'MonRestoreEvents
+
+      | where originalEventTimestamp >= ago({TimeRange}) //datetime that restore was initiated
+
+      | where LogicalServerName =~ ''"{ServerName}"''
+
+      | where isnotempty(restore_request_id) and restore_request_id != ''00000000-0000-0000-0000-000000000000''
+
+      | where isnotempty(restore_database_result)
+
+      | extend message_source =
+
+      iff(isnotempty(details), ''details'',
+
+      iff(isnotempty(details_with_customer_data), ''details_with_customer_data'',
+
+      iff(isnotempty(restore_database_progress), ''restore_database_progress'',
+
+      iff(isnotempty(restore_database_result), ''restore_database_result'',
+
+      iff(isnotempty(message), ''message'', '''')))))
+
+      | extend message = coalesce(details, details_with_customer_data, restore_database_progress, restore_database_result, message)
+
+      | project restore_request_id, originalEventTimestamp, event, message_source, message'
+- id: MI-backup_restore-476
+  Topic: Managed-Instance-Restore
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Recover-deleted-database-or-instance/Managed-Instance-Restore.md
+  Prompts:
+  - MI Managed-Instance-Restore
+  - Managed Instance Managed-Instance-Restore
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedDatabases
+    ExecutedQuery: 'MonManagedDatabases
+
+      | where managed_server_id =~ ''"{ManagedServerId}"''
+
+      | summarize arg_max(TIMESTAMP,*) by managed_database_name, managed_database_id,state, backup_retention_days, sql_database_id,create_mode, create_time
+
+      Databases which were already dropped **before dropping the instance, will not be restored as part of instance restore. This is because the last state of the server is taken into consideration when
+      issuing instance restore. Confirm with the customer if all the databases were restored.'
+- id: MI-backup_restore-478
+  Topic: Backup-or-Restore-was-aborted
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/References/Backup-or-Restore-was-aborted.md
+  Prompts:
+  - MI Backup-or-Restore-was-aborted
+  - Managed Instance Backup-or-Restore-was-aborted
+  CustomizedParameters:
+  - AppName
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where originalEventTimestamp >= ago({TimeRange}) and originalEventTimestamp <= now() //restore operation start timeframe
+
+      | where AppName =~ "{AppName}"
+
+      | where message contains ''Restore(1234.....): RESTORE DATABASE started'' //replace 1234... with dbId
+
+      | project originalEventTimestamp,message'
+- id: MI-backup_restore-480
+  Topic: Backup-or-Restore-was-aborted
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/References/Backup-or-Restore-was-aborted.md
+  Prompts:
+  - MI Backup-or-Restore-was-aborted
+  - Managed Instance Backup-or-Restore-was-aborted
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonSQLXStoreIOStats
+    ExecutedQuery: 'MonSQLXStoreIOStats
+
+      | where originalEventTimestamp >= ago({TimeRange}) and originalEventTimestamp <= now()
+
+      | where file_path contains ''/data/"{DatabaseGuid}"'' //replace with TargetDbId
+
+      |summarize by file_path,page_blob_tier'
+- id: MI-backup_restore-481
+  Topic: Cancel-a-restore-operation
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/References/Cancel-a-restore-operation.md
+  Prompts:
+  - MI Cancel-a-restore-operation
+  - Managed Instance Cancel-a-restore-operation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRestoreEvents
+    ExecutedQuery: 'MonRestoreEvents
+
+      | where restore_request_id contains ''"{RestoreRequestId}"''   //restore_request_id can be obtained from MonManagementOperations
+
+      | project originalEventTimestamp, restore_database_progress, details, AppName, message'
+- id: MI-backup_restore-483
+  Topic: Restore-completed-but-database-not-available
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/References/Restore-completed-but-database-not-available.md
+  Prompts:
+  - MI Restore-completed-but-database-not-available
+  - Managed Instance Restore-completed-but-database-not-available
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonDbSeedTraces
+    ExecutedQuery: 'MonDbSeedTraces
+
+      | where TIMESTAMP >= ago({TimeRange}) and TIMESTAMP <= now()
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where database_name =~ "{DatabaseName}" and role_desc == ''Source'' //logical database guid
+
+      | summarize min(originalEventTimestamp), arg_max(originalEventTimestamp, transferred_size_bytes, total_disk_io_wait_time_ms, total_network_wait_time_ms) by database_size_bytes, local_seeding_guid
+      database_name
+
+      | extend seedingDuration = originalEventTimestamp - min_originalEventTimestamp
+
+      | extend seedingDurationInSeconds = seedingDuration/1s
+
+      | extend seedingSpeedInMbs = database_size_bytes/1024/1024/seedingDurationInSeconds
+
+      | extend transferSpeedInMbs = transferred_size_bytes/1024/1024/seedingDurationInSeconds
+
+      | project database_name, database_size_bytes, local_seeding_guid, startTime = min_originalEventTimestamp, endTime = originalEventTimestamp, seedingDuration, seedingDurationInSeconds, seedingSpeedInMbs
+      transferSpeedInMbs, total_disk_io_wait_time_ms, total_network_wait_time_ms'
+- id: MI-backup_restore-484
+  Topic: Restore-failed-%2D-Internal-server-error
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/References/Restore-failed-%2D-Internal-server-error.md
+  Prompts:
+  - MI MI Restore failed   Internal server error
+  - Managed Instance Restore-failed---Internal-server-error
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRestoreEvents
+    ExecutedQuery: 'MonRestoreEvents
+
+      | where restore_request_id == ""{RestoreId}""
+
+      | project originalEventTimestamp, restore_request_id = tolower(restore_request_id), restore_database_progress, sql_error_message, [''details'']'
+- id: MI-backup_restore-485
+  Topic: Restore-failed-%2D-Internal-server-error
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/References/Restore-failed-%2D-Internal-server-error.md
+  Prompts:
+  - MI MI Restore failed   Internal server error
+  - Managed Instance Restore-failed---Internal-server-error
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDatabaseEncryptionKeys
+    ExecutedQuery: 'MonDatabaseEncryptionKeys
+
+      | where LogicalServerName == ''{ServerName}''
+
+      | where logical_database_id =~ ''{logical_database_id}''
+
+      | where PreciseTimeStamp >= ago(6h)
+
+      | distinct LogicalServerName, name, logical_database_id, database_id, encryption_state, encryptor_thumbprint, encryptor_type'
+- id: MI-backup_restore-486
+  Topic: Restore-failed-%2D-Internal-server-error
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/References/Restore-failed-%2D-Internal-server-error.md
+  Prompts:
+  - MI MI Restore failed   Internal server error
+  - Managed Instance Restore-failed---Internal-server-error
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRestoreRequests
+    ExecutedQuery: 'MonRestoreRequests
+
+      | where TIMESTAMP >= ago(5d)
+
+      | where restore_request_id =~ ''"{RestoreId}"''
+
+      | project operation_request_id, restore_request_id, restore_type, operation_type, state, operation_details, error_code, error_severity, error_message, source_managed_server_name, source_managed_database_name,
+      target_managed_server_name, target_managed_database_name'
+- id: MI-backup_restore-487
+  Topic: Restore-failed-%2D-Internal-server-error
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/References/Restore-failed-%2D-Internal-server-error.md
+  Prompts:
+  - MI MI Restore failed   Internal server error
+  - Managed Instance Restore-failed---Internal-server-error
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRestoreRequests
+    ExecutedQuery: 'MonRestoreRequests
+
+      | where restore_request_id =~ ''"{RestoreId}"''
+
+      | project TIMESTAMP, state, error_code, error_severity, error_message, operation_request_id, operation_type, restore_request_id, restore_type, point_in_time
+
+      //,source_managed_server_name, source_managed_database_name, target_managed_server_name, target_managed_database_name'
+- id: MI-backup_restore-488
+  Topic: Restore-failed-%2D-Internal-server-error
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/References/Restore-failed-%2D-Internal-server-error.md
+  Prompts:
+  - MI MI Restore failed   Internal server error
+  - Managed Instance Restore-failed---Internal-server-error
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonManagementResourceProvider
+    ExecutedQuery: 'let MIName = "{ServerName}"; MonManagementResourceProvider
+
+      | where TIMESTAMP >= ago({TimeRange}) and TIMESTAMP <= now()
+
+      | where request_url contains ''"{ServerName}"''
+
+      | where correlation_id =~ ''b83a82f9-a02e-465d-b7cd-4b193ef81c72''
+
+      | project PreciseTimeStamp, event, resource_group, request_id, subscription_id, resource_type, logical_database_name, message, response_code, request_url, http_verb, stack_trace, exception_type, headers,
+      client_request_id, correlation_id'
+- id: MI-backup_restore-489
+  Topic: Restore-took-longer-than-usual
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/References/Restore-took-longer-than-usual.md
+  Prompts:
+  - MI Restore-took-longer-than-usual
+  - Managed Instance Restore-took-longer-than-usual
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagementOperations
+    ExecutedQuery: 'MonManagementOperations
+
+      | where operation_type like ''CreateManagedRestoreRequest'' //for PiTR and Native restores
+
+      | where operation_parameters contains "{ServerName}"
+
+      | where TIMESTAMP >= {StartDateTime}
+
+      | extend Restore_ID = tostring(parse_xml(operation_parameters).InputParameters.RestoreId)
+
+      | project TIMESTAMP, request_id, Restore_ID, event, operation_parameters'
+- id: MI-backup_restore-490
+  Topic: Restore-took-longer-than-usual
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/References/Restore-took-longer-than-usual.md
+  Prompts:
+  - MI Restore-took-longer-than-usual
+  - Managed Instance Restore-took-longer-than-usual
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRestoreEvents
+    ExecutedQuery: 'MonRestoreEvents
+
+      | where restore_request_id == ''"{RestoreId}"''
+
+      | where restore_database_progress contains "have been restored in" or restore_database_progress contains "has been restored in"
+
+      | extend BackupType = iff(backup_file_name contains "Full", "Full", iff(backup_file_name  contains "Diff", "Diff", "Log"))
+
+      | extend size_mb = toreal(compressed_backup_size)/ 1024 / 1024
+
+      | extend size_gb = toreal(compressed_backup_size)/ 1024 / 1024 / 1024
+
+      | project originalEventTimestamp, restore_database_progress, BackupType, elapsed_time, compressed_backup_size, uncompressed_backup_size, size_mb, size_gb'
+- id: MI-backup_restore-491
+  Topic: Cannot-restore-database-with-CDC-enabled
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Restore-database-from-URL/Cannot-restore-database-with-CDC-enabled.md
+  Prompts:
+  - MI Cannot-restore-database-with-CDC-enabled
+  - Managed Instance Cannot-restore-database-with-CDC-enabled
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRestoreEvents
+    ExecutedQuery: 'MonRestoreEvents
+
+      | where restore_request_id in ("4be72878-b88a-4467-8438-eff0615d19cc")
+
+      | where restore_database_progress contains ''keep_cdc''
+
+      | project PreciseTimeStamp, restore_request_id, restore_database_progress'
+- id: MI-backup_restore-492
+  Topic: Error-41935-Reached-the-total-capacity-of-storage-account
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Restore-database-from-URL/Error-41935-Reached-the-total-capacity-of-storage-account.md
+  Prompts:
+  - MI Error-41935-Reached-the-total-capacity-of-storage-account
+  - Managed Instance Error-41935-Reached-the-total-capacity-of-storage-account
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLXStore
+    ExecutedQuery: 'MonSQLXStore
+
+      | where AppName =~ ''{AppName}''
+
+      | where event == ''xio_failed_request'' and errorcode == ''AccountQuotaExceeded''
+
+      | extend StorageAccount = extract("https://([0-9,a-z]+).blob.*", 1, file_path, typeof(string))
+
+      | where StorageAccount contains ''prs'' or StorageAccount contains ''pdw''
+
+      | summarize min(TIMESTAMP), max(TIMESTAMP), count(TIMESTAMP) by StorageAccount, AppName, AppTypeName, LogicalServerName , ClusterName
+
+      | extend FailureCount = count_TIMESTAMP
+
+      | project StorageAccount, AppName , AppTypeName, FailureCount, LogicalServerName, ClusterName, min_TIMESTAMP, max_TIMESTAMP
+
+      | where max_TIMESTAMP >= ago(10h)'
+- id: MI-backup_restore-493
+  Topic: Error-41935-Reached-the-total-capacity-of-storage-account
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Restore-database-from-URL/Error-41935-Reached-the-total-capacity-of-storage-account.md
+  Prompts:
+  - MI Error-41935-Reached-the-total-capacity-of-storage-account
+  - Managed Instance Error-41935-Reached-the-total-capacity-of-storage-account
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where PreciseTimeStamp >= ago(10h)
+
+      | where AppName == ''{AppName}'' and message != '''' and message contains ''Error: 41935''
+
+      | project PreciseTimeStamp, AppName, message, error_id'
+- id: MI-backup_restore-494
+  Topic: Error-41935-Reached-the-total-capacity-of-storage-account
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Restore-database-from-URL/Error-41935-Reached-the-total-capacity-of-storage-account.md
+  Prompts:
+  - MI Error-41935-Reached-the-total-capacity-of-storage-account
+  - Managed Instance Error-41935-Reached-the-total-capacity-of-storage-account
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmIoVirtualFileStats
+    ExecutedQuery: 'let appName = "{AppName}"; let endTime = now();
+let startTime = ago({TimeRange});
+MonDmIoVirtualFileStats
+
+      | where TIMESTAMP between (startTime .. endTime)
+
+      | where AppName =~ appName
+
+      | where is_remote == 1 // check only remote storage files; this eliminates files from: master (physical master), tempdb, model, model_msdb and model_replicatedmaster databases
+
+      | summarize by end_utc_date, database_id, db_name, size_on_disk_GB = size_on_disk_bytes / 1024. / 1024. / 1024., file_id, type_desc
+
+      | extend used_storage_space_GB = case(
+
+      size_on_disk_GB <= 129., 128.
+
+      size_on_disk_GB <= 513., 512.
+
+      size_on_disk_GB <= 1025., 1024.
+
+      size_on_disk_GB <= 2049., 2048.
+
+      size_on_disk_GB <= 4097., 4096.
+
+      size_on_disk_GB <= 8193., 8192., -1.)
+
+      | summarize TotalSizeOnDiskGB = sum(size_on_disk_GB), TotalUsedStorageSpaceGB = sum(used_storage_space_GB), InvalidFileCount = countif(used_storage_space_GB == -1) by end_utc_date
+
+      | summarize arg_max(TotalUsedStorageSpaceGB, *)
+
+      | extend TotalRemainingSpaceOnXIOGB = StorageAccountQuotaGB - TotalUsedStorageSpaceGB
+
+      | project StorageAccountQuotaGB, TotalUsedStorageSpaceGB, TotalRemainingSpaceOnXIOGB'
+- id: MI-backup_restore-495
+  Topic: Error-41935-Reached-the-total-capacity-of-storage-account
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Restore-database-from-URL/Error-41935-Reached-the-total-capacity-of-storage-account.md
+  Prompts:
+  - MI Error-41935-Reached-the-total-capacity-of-storage-account
+  - Managed Instance Error-41935-Reached-the-total-capacity-of-storage-account
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmIoVirtualFileStats
+    ExecutedQuery: 'let appName = "{AppName}"; let endTime = now();
+let startTime = ago({TimeRange});
+MonDmIoVirtualFileStats
+
+      | where TIMESTAMP between (startTime .. endTime)
+
+      | where AppName =~ appName
+
+      | where is_remote == 1 // check only remote storage files; this eliminates files from: master (physical master), tempdb, model, model_msdb and model_replicatedmaster databases
+
+      | summarize max(TIMESTAMP), max(size_on_disk_bytes) by database_id, file_id
+
+      | extend sizegb = max_size_on_disk_bytes / 1024.0 / 1024.0 / 1024.0
+
+      | extend allocgb = iff(sizegb < 128.0, 128.0, sizegb)'
+- id: MI-backup_restore-496
+  Topic: Error-41935-Reached-the-total-capacity-of-storage-account
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Restore-database-from-URL/Error-41935-Reached-the-total-capacity-of-storage-account.md
+  Prompts:
+  - MI Error-41935-Reached-the-total-capacity-of-storage-account
+  - Managed Instance Error-41935-Reached-the-total-capacity-of-storage-account
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagementOperations
+    ExecutedQuery: 'MonManagementOperations
+
+      | where originalEventTimestamp > ago(3d)
+
+      | where request_id contains "E1C0991E-A815-40CF-93DB-09E62A6E9697"
+
+      | project originalEventTimestamp, operation_parameters'
+- id: MI-backup_restore-497
+  Topic: Restore-MI-DB-from-a-backup-of-another-MI-DB
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Restore-database-from-URL/Restore-MI-DB-from-a-backup-of-another-MI-DB.md
+  Prompts:
+  - MI Restore-MI-DB-from-a-backup-of-another-MI-DB
+  - Managed Instance Restore-MI-DB-from-a-backup-of-another-MI-DB
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagementOperations
+    ExecutedQuery: 'MonManagementOperations
+
+      | where originalEventTimestamp >= {StartDateTime}
+
+      and originalEventTimestamp <= {EndDateTime} //remove to check for operations completing after EndTime
+
+      | where event != ''management_operation_start''
+
+      | where operation_type  == ''CreateManagedRestoreRequest''
+
+      | where operation_parameters has serverName
+
+      | project originalEventTimestamp, request_id, event,error_code, error_message, operation_result
+
+      ) on request_id
+
+      | extend Result=replace(@''management_operation_*'', @''\1'', event)
+
+      | extend OutputParams = tostring(parse_xml(operation_result).OutputParameters)
+
+      | extend OutputParams = iif(isempty(OutputParams), operation_result, OutputParams)
+
+      | project originalEventTimestamp, originalEventTimestamp1, Database, request_id, Result, operation_type, error_code, error_message, InputParams, OutputParams, NotRequestedViaARM
+
+      | project-rename StartTime = originalEventTimestamp, EndTime = originalEventTimestamp1'
+- id: MI-backup_restore-498
+  Topic: '[One-Pager]-Native-Restore-taking-too-long-%2D-CHECKSUM'
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Restore-database-from-URL/[One-Pager]-Native-Restore-taking-too-long-%2D-CHECKSUM.md
+  Prompts:
+  - MI MI [One Pager] Native Restore taking too long   CHECKSUM
+  - Managed Instance [One-Pager]-Native-Restore-taking-too-long---CHECKSUM
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonRestoreEvents
+    ExecutedQuery: 'MonRestoreEvents
+
+      |where TIMESTAMP >=ago({TimeRange})
+
+      |where TIMESTAMP <now()
+
+      |where restore_request_id contains "a8c82657-4e0a-4da2-9a52-5b5b6aa99787"
+
+      | where LogicalServerName == ""{ServerName}""
+
+      //| where restore_database_progress contains "Executing restore query RESTORE DATABASE" //uncomment this line to get the database id without having to look in all the output
+
+      | project originalEventTimestamp, LogicalServerName, AppName, event, restore_database_progress, message, restore_configuration_info, restore_database_result, exception_type, stack_trace, level
+
+      With the information (AppName and database id) obtained from the previous query we can run the following query'
+- id: MI-backup_restore-499
+  Topic: '[One-Pager]-Native-Restore-taking-too-long-%2D-CHECKSUM'
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Restore-database-from-URL/[One-Pager]-Native-Restore-taking-too-long-%2D-CHECKSUM.md
+  Prompts:
+  - MI MI [One Pager] Native Restore taking too long   CHECKSUM
+  - Managed Instance [One-Pager]-Native-Restore-taking-too-long---CHECKSUM
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where AppName == "xxxxx"
+
+      | where TIMESTAMP >=ago({TimeRange})
+
+      | where TIMESTAMP <now()
+
+      | where message contains databaseid or logical_database_guid =~ databaseid
+
+      | where message contains "CHECKDB"
+
+      | project originalEventTimestamp,  message'
+- id: MI-backup_restore-500
+  Topic: '[One-Pager]-Restore-of-contained-database-failing'
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Restore-database-from-URL/[One-Pager]-Restore-of-contained-database-failing.md
+  Prompts:
+  - MI [One-Pager]-Restore-of-contained-database-failing
+  - Managed Instance [One-Pager]-Restore-of-contained-database-failing
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagementOperations
+    ExecutedQuery: 'MonManagementOperations
+
+      |where TIMESTAMP >= {StartDateTime}
+
+      | where operation_parameters has ''>{ServerName}<''
+
+      | project TIMESTAMP , request_id , operation_type , event, elapsed_time, error_code , error_severity , error_message, operation_parameters , operation_result'
+- id: MI-backup_restore-501
+  Topic: '[One-Pager]-Restore-of-contained-database-failing'
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Restore-database-from-URL/[One-Pager]-Restore-of-contained-database-failing.md
+  Prompts:
+  - MI [One-Pager]-Restore-of-contained-database-failing
+  - Managed Instance [One-Pager]-Restore-of-contained-database-failing
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRestoreEvents
+    ExecutedQuery: 'MonRestoreEvents
+
+      | where restore_request_id =~ "de432cc5-4e1e-4519-8e8e-ca8eb0922bf3"
+
+      | project originalEventTimestamp, event, message, query_api_name, query_parameters, exception_type, exception_message, exception, exception_stack, stack_trace'
+- id: MI-backup_restore-502
+  Topic: '[One-Pager]-Restore-or-Migrate-database-containing-Memory-Optimized-objects-to-Azure-SQL-Managed-Instance'
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Backup-and-Restore/Restore-database-from-URL/[One-Pager]-Restore-or-Migrate-database-containing-Memory-Optimized-objects-to-Azure-SQL-Managed-Instance.md
+  Prompts:
+  - MI [One-Pager]-Restore-or-Migrate-database-containing-Memory-Optimized-objects-to-Azure-SQL-Managed-Instance
+  - Managed Instance [One-Pager]-Restore-or-Migrate-database-containing-Memory-Optimized-objects-to-Azure-SQL-Managed-Instance
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRestoreEvents
+    ExecutedQuery: 'MonRestoreEvents
+
+      | where restore_request_id == "{RestoreId}" 
+      | where originalEventTimestamp >= {datetime}
+
+      | project process_id, originalEventTimestamp, restore_database_progress, message, details, LogicalServerName, stack_trace'
+- id: MI-backup_restore-504
+  Topic: Azure-SQL-Managed-Instance-Link
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Migration-and-Move/Azure-SQL-Managed-Instance-Link.md
+  Prompts:
+  - MI Azure-SQL-Managed-Instance-Link
+  - Managed Instance Azure-SQL-Managed-Instance-Link
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonManagementOperations
+    ExecutedQuery: 'MonManagementOperations
+
+      | where operation_type == "DistributedAvailabilityGroupsLinkCreate"
+
+      | project PreciseTimeStamp, request_id, operation_parameters
+
+      | where PreciseTimeStamp >= ago({TimeRange})'
+- id: MI-backup_restore-505
+  Topic: Azure-SQL-Managed-Instance-Link
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Migration-and-Move/Azure-SQL-Managed-Instance-Link.md
+  Prompts:
+  - MI Azure-SQL-Managed-Instance-Link
+  - Managed Instance Azure-SQL-Managed-Instance-Link
+  CustomizedParameters:
+  - AppName
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where AppName == "{AppName}"
+
+      | where PreciseTimeStamp >= ago(1d)
+
+      | where message contains "Connection handshake failed"
+
+      | project PreciseTimeStamp, message'
+- id: MI-backup_restore-506
+  Topic: 1.2-%2D-Connectivity-issues-due-to-certificate-missing-or-mismatch
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Migration-and-Move/Azure-SQL-Managed-Instance-Link/1.2-%2D-Connectivity-issues-due-to-certificate-missing-or-mismatch.md
+  Prompts:
+  - MI MI 1.2   Connectivity issues due to certificate missing or mismatch
+  - Managed Instance 1.2---Connectivity-issues-due-to-certificate-missing-or-mismatch
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonUcsConnections
+    ExecutedQuery: 'let appName = "{AppName}"; let endTime = now();
+let startTime = ago({TimeRange});
+MonUcsConnections
+
+      | where PreciseTimeStamp  between(startTime..endTime)
+
+      | where AppName == appName
+
+      | where error_message != ""
+
+      | project PreciseTimeStamp, AppName, LogicalServerName, event,endpoint_type, error_code, error_message, stream_status, target_address
+
+      | order by PreciseTimeStamp desc'
+- id: MI-backup_restore-508
+  Topic: 1.3-%2D-Missing-TDE-protector
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Migration-and-Move/Azure-SQL-Managed-Instance-Link/1.3-%2D-Missing-TDE-protector.md
+  Prompts:
+  - MI MI 1.3   Missing TDE protector
+  - Managed Instance 1.3---Missing-TDE-protector
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'let startTime = ago({TimeRange});
+MonSQLSystemHealth
+
+      | where originalEventTimestamp >= startTime
+
+      | where originalEventTimestamp <= startTime +1h
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | project error_id, message'
+- id: MI-backup_restore-509
+  Topic: 1.4-%2D-Database-already-exists
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Migration-and-Move/Azure-SQL-Managed-Instance-Link/1.4-%2D-Database-already-exists.md
+  Prompts:
+  - MI MI 1.4   Database already exists
+  - Managed Instance 1.4---Database-already-exists
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: 'let endTime = now();
+let startTime = ago({TimeRange});
+MonAnalyticsDBSnapshot
+
+      | where TIMESTAMP between(startTime..endTime)
+
+      | where logical_server_name =~ "{ServerName}"
+
+      | where isempty("{DatabaseName}") or logical_database_name =~ "{DatabaseName}"
+
+      | project PreciseTimeStamp, logical_database_name, logical_database_id, state, physical_database_id
+
+      | order by logical_database_id, PreciseTimeStamp asc
+
+      | serialize
+
+      | extend isSameState = iif(prev(logical_database_id) == logical_database_id and prev(state) == state,1,0)
+
+      | where isSameState == 0
+
+      | project-away isSameState
+
+      | order by PreciseTimeStamp asc'
+- id: MI-backup_restore-510
+  Topic: 1.5-%2D-DAG-still-exists
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Migration-and-Move/Azure-SQL-Managed-Instance-Link/1.5-%2D-DAG-still-exists.md
+  Prompts:
+  - MI MI 1.5   DAG still exists
+  - Managed Instance 1.5---DAG-still-exists
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagementOperations
+    ExecutedQuery: 'MonManagementOperations
+
+      | where operation_type == "DistributedAvailabilityGroupsDropLink"
+
+      | where operation_parameters has {MIServerName} and operation_parameters has {DatabaseName}
+
+      | project PreciseTimeStamp, event, request_id, operation_type, operation_parameters
+
+      | order by PreciseTimeStamp desc'
+- id: MI-backup_restore-511
+  Topic: Getting-managed-instance-link-information
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Migration-and-Move/Azure-SQL-Managed-Instance-Link/Getting-managed-instance-link-information.md
+  Prompts:
+  - MI Getting-managed-instance-link-information
+  - Managed Instance Getting-managed-instance-link-information
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagementOperations
+    ExecutedQuery: 'MonManagementOperations
+
+      | where PreciseTimeStamp >= ago(2d)
+
+      | where operation_type == "DistributedAvailabilityGroupsLinkCreate"
+
+      | where operation_parameters contains "{ServerName}" //MIName
+
+      | project PreciseTimeStamp, request_id, operation_parameters'
+- id: MI-backup_restore-512
+  Topic: Managed-Instance-Link-creation-stuck
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Migration-and-Move/Azure-SQL-Managed-Instance-Link/Managed-Instance-Link-creation-stuck.md
+  Prompts:
+  - MI Managed-Instance-Link-creation-stuck
+  - Managed Instance Managed-Instance-Link-creation-stuck
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDbSeedTraces
+    ExecutedQuery: 'MonDbSeedTraces
+
+      | where originalEventTimestamp > ago(5d)
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where database_name =~ "{DatabaseName}" //logical_database_id of target DB on MI
+
+      | project originalEventTimestamp, database_id, event, transfer_rate_bytes_per_second, transferred_size_bytes, database_size_bytes, internal_state_desc, old_state, new_state'
+- id: MI-backup_restore-513
+  Topic: Managed-Instance-Link-creation-stuck
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Migration-and-Move/Azure-SQL-Managed-Instance-Link/Managed-Instance-Link-creation-stuck.md
+  Prompts:
+  - MI Managed-Instance-Link-creation-stuck
+  - Managed Instance Managed-Instance-Link-creation-stuck
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where PreciseTimeStamp >= ago(2d)
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where message contains "59efe01a-a9a7-49da-9299-57b3b72c3dbb" //logical_database_id of target DB on MI
+
+      | project PreciseTimeStamp, error_code, error_id, message'
+- id: MI-backup_restore-514
+  Topic: How-to-check-MI-Link-seeding-speed-and-status
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Migration-and-Move/Azure-SQL-Managed-Instance-Link/Reference/How-to-check-MI-Link-seeding-speed-and-status.md
+  Prompts:
+  - MI How-to-check-MI-Link-seeding-speed-and-status
+  - Managed Instance How-to-check-MI-Link-seeding-speed-and-status
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonDbSeedTraces
+    ExecutedQuery: 'MonDbSeedTraces
+
+      | where LogicalServerName contains {ManagedInstance}
+
+      | where PreciseTimeStamp > ago({TimeRange})
+
+      | where PreciseTimeStamp < now()
+
+      | where database_name =~ "{DatabaseName}" //database guid
+
+      | project originalEventTimestamp, transferred_size_bytes, database_size_bytes
+
+      //| extend database_size_gb = database_size_bytes/1000.0/1000.0/1000.0
+
+      //| extend transferred_size_gb = transferred_size_bytes/1000.0/1000.0/1000.0
+
+      //| project originalEventTimestamp, transferred_size_gb, database_size_gb
+
+      | render timechart'
+- id: MI-backup_restore-515
+  Topic: How-to-check-MI-Link-seeding-speed-and-status
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Migration-and-Move/Azure-SQL-Managed-Instance-Link/Reference/How-to-check-MI-Link-seeding-speed-and-status.md
+  Prompts:
+  - MI How-to-check-MI-Link-seeding-speed-and-status
+  - Managed Instance How-to-check-MI-Link-seeding-speed-and-status
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonDbSeedTraces
+    ExecutedQuery: 'MonDbSeedTraces
+
+      | where LogicalServerName contains {ManagedInstance}
+
+      | where PreciseTimeStamp > ago({TimeRange})
+
+      | where PreciseTimeStamp < now()
+
+      | where database_name =~ "{DatabaseName}"
+
+      | project originalEventTimestamp, transfer_rate_bytes_per_second
+
+      //| extend transfer_rate_mb_per_second = transfer_rate_bytes_per_second/1000.0/1000.0
+
+      //| project originalEventTimestamp, transfer_rate_mb_per_second
+
+      | render timechart'
+- id: MI-backup_restore-516
+  Topic: How-to-check-if-MI-Link-exists
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Migration-and-Move/Azure-SQL-Managed-Instance-Link/Reference/How-to-check-if-MI-Link-exists.md
+  Prompts:
+  - MI How-to-check-if-MI-Link-exists
+  - Managed Instance How-to-check-if-MI-Link-exists
+  CustomizedParameters:
+  - DatabaseName
+  - PhysicalDatabaseId
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmContinuousCopyStatus
+    ExecutedQuery: 'MonDmContinuousCopyStatus
+
+      | where TIMESTAMP >= timeframe
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where link_type =~ ''LAG_REPLICA_LINK_TYPE_CONTINUOUS_COPY_HYBRID''
+
+      | where partner_server =~ ''ExternalHybridServerUnknown'' and partner_database =~ ''ExternalHybridDatabaseUnknown''
+
+      | join kind = inner (MonAnalyticsDBSnapshot
+
+      | where LogicalServerName =~ instanceName or logical_server_name =~ instanceName
+
+      | where TIMESTAMP >= timeframe
+
+      //| where physical_database_id =~ "{PhysicalDatabaseId}" // uncomment this if looking for a specific database
+
+      | summarize max(TIMESTAMP) by physical_database_id, logical_database_id, logical_database_name)'
+- id: MI-backup_restore-517
+  Topic: MI-Link-Certificate-and-rotation
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Migration-and-Move/Azure-SQL-Managed-Instance-Link/Reference/MI-Link-Certificate-and-rotation.md
+  Prompts:
+  - MI MI-Link-Certificate-and-rotation
+  - Managed Instance MI-Link-Certificate-and-rotation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCertificates
+    ExecutedQuery: 'MonCertificates
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where PreciseTimeStamp >= ago(15d)
+
+      | where certificatename contains "##MS_InstanceCertificate##"
+
+      | project TIMESTAMP, ClusterName, AppName, LogicalServerName, certificatename, thumprint'
+- id: MI-backup_restore-518
+  Topic: MI-Link-Certificate-and-rotation
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Migration-and-Move/Azure-SQL-Managed-Instance-Link/Reference/MI-Link-Certificate-and-rotation.md
+  Prompts:
+  - MI MI-Link-Certificate-and-rotation
+  - Managed Instance MI-Link-Certificate-and-rotation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSystemCertificates
+    ExecutedQuery: 'MonSystemCertificates
+
+      | where PreciseTimeStamp >= ago(90d)
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where name contains "##MS_InstanceCertificate##"
+
+      | project TIMESTAMP, ClusterName, AppName, LogicalServerName, name, pvt_key_encryption_type_desc, thumbprint, start_date, expiry_date'
+- id: MI-backup_restore-520
+  Topic: Copy-or-Move-in-progress
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Migration-and-Move/Database-move or copy/Copy-or-Move-in-progress.md
+  Prompts:
+  - MI Copy-or-Move-in-progress
+  - Managed Instance Copy-or-Move-in-progress
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDbSeedTraces
+    ExecutedQuery: 'let endTime = now();
+let startTime = ago({TimeRange});
+MonDbSeedTraces
+
+      | where TIMESTAMP between (startTime .. endTime)
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where database_name =~ "{DatabaseName}"
+
+      | summarize min(TIMESTAMP), arg_max(TIMESTAMP, transferred_size_bytes) by NodeName, local_seeding_guid, internal_state_desc, database_name, failure_code, failure_message'
+- id: MI-backup_restore-521
+  Topic: Restore-from-Blob-URL-using-Log-Replay-Service-(LRS)
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Migration-and-Move/Log-Replay-Service/Restore-from-Blob-URL-using-Log-Replay-Service-(LRS).md
+  Prompts:
+  - MI Restore-from-Blob-URL-using-Log-Replay-Service-(LRS)
+  - Managed Instance Restore-from-Blob-URL-using-Log-Replay-Service-(LRS)
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagementOperations
+    ExecutedQuery: 'let endTime = now();
+let startTime = ago({TimeRange});
+MonManagementOperations
+
+      | where TIMESTAMP >= startTime and TIMESTAMP <= endTime
+
+      | where operation_category == ''BackupRestore''
+
+      | where operation_type in (''CreateExternalManagedBackupRestoreV2Request'', ''CreateManagedRecoverRequest'', ''CreateManagedRestoreFromLtrBackupRequest'', ''CreateManagedRestoreRequest'',''ManagedDatabaseCompleteExternalRestore'')
+
+      | where event == ''management_operation_start''
+
+      | extend inputParams = parse_xml(operation_parameters)
+
+      | extend restore_request_id = inputParams.InputParameters.RestoreId
+
+      | extend TargetSubscriptionId = inputParams.InputParameters.SubscriptionId
+
+      | extend TargetServer = inputParams.InputParameters.TargetManagedServerName
+
+      | extend TargetDatabase = inputParams.InputParameters.TargetManagedDatabaseName
+
+      | extend SourceSubscriptionId = inputParams.InputParameters.SourceSubscriptionId
+
+      | extend SourceManagedServerName = inputParams.InputParameters.SourceManagedServerName
+
+      | extend SourceManagedDatabaseName = inputParams.InputParameters.SourceManagedDatabaseName
+
+      | extend BackupContainerUrl = inputParams.InputParameters.BackupContainerUrl
+
+      | extend ArchivedBackupResourceId = tostring(inputParams.InputParameters.ArchivedBackupResourceId)
+
+      | extend StartTime = originalEventTimestamp
+
+      | extend SourceServer = iif(ArchivedBackupResourceId != '''',
+
+      extract(''/longTermRetentionManagedInstances/(.*)/longTermRetentionDatabases/'', 1, ArchivedBackupResourceId),
+
+      SourceManagedServerName)
+
+      | extend SourceDatabase = iif(ArchivedBackupResourceId != '''',
+
+      extract(''/longTermRetentionDatabases/(.*)/longTermRetentionManagedInstanceBackups/'', 1, ArchivedBackupResourceId),
+
+      SourceManagedDatabaseName)
+
+      | project request_id, restore_request_id, StartTime, TargetSubscriptionId, TargetServer, TargetDatabase, ArchivedBackupResourceId, SourceSubscriptionId, SourceServer, SourceDatabase, operation_type,
+      BackupContainerUrl
+
+      | where (TargetServer =~ serverName)
+
+      or (SourceServer =~ serverName)
+
+      | join kind=leftouter ('
+- id: MI-backup_restore-522
+  Topic: Restore-from-Blob-URL-using-Log-Replay-Service-(LRS)
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Migration-and-Move/Log-Replay-Service/Restore-from-Blob-URL-using-Log-Replay-Service-(LRS).md
+  Prompts:
+  - MI Restore-from-Blob-URL-using-Log-Replay-Service-(LRS)
+  - Managed Instance Restore-from-Blob-URL-using-Log-Replay-Service-(LRS)
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagementOperations
+    ExecutedQuery: 'let endTime = now();
+let startTime = ago({TimeRange});
+MonManagementOperations
+
+      | where TIMESTAMP >= startTime
+
+      and TIMESTAMP <= endTime //remove to check for operations completing after EndTime
+
+      | where event contains ''management_operation_''
+
+      | where event !in (''management_operation_start'', ''management_operation_progress'')
+
+      | extend EndTime = originalEventTimestamp
+
+      | extend end_event = event
+
+      | extend opResult = parse_xml(operation_result)
+
+      | extend OperationDetails = opResult.OutputParameters.OperationDetails
+
+      | extend CreatedDate = opResult.OutputParameters.CreatedDate
+
+      | extend Result = replace(@''management_operation_(.*)'', @''\1'', event)
+
+      ) on request_id
+
+      | project StartTime, EndTime, operation_type, Result, request_id, restore_request_id,BackupContainerUrl
+
+      , TargetSubscriptionId, TargetServer, TargetDatabase, SourceSubscriptionId, SourceServer, SourceDatabase, OperationDetails, CreatedDate, ArchivedBackupResourceId
+
+      , error_message, error_classification
+
+      | extend TargetSubscriptionId = iff(TargetSubscriptionId contains ''xsi:nil'', '''', TargetSubscriptionId)
+
+      | extend SourceSubscriptionId = iff(SourceSubscriptionId =~ "{SubscriptionId}", '''', SourceSubscriptionId)
+
+      | sort by StartTime desc'
+- id: MI-backup_restore-526
+  Topic: Moving-MI-to-different-subnet-operation-is-stuck
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Migration-and-Move/Move-instance-to-another-VNet or subnet/Moving-MI-to-different-subnet-operation-is-stuck.md
+  Prompts:
+  - MI Moving-MI-to-different-subnet-operation-is-stuck
+  - Managed Instance Moving-MI-to-different-subnet-operation-is-stuck
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where request_id in (''12345678...'') //ongoing request_id collected from above
+
+      | where message has "Subnet selected for managed instance migration is not configured to enable communication with" and message has "geo replicated"
+
+      | project request_id, TIMESTAMP, message, stack_trace'
+- id: MI-backup_restore-528
+  Topic: Moving-MI-to-different-subnet-operation-is-stuck
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Migration-and-Move/Move-instance-to-another-VNet or subnet/Moving-MI-to-different-subnet-operation-is-stuck.md
+  Prompts:
+  - MI Moving-MI-to-different-subnet-operation-is-stuck
+  - Managed Instance Moving-MI-to-different-subnet-operation-is-stuck
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where originalEventTimestamp >= ago(3d)
+
+      | where LogicalServerName == ""{ServerName}""
+
+      | where message contains "TDE"
+
+      | order by originalEventTimestamp desc
+
+      | project originalEventTimestamp, ClusterName, NodeName, message'
+>>>>>>> Stashed changes

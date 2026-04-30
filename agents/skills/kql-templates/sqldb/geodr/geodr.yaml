@@ -1,0 +1,2949 @@
+SqlSkills:
+- id: DB-geodr-1
+  Topic: GEODR0047.27--Unhealthy-geo-secondary-due-to-insufficient-HK-memory-(SLO-mismatch)
+  Source: TSG-SQL-DB-GeoDr/content/GEODR0047.27--Unhealthy-geo-secondary-due-to-insufficient-HK-memory-(SLO-mismatch).md
+  Prompts:
+  - SQL DB snapshot status
+  - SQL DB MonAnalyticsDBSnapshot logical_server_name
+  - SQL DB investigate snapshot
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: 'MonAnalyticsDBSnapshot
+
+      | where TIMESTAMP > ago(1h)
+
+      | where logical_server_name == "{LogicalServerName}"
+
+      | project logical_server_name, sql_instance_name, service_level_objective'
+- id: DB-geodr-2
+  Topic: GEODR0005---One-or-more-rings-on-a-cluster-are-una
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0005---One-or-more-rings-on-a-cluster-are-una.md
+  Prompts:
+  - SQL DB geo DR failover groups status
+  - SQL DB MonGeoDRFailoverGroups event logical_server_name
+  - SQL DB investigate geo DR failover groups
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonGeoDRFailoverGroups
+    ExecutedQuery: 'MonManagement
+
+      | where PreciseTimeStamp >= outageTime
+
+      | where event contains "failover_failover_group_begin"
+
+      | project failover_request_id=request_id, failover_time=tostring(PreciseTimeStamp), failoverInitiatedByCustomer=iff(event startswith "management_workflow", true, false), failover_group_name, logical_server_name
+
+      | join ( MonGeoDRFailoverGroups
+
+      | where PreciseTimeStamp <= outageTime
+
+      | summarize arg_max(PreciseTimeStamp, *) by failover_group_id
+
+      ) on failover_group_name, logical_server_name
+
+      | project failover_request_id, failoverInitiatedByCustomer, failover_time, secondary_server_name=logical_server_name, failover_group_name, failover_group_id, primary_region=partner_region, role, failover_policy, failover_with_data_loss_grace_period_in_minutes
+
+      | join ( cluster(failingCluster).database(''sqlazure1'').MonGeoDRFailoverGroups
+
+      | where PreciseTimeStamp <= outageTime
+
+      | summarize arg_max(PreciseTimeStamp, primary_server_name=logical_server_name, secondary_region=partner_region) by failover_group_id
+
+      ) on failover_group_id
+
+      | where primary_region == failingClusterName
+
+      | join kind = leftouter ( MonAnalyticsDBSnapshot
+
+      | where PreciseTimeStamp <= outageTime
+
+      | summarize by failover_group_id, logical_database_id, logical_database_name, secondary_server_name=logical_server_name
+
+      ) on failover_group_id, secondary_server_name
+
+      | join kind = leftouter ( cluster(failingCluster).database(''sqlazure1'').MonDmDbHadrReplicaStates
+
+      | where PreciseTimeStamp > outageTime - time(1h) and PreciseTimeStamp <= outageTime and is_forwarder == 1
+
+      | summarize lag_timestamp=arg_max(PreciseTimeStamp, secondary_lag_seconds) by primary_server_name=LogicalServerName, logical_database_name, group_database_id
+
+      ) on primary_server_name, logical_database_name
+
+      | summarize db_count=count(), avg(secondary_lag_seconds) by failover_request_id, failoverInitiatedByCustomer, primary_server_name, secondary_server_name, secondary_region, failover_group_name, failover_group_id, role, failover_policy, failover_with_data_loss_grace_period_in_minutes, failover_time
+
+      | join kind = leftouter ( cluster(failingCluster).database(''sqlazure1'').MonManagement
+
+      | where PreciseTimeStamp > outageTime
+
+      | where event contains "failover_failover_group_begin"
+
+      | project failback_request_id=request_id, failback_time=tostring(PreciseTimeStamp), failbackInitiatedByCustomer=iff(event startswith "management_workflow", true, false), failover_group_name, primary_server_name=logical_server_name
+
+      ) on failover_group_name, primary_server_name
+
+      | extend ttf = todatetime(failover_time) - outageTime
+
+      | extend ttfb = todatetime(failback_time) - outageTime
+
+      | project primary_server_name, secondary_server_name, failover_group_name, failover_group_id, failover_policy, failover_with_data_loss_grace_period_in_minutes, secondary_region, db_count, avg_secondary_lag_seconds, failover_time, ttf, failoverInitiatedByCustomer, failover_request_id, failback_time, ttfb, failbackInitiatedByCustomer, failback_request_id
+
+      | extend db_count = iff(db_count == 1 and isnan(avg_secondary_lag_seconds), 0, db_count)'
+- id: DB-geodr-3
+  Topic: GEODR0012-Logins-failing-on-the-local-secondary-wi
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0012-Logins-failing-on-the-local-secondary-wi.md
+  Prompts:
+  - SQL DB login events
+  - SQL DB MonLogin event logical_server_name database_name
+  - SQL DB investigate login events
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'MonLogin
+
+      | where logical_server_name =~ "{ServerName}" and database_name =~ "{DatabaseName}"
+
+      | where package  == "xdbgateway" and event == "process_login_finish" / and NodeName == "{NodeName}"
+
+      | where TIMESTAMP >= ago(30m)
+
+      | project originalEventTimestamp, ClusterName, NodeName, connection_id, logical_server_name, database_name, login_flags, fabric_node_name, instance_name, peer_activity_id
+
+      | order by originalEventTimestamp desc'
+- id: DB-geodr-4
+  Topic: GEODR0038-Read-Scale-Out-Troubleshooting
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0038-Read-Scale-Out-Troubleshooting.md
+  Prompts:
+  - SQL DB login events
+  - SQL DB MonLogin is_success event logical_server_name
+  - SQL DB investigate login events
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'MonLogin
+
+      | where logical_server_name == "{logical_server_name}" and database_name contains "{logical_database_name}"
+
+      | where event == "process_login_finish" and package == "xdbgateway" and event == "process_login_finish"
+
+      | extend bit21 = toint(login_flags / 2097152) % 2
+
+      | extend appIntentReadOnly = bit21
+
+      | summarize count() by bin(originalEventTimestamp, time(1h)), is_success, instance_port, appIntentReadOnly
+
+      | project originalEventTimestamp, appIntentReadOnly, is_success, count_, instance_port
+
+      | sort by originalEventTimestamp desc'
+- id: DB-geodr-5
+  Topic: GEODR0038-Read-Scale-Out-Troubleshooting
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0038-Read-Scale-Out-Troubleshooting.md
+  Prompts:
+  - SQL DB login events
+  - SQL DB MonLogin event logical_server_name database_name
+  - SQL DB investigate login events
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'MonLogin
+
+      | where logical_server_name == "{logical_server_name}" and database_name contains "{logical_database_name}"
+
+      | where event == "process_login_finish" and package == "sqlserver"
+
+      | summarize count_success = sum(is_success), count_failure = sum(1 - is_success) by bin(originalEventTimestamp, time(1h)), ClusterName, NodeName
+
+      | project originalEventTimestamp, count_success, count_failure, NodeName, ClusterName
+
+      | sort by originalEventTimestamp desc'
+- id: DB-geodr-6
+  Topic: GEODR0042-Copy-failing-due-to-insufficient-file-sp
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0042-Copy-failing-due-to-insufficient-file-sp.md
+  Prompts:
+  - SQL DB management errors
+  - SQL DB MonManagement error event error_message
+  - SQL DB troubleshoot management errors
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where event startswith "management_operation_"
+
+      | where operation_type == "StartDatabaseContinousCopy" or operation_type == "StartDatabaseCopy"
+
+      | where operation_parameters contains "{DatabaseName}"
+
+      | project originalEventTimestamp, event, error, message, error_message, operation_parameters
+
+      | top 10 by originalEventTimestamp desc'
+- id: DB-geodr-7
+  Topic: GEODR0042-Copy-failing-due-to-insufficient-file-sp
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0042-Copy-failing-due-to-insufficient-file-sp.md
+  Prompts:
+  - SQL DB primary replica status
+  - SQL DB MonDmIoVirtualFileStats LogicalServerName
+  - SQL DB investigate primary replica
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmIoVirtualFileStats
+    ExecutedQuery: 'MonDmIoVirtualFileStats
+
+      | where LogicalServerName == "{ServerName}" and db_name == "{DatabaseName}" and is_primary_replica == 1
+
+      | extend file_size_mb = size_on_disk_bytes / 1024 / 1024
+
+      | summarize storage_size_mb = sum(spaceused_mb), file_size_mb = sum(file_size_mb) by end_utc_date, db_name
+
+      | top 10 by end_utc_date desc'
+- id: DB-geodr-8
+  Topic: GEODR0042-Copy-failing-due-to-insufficient-file-sp
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0042-Copy-failing-due-to-insufficient-file-sp.md
+  Prompts:
+  - SQL DB resource pool stats analysis
+  - SQL DB MonResourcePoolStats LogicalServerName
+  - SQL DB investigate resource pool stats
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonResourcePoolStats
+    ExecutedQuery: 'MonResourcePoolStats
+
+      | where LogicalServerName == "{ServerName}" and resource_pool_name == "{ElasticPoolName}"
+
+      | top 5 by TIMESTAMP desc
+
+      | project TIMESTAMP, data_storage_percent, storage_limit_mb = toint(resource_pool_storage_limit) / 1024, storage_used_mb = toint(data_storage_percent) * 0.01 * toint(resource_pool_storage_limit) / 1024
+
+      | extend storage_space_remaining_mb = storage_limit_mb - storage_used_mb'
+- id: DB-geodr-9
+  Topic: GEODR0042-Copy-failing-due-to-insufficient-file-sp
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0042-Copy-failing-due-to-insufficient-file-sp.md
+  Prompts:
+  - SQL DB RG load activity
+  - SQL DB MonRgLoad event ClusterName TIMESTAMP slo_size
+  - SQL DB investigate RG load
+  CustomizedParameters:
+  - AppName
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonRgLoad
+    ExecutedQuery: 'MonRgLoad
+
+      | where event == "directory_quota_report_load" and application_name contains \"{AppName}\" and target_directory contains "data" and TIMESTAMP > ago(2h)
+
+      | summarize max(quota_usage_in_bytes) by ClusterName, application_name, slo_size, target_directory, quota_limit_in_bytes
+
+      | extend percentage = 100 * (1.0 * max_quota_usage_in_bytes / quota_limit_in_bytes)
+
+      | extend quota_limit_gb = quota_limit_in_bytes / (1024 * 1024 * 1024)
+
+      | extend quota_usage_gb = max_quota_usage_in_bytes / (1024 * 1024 * 1024)
+
+      | project ClusterName, application_name, slo_size, target_directory, quota_limit_gb, quota_usage_gb, percentage'
+- id: DB-geodr-10
+  Topic: GEODR0042-Copy-failing-due-to-insufficient-file-sp
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0042-Copy-failing-due-to-insufficient-file-sp.md
+  Prompts:
+  - SQL DB resource pool stats analysis
+  - SQL DB MonResourcePoolStats LogicalServerName
+  - SQL DB investigate resource pool stats
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonResourcePoolStats
+    ExecutedQuery: 'MonResourcePoolStats
+
+      | where LogicalServerName == "{ServerName}" and resource_pool_name =~ "{ElasticPoolName}"
+
+      | top 1 by TIMESTAMP desc
+
+      | project TIMESTAMP,
+
+      pool_storage_size_mb=toint(todouble(data_storage_percent) / 100.0 * todouble(resource_pool_storage_limit) / 1024.0),
+
+      pool_file_size_mb=toint(todouble(allocated_data_storage_percent) / 100.0 * todouble(resource_pool_storage_limit) / 1024.0),
+
+      pool_storage_limit_mb=todouble(resource_pool_storage_limit) / 1024.0'
+- id: DB-geodr-11
+  Topic: GEODR0044-GeoDR-link-stuck-in-RemovingInstancePart
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0044-GeoDR-link-stuck-in-RemovingInstancePart.md
+  Prompts:
+  - SQL DB database metrics activity
+  - SQL DB MonDatabaseMetrics database_name PreciseTimeStamp
+  - SQL DB investigate database metrics
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDatabaseMetrics
+    ExecutedQuery: 'MonDatabaseMetrics
+
+      | where database_name startswith \"{DatabaseName}\"
+
+      | where database_maxsize_in_bytes_bootpage != 0 and PreciseTimeStamp >= ago(1h)
+
+      | summarize arg_max(PreciseTimeStamp, *) by server_name, database_name, sku
+
+      | project server_name, database_name, sku, database_maxsize_in_bytes_bootpage
+
+      | join kind= inner ('
+- id: DB-geodr-12
+  Topic: GEODR0044-GeoDR-link-stuck-in-RemovingInstancePart
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0044-GeoDR-link-stuck-in-RemovingInstancePart.md
+  Prompts:
+  - SQL DB IO virtual file stats status
+  - SQL DB MonDmIoVirtualFileStats database_name max_size_mb
+  - SQL DB investigate IO virtual file stats
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmIoVirtualFileStats
+    ExecutedQuery: 'MonDmIoVirtualFileStats
+
+      | where db_name startswith "db_crmcorenam"
+
+      | where PreciseTimeStamp > ago(1h)
+
+      | where type_desc == "ROWS" and db_name !in (''tempdb'', ''master'', ''msdb'')
+
+      | summarize arg_max(PreciseTimeStamp, *), filecount = dcount(file_id) by server_name = LogicalServerName, database_name = db_name
+
+      | where filecount == 1
+
+      | where max_size_mb <> 0
+
+      | extend max_size_bytes = max_size_mb * 1024 * 1024, size_on_disk_mb = size_on_disk_bytes / 1024 / 1024
+
+      | project-away state
+
+      ) on server_name, database_name
+
+      | join kind=inner ('
+- id: DB-geodr-13
+  Topic: GEODR0044-GeoDR-link-stuck-in-RemovingInstancePart
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0044-GeoDR-link-stuck-in-RemovingInstancePart.md
+  Prompts:
+  - SQL DB snapshot status
+  - SQL DB MonAnalyticsDBSnapshot state logical_server_name
+  - SQL DB investigate snapshot
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: 'MonAnalyticsDBSnapshot
+
+      | where logical_database_name startswith \"{DatabaseName}\"
+
+      | summarize arg_max(PreciseTimeStamp, physical_database_id, max_size_bytes, state, create_time ) by server_name = logical_server_name, database_name = logical_database_name
+
+      | extend cms_msb = max_size_bytes
+
+      | project-away max_size_bytes
+
+      ) on server_name, database_name
+
+      | project server_name, database_name, physical_database_id, msb_mb_file = max_size_bytes / 1024 / 1024, msb_mb_bp = database_maxsize_in_bytes_bootpage / 1024 / 1024, msb_mb_cms = cms_msb / 1024 / 1024, spaceused_mb, size_on_disk_mb, state, ClusterName
+
+      | where size_on_disk_mb > msb_mb_bp
+
+      | extend mitigation_cmd = iff(state == ''Copying'',
+
+      strcat("Update-DatabaseMaxSizeInEngine -LogicalServerName "", server_name, "" -LogicalDatabaseName "", database_name,
+
+      "" -PhysicalDatabaseId "", physical_database_id, "" -DatabaseMaxSizeInBytes !!!SMALLEST MAX SIZE >= size_on_disk_mb!!! -OnlyUpdateOnBootPage $true"),
+
+      iff(state == ''Ready'', strcat(''Set-Database -ServerName '', server_name, '' -DatabaseName '', database_name, '' -MaxSizeBytes !!!SMALLEST MAX SIZE >= size_on_disk_mb!!!''), ''Not sure how to mitigate, state not recognized''))'
+- id: DB-geodr-14
+  Topic: GEODR0045-Seeding-being-repeatedly-killed-due-to-f
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0045-Seeding-being-repeatedly-killed-due-to-f.md
+  Prompts:
+  - SQL DB fabric debug analysis
+  - SQL DB MonFabricDebug event TIMESTAMP lookback
+  - SQL DB investigate fabric debug
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonFabricDebug
+    ExecutedQuery: 'MonFabricDebug
+
+      | where TIMESTAMP > ago(lookback)
+
+      | where event == "lock_redo_unblocked" and resource_type == "DATABASE"
+
+      | extend redo_unblocked_time = originalEventTimestamp;
+
+      let cancelled_seedings ='
+- id: DB-geodr-15
+  Topic: GEODR0045-Seeding-being-repeatedly-killed-due-to-f
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0045-Seeding-being-repeatedly-killed-due-to-f.md
+  Prompts:
+  - SQL DB SQL system health
+  - SQL DB MonSQLSystemHealth TIMESTAMP lookback
+  - SQL DB investigate SQL system health
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where TIMESTAMP > ago(lookback)
+
+      | where message contains "build replica operation on primary database" and message contains "called cancel on seeding operation"
+
+      | extend physical_database_id = toupper(extract("Build replica operation on primary database[(.*)] called", 1, message))
+
+      | extend local_seeding_guid = extract("Source operation ID[(.*)]", 1, message)
+
+      | extend seeding_kill_time = originalEventTimestamp;
+
+      let BlockedRedosToCancelledSeedings ='
+- id: DB-geodr-16
+  Topic: GEODR0045-Seeding-being-repeatedly-killed-due-to-f
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0045-Seeding-being-repeatedly-killed-due-to-f.md
+  Prompts:
+  - SQL DB primary replica status
+  - SQL DB MonDmDbHadrReplicaStates LogicalServerName
+  - SQL DB investigate primary replica
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmDbHadrReplicaStates
+    ExecutedQuery: 'MonDmDbHadrReplicaStates
+
+      | where TIMESTAMP > ago(lookback)
+
+      | where logical_database_name != tolower(group_id)
+
+      | summarize by LogicalServerName, logical_database_name, AppName, database_id, physical_database_id=group_id;
+
+      let partners ='
+- id: DB-geodr-17
+  Topic: GEODR0045-Seeding-being-repeatedly-killed-due-to-f
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0045-Seeding-being-repeatedly-killed-due-to-f.md
+  Prompts:
+  - SQL DB continuous copy status status
+  - SQL DB MonDmContinuousCopyStatus LogicalServerName
+  - SQL DB investigate continuous copy status
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmContinuousCopyStatus
+    ExecutedQuery: 'MonDmContinuousCopyStatus
+
+      | where TIMESTAMP > ago(lookback)
+
+      | where is_target_role == 1
+
+      | summarize by LogicalServerName, partner_server , physical_database_id;
+
+      let blocked_redos_joined_to_cancelled_seedings='
+- id: DB-geodr-18
+  Topic: GEODR0052-Drop-or-alter-the-database-encryption-ke
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0052-Drop-or-alter-the-database-encryption-ke.md
+  Prompts:
+  - SQL DB errors reported errors
+  - SQL DB AlrSQLErrorsReported state AppName TIMESTAMP
+  - SQL DB troubleshoot errors reported errors
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: AlrSQLErrorsReported
+    ExecutedQuery: 'AlrSQLErrorsReported
+
+      | where TIMESTAMP >=<Timerange>
+
+      | where AppName == "<appName>"
+
+      | where error_number == "33123" and state == "1"'
+- id: DB-geodr-19
+  Topic: GEODR0057_Insufficient_permission_to_create_a_database_copy_on_server_partner_server
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0057_Insufficient_permission_to_create_a_database_copy_on_server_partner_server.md
+  Prompts:
+  - SQL DB management analysis
+  - SQL DB MonManagement originalEventTimestamp varEndTime
+  - SQL DB investigate management
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where originalEventTimestamp between (varStartTime .. varEndTime)'
+- id: DB-geodr-20
+  Topic: GEODR0060-Executing-ResumeContinuousCopy-workflow
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0060-Executing-ResumeContinuousCopy-workflow.md
+  Prompts:
+  - SQL DB socrates activity
+  - SQL DB MonSocrates event AppName TIMESTAMP of App
+  - SQL DB investigate socrates
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSocrates
+    ExecutedQuery: 'MonSocrates
+
+      | where TIMESTAMP < now() // Less than the timestamp of GeoDR failover *start time*
+
+      | where AppName == "{AppName}"  // Old geo-primary’s Compute App Name : Srv_A  in above case
+
+      | where event == "VldbRgProgressSnapshotXEvent" and Role == "ForwarderXlogReader" and NodeId == 0
+
+      | extend CatchupRateMb = CatchupRate / 1024. / 1024, DistanceGb = Distance / 1024. / 1024 / 1024
+
+      | project-keep originalEventTimestamp, DistanceGb, CurrentBsn
+
+      | summarize arg_max(TIMESTAMP, CurrentBsn)'
+- id: DB-geodr-21
+  Topic: GEODR0066--CL-Redo-kill-interrupts-seeding-local-replicas-on-geo-secondary
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0066--CL-Redo-kill-interrupts-seeding-local-replicas-on-geo-secondary.md
+  Prompts:
+  - SQL DB SQL system health
+  - SQL DB MonSQLSystemHealth AppName NodeName ClusterName
+  - SQL DB investigate SQL system health
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where TIMESTAMP > ago(1h)
+
+      | where message contains "due to failure to acquire DATABASE lock for"
+
+      | extend db_id = extract("for database \\[(.*)\\] due to", 1, message)
+
+      | where ClusterName == ICMClusterName
+
+      | where ManagedServerName == ICMManagedServerName
+
+      | where AppName == ICMAppName
+
+      | where NodeName == ICMNodeName
+
+      | where DatabaseId == ICMDatabaseId
+
+      | summarize LastOccurenceTs = arg_max(TIMESTAMP, ClusterName, ManagedServerName, AppName, NodeName, message, DatabaseId)
+
+      | join kind = inner ('
+- id: DB-geodr-22
+  Topic: GEODR0066--CL-Redo-kill-interrupts-seeding-local-replicas-on-geo-secondary
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0066--CL-Redo-kill-interrupts-seeding-local-replicas-on-geo-secondary.md
+  Prompts:
+  - SQL DB seed traces errors (MI/GeoDR context)
+  - SQL DB MonDbSeedTraces event database_name AppName
+  - SQL DB troubleshoot seed traces errors
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDbSeedTraces
+    ExecutedQuery: 'MonDbSeedTraces
+
+      | where TIMESTAMP > ago(1h)
+
+      | where AppTypeName == "Worker.CL"
+
+      | where ClusterName == ICMClusterName
+
+      | where ManagedServerName == ICMManagedServerName
+
+      | where AppName == ICMAppName
+
+      | where NodeName == ICMNodeName
+
+      | where DatabaseId == ICMDatabaseId
+
+      | where event == "hadr_physical_seeding_failure"
+
+      | where failure_message == "Remote side failure"
+
+      | project TIMESTAMP, ClusterName, ManagedServerName, AppName, NodeName, database_name
+
+      ) on ClusterName, ManagedServerName, AppName, NodeName, $left.DatabaseId == $right.database_name
+
+      | where (TIMESTAMP - LastOccurenceTs) between (0s .. 30s)
+
+      | project LastOccurenceTs, ClusterName, ManagedServerName, AppName, NodeName, DatabaseId
+
+      | join kind = inner ('
+- id: DB-geodr-23
+  Topic: GEODR0066--CL-Redo-kill-interrupts-seeding-local-replicas-on-geo-secondary
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0066--CL-Redo-kill-interrupts-seeding-local-replicas-on-geo-secondary.md
+  Prompts:
+  - SQL DB geo DR failover groups analysis
+  - SQL DB MonGeoDRFailoverGroups logical_server_name
+  - SQL DB investigate geo DR failover groups
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonGeoDRFailoverGroups
+    ExecutedQuery: 'MonGeoDRFailoverGroups
+
+      | where TIMESTAMP > ago(1h)
+
+      | where ManagedServerName == ICMManagedServerName
+
+      | where role == "Secondary"
+
+      | project TIMESTAMP, logical_server_name, failover_group_name
+
+      ) on $left.ManagedServerName == $right.logical_server_name
+
+      | where (TIMESTAMP - LastOccurenceTs) between (0m .. 10m)
+
+      | project LastOccurenceTs'
+- id: DB-geodr-24
+  Topic: GEODR0066--CL-Redo-kill-interrupts-seeding-local-replicas-on-geo-secondary
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0066--CL-Redo-kill-interrupts-seeding-local-replicas-on-geo-secondary.md
+  Prompts:
+  - SQL DB seed traces status (MI/GeoDR context)
+  - SQL DB MonDbSeedTraces event AppName AppTypeName
+  - SQL DB investigate seed traces
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDbSeedTraces
+    ExecutedQuery: 'MonDbSeedTraces
+
+      | where TIMESTAMP > ago(1h)
+
+      | where AppTypeName == "Worker.CL"
+
+      | where ManagedServerName == ICMManagedServerName
+
+      | where AppName == ICMAppName
+
+      | where NodeName == ICMNodeName
+
+      | where DatabaseId == ICMDatabaseId
+
+      | where event == ''hadr_physical_seeding_progress''
+
+      | where internal_state_desc == ''Success''
+
+      | project seeding_end_time
+
+      If LastOccurenceTime <= LastOccurenceTs and the last query didn''t return a result, proceed to the mitigation section.'
+- id: DB-geodr-26
+  Topic: GEODR0071--CL-Stuck-managed-failvoer-group-creation,-drop-or-stuck-cross-instance-database-movement
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0071--CL-Stuck-managed-failvoer-group-creation,-drop-or-stuck-cross-instance-database-movement.md
+  Prompts:
+  - SQL DB management errors
+  - SQL DB MonManagement event originalEventTimestamp
+  - SQL DB troubleshoot management errors
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where originalEventTimestamp > ago(2h)
+
+      | where operation_type == ''{operation_type_from_title}''
+
+      | extend server_name = iff ((operation_parameters !has "</ManagedServerName>"), extract("<SourceServerName>(.*)</SourceServerName>", 1, operation_parameters), extract("<ManagedServerName>(.*)</ManagedServerName>", 1, operation_parameters))
+
+      | where server_name == ''{server_name_from_title}''
+
+      | summarize by request_id, server_name
+
+      | join kind=leftanti (MonManagement
+
+      | where originalEventTimestamp > ago(2h)
+
+      | where event == ''management_operation_failure'' or event == ''management_operation_success'' or event == ''management_operation_cancel'' or event == ''management_operation_fatal_error''
+
+      | summarize by request_id
+
+      ) on request_id
+
+      | join kind=inner (MonManagement
+
+      | where originalEventTimestamp > ago(2h)
+
+      | where state_machine_type  == ''ManagedFailoverGroupStateMachine'' or state_machine_type == ''CrossManagedInstanceDatabaseMovementStateMachine''
+
+      | where isnotempty([''state''])
+
+      | summarize arg_max(originalEventTimestamp, [''state'']) by request_id
+
+      ) on request_id
+
+      | where [''state'']  !in (''AddingAndRemovingDatabasesOnPartnerServer'', ''AddingAndRemovingDatabasesOnLocalServer'', ''WaitingForPrimaryToFinishDatabaseOperations'', ''WaitingForTargetDatabaseCreation'', ''CreatingTargetDatabase'')
+
+      | where now() - originalEventTimestamp > 30min
+
+      | where'
+- id: DB-geodr-27
+  Topic: GEODR0074-[CL]-GeoDR-slow-seeding
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0074-[CL]-GeoDR-slow-seeding.md
+  Prompts:
+  - SQL DB snapshot status
+  - SQL DB MonAnalyticsDBSnapshot logical_server_name
+  - SQL DB investigate snapshot
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: 'MonAnalyticsDBSnapshot
+
+      | where TIMESTAMP >= ago(3h)
+
+      | where database_type == "SQL.ManagedUserDb"
+
+      | where [''state''] == "Copying"
+
+      | summarize arg_max(TIMESTAMP, [''state''], physical_database_state) by tenant_ring_name, customer_subscription_id, sql_instance_name, logical_server_name, logical_database_name'
+- id: DB-geodr-28
+  Topic: GEODR0074-[CL]-GeoDR-slow-seeding
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0074-[CL]-GeoDR-slow-seeding.md
+  Prompts:
+  - SQL DB seed traces activity (MI/GeoDR context)
+  - SQL DB MonDbSeedTraces event LogicalServerName
+  - SQL DB investigate seed traces
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDbSeedTraces
+    ExecutedQuery: 'MonDbSeedTraces
+
+      | where TIMESTAMP >= ago(24h)
+
+      | where AppTypeName == "Worker.CL"
+
+      | where LogicalServerName startswith "{managed_server_name}"
+
+      | where event == ''hadr_physical_seeding_progress''
+
+      | where role_desc == "Destination"
+
+      | extend transfer_rate_mb_per_second = transfer_rate_bytes_per_second / 1024.0 / 1024.0
+
+      | extend database_size_GB = database_size_bytes / 1024.0 / 1024.0 / 1024.0
+
+      | extend transferred_size_GB = transferred_size_bytes / 1024.0 / 1024.0 / 1024.0
+
+      | extend db_name = extract(''Database=\\[(.*)\\]'', 1, remote_machine_name)
+
+      | summarize max(transferred_size_GB), max(database_size_GB), avg(transfer_rate_mb_per_second) by db_name'
+- id: DB-geodr-29
+  Topic: GEODR0074-[CL]-GeoDR-slow-seeding
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0074-[CL]-GeoDR-slow-seeding.md
+  Prompts:
+  - SQL DB seed traces status (MI/GeoDR context)
+  - SQL DB MonDbSeedTraces event LogicalServerName
+  - SQL DB investigate seed traces
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDbSeedTraces
+    ExecutedQuery: 'MonDbSeedTraces
+
+      | where TIMESTAMP >= ago(24h)
+
+      | where AppTypeName == "Worker.CL"
+
+      | where LogicalServerName startswith "{managed_server_name}"
+
+      | where event == "hadr_physical_seeding_progress"
+
+      | where role_desc == "Destination"
+
+      | where internal_state_desc == "Success"
+
+      | extend transfer_rate_mb_per_second = transfer_rate_bytes_per_second / 1024.0 / 1024.0
+
+      | extend db_name = extract(''Database=\\[(.*)\\]'', 1, remote_machine_name)
+
+      | summarize avg(transfer_rate_mb_per_second) by bin(TIMESTAMP, 5min), db_name
+
+      | render timechart'
+- id: DB-geodr-30
+  Topic: GEODR0074-[CL]-GeoDR-slow-seeding
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0074-[CL]-GeoDR-slow-seeding.md
+  Prompts:
+  - SQL DB audit analysis
+  - SQL DB MonNonPiiAudit request_action username TIMESTAMP
+  - SQL DB investigate audit
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonNonPiiAudit
+    ExecutedQuery: 'MonNonPiiAudit
+
+      | where TIMESTAMP >= ago(24h)
+
+      | where request_action contains "KillProcess"
+
+      | where * contains "{sql_instance_name}"
+
+      | project TIMESTAMP, username, parameters, request, request_action'
+- id: DB-geodr-31
+  Topic: GEODR0075--CL-Inconsistent-value-of-is_geo_secondary_disaster_recovery_only-parameter-on-primary-and-secondary-side
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0075--CL-Inconsistent-value-of-is_geo_secondary_disaster_recovery_only-parameter-on-primary-and-secondary-side.md
+  Prompts:
+  - SQL DB management operations
+  - SQL DB MonManagementOperations TIMESTAMP br operation_type
+  - SQL DB investigate management operations
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagementOperations
+    ExecutedQuery: 'MonManagementOperations
+
+
+      | where TIMESTAMP > ago (2h)
+
+
+      | where operation_type in (''CreateManagedFailoverGroups'', ''UpdateManagedFailoverGroup'')
+
+
+      | where operation_parameters contains ''{FailoverGroupName}'''
+- id: DB-geodr-32
+  Topic: GEODR0078-Synchronization-interrupted-by-illegal-transition-messages
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0078-Synchronization-interrupted-by-illegal-transition-messages.md
+  Prompts:
+  - SQL DB x status
+  - SQL DB X LogicalServerName originalEventTimestamp
+  - SQL DB investigate x
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'X.MonSQLSystemHealth
+
+      | where originalEventTimestamp between (varInvestigationWindowStart .. varInvestigationWindowEnd)
+
+      | where LogicalServerName in~ (varServer1, varServer2)
+
+      | where message contains ''* illegal transition * change from''
+
+      | summarize count(), min(originalEventTimestamp), max(originalEventTimestamp), arg_min(originalEventTimestamp, message) by LogicalServerName
+
+      )'
+- id: DB-geodr-33
+  Topic: GEODR0078-Synchronization-interrupted-by-illegal-transition-messages
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0078-Synchronization-interrupted-by-illegal-transition-messages.md
+  Prompts:
+  - SQL DB fabric debug activity
+  - SQL DB MonFabricDebug event LogicalServerName TIMESTAMP
+  - SQL DB investigate fabric debug
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonFabricDebug
+    ExecutedQuery: 'MonFabricDebug
+
+      | where TIMESTAMP > ago(1h)
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where event == ''hadr_transport_dump_dropped_message'' //and operation_reason == ''UnableToAllocate''
+
+      | summarize count() by operation_reason'
+- id: DB-geodr-34
+  Topic: GEODR0079-CL-%2D-Stuck-PaaSv2-migration-on-Geo%2DSecondary-(works-for-Geo%2DPrimary-as-well)
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0079-CL-%2D-Stuck-PaaSv2-migration-on-Geo%2DSecondary-(works-for-Geo%2DPrimary-as-well).md
+  Prompts:
+  - SQL DB mi geo DR failover groups connectivity activity
+  - SQL DB MonMIGeoDRFailoverGroupsConnectivity TIMESTAMP
+  - SQL DB investigate mi geo DR failover groups connectivity
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonMIGeoDRFailoverGroupsConnectivity
+    ExecutedQuery: 'MonMIGeoDRFailoverGroupsConnectivity
+
+      | where TIMESTAMP > ago(2h)
+
+      | where Region =~ "<your region>"
+
+      | where ManagedServerName in~ (''<your_mi>'')
+
+      | summarize by ManagedServerName, Region, PartnerServerName, PartnerRegion
+
+      If there was connectivity before, do not proceed!'
+- id: DB-geodr-35
+  Topic: GEODR0079-CL-%2D-Stuck-PaaSv2-migration-on-Geo%2DSecondary-(works-for-Geo%2DPrimary-as-well)
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0079-CL-%2D-Stuck-PaaSv2-migration-on-Geo%2DSecondary-(works-for-Geo%2DPrimary-as-well).md
+  Prompts:
+  - SQL DB snapshot status
+  - SQL DB MonAnalyticsDBSnapshot logical_server_name
+  - SQL DB investigate snapshot
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: 'MonAnalyticsDBSnapshot
+
+      | where TIMESTAMP > ago(2h)
+
+      | where database_type == ''SQL.ManagedUserDb''
+
+      | where logical_server_name == secondaryServerName'
+- id: DB-geodr-36
+  Topic: GEODR0079-CL-%2D-Stuck-PaaSv2-migration-on-Geo%2DSecondary-(works-for-Geo%2DPrimary-as-well)
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0079-CL-%2D-Stuck-PaaSv2-migration-on-Geo%2DSecondary-(works-for-Geo%2DPrimary-as-well).md
+  Prompts:
+  - SQL DB snapshot status
+  - SQL DB MonAnalyticsDBSnapshot state logical_server_name
+  - SQL DB investigate snapshot
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: 'MonAnalyticsDBSnapshot
+
+      | where TIMESTAMP > ago(2h)
+
+      | where logical_server_name == secondaryServerName
+
+      | where database_type == ''SQL.ManagedUserDb''
+
+      | summarize arg_max(TIMESTAMP, state) by logical_database_name
+
+      | join kind = inner (MonDmContinuousCopyStatus
+
+      | where TIMESTAMP > ago(2h)
+
+      | where LogicalServerName == secondaryServerName
+
+      | summarize arg_max(TIMESTAMP, replication_state_desc) by partner_database)
+
+      on $left.logical_database_name == $right.partner_database
+
+      | project TIMESTAMP, logical_database_name, database_state = state, replication_state = replication_state_desc'
+- id: DB-geodr-37
+  Topic: GEODR0080-[CL]-prolonged-split-brain
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0080-[CL]-prolonged-split-brain.md
+  Prompts:
+  - SQL DB snapshot status (MI/GeoDR context)
+  - SQL DB MonAnalyticsDBSnapshot state event LogicalServerName
+  - SQL DB investigate snapshot
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: 'cluster(clstr).database(''sqlazure1'').MonAnalyticsDBSnapshot
+
+      | where TIMESTAMP > timeBegin and TIMESTAMP < timeEnd
+
+      | where fabric_service_uri startswith "fabric:/Worker.CL"
+
+      | summarize arg_max(TIMESTAMP, managed_database_id = logical_database_id, failover_group_id, managed_server_id = logical_server_id)
+
+      by managed_server_name = logical_server_name, managed_database_name = logical_database_name
+
+      | where failover_group_id != ''''
+
+      | join kind = inner (
+
+      cluster(clstr).database(''sqlazure1'').MonDmDbHadrReplicaStates
+
+      | where TIMESTAMP > timeBegin and TIMESTAMP < timeEnd
+
+      | summarize arg_max(TIMESTAMP, internal_state) by ClusterName, LogicalServerName, managed_database_id = toupper(logical_database_name)
+
+      | where internal_state == 3 // internal_state == 3 means the replica is global primary
+
+      ) on managed_database_id
+
+      | join kind = inner (
+
+      cluster(clstr).database(''sqlazure1'').MonDmDbHadrReplicaStates
+
+      | where TIMESTAMP > timeBegin and TIMESTAMP < timeEnd
+
+      | summarize replicas_exist = count() > 0, global_primary_replica_exists = countif(internal_state == 3) > 0
+
+      by ClusterName, LogicalServerName, managed_database_id = toupper(logical_database_name), bin(TIMESTAMP, 1m)
+
+      | where replicas_exist == true
+
+      | summarize minutes_replicas_exists = count(), minutes_global_primary_exists = countif(global_primary_replica_exists)
+
+      by ClusterName, LogicalServerName, managed_database_id
+
+      | where minutes_global_primary_exists >= thresholdGlobalPrimaryMinutes
+
+      ) on managed_database_id
+
+      | join kind = anti (
+
+      cluster(clstr).database(''sqlazure1'').MonManagementOperations
+
+      | where TIMESTAMP > timeEnd - 2d and TIMESTAMP < timeEnd
+
+      | where operation_type == ''ResumeContinuousCopy''
+
+      | summarize arg_max(TIMESTAMP, event) by request_id
+
+      | where event == ''management_operation_start''
+
+      | join kind = inner (
+
+      cluster(clstr).database(''sqlazure1'').MonManagement
+
+      | where TIMESTAMP > timeBegin and TIMESTAMP < timeEnd
+
+      | where state_machine_type == ''ManagedDatabaseStateMachine''
+
+      | where state != ''''
+
+      | summarize arg_max(TIMESTAMP, state) by keys, request_id
+
+      | where state !in (''Ready'', ''DisablingExternalConnections'', ''WaitingForExternalConnectionsDisabled'', ''NotifyingNodeAgentForExternalConnectionsDisabled'')
+
+      | parse kind=regex keys with * managed_server_id_lower '','' managed_database_id_lower
+
+      | project managed_server_id = toupper(managed_server_id_lower), managed_database_id = toupper(managed_database_id_lower), keys, state, request_id
+
+      ) on request_id
+
+      ) on managed_server_id, managed_database_id'
+- id: DB-geodr-38
+  Topic: GEODR0080-[CL]-prolonged-split-brain
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0080-[CL]-prolonged-split-brain.md
+  Prompts:
+  - SQL DB management operations
+  - SQL DB MonManagementOperations event error_message
+  - SQL DB investigate management operations
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagementOperations
+    ExecutedQuery: 'cluster(clstr).database(''sqlazure1'').MonManagementOperations
+
+      | where TIMESTAMP > ago(6h)
+
+      | where operation_type == ''FailoverManagedFailoverGroup''
+
+      | where operation_parameters contains strcat(">", firstManagedServerName, "<") or operation_parameters contains strcat(">", secondManagedServerName, "<")
+
+      | project TIMESTAMP, request_id, event, operation_type, operation_parameters, operation_result, elapsed_time, error_code, error_message'
+- id: DB-geodr-39
+  Topic: GEODR0080-[CL]-prolonged-split-brain
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0080-[CL]-prolonged-split-brain.md
+  Prompts:
+  - SQL DB management errors
+  - SQL DB MonManagement state event error_message
+  - SQL DB troubleshoot management errors
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'cluster(clstr).database(''sqlazure1'').MonManagement
+
+      | where request_id =~ requestId
+
+      | project TIMESTAMP, event, state, message, old_state, action, new_state, state_machine_type, keys, remote_request_id, operation_parameters, exception_type, error_message, stack_trace'
+- id: DB-geodr-40
+  Topic: GEODR0080-[CL]-prolonged-split-brain
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0080-[CL]-prolonged-split-brain.md
+  Prompts:
+  - SQL DB management operations
+  - SQL DB MonManagementOperations event ClusterName
+  - SQL DB investigate management operations
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagementOperations
+    ExecutedQuery: 'cluster(clstr).database(''sqlazure1'').MonManagementOperations
+
+      | where TIMESTAMP > ago(1d)
+
+      | where operation_type == ''ResumeContinuousCopy''
+
+      | where operation_parameters contains strcat(">", databaseName, "<") and (operation_parameters contains strcat(">", firstManagedServerName,"<") or operation_parameters contains strcat(">", secondManagedServerName,"<"))
+
+      | project TIMESTAMP, ClusterName, request_id, event, operation_type, operation_parameters, operation_result, elapsed_time, error_code, error_message'
+- id: DB-geodr-41
+  Topic: GEODR0085-Replication-Lag-Metric-in-Portal
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0085-Replication-Lag-Metric-in-Portal.md
+  Prompts:
+  - SQL DB primary replica status
+  - SQL DB MonDmDbHadrReplicaStates LogicalServerName
+  - SQL DB investigate primary replica
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmDbHadrReplicaStates
+    ExecutedQuery: 'MonDmDbHadrReplicaStates | where TIMESTAMP between (varStartTime .. varEndTime)
+
+      | where LogicalServerName == varLogicalServerName1 and logical_database_name == varLogicalDatabaseName and is_forwarder == 1
+
+      | project TIMESTAMP, log_send_queue_size_MB=iff(log_send_queue_size >= 0, log_send_queue_size / 1024., -1.0), redo_queue_size_MB=iff(redo_queue_size >= 0, redo_queue_size / 1024., -1.0), secondary_lag_seconds
+
+      | render timechart with ( xcolumn=TIMESTAMP, ycolumns=secondary_lag_seconds )'
+- id: DB-geodr-42
+  Topic: GEODR0085-Replication-Lag-Metric-in-Portal
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0085-Replication-Lag-Metric-in-Portal.md
+  Prompts:
+  - SQL DB continuous copy status status
+  - SQL DB MonDmContinuousCopyStatus LogicalServerName
+  - SQL DB investigate continuous copy status
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmContinuousCopyStatus
+    ExecutedQuery: 'MonDmContinuousCopyStatus | where TIMESTAMP between (varStartTime .. varEndTime)
+
+      | where LogicalServerName =~ varLogicalServerName1 and partner_database =~ varLogicalDatabaseName
+
+      | project PreciseTimeStamp, AppName, is_target_role, last_replication, replication_lag_sec
+
+      | order by PreciseTimeStamp
+
+      | project PreciseTimeStamp, toint(replication_lag_sec)
+
+      | render timechart'
+- id: DB-geodr-43
+  Topic: GeoDR0083-sysdbreg-mismatch-in-user-DB
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GeoDR0083-sysdbreg-mismatch-in-user-DB.md
+  Prompts:
+  - SQL DB login failures
+  - SQL DB MonLogin error event logical_server_name
+  - SQL DB troubleshoot login failures
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'MonLogin
+
+      | where TIMESTAMP > ago(2hr)
+
+      | where logical_server_name =~ \"{ServerName}\"
+
+      | where database_name =~ \"{DatabaseName}\"
+
+      | where package =~ "sqlserver"
+
+      | where event == "process_login_finish"
+
+      | where error > 0
+
+      | summarize min(originalEventTimestamp), max(originalEventTimestamp), count()
+
+      by event, package, error, state, state_desc, ClusterName, NodeName'
+- id: DB-geodr-44
+  Topic: GeoDR0083-sysdbreg-mismatch-in-user-DB
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GeoDR0083-sysdbreg-mismatch-in-user-DB.md
+  Prompts:
+  - SQL DB SQL system health
+  - SQL DB MonSQLSystemHealth event AppName NodeName
+  - SQL DB investigate SQL system health
+  CustomizedParameters:
+  - DatabaseName
+  - NodeName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where TIMESTAMP >= ago(2hr)
+
+      | where AppName in (''<SQL_INSTANCE_NAME>'') and event == "systemmetadata_written"
+
+      | extend ErrorCode = extract(''Error: [0-9]*, Severity: [0-9]*, State: [0-9]*'', 0, message)
+
+      | extend DisplayMessage = replace(''[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] [0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9]+ [a-zA-Z0-9]* '', '''', message)
+
+      | extend DisplayMessage = trim(@''[\t\n\f\r ]+'', DisplayMessage)
+
+      | summarize Count = count(), MinTime = min(TIMESTAMP), MaxTime = max(TIMESTAMP),
+
+      DisplayMessage=take_any(DisplayMessage) by ErrorCode, NodeName
+
+      | extend ErrorCode = iff(ErrorCode != '''', ErrorCode, ''(No specific error code)'')
+
+      | where NodeName == \"{NodeName}\"
+
+      | order by Count desc
+
+      | limit 15'
+- id: DB-geodr-45
+  Topic: GeoDR0083-sysdbreg-mismatch-in-user-DB
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GeoDR0083-sysdbreg-mismatch-in-user-DB.md
+  Prompts:
+  - SQL DB SQL system health
+  - SQL DB MonSQLSystemHealth event AppName TIMESTAMP
+  - SQL DB investigate SQL system health
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where TIMESTAMP >= ago(30min)
+
+      | where AppName in (''<SQL_INSTANCE_NAME>'')
+
+      | where event == "systemmetadata_written"
+
+      | where message contains "40613" or message contains "952"
+
+      | summarize count() by bin(TIMESTAMP, 5m), error_id'
+- id: DB-geodr-46
+  Topic: Mass-mitigation-script-for-missed-instance-certifi
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/Mass-mitigation-script-for-missed-instance-certifi.md
+  Prompts:
+  - SQL DB certificate rotation
+  - SQL DB MonAnalyticsDBSnapshot LogicalServerName
+  - SQL DB investigate certificate rotation
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: 'cluster(''sqlazrwcus'').database(''sqlazure1'').MonAnalyticsDBSnapshot,
+
+      cluster(''sqlazureau2'').database(''sqlazure1'').MonAnalyticsDBSnapshot,
+
+      cluster(''sqlazurebr2'').database(''sqlazure1'').MonAnalyticsDBSnapshot,
+
+      cluster(''sqlazureca2'').database(''sqlazure1'').MonAnalyticsDBSnapshot,
+
+      cluster(''sqlazurecus2'').database(''sqlazure1'').MonAnalyticsDBSnapshot,
+
+      cluster(''sqlazureeas2'').database(''sqlazure1'').MonAnalyticsDBSnapshot,
+
+      cluster(''sqlazureeus12'').database(''sqlazure1'').MonAnalyticsDBSnapshot,
+
+      cluster(''sqlazureeus22'').database(''sqlazure1'').MonAnalyticsDBSnapshot,
+
+      cluster(''sqlazureince2'').database(''sqlazure1'').MonAnalyticsDBSnapshot,
+
+      cluster(''sqlazureinso2'').database(''sqlazure1'').MonAnalyticsDBSnapshot,
+
+      cluster(''sqlazureinwe2'').database(''sqlazure1'').MonAnalyticsDBSnapshot,
+
+      cluster(''sqlazureja2'').database(''sqlazure1'').MonAnalyticsDBSnapshot,
+
+      cluster(''sqlazurencus3'').database(''sqlazure1'').MonAnalyticsDBSnapshot,
+
+      cluster(''sqlazureneu2'').database(''sqlazure1'').MonAnalyticsDBSnapshot,
+
+      cluster(''sqlazurescus2'').database(''sqlazure1'').MonAnalyticsDBSnapshot,
+
+      cluster(''sqlazureseas2'').database(''sqlazure1'').MonAnalyticsDBSnapshot,
+
+      cluster(''sqlazureuk2'').database(''sqlazure1'').MonAnalyticsDBSnapshot,
+
+      cluster(''sqlazureweu2'').database(''sqlazure1'').MonAnalyticsDBSnapshot,
+
+      cluster(''sqlazurewus2'').database(''sqlazure1'').MonAnalyticsDBSnapshot
+
+      | where TIMESTAMP >= ago(1h)
+
+      | summarize arg_max(TIMESTAMP, tenant_ring_name, sql_instance_name) by tenant_ring_name, sql_instance_name
+
+      | summarize by tenant_ring_name, sql_instance_name
+
+      ) on $left.AppName == $right.sql_instance_name and $left.ClusterName == $right.tenant_ring_name
+
+      | project-away sql_instance_name
+
+      | summarize by ClusterName, LogicalServerName, AppName, partner_server, Role, CertErrorCount, LastErrorTS
+
+      | extend Region = extract("(.*).(.*).(worker|control).(database|sqltest-eg1).(windows.net|chinacloudapi.cn|mscds.com|usgovcloudapi.net|cloudapi.de)", 2, ClusterName, typeof(string))
+
+      | extend EnvCmd = strcat("Select-SqlAzureEnvironment ", iif(ClusterName contains "chinacloudapi", "MCPROD", iif(ClusterName contains "usgovcloudapi", "FFPROD", iif(ClusterName contains "cloudapi.de", "BFPROD", "PROD"))), "; ")
+
+      | extend ClusterCmd = strcat("Select-SqlAzureCluster Wasd-prod-", Region, "-CR1; ")
+
+      | extend JitCmd = strcat("Get-JitAccess -WorkitemSource IcM -WorkItemId 60110617 -Justification "Mitigate instance partner certificate missing"; ")
+
+      | extend MitigationCmd = strcat("Set-SqlAzureFsmState -TableName tbl_sql_instance_partners -Keys @(", """, AppName, "","", partner_server, "") -ExpectedCurrentState Ready -NewState Updating -CabId 60110617 -Force")
+
+      | extend cmd = strcat(EnvCmd, ClusterCmd, JitCmd, MitigationCmd)
+
+      | project-away EnvCmd, ClusterCmd, JitCmd, MitigationCmd
+
+      | order by Region'
+- id: DB-geodr-47
+  Topic: Mass-upgrade-script
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/Mass-upgrade-script.md
+  Prompts:
+  - SQL DB snapshot status
+  - SQL DB MonAnalyticsDBSnapshot logical_server_name
+  - SQL DB investigate snapshot
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: 'MonAnalyticsDBSnapshot
+
+      | where TIMESTAMP >= ago(1d)
+
+      | where logical_server_name in ("spartan-srv-emea-template-crmcoreemea-fb4f8edb3ac9")
+
+      | where logical_database_name != "master"
+
+      | project end_utc_date, logical_server_name, logical_database_name, logical_database_id, fabric_application_uri, tenant_ring_name, ClusterName, sql_instance_name
+
+      | summarize arg_max(end_utc_date, *) by logical_server_name, logical_database_name, logical_database_id, fabric_application_uri, tenant_ring_name, ClusterName
+
+      ) on $left.ClusterName == $right.tenant_ring_name and $left.AppName == $right.sql_instance_name
+
+      | extend TR = extract("(.*).(.*).(worker|control).(database|sqltest-eg1).(windows.net|chinacloudapi.cn|mscds.com)", 1, tenant_ring_name, typeof(string))
+
+      | extend Region = extract("(.*).(.*).(worker|control).(database|sqltest-eg1).(windows.net|chinacloudapi.cn|mscds.com)", 2, tenant_ring_name, typeof(string))
+
+      | extend Cluster=strcat("wasd-prod-", Region)
+
+      | extend FabricCluster=strcat("wasd-prod-", Region, "-", TR)
+
+      | summarize makeset(fabric_application_uri) by Cluster, FabricCluster, AppTypeName
+
+      | extend fabric_application_uri=tostring(set_fabric_application_uri)
+
+      | extend command1=strcat("Update-ApplicationInstance -ClusterName ", Cluster, " -FabricClusterName ", FabricCluster, " -BuildBranchName WASD_A3 -BuildVersionNumber 15.0.300.379 -ApplicationInstanceName @(", fabric_application_uri, ") -ApplicationTypeName ", AppTypeName)
+
+      | extend command2=strcat("Select-SqlAzureCluster ", FabricCluster, ";Set-ApplicationDeploymentPinningFlag -FabricApplicationUri ", fabric_application_uri, " -Action Pin -Justification "Rollingback T36 on CRM DBs" -IncidentId 67839660")
+
+      | project command1, command2'
+- id: DB-geodr-48
+  Topic: Throttling-geo-primary-due-to-mismatched-SLO
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/Throttling-geo-primary-due-to-mismatched-SLO.md
+  Prompts:
+  - SQL DB fabric throttle analysis
+  - SQL DB MonFabricThrottle event database_name AppName
+  - SQL DB investigate fabric throttle
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonFabricThrottle
+    ExecutedQuery: 'MonFabricThrottle
+
+      | where AppName == "{AppName}" and database_name =~ "{DatabaseName}"
+
+      | where event == "hadr_db_log_throttle" and throttling_reason == "MismatchedSlo"
+
+      | where TIMESTAMP > ago(1h)'
+- id: DB-geodr-49
+  Topic: Throttling-geo-primary-due-to-mismatched-SLO
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/Throttling-geo-primary-due-to-mismatched-SLO.md
+  Prompts:
+  - SQL DB fabric throttle analysis
+  - SQL DB MonFabricThrottle event database_name AppName
+  - SQL DB investigate fabric throttle
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonFabricThrottle
+    ExecutedQuery: 'MonFabricThrottle
+
+      | where AppName == "{AppName}" and database_name =~ "{DatabaseName}"
+
+      | where event == "hadr_db_log_throttle" and throttling_reason == "MismatchedSlo"
+
+      | where TIMESTAMP > ago(1h)
+
+      | extend throttled_log_generation_rate=iff(throttled_log_generation_rate == -1, sku_max_log_generation_rate, throttled_log_generation_rate)
+
+      | project TIMESTAMP, throttled_log_generation_rate, sku_max_log_generation_rate
+
+      | render timechart'
+- id: DB-geodr-50
+  Topic: Throttling-geo-primary-due-to-mismatched-SLO
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/Throttling-geo-primary-due-to-mismatched-SLO.md
+  Prompts:
+  - SQL DB fabric throttle analysis
+  - SQL DB MonFabricThrottle event database_name AppName
+  - SQL DB investigate fabric throttle
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonFabricThrottle
+    ExecutedQuery: 'MonFabricThrottle
+
+      | where AppName == "{AppName}" and database_name =~ "{DatabaseName}"
+
+      | where event == "hadr_db_log_throttle"// and throttling_reason == "MismatchedSlo"
+
+      | where TIMESTAMP > ago(1h)
+
+      | extend throttled_log_generation_rate=iff(throttled_log_generation_rate == -1, sku_max_log_generation_rate, throttled_log_generation_rate)
+
+      | project TIMESTAMP, throttled_log_generation_rate, throttling_reason
+
+      | render scatterchart'
+- id: DB-geodr-51
+  Topic: Throttling-geo-primary-due-to-mismatched-SLO
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/Throttling-geo-primary-due-to-mismatched-SLO.md
+  Prompts:
+  - SQL DB cloud database wait stats analysis
+  - SQL DB MonDmCloudDatabaseWaitStats database_name
+  - SQL DB investigate cloud database wait stats
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmCloudDatabaseWaitStats
+    ExecutedQuery: 'MonDmCloudDatabaseWaitStats
+
+      | where AppName == "{AppName}" and database_name =~ "{DatabaseName}"
+
+      | where wait_type contains "HADR_THROTTLE_LOG_RATE_MISMATCHED_SLO"
+
+      | project TIMESTAMP, wait_time_ms
+
+      | render timechart'
+- id: DB-geodr-52
+  Topic: Throttling-geo-primary-due-to-mismatched-SLO
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/Throttling-geo-primary-due-to-mismatched-SLO.md
+  Prompts:
+  - SQL DB SQL system health
+  - SQL DB MonSQLSystemHealth AppName NodeName ID geo
+  - SQL DB investigate SQL system health
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where AppName == "{AppName}"
+
+      | where message contains "[HaDrDbMgr::ProcessEstablishDB] Received SLO info for partner replica ID"
+
+      | where message contains "C0E8F584-5974-414B-A690-0339BF6F9FD2" // geo-secondary''s logical database ID
+
+      | project originalEventTimestamp, NodeName, message'
+- id: DB-geodr-53
+  Topic: GEODRSOP0019-[CL]-Get-subnet-information-for-MI
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR-SOP/GEODRSOP0019-[CL]-Get-subnet-information-for-MI.md
+  Prompts:
+  - SQL DB private clusters activity
+  - SQL DB MonPrivateClusters vnet_name subnet_name
+  - SQL DB investigate private clusters
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonPrivateClusters
+    ExecutedQuery: 'MonPrivateClusters
+
+      | where tenant_ring_name== "tr257.qatarcentral1-a.worker.database.windows.net"
+
+      | parse vnet_resource_id with  * "/virtualNetworks/" vnet_name "/"
+
+      | summarize by subnet_name, subnet_address_range, subnet_resource_id, vnet_name, vnet_resource_id, resource_group'
+- id: DB-geodr-54
+  Topic: GEODRSOP0021-[CL]-Get-vnet-peering,-routes,-NSGs-information-by-Kusto-queries
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR-SOP/GEODRSOP0021-[CL]-Get-vnet-peering,-routes,-NSGs-information-by-Kusto-queries.md
+  Prompts:
+  - SQL DB resources activity
+  - SQL DB Resources name id type parsed subnet resource
+  - SQL DB investigate resources
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: Resources
+    ExecutedQuery: 'let resource = "/subscriptions/0841bef4-4b5c-4d2c-8a5c-4de3dd759c39/resourceGroups/rg-msyqc-prod-vnets/providers/Microsoft.Network/virtualNetworks/vnet-msysqlqcmi-prod/subnets/snet-sqlmi-prod";
+
+      cluster("https://argwus2nrpone.westus2.kusto.windows.net").database(''AzureResourceGraph'').Resources
+
+      | where timestamp > ago(5d)
+
+      | where type == "microsoft.network/virtualnetworks"
+
+      | where properties contains resource
+
+      | extend parsed = parse_json(properties)
+
+      | mv-expand subnet = parsed.subnets
+
+      | where subnet.id == resource
+
+      | extend virtualNetworkPeerings = iff(isempty(parsed.virtualNetworkPeerings) or isempty(parsed.virtualNetworkPeerings[0]), dynamic(null), parsed.virtualNetworkPeerings)
+
+      | mv-expand virtualNetworkPeering = virtualNetworkPeerings
+
+      //| project name, type, parsed, subnet, virtualNetworkPeering
+
+      | project name, subnet.id, vnet_address_space = parsed.addressSpace, subnet_address_space = subnet.properties.addressPrefix, subnet.properties.networkSecurityGroup.id, subnet.properties.routeTable.id,
+
+      virtualNetworkPeering.properties.remoteVirtualNetwork.id, virtualNetworkPeering.properties.remoteVirtualNetworkAddressSpace
+
+      | summarize by vnet_name = name,
+
+      tostring(vnet_address_space),
+
+      tostring(subnet_id),
+
+      tostring(subnet_address_space),
+
+      NSG_id = tostring(subnet_properties_networkSecurityGroup_id),
+
+      RouteTable_id = tostring(subnet_properties_routeTable_id),
+
+      Vnet_peering_remote_vnet_id = tostring(virtualNetworkPeering_properties_remoteVirtualNetwork_id),
+
+      Vnet_peering_remote_vnet_address_space = tostring(virtualNetworkPeering_properties_remoteVirtualNetworkAddressSpace)'
+- id: DB-geodr-55
+  Topic: GEODRSOP0021-[CL]-Get-vnet-peering,-routes,-NSGs-information-by-Kusto-queries
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR-SOP/GEODRSOP0021-[CL]-Get-vnet-peering,-routes,-NSGs-information-by-Kusto-queries.md
+  Prompts:
+  - SQL DB resources analysis
+  - SQL DB Resources name id type routes subnets resource
+  - SQL DB investigate resources
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: Resources
+    ExecutedQuery: 'let resource = "/subscriptions/0841bef4-4b5c-4d2c-8a5c-4de3dd759c39/resourceGroups/rg-msyqc-prod-vnets/providers/Microsoft.Network/virtualNetworks/vnet-msysqlqcmi-prod/subnets/snet-sqlmi-prod";
+
+      let route_id = "/subscriptions/0841bef4-4b5c-4d2c-8a5c-4de3dd759c39/resourceGroups/rg-msyqc-prod-vnets/providers/Microsoft.Network/routeTables/rt-msysqlmiqcprod-01";
+
+      cluster("https://argwus2nrpone.westus2.kusto.windows.net").database(''AzureResourceGraph'').Resources
+
+      | where timestamp > ago(5d)
+
+      | where type == "microsoft.network/routetables"
+
+      | extend properties_json = parse_json(properties)
+
+      | mv-expand subnets = properties_json.subnets
+
+      | where id == route_id
+
+      | where subnets.id == resource
+
+      | mv-expand routes = properties.routes
+
+      | distinct  name, subscriptionId, id, tostring(routes)'
+- id: DB-geodr-56
+  Topic: GEODRSOP0021-[CL]-Get-vnet-peering,-routes,-NSGs-information-by-Kusto-queries
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR-SOP/GEODRSOP0021-[CL]-Get-vnet-peering,-routes,-NSGs-information-by-Kusto-queries.md
+  Prompts:
+  - SQL DB resources analysis
+  - SQL DB Resources name id type nsg_id timestamp
+  - SQL DB investigate resources
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: Resources
+    ExecutedQuery: 'let nsg_id = "/subscriptions/18669d4d-f818-4c8c-94b2-b36836b433ec/resourceGroups/rg-brainv3sql-prod-centralus/providers/Microsoft.Network/networkSecurityGroups/nsg-brainv3sql-prod-centralus";
+
+      cluster("https://argwus2nrpone.westus2.kusto.windows.net").database(''AzureResourceGraph'').Resources
+
+      | where timestamp > ago(1d)
+
+      | where id == nsg_id
+
+      | extend parsed = parse_json(properties)
+
+      | mv-expand securityRules = parsed.securityRules
+
+      | project name, type, securityRules'
+- id: DB-geodr-57
+  Topic: GEODR0001-3-UndoOfRedoInterrupted-_Error-35273_
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0001-Geo-secondary-not-available-_-SPO-Databa/GEODR0001-3-UndoOfRedoInterrupted-_Error-35273_.md
+  Prompts:
+  - SQL DB SQL system health
+  - SQL DB MonSQLSystemHealth AppName physical_database_id
+  - SQL DB investigate SQL system health
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where AppName =~ ''{AppName}'' and message contains ''Error: 35273,''
+
+      | extend physical_database_id = extract(@"Bypassing recovery for database ''(.*)'' because it is marked", 1, message)
+
+      | where physical_database_id =~ ''{physical_db_id}''
+
+      | summarize startTime = min(originalEventTimestamp), endTime = max(originalEventTimestamp), total = count()'
+- id: DB-geodr-58
+  Topic: GEODR0001-4-Database-__-cannot-be-opened-because-i
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0001-Geo-secondary-not-available-_-SPO-Databa/GEODR0001-4-Database-__-cannot-be-opened-because-i.md
+  Prompts:
+  - SQL DB primary replica status
+  - SQL DB MonDmDbHadrReplicaStates LogicalServerName
+  - SQL DB investigate primary replica
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmDbHadrReplicaStates
+    ExecutedQuery: 'let prServerName="<fac19fs3bv>"; // geo-primary server
+
+      let drServerName="<r6q3avv17s>"; // geo-secondary server
+
+      let dbName=\"{DatabaseName}\";
+
+      cluster(''<SqlAzureWEU2>'').database(''sqlazure1'').MonDmDbHadrReplicaStates
+
+      | where LogicalServerName == drServerName and logical_database_name =~ dbName
+
+      | where is_primary_replica == 1 or is_forwarder == 1
+
+      //| where TIMESTAMP > ago(12h)
+
+      | summarize min(TIMESTAMP), max(TIMESTAMP) by role="Geo-Secondary", code_package_version, LogicalServerName, AppName, ClusterName, physical_db_id = group_id
+
+      | union (
+
+      cluster(''<SqlAzureNEU2>'').database(''sqlazure1'').MonDmDbHadrReplicaStates
+
+      | where LogicalServerName == prServerName and logical_database_name =~ dbName
+
+      | where is_primary_replica == 1 or is_forwarder == 1
+
+      //| where TIMESTAMP > ago(12h)
+
+      | summarize min(TIMESTAMP), max(TIMESTAMP) by role="Geo-Primary", code_package_version, LogicalServerName, AppName, ClusterName, physical_db_id = group_id
+
+      )
+
+      | order by min_TIMESTAMP asc'
+- id: DB-geodr-59
+  Topic: GEODR0002-11-Failover-stuck-in-WaitForFailoverComp
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0002-Workflow-stuck-with-potential-unavailabi/GEODR0002-11-Failover-stuck-in-WaitForFailoverComp.md
+  Prompts:
+  - SQL DB primary replica status
+  - SQL DB MonDmDbHadrReplicaStates LogicalServerName
+  - SQL DB investigate primary replica
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmDbHadrReplicaStates
+    ExecutedQuery: 'MonDmDbHadrReplicaStates
+
+      | where LogicalServerName == "{server_name}"
+
+      | where synchronization_state_desc == "NOT SYNCHRONIZING"
+
+      | where is_primary_replica == long(1)
+
+      | where is_local == long(1)
+
+      | where database_id  !in (long(4), long(32760), long(32763))
+
+      | summarize arg_max(TIMESTAMP, database_state_desc) by database_id
+
+      With the following query, we can check if the database is in recovering state. If the database is in recovery, it is not advised to perform a kill as it would just make the recovery to start over again.'
+- id: DB-geodr-60
+  Topic: GEODR0002-11-Failover-stuck-in-WaitForFailoverComp
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0002-Workflow-stuck-with-potential-unavailabi/GEODR0002-11-Failover-stuck-in-WaitForFailoverComp.md
+  Prompts:
+  - SQL DB primary replica status
+  - SQL DB MonDmDbHadrReplicaStates LogicalServerName
+  - SQL DB investigate primary replica
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonDmDbHadrReplicaStates
+    ExecutedQuery: 'MonDmDbHadrReplicaStates
+
+      | where TIMESTAMP between (ago({TimeRange}) .. datetime(2022-04-08 11:00:00))
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where internal_state_desc == ''FORWARDER'' and database_state_desc == ''RECOVERING''
+
+      | where logical_database_name =~ "{DatabaseName}"
+
+      | summarize min(TIMESTAMP), max(TIMESTAMP) by bin(TIMESTAMP, 6h)'
+- id: DB-geodr-61
+  Topic: GEODR0004-1-Physical-database-drop-stuck
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0004-Stuck-update-SLO/GEODR0004-1-Physical-database-drop-stuck.md
+  Prompts:
+  - SQL DB timeout analysis
+  - SQL DB MonManagement event originalEventTimestamp
+  - SQL DB troubleshoot timeout
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where originalEventTimestamp > datetime({startTime}) and originalEventTimestamp < datetime({endTime})
+
+      | where request_id == toupper(''{update_slo_request_id}'')
+
+      | where state_machine_type == "FabricServiceStateMachine" and event == "fsm_executed_action_failed" and action == "TransitionDrop"
+
+      | summarize argmax(originalEventTimestamp, stack_trace, keys), request_id = any(request_id)
+
+      | where max_originalEventTimestamp_stack_trace contains "System.TimeoutException: Operation timed out"
+
+      | extend pdbid = split(split(max_originalEventTimestamp_keys, ",")[1], "/")[4]
+
+      | project TSG = ''GEODR0004.1'', Details = strcat(''Fabric service for physical database ID '', pdbid, '' is stuck in dropping state'')'
+- id: DB-geodr-62
+  Topic: GEODR0004-10-InsufficientFreeSpace-_Not-enough-dis
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0004-Stuck-update-SLO/GEODR0004-10-InsufficientFreeSpace-_Not-enough-dis.md
+  Prompts:
+  - SQL DB SQL system health
+  - SQL DB MonSQLSystemHealth event AppName NodeName
+  - SQL DB investigate SQL system health
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where AppName == "{target_app_name}" and event == "systemmetadata_written"
+
+      | where message contains "Error: 3257," or message contains "There is not enough space on the disk"
+
+      | project originalEventTimestamp, NodeName, message'
+- id: DB-geodr-63
+  Topic: GEODR0004-10-InsufficientFreeSpace-_Not-enough-dis
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0004-Stuck-update-SLO/GEODR0004-10-InsufficientFreeSpace-_Not-enough-dis.md
+  Prompts:
+  - SQL DB RG load activity
+  - SQL DB MonRgLoad event NodeName ClusterName
+  - SQL DB investigate RG load
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonRgLoad
+    ExecutedQuery: 'MonRgLoad
+
+      | where event == "directory_quota_report_load" and target_directory endswith "data"
+
+      | where application_name == "fabric:/Worker.ISO/{app_name}" or application_name == "fabric:/Worker.ISO.Premium/{app_name}"
+
+      | summarize application_name = any(application_name), argmin(originalEventTimestampTo, quota_usage_in_bytes, quota_limit_in_bytes) by bin(originalEventTimestampTo, time(10m)), NodeName, ClusterName
+
+      | join kind=leftouter ('
+- id: DB-geodr-64
+  Topic: GEODR0004-10-InsufficientFreeSpace-_Not-enough-dis
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0004-Stuck-update-SLO/GEODR0004-10-InsufficientFreeSpace-_Not-enough-dis.md
+  Prompts:
+  - SQL DB RG load activity
+  - SQL DB MonRgLoad event NodeName ClusterName TIMESTAMP
+  - SQL DB investigate RG load
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonRgLoad
+    ExecutedQuery: 'MonRgLoad
+
+      | where TIMESTAMP > datetime("{startTime}") and TIMESTAMP < datetime("{endTime}")
+
+      | where event == "drive_usage_report_load"
+
+      | summarize argmin(originalEventTimestampTo, drive_capacity_in_bytes , drive_usage_percentage) by bin(originalEventTimestampTo, time(10m)), NodeName, ClusterName
+
+      ) on originalEventTimestampTo, NodeName, ClusterName
+
+      | extend rg_quota_usage_mb = min_originalEventTimestampTo_quota_usage_in_bytes / 1024, rg_quota_limit_mb = min_originalEventTimestampTo_quota_limit_in_bytes / 1024, drive_usage_percent = min_originalEventTimestampTo_drive_usage_percentage, drive_capacity_mb = min_originalEventTimestampTo_drive_capacity_in_bytes / 1024 / 1024
+
+      | extend rg_quota_percent = round(10000 * rg_quota_usage_mb / todouble(rg_quota_limit_mb)) / 100
+
+      | project originalEventTimestamp = originalEventTimestampTo, NodeName, rg_quota_percent, rg_quota_usage_mb, rg_quota_limit_mb, drive_usage_percent, drive_capacity_mb, cmd_increase_rg_allocation = strcat(''Update-RgResourceSettings -ClusterName '', ClusterName, '' -NodeName '', NodeName, '' -ApplicationName '', application_name, '' -ResourceType DirQuotaInMb -ResourceValue '', toint(rg_quota_limit_mb + (100 - drive_usage_percent) * drive_capacity_mb), '' -ExtraParam workdata'')
+
+      | sort by originalEventTimestamp desc'
+- id: DB-geodr-65
+  Topic: GEODR0004-13-ElasticPoolIsReachingUsageLimit
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0004-Stuck-update-SLO/GEODR0004-13-ElasticPoolIsReachingUsageLimit.md
+  Prompts:
+  - SQL DB IO virtual file stats activity
+  - SQL DB MonDmIoVirtualFileStats database_name AppName
+  - SQL DB investigate IO virtual file stats
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmIoVirtualFileStats
+    ExecutedQuery: 'MonDmIoVirtualFileStats
+
+      | where TIMESTAMP >= start_timestamp and TIMESTAMP <= end_timestamp
+
+      | where ClusterName == cluster_name and AppName == instance_name
+
+      | where type_desc == ''ROWS'' and spaceused_mb <> 0
+
+      | where tolower(db_name) <> tolower(database_name)
+
+      | project originalEventTimestamp, ClusterName, NodeName, AppName, LogicalServerName, db_name, size_on_disk_bytes, spaceused_mb
+
+      | extend size_on_disk_gb = todouble(todouble(size_on_disk_bytes)/1024.0/1024.0/1024.0)
+
+      | extend spaceused_gb = todouble(todouble(spaceused_mb)/1024.0)
+
+      | summarize arg_max(originalEventTimestamp, size_on_disk_gb, spaceused_gb) by NodeName, AppName, LogicalServerName, db_name, ClusterName
+
+      | summarize sum(size_on_disk_gb), sum(spaceused_gb) by NodeName, LogicalServerName, AppName, ClusterName
+
+      | summarize pool_size_on_disk_gb = max(sum_size_on_disk_gb), pool_spaceused_gb = max(sum_spaceused_gb) by AppName, ClusterName
+
+      | join kind=leftouter ('
+- id: DB-geodr-66
+  Topic: GEODR0004-13-ElasticPoolIsReachingUsageLimit
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0004-Stuck-update-SLO/GEODR0004-13-ElasticPoolIsReachingUsageLimit.md
+  Prompts:
+  - SQL DB snapshot status
+  - SQL DB MonAnalyticsDBSnapshot logical_server_name
+  - SQL DB investigate snapshot
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: 'MonAnalyticsDBSnapshot
+
+      | where TIMESTAMP >= start_timestamp and TIMESTAMP <= end_timestamp
+
+      | where tenant_ring_name == cluster_name and sql_instance_name == instance_name
+
+      | summarize min(TIMESTAMP), max(TIMESTAMP) by tenant_ring_name, sql_instance_name, logical_server_name, logical_resource_pool_id
+
+      | join kind=inner ('
+- id: DB-geodr-67
+  Topic: GEODR0004-13-ElasticPoolIsReachingUsageLimit
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0004-Stuck-update-SLO/GEODR0004-13-ElasticPoolIsReachingUsageLimit.md
+  Prompts:
+  - SQL DB snapshot status
+  - SQL DB MonAnalyticsRPSnapshot TIMESTAMP end_timestamp
+  - SQL DB investigate snapshot
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonAnalyticsRPSnapshot
+    ExecutedQuery: 'MonAnalyticsRPSnapshot
+
+      | where TIMESTAMP >= start_timestamp and TIMESTAMP <= end_timestamp
+
+      | summarize min(TIMESTAMP), max(TIMESTAMP) by resource_pool_storage_limit_in_gb, logical_resource_pool_id
+
+      | project resource_pool_storage_limit_in_gb, logical_resource_pool_id
+
+      ) on logical_resource_pool_id
+
+      | project tenant_ring_name, sql_instance_name, logical_resource_pool_id, resource_pool_storage_limit_in_gb
+
+      | summarize resource_pool_storage_limit_in_gb=max(resource_pool_storage_limit_in_gb) by sql_instance_name, tenant_ring_name
+
+      ) on $left.AppName == $right.sql_instance_name and $left.ClusterName == $right.tenant_ring_name
+
+      | extend elastic_pool_is_reaching_limit = iff(isnotempty(pool_size_on_disk_gb) and isnotempty(resource_pool_storage_limit_in_gb), resource_pool_storage_limit_in_gb < pool_size_on_disk_gb, false)'
+- id: DB-geodr-68
+  Topic: GEODR0004-16-NoOverlapDuringJoin
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0004-Stuck-update-SLO/GEODR0004-16-NoOverlapDuringJoin.md
+  Prompts:
+  - SQL DB SQL system health
+  - SQL DB MonSQLSystemHealth AppName originalEventTimestamp
+  - SQL DB investigate SQL system health
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where AppName == ''{AppName}''
+
+      | where message contains ''Failed to join database ['' and message contains ''{TargetPhysicalDatabaseId}''
+
+      | summarize by bin(originalEventTimestamp, time(10s))
+
+      ) on originalEventTimestamp
+
+      | summarize startTime = min(originalEventTimestamp), endTime = max(originalEventTimestamp), count = count()
+
+      | where count > 0'
+- id: DB-geodr-69
+  Topic: GEODR0004-17-InsufficientMemoryToAcquireLock
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0004-Stuck-update-SLO/GEODR0004-17-InsufficientMemoryToAcquireLock.md
+  Prompts:
+  - SQL DB SQL system health
+  - SQL DB MonSQLSystemHealth AppName originalEventTimestamp
+  - SQL DB investigate SQL system health
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where originalEventTimestamp > datetime({startTime}) and originalEventTimestamp < datetime({endTime})
+
+      | where AppName =~ "{SourceAppName}" or AppName =~ "{TargetAppName}"
+
+      | where message contains "Error: 1204,"
+
+      | summarize startTime = min(originalEventTimestamp), endTime = max(originalEventTimestamp), ct = count(), nodes = makeset(NodeName) by AppName
+
+      | extend physical_database_id = iff(AppName == "{SourceAppName}", "{SourcePhysicalDatabaseId}", "{TargetPhysicalDatabaseId}")
+
+      | where ct > 10
+
+      | project TSG = ''OutofMemory'', Details = strcat("AppName: ", AppName, ", PhysicalDatabaseId: ", physical_database_id, ", count: ", ct, ", startTime: ", startTime, ", endTime: ", endTime, ", replicas: ", tostring(nodes));'
+- id: DB-geodr-70
+  Topic: GEODR0004-20-VdEBusy
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0004-Stuck-update-SLO/GEODR0004-20-VdEBusy.md
+  Prompts:
+  - SQL DB seed traces errors
+  - SQL DB MonDbSeedTraces error database_name AppName
+  - SQL DB troubleshoot seed traces errors
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDbSeedTraces
+    ExecutedQuery: 'MonDbSeedTraces
+
+      | where AppName =~ ''{source_app_name}'' and database_name =~ ''{source_physical_database_id}'' and failure_message contains ''VD_E_BUSY''
+
+      | summarize startTime = min(originalEventTimestamp), endTime = max(originalEventTimestamp), _count = count()
+
+      | project TSG = ''VdEBusy'', Details = strcat(''First error: '', startTime, '', last error: '', endTime, '', num errors: '', _count)'
+- id: DB-geodr-71
+  Topic: GEODR0004-4-Rollback-stuck
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0004-Stuck-update-SLO/GEODR0004-4-Rollback-stuck.md
+  Prompts:
+  - SQL DB SQL system health
+  - SQL DB MonSQLSystemHealth AppName originalEventTimestamp
+  - SQL DB investigate SQL system health
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where originalEventTimestamp > datetime({startTime}) and originalEventTimestamp < datetime({endTime})
+
+      | where AppName in (tolower("{target_app_name}"), tolower("{source_app_name}"))
+
+      | where message contains "Nonqualified transactions are being rolled back in database " and message contains " for an Always On Availability Groups state change. Estimated rollback completion: 0%."
+
+      | extend is_on_source = message contains "{source_physical_database_id}", is_on_target = message contains "{target_physical_database_id}"
+
+      | where is_on_source or is_on_target
+
+      | extend physical_database_id = iff(is_on_source, ''{source_physical_database_id}'', ''{target_physical_database_id}'')'
+- id: DB-geodr-72
+  Topic: GEODR0004-6-Long-recovery
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0004-Stuck-update-SLO/GEODR0004-6-Long-recovery.md
+  Prompts:
+  - SQL DB SQL system health
+  - SQL DB MonSQLSystemHealth AppName originalEventTimestamp
+  - SQL DB investigate SQL system health
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where originalEventTimestamp > datetime({startTime}) and originalEventTimestamp < datetime({endTime})
+
+      | where AppName in (tolower("{target_app_name}"), tolower("{source_app_name}"))
+
+      | extend is_on_source = message contains "Recovery completed for database ''{source_physical_database_id}''", is_on_target = message contains "Recovery completed for database ''{target_physical_database_id}''"
+
+      | where is_on_source or is_on_target
+
+      | summarize last_recovery_completion_time = max(originalEventTimestamp) by is_on_source
+
+      | project last_recovery_completion_time = iff(isnull(last_recovery_completion_time), datetime(''{startTime}''), last_recovery_completion_time), is_on_source
+
+      | join ('
+- id: DB-geodr-73
+  Topic: GEODR0004-6-Long-recovery
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0004-Stuck-update-SLO/GEODR0004-6-Long-recovery.md
+  Prompts:
+  - SQL DB SQL system health
+  - SQL DB MonSQLSystemHealth AppName originalEventTimestamp
+  - SQL DB investigate SQL system health
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where originalEventTimestamp > datetime({startTime}) and originalEventTimestamp < datetime({endTime})
+
+      | where AppName in (tolower("{target_app_name}"), tolower("{source_app_name}"))
+
+      | extend is_on_source = message contains "Recovery of database ''{source_physical_database_id}''", is_on_target = message contains "Recovery of database ''{target_physical_database_id}''"
+
+      | where is_on_source or is_on_target
+
+      | project message, originalEventTimestamp, is_on_source
+
+      ) on is_on_source
+
+      | where originalEventTimestamp > last_recovery_completion_time
+
+      | summarize duration = max(originalEventTimestamp) - min(originalEventTimestamp) by is_on_source
+
+      | where duration > time(15m)
+
+      | project TSG = iff(is_on_source, ''GEODR0004.6'', ''GEODR0004.7''), Details = strcat(''Recovery in progress for '', duration, '' for physical database '', iff(is_on_source, ''{source_physical_database_id}'', ''{target_physical_database_id}''))'
+- id: DB-geodr-74
+  Topic: GEODR0004-9-Slow-data-transfer-to-update-SLO-targe
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0004-Stuck-update-SLO/GEODR0004-9-Slow-data-transfer-to-update-SLO-targe.md
+  Prompts:
+  - SQL DB seed traces analysis
+  - SQL DB MonDbSeedTraces database_name AppName role_desc
+  - SQL DB investigate seed traces
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDbSeedTraces
+    ExecutedQuery: 'MonDbSeedTraces
+
+      | where originalEventTimestamp > datetime({startTime}) and originalEventTimestamp < datetime({endTime})
+
+      | where (AppName == "{source_app_name}" and database_name =~ "{source_physical_database_id}" and remote_machine_name contains "{target_physical_database_id}" and role_desc == "Source")'
+- id: DB-geodr-75
+  Topic: FailedPartnerCreate
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0008-Forwarder-not-synchronizing/FailedPartnerCreate.md
+  Prompts:
+  - SQL DB fabric debug activity
+  - SQL DB MonFabricDebug event AppName operation_reason
+  - SQL DB investigate fabric debug
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonFabricDebug
+    ExecutedQuery: 'MonFabricDebug
+
+      | where AppName == ''{SourceAppName}'' and availability_group_id =~ ''{AvailabilityGroupId}''
+
+      | where event == ''hadr_transport_dump_dropped_message'' and operation_reason == ''FailedPartnerCreate''
+
+      | summarize count()
+
+      | where count_ > 50'
+- id: DB-geodr-76
+  Topic: GEODR0008-3--CL-GeoDrForwarderNotSynchronizing
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0008-Forwarder-not-synchronizing/GEODR0008-3--CL-GeoDrForwarderNotSynchronizing.md
+  Prompts:
+  - SQL DB managed instance resource stats activity
+  - SQL DB MonManagedInstanceResourceStats LogicalServerName
+  - SQL DB investigate managed instance resource stats
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagedInstanceResourceStats
+    ExecutedQuery: 'MonManagedInstanceResourceStats
+
+      | where  LogicalServerName =~ "{ServerName}"  or  LogicalServerName =~ "{ServerName}"
+
+      | summarize  max(storage_space_used_mb), max(reserved_storage_mb) by  LogicalServerName, bin(PreciseTimeStamp, 1h)
+
+      | limit 100'
+- id: DB-geodr-77
+  Topic: GEODR0008-5-[CL]-Log-corruption-on-geo-secondary-3456
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0008-Forwarder-not-synchronizing/GEODR0008-5-[CL]-Log-corruption-on-geo-secondary-3456.md
+  Prompts:
+  - SQL DB SQL system health
+  - SQL DB MonSQLSystemHealth LogicalServerName TIMESTAMP
+  - SQL DB investigate SQL system health
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where message contains "Error: 3456, Severity: 21, State: 1."
+
+      | where TIMESTAMP >= ago(1d)
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | project TIMESTAMP, message'
+- id: DB-geodr-78
+  Topic: GEODR0010-1-[CL]-Redo-lag-on-forwarder
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0010-Redo-lag-on-forwarder/GEODR0010-1-[CL]-Redo-lag-on-forwarder.md
+  Prompts:
+  - SQL DB managed servers activity
+  - SQL DB MonManagedServers name service_level_objective
+  - SQL DB investigate managed servers
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'MonManagedServers
+
+      | where name == "uks-prd-sql01"
+
+      | summarize min(TIMESTAMP), max(TIMESTAMP) by service_level_objective'
+- id: DB-geodr-79
+  Topic: GEODR0010-1-[CL]-Redo-lag-on-forwarder
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0010-Redo-lag-on-forwarder/GEODR0010-1-[CL]-Redo-lag-on-forwarder.md
+  Prompts:
+  - SQL DB fabric debug activity
+  - SQL DB MonFabricDebug event AppName TIMESTAMP end
+  - SQL DB investigate fabric debug
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonFabricDebug
+    ExecutedQuery: 'MonFabricDebug
+
+      | where AppName == "{AppName}"
+
+      | where TIMESTAMP  between (start .. end)
+
+      | where database_id == 32
+
+      | where event in ("lock_redo_blocked", "lock_redo_unblocked")
+
+      | project TIMESTAMP, event
+
+      | summarize count() by event, bin(TIMESTAMP, 1h)
+
+      | render timechart
+
+      If redo queue is blocked, advise the customer to stop read workload on geo-secondary until redo queue drains.'
+- id: DB-geodr-80
+  Topic: GEODR0014-1-[CL]-Send-lag-on-forwarder
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0014-Send-lag-on-forwarder/GEODR0014-1-[CL]-Send-lag-on-forwarder.md
+  Prompts:
+  - SQL DB sqlx store IO stats analysis
+  - SQL DB MonSQLXStoreIOStats LogicalServerName TIMESTAMP
+  - SQL DB investigate sqlx store IO stats
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonSQLXStoreIOStats
+    ExecutedQuery: 'MonSQLXStoreIOStats
+
+      | where TIMESTAMP  between (ago({TimeRange}) .. datetime(2022-01-04 00:00))
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where file_path endswith ".ldf"
+
+      | where total_writes > 0
+
+      | extend avgwritetime = 1.0* total_write_microsec /( total_writes * 1000)
+
+      project TIMESTAMP, avgwritetime
+
+      | render timechart'
+- id: DB-geodr-81
+  Topic: GEODR0014-1-[CL]-Send-lag-on-forwarder
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0014-Send-lag-on-forwarder/GEODR0014-1-[CL]-Send-lag-on-forwarder.md
+  Prompts:
+  - SQL DB sqlx store IO stats analysis
+  - SQL DB MonSQLXStoreIOStats LogicalServerName TIMESTAMP
+  - SQL DB investigate sqlx store IO stats
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonSQLXStoreIOStats
+    ExecutedQuery: 'MonSQLXStoreIOStats
+
+      | where TIMESTAMP  between (ago({TimeRange}) .. datetime(2022-01-04 00:00))
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where file_path endswith ".ldf"
+
+      | distinct file_path, page_blob_tier'
+- id: DB-geodr-82
+  Topic: GEODR0038-1-Locating-read-scale-out-secondary-repl
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0038-Read-Scale-Out-Troubleshooting/GEODR0038-1-Locating-read-scale-out-secondary-repl.md
+  Prompts:
+  - SQL DB login events
+  - SQL DB MonLogin is_success event logical_server_name
+  - SQL DB investigate login events
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'MonLogin
+
+      | where logical_server_name == "{logical_server_name}" and database_name contains "{logical_database_name}"
+
+      | where event == "process_login_finish" and package == "xdbgateway" and event == "process_login_finish"
+
+      | extend bit21 = toint(login_flags / 2097152) % 2
+
+      | extend appIntentReadOnly = bit21
+
+      | summarize count() by bin(originalEventTimestamp, time(1h)), is_success, instance_port, appIntentReadOnly
+
+      | project originalEventTimestamp, appIntentReadOnly, is_success, count_, instance_port, target_db_node = instance_port - 11000
+
+      | sort by originalEventTimestamp desc'
+- id: DB-geodr-83
+  Topic: GEODR0040-5-Copy-Stuck-with-Secondary-Link-in-Remo
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0040-Stuck-database-copy-_-SPO-NewDatabase-Se/GEODR0040-5-Copy-Stuck-with-Secondary-Link-in-Remo.md
+  Prompts:
+  - SQL DB management analysis
+  - SQL DB MonManagement operation_type operation_parameters
+  - SQL DB investigate management
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where operation_parameters contains {LogicalServerName} and operation_parameters contains {LogicalDatabaseName}
+
+      | where operation_type contains ''copy'''
+- id: DB-geodr-84
+  Topic: GEODR0040-6-Source-DB-has-file-with-size-_-1-TB
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0040-Stuck-database-copy-_-SPO-NewDatabase-Se/GEODR0040-6-Source-DB-has-file-with-size-_-1-TB.md
+  Prompts:
+  - SQL DB sqlx store analysis
+  - SQL DB MonSQLXStore AppName mdf file_path
+  - SQL DB investigate sqlx store
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSQLXStore
+    ExecutedQuery: 'MonSQLXStore
+
+      | where AppName == "{AppName}" and file_path == "<https://wasd2prodeus1aprs19597.blob.core.windows.net/data-spartan-srv-nam-crmco-23e26609-dbc5-4e04-9686-a282f649a2a5/data/463ad9c4-2336-4836-b139-1014fe2d88d6_1.mdf>"'
+- id: DB-geodr-85
+  Topic: GEODR0040-6-Source-DB-has-file-with-size-_-1-TB
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0040-Stuck-database-copy-_-SPO-NewDatabase-Se/GEODR0040-6-Source-DB-has-file-with-size-_-1-TB.md
+  Prompts:
+  - SQL DB transaction log usage
+  - SQL DB MonDmIoVirtualFileStats LogicalServerName
+  - SQL DB investigate transaction log usage
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmIoVirtualFileStats
+    ExecutedQuery: 'MonDmIoVirtualFileStats
+
+      | where PreciseTimeStamp > ago(3h)
+
+      | where max_size_mb > 1024 * 1024
+
+      | where AppTypeName startswith "Worker.ISO"
+
+      | where file_id <> 2
+
+      | where db_name !in (''tempdb'', ''msdb'')
+
+      | summarize arg_max(PreciseTimeStamp, max_size_mb, size_on_disk_bytes, spaceused_mb) by ClusterName, AppName, LogicalServerName, db_name, file_id
+
+      | extend max_size_gb = max_size_mb / 1024, size_on_disk_gb = size_on_disk_bytes / 1024 / 1024 / 1024, spaceused_gb = spaceused_mb / 1024
+
+      | project-away max_size_mb, size_on_disk_bytes, spaceused_mb'
+- id: DB-geodr-86
+  Topic: GEODR0047-18-Managed-server-adn-failover-group-stuck-drop-due-to-DB-in-ExternalConnectionsDisabled-state
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0047-Managed-Instance-Failover-Group-TSGs/GEODR0047-18-Managed-server-adn-failover-group-stuck-drop-due-to-DB-in-ExternalConnectionsDisabled-state.md
+  Prompts:
+  - SQL DB management status
+  - SQL DB MonManagement action new_state old_state
+  - SQL DB investigate management
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement| where request_id contains "<request id from ICM>"
+
+      | where state_machine_type contains "ManagedFailoverGroupLinkStateMachine" or caller_state_machine_type contains "ManagedFailoverGroupLinkStateMachine"
+
+      | project TIMESTAMP, state_machine_type, [''keys''], action, old_state, new_state, caller_state_machine_type, caller_keys| project TIMESTAMP, state_machine_type, [''keys''], action, old_state, new_state, caller_state_machine_type, caller_keys'
+- id: DB-geodr-87
+  Topic: GEODR0047-19-Clean-up-ghost-Geo-secondary-databases
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0047-Managed-Instance-Failover-Group-TSGs/GEODR0047-19-Clean-up-ghost-Geo-secondary-databases.md
+  Prompts:
+  - SQL DB geo DR failover groups activity
+  - SQL DB MonGeoDRFailoverGroups ICM role failover_group_id
+  - SQL DB investigate geo DR failover groups
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonGeoDRFailoverGroups
+    ExecutedQuery: 'MonGeoDRFailoverGroups\n
+
+      | where failover_group_type == "ManagedFailoverGroup"\n
+
+      | where failover_group_id == "<FoG id from the ICM>"\n
+
+      | summarize min(PreciseTimeStamp), max(PreciseTimeStamp) by role'
+- id: DB-geodr-88
+  Topic: GEODR0047-19-Clean-up-ghost-Geo-secondary-databases
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0047-Managed-Instance-Failover-Group-TSGs/GEODR0047-19-Clean-up-ghost-Geo-secondary-databases.md
+  Prompts:
+  - SQL DB management status
+  - SQL DB MonManagement originalEventTimestamp new_state
+  - SQL DB investigate management
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement\n
+
+      | where state_machine_type contains "ManagedDatabaseStateMachine"\n
+
+      | where [''keys''] contains "<managed database id from the verification query 2>"\n
+
+      //| where [''state''] == "CreatingAlias"\n
+
+      | project originalEventTimestamp, [''state''], old_state, new_state'
+- id: DB-geodr-89
+  Topic: GEODR0047-19-Clean-up-ghost-Geo-secondary-databases
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0047-Managed-Instance-Failover-Group-TSGs/GEODR0047-19-Clean-up-ghost-Geo-secondary-databases.md
+  Prompts:
+  - SQL DB snapshot status
+  - SQL DB MonAnalyticsDBSnapshot logical_server_name
+  - SQL DB investigate snapshot
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: 'MonAnalyticsDBSnapshot\n
+
+      | where service_level_objective startswith ''MI'' and logical_database_name !in ("replicatedmaster","managed_model","msdb") and PreciseTimeStamp between (datetime(<interval start - some delta>)..datetime(interval end + some delta))\n
+
+      //| where failover_group_id != "" // Alert picks only DBs with FoG id set, however you should run query for all to check if that is the issue\n
+
+      | where logical_server_name == \"{ServerName}\" and logical_database_name == \"{DatabaseName}\"\n
+
+      | project PreciseTimeStamp, physical_database_id'
+- id: DB-geodr-90
+  Topic: GEODR0047-2--CL-Cannot-Deploy-MI-GeoDr-in-Subnet-in-Which-Th
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0047-Managed-Instance-Failover-Group-TSGs/GEODR0047-2--CL-Cannot-Deploy-MI-GeoDr-in-Subnet-in-Which-Th.md
+  Prompts:
+  - SQL DB management errors
+  - SQL DB MonManagement event error_message keys fsm_event
+  - SQL DB troubleshoot management errors
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where  request_id == "EB41289E-1147-49B0-B3D6-0D82127F038A"
+
+      | project  originalEventTimestamp, state_machine_type, event, fsm_event, old_state, new_state, operation_parameters, operation_id, keys, message, error_message, stack_trace, request_id, caller_state_machine_type , caller_keys
+
+      | order  by  originalEventTimestamp  asc
+
+      | project  originalEventTimestamp, message, error_message'
+- id: DB-geodr-91
+  Topic: GEODR0047-20-Fix-ghost-geo-primary-databases
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0047-Managed-Instance-Failover-Group-TSGs/GEODR0047-20-Fix-ghost-geo-primary-databases.md
+  Prompts:
+  - SQL DB GeoDR failover groups status
+  - SQL DB GeoDR failover groups logical_server_name LogicalServerName
+  - SQL DB investigate now
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonGeoDRFailoverGroups
+    ExecutedQuery: 'let now = now();
+
+      let delay_3h = datetime_add(''hour'', -3, now);
+
+      let interval_start = datetime_add(''hour'', -1, now);
+
+      // All Geo Primary DBs WW
+
+      GetCrossClusterData(''MonGeoDRFailoverGroups'')
+
+      | where KustoCluster != "sqladhoc"
+
+      | where failover_group_type == "ManagedFailoverGroup" and PreciseTimeStamp > interval_start
+
+      | where failover_group_create_time < delay_3h
+
+      | extend region_name = split(ClusterName,''.'')[1]
+
+      | summarize arg_max(PreciseTimeStamp,region_name,logical_server_name, failover_group_name, partner_region, partner_server_name, role, failover_group_create_time) by failover_group_id, ClusterName
+
+      | where role == "Primary"
+
+      | join kind=inner
+
+      (
+
+      GetCrossClusterData(''MonAnalyticsDBSnapshot'')
+
+      | where service_level_objective startswith ''MI'' and logical_database_name !in ("replicatedmaster","managed_model", "msdb") and  PreciseTimeStamp > interval_start
+
+      | where create_time < delay_3h
+
+      | where failover_group_id != ""
+
+      | summarize arg_max(PreciseTimeStamp, service_level_objective, physical_database_id, create_time, [''state''], tenant_ring_name) by logical_server_name, logical_database_name
+
+      | where [''state''] != "WaitingForPhysicalDatabaseCreation"
+
+      ) on logical_server_name
+
+      | join kind=leftanti
+
+      (
+
+      GetCrossClusterData(''MonDmContinuousCopyStatus'')
+
+      | where PreciseTimeStamp > delay_3h
+
+      | summarize by LogicalServerName, physical_database_id, partner_server, partner_database
+
+      ) on $left.partner_server_name == $right.partner_server and $left.logical_database_name == $right.partner_database
+
+      |join kind=inner
+
+      (
+
+      GetCrossClusterData(''MonNodeAgentHeartbeat'')
+
+      | where PreciseTimeStamp  > delay_3h
+
+      | summarize count() by ClusterName
+
+      ) on $left.tenant_ring_name == $right.ClusterName
+
+      | where logical_server_name == ''{server_name}'''
+- id: DB-geodr-92
+  Topic: GEODR0047-20-Fix-ghost-geo-primary-databases
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0047-Managed-Instance-Failover-Group-TSGs/GEODR0047-20-Fix-ghost-geo-primary-databases.md
+  Prompts:
+  - SQL DB SQL system health
+  - SQL DB MonSQLSystemHealth LogicalServerName error_id
+  - SQL DB investigate SQL system health
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where LogicalServerName contains "{managed_server_name}"
+
+      | where PreciseTimeStamp > ago(1h)
+
+      | where message contains "Azure Key Vault" or message contains "AKV"
+
+      | where message contains "error"
+
+      | project PreciseTimeStamp, error_id, message'
+- id: DB-geodr-93
+  Topic: GEODR0047-24-MI-Database-Move-and-Copy-Throubleshooting
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0047-Managed-Instance-Failover-Group-TSGs/GEODR0047-24-MI-Database-Move-and-Copy-Throubleshooting.md
+  Prompts:
+  - SQL DB management resource provider analysis
+  - SQL DB MonManagementResourceProvider PreciseTimeStamp
+  - SQL DB investigate management resource provider
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagementResourceProvider
+    ExecutedQuery: 'MonManagementResourceProvider
+
+      | where PreciseTimeStamp > ago(1d)
+
+      | where operation_name == "POST/MODULES/SUBSCRIPTIONS/RESOURCEGROUPS/PROVIDERS/MICROSOFT.SQL/MANAGEDINSTANCES/DATABASES/STARTMOVE"
+
+      | project originalEventTimestamp, correlation_id, request_id, request_url, extra_parameters, subscription_id, http_verb, resource_type, operation_name, exception_message'
+- id: DB-geodr-94
+  Topic: GEODR0047-24-MI-Database-Move-and-Copy-Throubleshooting
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0047-Managed-Instance-Failover-Group-TSGs/GEODR0047-24-MI-Database-Move-and-Copy-Throubleshooting.md
+  Prompts:
+  - SQL DB management operations
+  - SQL DB MonManagementOperations event PreciseTimeStamp
+  - SQL DB investigate management operations
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagementOperations
+    ExecutedQuery: 'MonManagementOperations
+
+      | where PreciseTimeStamp > ago(1d)
+
+      | where operation_type in ("StartCrossManagedInstanceDatabaseMovement","CancelCrossManagedInstanceDatabaseMovement","ContinueCrossManagedInstanceDatabaseMovement")
+
+      | project originalEventTimestamp, event, request_id, operation_type, operation_parameters, operation_result'
+- id: DB-geodr-95
+  Topic: GEODR0047-24-MI-Database-Move-and-Copy-Throubleshooting
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0047-Managed-Instance-Failover-Group-TSGs/GEODR0047-24-MI-Database-Move-and-Copy-Throubleshooting.md
+  Prompts:
+  - SQL DB management status
+  - SQL DB MonManagement state PreciseTimeStamp id
+  - SQL DB investigate management
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where PreciseTimeStamp > ago(1d)
+
+      | where request_id == "<request id>"
+
+      | project PreciseTimeStamp, keys, state_machine_type, old_state, new_state, state, action, message, exception, stack_trace'
+- id: DB-geodr-96
+  Topic: GEODR0047-24-MI-Database-Move-and-Copy-Throubleshooting
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0047-Managed-Instance-Failover-Group-TSGs/GEODR0047-24-MI-Database-Move-and-Copy-Throubleshooting.md
+  Prompts:
+  - SQL DB management operations
+  - SQL DB MonManagementOperations TIMESTAMP request_id
+  - SQL DB investigate management operations
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagementOperations
+    ExecutedQuery: 'MonManagementOperations
+
+      | where TIMESTAMP >ago(7d)
+
+      | where operation_type contains ''CrossManagedInstanceDatabaseMovement''
+
+      | where operation_parameters contains ''{server_name}'' and operation_parameters contains ''{database_name}''
+
+      | summarize min(originalEventTimestamp) by request_id
+
+      | order by min_originalEventTimestamp desc
+
+      | take 1'
+- id: DB-geodr-97
+  Topic: GEODR0047-24-MI-Database-Move-and-Copy-Throubleshooting
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0047-Managed-Instance-Failover-Group-TSGs/GEODR0047-24-MI-Database-Move-and-Copy-Throubleshooting.md
+  Prompts:
+  - SQL DB management latency
+  - SQL DB MonManagement event originalEventTimestamp
+  - SQL DB troubleshoot management latency
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where TIMESTAMP >ago(7d)
+
+      | where request_id =~ ''{request_id}''
+
+      | where operation_type contains "CrossManagedInstanceDatabaseMovement"
+
+      | extend isCanceledInReadyForFailover = (operation_type startswith ''Cancel'')
+
+      | extend isUserCanceled = (event contains ''management_operation'' and event contains "cancel") or isCanceledInReadyForFailover
+
+      | project originalEventTimestamp, operation_type, event, elapsed_time, isUserCanceled, isCanceledInReadyForFailover'
+- id: DB-geodr-98
+  Topic: GEODR0047-25-Add-DB-to-failover-group-stuck
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0047-Managed-Instance-Failover-Group-TSGs/GEODR0047-25-Add-DB-to-failover-group-stuck.md
+  Prompts:
+  - SQL DB management operations
+  - SQL DB MonManagementOperations
+  - SQL DB investigate management operations
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagementOperations
+    ExecutedQuery: MonManagementOperations| where operation_parameters contains '{managed_server_name}' and operation_parameters  contains '{managed_database_name}'
+- id: DB-geodr-99
+  Topic: GEODR0047-3-Management-service-Alert-for-SystemExc
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0047-Managed-Instance-Failover-Group-TSGs/GEODR0047-3-Management-service-Alert-for-SystemExc.md
+  Prompts:
+  - SQL DB management errors
+  - SQL DB MonManagement event TIMESTAMP CasCommand
+  - SQL DB troubleshoot management errors
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where TIMESTAMP > ago(2h)
+
+      | where query_name =~ "GetManagedFailoverGroupOperation" and event =~ "management_workflow_query_failure"
+
+      | summarize by request_id
+
+      | join kind=inner(MonManagementResourceProvider) on request_id
+
+      | summarize by request_url
+
+      | extend problematicRequestId = extract("instanceFailoverGroupAzureAsyncOperation/([a-f0-9-]+)?", 1, request_url)
+
+      | extend CasCommand = strcat("Set-SqlAzureFsmState -TableName tbl_management_operations -Keys @("",
+
+      problematicRequestId, "") -CabId 126178384 -Force -ExpectedCurrentState Failed -NewState Purged")
+
+      | project problematicRequestId, request_url, CasCommand'
+- id: DB-geodr-100
+  Topic: GEODR0047-6--CL-Failover-groups-stuck-in-drop
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0047-Managed-Instance-Failover-Group-TSGs/GEODR0047-6--CL-Failover-groups-stuck-in-drop.md
+  Prompts:
+  - SQL DB management analysis
+  - SQL DB MonManagement event fog_name request_id
+  - SQL DB investigate management
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where operation_type == "CreateManagedFailoverGroup"
+
+      | where event == "management_operation_start"
+
+      | extend fog_name = extract("<FailoverGroupName>(.*)</FailoverGroupName>", 1, operation_parameters)
+
+      | where fog_name == ''{fog_name}''
+
+      | project fog_name, request_id
+
+      | join kind = leftanti('
+- id: DB-geodr-101
+  Topic: GEODR0047-6--CL-Failover-groups-stuck-in-drop
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0047-Managed-Instance-Failover-Group-TSGs/GEODR0047-6--CL-Failover-groups-stuck-in-drop.md
+  Prompts:
+  - SQL DB timeout analysis
+  - SQL DB MonManagement event fog_name request_id
+  - SQL DB troubleshoot timeout
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where operation_type == "CreateManagedFailoverGroup"
+
+      | where event in ("management_operation_success", "management_operation_failure", "management_operation_timeout", "management_operation_fatal_error", "management_operation_cancel")
+
+      | extend fog_name = extract("<FailoverGroupName>(.*)</FailoverGroupName>", 1, operation_parameters)
+
+      | project fog_name, request_id
+
+      ) on fog_name, request_id
+
+      | summarize count() by fog_name
+
+      | where count_ > 1'
+- id: DB-geodr-102
+  Topic: GEODR0047-8-Create-failover-group-stuck-in-Creatin
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0047-Managed-Instance-Failover-Group-TSGs/GEODR0047-8-Create-failover-group-stuck-in-Creatin.md
+  Prompts:
+  - SQL DB management status
+  - SQL DB MonManagement state_machine_type
+  - SQL DB investigate management
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where [''keys''] contains "[failover_group_id]"
+
+      | where state_machine_type == "ManagedFailoverGroupEndpointStateMachine"
+
+      | project TIMESTAMP, [''keys''], [''state''], message'
+- id: DB-geodr-103
+  Topic: GEODR0047.26-Proxy-override-mismatch
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0047-Managed-Instance-Failover-Group-TSGs/GEODR0047.26-Proxy-override-mismatch.md
+  Prompts:
+  - SQL DB login status
+  - SQL DB MonLogin event logical_server_name LogicalServerName
+  - SQL DB investigate login
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'MonLogin
+
+      | where logical_server_name =~ fogName or LogicalServerName =~ fogName
+
+      | extend ProxyOrRedirect = iif( result == "e_crContinueSameState", "Proxy" , "Redirect")
+
+      | where TIMESTAMP > ago(1d)
+
+      | where event contains "login_finish"
+
+      | summarize count() by ProxyOrRedirect'
+- id: DB-geodr-104
+  Topic: GEODR0063.0-Managed-Instance-Failover-Group-Connectivity-Telemetry
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0063--CL-Managed-Instance-Failover-Group-ConnectivityTSGs/GEODR0063.0-Managed-Instance-Failover-Group-Connectivity-Telemetry.md
+  Prompts:
+  - SQL DB get cross cluster data status (MI/GeoDR context)
+  - SQL DB GetCrossClusterData logical_server_name
+  - SQL DB investigate get cross cluster data
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: GetCrossClusterData
+    ExecutedQuery: 'GetCrossClusterData(''MonDmContinuousCopyStatus'')
+
+      | where KustoCluster != ''sqladhoc''
+
+      | where AppTypeName contains ''Worker.CL'' and TIMESTAMP > ago(2d) and is_target_role == 0 and link_type == ''LAG_REPLICA_LINK_TYPE_CONTINUOUS_COPY''
+
+      | summarize arg_max(PreciseTimeStamp, last_replication, replication_lag_sec, replication_state_desc) by ClusterName, LogicalServerName, partner_database, partner_server, is_target_role
+
+      | where replication_lag_sec == "" or last_replication == ""
+
+      | summarize by ManagedServerName = LogicalServerName, PartnerServerName = partner_server
+
+      | union (GetCrossClusterData(''MonGeoDRFailoverGroups'')
+
+      | where TIMESTAMP > ago(2d) and failover_group_type == ''ManagedFailoverGroup'' and role == ''Primary''
+
+      | summarize by failover_group_name, logical_server_name, partner_server_name
+
+      | join kind = inner (GetCrossClusterData(''MonAnalyticsDBSnapshot'')
+
+      | where TIMESTAMP > ago(2d) and database_type == "SQL.ManagedUserDb"
+
+      | summarize by logical_server_name) on logical_server_name
+
+      | join kind = anti  (GetCrossClusterData(''MonDmContinuousCopyStatus'')
+
+      | where AppTypeName contains ''Worker.CL'' and TIMESTAMP > ago(2d) and is_target_role == 0 and link_type == ''LAG_REPLICA_LINK_TYPE_CONTINUOUS_COPY''
+
+      | summarize by LogicalServerName) on $left.logical_server_name == $right.LogicalServerName
+
+      | summarize by ManagedServerName = logical_server_name, PartnerServerName = partner_server_name)'
+- id: DB-geodr-105
+  Topic: GEODR0063.0-Managed-Instance-Failover-Group-Connectivity-Telemetry
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0063--CL-Managed-Instance-Failover-Group-ConnectivityTSGs/GEODR0063.0-Managed-Instance-Failover-Group-Connectivity-Telemetry.md
+  Prompts:
+  - SQL DB get cross cluster data latency (MI/GeoDR context)
+  - SQL DB GetCrossClusterData logical_server_name
+  - SQL DB troubleshoot get cross cluster data latency
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: GetCrossClusterData
+    ExecutedQuery: 'GetCrossClusterData(''MonDmDbHadrReplicaStates'')
+
+      | where KustoCluster != ''sqladhoc''
+
+      | where synchronization_health_desc == "HEALTHY"
+
+      | where TIMESTAMP > ago(2d) and is_forwarder == 1 and AppTypeName contains "Worker.CL" and secondary_lag_seconds > 1200
+
+      | summarize max(secondary_lag_seconds) by LogicalServerName
+
+      | join kind = inner (GetCrossClusterData(''MonGeoDRFailoverGroups'')
+
+      | where failover_group_type == ''ManagedFailoverGroup'' and TIMESTAMP > ago(6h)
+
+      | summarize max(PreciseTimeStamp) by failover_group_name, logical_server_name, partner_server_name) on $left.LogicalServerName == $right.logical_server_name
+
+      | project ManagedServerName = LogicalServerName, PartnerServerName = partner_server_name, MaxReplicationLatency = max_secondary_lag_seconds'
+- id: DB-geodr-106
+  Topic: GEODR0063.0-Managed-Instance-Failover-Group-Connectivity-Telemetry
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0063--CL-Managed-Instance-Failover-Group-ConnectivityTSGs/GEODR0063.0-Managed-Instance-Failover-Group-Connectivity-Telemetry.md
+  Prompts:
+  - SQL DB get cross cluster data errors
+  - SQL DB GetCrossClusterData event error_message
+  - SQL DB troubleshoot get cross cluster data errors
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: GetCrossClusterData
+    ExecutedQuery: 'GetCrossClusterData(''MonManagement'')
+
+      | where KustoCluster != ''sqladhoc''
+
+      | where TIMESTAMP > ago(2d) and operation_type == ''CreateManagedFailoverGroup'' and event  == ''management_operation_failure''
+
+      | parse operation_parameters with * ''<ManagedServerName>'' ManagedServerName:string ''</ManagedServerName>'' * ''<FailoverGroupName>'' FailoverGroupName:string ''</FailoverGroupName>'' * ''<PartnerServerName>'' PartnerServerName:string ''</PartnerServerName>'' *
+
+      | where error_message contains "Replication to the partner managed instance could not be established."
+
+      | summarize by FailoverGroupName, ManagedServerName, PartnerServerName'
+- id: DB-geodr-107
+  Topic: GEODR0063.0-Managed-Instance-Failover-Group-Connectivity-Telemetry
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0063--CL-Managed-Instance-Failover-Group-ConnectivityTSGs/GEODR0063.0-Managed-Instance-Failover-Group-Connectivity-Telemetry.md
+  Prompts:
+  - SQL DB managed servers errors
+  - SQL DB managed servers state logical_server_name LogicalServerName
+  - SQL DB troubleshoot ago errors
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'let ago_6h = ago(6h);
+
+      let ago_3h = ago(3h);
+
+      let ServerInfo = GetCrossClusterData(''MonManagedServers'')
+
+      | where name in (primaryServerName, secondaryServerName) and TIMESTAMP > ago_6h
+
+      | extend RegionParams = split(ClusterName, ".")
+
+      | extend Region = strcat("wasd-prod-", RegionParams[1])
+
+      | summarize arg_max(PreciseTimeStamp, private_cluster_tenant_ring_name, vnet_dns_record_name, state, subnet_id, is_wcow_managed_server) by name, Region, customer_subscription_id
+
+      | where state == ''Ready''
+
+      | join kind = inner (GetCrossClusterData(''MonGeoDRFailoverGroups'')
+
+      | where failover_group_type == ''ManagedFailoverGroup'' and TIMESTAMP > ago_6h
+
+      | summarize max(PreciseTimeStamp) by failover_group_name, logical_server_name, partner_server_name) on $left.name == $right.logical_server_name
+
+      | project Region, LogicalServerName = name, FabricClusterName = private_cluster_tenant_ring_name, HostName = vnet_dns_record_name, PartnerServerName = partner_server_name, FailoverGroupName = failover_group_name, CustomerSubscriptionId = customer_subscription_id, subnet_id, is_wcow_managed_server
+
+      | join kind = leftouter (GetCrossClusterData(''MonSQLSystemHealth'')
+
+      | where TIMESTAMP > ago_3h and LogicalServerName in (primaryServerName, secondaryServerName) and error_id == ''33111''
+
+      | summarize  count() by LogicalServerName
+
+      | extend IsAKV = iff(count_ > 0, true, false)) on LogicalServerName
+
+      | project-away LogicalServerName1, count_;'
+- id: DB-geodr-108
+  Topic: GEODR0063.0-Managed-Instance-Failover-Group-Connectivity-Telemetry
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/GEODR0063--CL-Managed-Instance-Failover-Group-ConnectivityTSGs/GEODR0063.0-Managed-Instance-Failover-Group-Connectivity-Telemetry.md
+  Prompts:
+  - SQL DB managed servers status
+  - SQL DB MonManagedServers ClusterName originalEventTimestamp
+  - SQL DB investigate managed servers
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'let ago_6h = ago(6h);
+
+      let SingleCluster = (clstr: string) {cluster(clstr).database(''sqlazure1'').MonManagedServers
+
+      | where name in (primaryServer, secondaryServer)
+
+      | summarize arg_max(PreciseTimeStamp, SubnetId = subnet_id, ClusterName = private_cluster_tenant_ring_name) by ManagedServerName = name
+
+      | join kind = inner (cluster(clstr).database(''sqlazure1'').MonPrivateClusters
+
+      | summarize arg_max(PreciseTimeStamp, create_time) by ClusterName = tenant_ring_name) on ClusterName
+
+      | join kind = inner(cluster(clstr).database(''sqlazure1'').MonEffectiveRoutes
+
+      | where TIMESTAMP > ago_6h  and status == ''Active'' or status == ''Invalid''
+
+      | project originalEventTimestamp, SubnetId = subnet_resource_id, name, source, status, address_prefixes, type) on SubnetId
+
+      | summarize by ManagedServerName, SubnetId, name, source, status, tostring(address_prefixes), type, create_time'
+- id: DB-geodr-109
+  Topic: GeoDR-Standby-Replica
+  Source: TSG-SQL-DB-GeoDr/content/GEODR/StandbyReplica/GeoDR-Standby-Replica.md
+  Prompts:
+  - SQL DB continuous copy status status
+  - SQL DB MonDmContinuousCopyStatus LogicalServerName
+  - SQL DB investigate continuous copy status
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmContinuousCopyStatus
+    ExecutedQuery: 'MonDmContinuousCopyStatus
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where partner_server =~ ''dinesqlserverforstandbytest'' and partner_database =~ ''sales''
+
+      | summarize by LogicalServerName, partner_server, partner_database, SubscriptionId, is_target_role, link_type
+
+      | LogicalServerName | partner_server | partner_database | SubscriptionId | is_target_role | link_type |
+
+      | ----------------- | -------------  | ---------------- | -------------- | -------------- | --------- |
+
+      | dinesqlserverforstandabytestsecondary | dinesqlserverforstandbytest | sales | e01ba8c8-5964-4bd5-b599-3ae33b3f31ba | 1 | `LAG_REPLICA_LINK_TYPE_OFFLINE_SECONDARY` |'

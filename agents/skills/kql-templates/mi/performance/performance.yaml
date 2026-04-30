@@ -1013,17 +1013,21 @@ SqlSkills:
   - DatabaseName
   KustoQueries:
   - TableName: MonQueryProcessing
+<<<<<<< Updated upstream
     ExecutedQuery: 'let sname =   "<server name>";
+=======
+    ExecutedQuery: 'let server = "{ServerName}"; let db = "{DatabaseName}"; let sname =   ""{ServerName}"";
+>>>>>>> Stashed changes
 
-      let dname =   "<db name>";
+      let dname =   ""{DatabaseName}"";
 
       let aname =   "<app name>";
 
-      let phash = tolong("<hex plan hash>");
+      let phash = tolong(""{PlanHash}"");
 
-      let startTime =   "<start time>";
+      let startTime =   "ago({TimeRange})";
 
-      let endTime =   "<end time>";
+      let endTime =   "now()";
 
       MonQueryProcessing
 
@@ -1093,17 +1097,21 @@ SqlSkills:
   - DatabaseName
   KustoQueries:
   - TableName: MonWiQueryParamData
+<<<<<<< Updated upstream
     ExecutedQuery: 'let sname =   "<server name>";
+=======
+    ExecutedQuery: 'let server = "{ServerName}"; let db = "{DatabaseName}"; let sname =   ""{ServerName}"";
+>>>>>>> Stashed changes
 
-      let dname =   "<db name>";
+      let dname =   ""{DatabaseName}"";
 
       let aname =   "<app name>";
 
-      let phash = tolong("<hex plan hash>");
+      let phash = tolong(""{PlanHash}"");
 
-      let startTime =   "<start time>";
+      let startTime =   "ago({TimeRange})";
 
-      let endTime =   "<end time>";
+      let endTime =   "now()";
 
       MonWiQueryParamData
 
@@ -1132,17 +1140,21 @@ SqlSkills:
   - DatabaseName
   KustoQueries:
   - TableName: MonQueryProcessing
+<<<<<<< Updated upstream
     ExecutedQuery: 'let sname =   "<server name>";
+=======
+    ExecutedQuery: 'let server = "{ServerName}"; let db = "{DatabaseName}"; let sname =   ""{ServerName}"";
+>>>>>>> Stashed changes
 
-      let dname =   "<db name>";
+      let dname =   ""{DatabaseName}"";
 
       let aname =   "<app name>";
 
-      let phash = tolong("<hex plan hash>");
+      let phash = tolong(""{PlanHash}"");
 
-      let startTime =   "<start time>";
+      let startTime =   "ago({TimeRange})";
 
-      let endTime =   "<end time>";
+      let endTime =   "now()";
 
       MonQueryProcessing
 
@@ -2336,7 +2348,7 @@ SqlSkills:
 
       | where TIMESTAMP>= ago(1d)
 
-      | where logical_server_name =="<MIName>"
+      | where logical_server_name ==""{ServerName}""
 
       //| where logical_database_name =~ "{DatabaseName}"
 
@@ -2355,7 +2367,7 @@ SqlSkills:
   - TableName: MonSQLXStore
     ExecutedQuery: 'MonSQLXStore
 
-      | where LogicalServerName == "<MIName>" and file_path endswith  ".mdf"
+      | where LogicalServerName == ""{ServerName}"" and file_path endswith  ".mdf"
 
       | where TIMESTAMP  between (datetime(2025-01-02 08:30:00)..datetime(2025-01-04 09:30:00))'
 - id: MI-performance-119
@@ -3344,7 +3356,11 @@ SqlSkills:
     ExecutedQuery: 'MonSQLXStore| where LogicalServerName =~ "{ServerName}"| where event == "xio_failed_request" | where TIMESTAMP > datetime(2024-02-01 15:13:14.8733824)| project TIMESTAMP,LogicalServerName,event,file_path,
       mapped_errorcode,request_type,http_errorcode,request_id, error_responselet SingleCluster=(clstr: string) {cluster(clstr).database(''sqlazure1'').MonManagementOperations| where operation_type == "AlterFileManagedDatabase"|
       extend MaxFileSizeInKb = extract("<MaxFileSizesKb><string>([0-9]+)</string>", 1, operation_parameters)| extend FileSizeInKb = extract("<FileSizesKb><string>([0-9]+)</string>", 1, operation_parameters)|
+<<<<<<< Updated upstream
       extend MaxFileSizeInGb = toint(MaxFileSizeInKb) / (1024*1024)| extend FileSizeInGb = toint(FileSizeInKb) / (1024*1024)| extend ManagedInstanceName = extract("<ManagedServerName>([a-zA-Z-0-9_]+)</ManagedServerName>",
+=======
+      extend MaxFileSizeInGb = toint(MaxFileSizeInKb) / (1024*1024)| extend FileSizeInGb = toint(FileSizeInKb) / (1024*1024)| extend ManagedInstanceName = extract(""{ServerName}"([a-zA-Z-0-9_]+)</ManagedServerName>"
+>>>>>>> Stashed changes
       1, operation_parameters)//| where FileSizeInGb > 100 or MaxFileSizeInGb > 100| where error_code == 0 or isempty( error_code)| where event != "management_operation_start"| where event == "management_operation_fatal_error"|
       project TIMESTAMP, request_id, event,ManagedInstanceName, MaxFileSizeInGb, FileSizeInGb, toint( MaxFileSizeInKb) , toint( FileSizeInKb) , error_code, error_message, operation_parameters};_ExecuteForProdClusters'
 - id: MI-performance-168
@@ -4307,7 +4323,7 @@ SqlSkills:
   - DatabaseName
   KustoQueries:
   - TableName: MonSQLXStore
-    ExecutedQuery: "let startTime = datetime(YYYY-MM-DD HH:mm:ss);  \nlet endTime = datetime(YYYY-MM-DD HH:mm:ss);  \nlet srvrName = '<managed_server_name>';  \nMonSQLXStore  \n| where TIMESTAMP > startTime\
+    ExecutedQuery: "let startTime = datetime(YYYY-MM-DD HH:mm:ss);  \nlet endTime = datetime(YYYY-MM-DD HH:mm:ss);  \nlet srvrName = '"{ServerName}"';  \nMonSQLXStore  \n| where TIMESTAMP > startTime\
       \  \n| where TIMESTAMP < endTime  \n| where LogicalServerName == srvrName  \n| where file_path endswith \".mdf\" or file_path endswith \".ndf\" or file_path endswith \".ldf\"  \n| where event == 'xio_failed_request'\
       \  \n| where http_errorcode == '503'  \n| summarize max(retry_count), count() by bin(TIMESTAMP, 5m), file_path  \n| top 5 by count_ desc"
 - id: MI-performance-223
@@ -4322,7 +4338,7 @@ SqlSkills:
   - DatabaseName
   KustoQueries:
   - TableName: MonSQLXStore
-    ExecutedQuery: "let startTime = datetime(YYYY-MM-DD HH:mm:ss);  \nlet endTime = datetime(YYYY-MM-DD HH:mm:ss);\nlet srvrName = '<managed_server_name>';  \nMonSQLXStore  \n| where TIMESTAMP > startTime\
+    ExecutedQuery: "let startTime = datetime(YYYY-MM-DD HH:mm:ss);  \nlet endTime = datetime(YYYY-MM-DD HH:mm:ss);\nlet srvrName = '"{ServerName}"';  \nMonSQLXStore  \n| where TIMESTAMP > startTime\
       \  \n| where TIMESTAMP < endTime  \n| where LogicalServerName == srvrName  \n| where file_path endswith \"df\"  \n| where event == 'xio_failed_request'  \n| summarize max(retry_count), count() by\
       \ bin(TIMESTAMP, 5m), file_path, request_type  \n| top 5 by count_ desc"
 - id: MI-performance-224
@@ -4354,7 +4370,7 @@ SqlSkills:
   - DatabaseName
   KustoQueries:
   - TableName: MonSqlRgHistory
-    ExecutedQuery: "let startTime = datetime(YYYY-MM-DD HH:mm:ss);  \nlet endTime = datetime(YYYY-MM-DD HH:mm:ss);  \nlet srvrName = '<managed_server_name>';  \nMonSqlRgHistory  \n| where TIMESTAMP > startTime\
+    ExecutedQuery: "let startTime = datetime(YYYY-MM-DD HH:mm:ss);  \nlet endTime = datetime(YYYY-MM-DD HH:mm:ss);  \nlet srvrName = '"{ServerName}"';  \nMonSqlRgHistory  \n| where TIMESTAMP > startTime\
       \  \n| where TIMESTAMP < endTime  \n| where AppTypeName == \"Worker.CL\"  \n| where LogicalServerName == srvrName  \n| where event == \"aggregated_resource_pools_plus_history\"  \n| summarize sum(delta_read_bytes_total),\
       \ sum(delta_read_io_issued_total) by event, group_name, pool_name, bin(TIMESTAMP, 5m)  \n| render timechart"
 - id: MI-performance-226
@@ -4369,7 +4385,7 @@ SqlSkills:
   - DatabaseName
   KustoQueries:
   - TableName: MonSqlRgHistory
-    ExecutedQuery: "let startTime = datetime(YYYY-MM-DD HH:mm:ss);  \nlet endTime = datetime(YYYY-MM-DD HH:mm:ss);  \nlet srvrName = '<managed_server_name>';  \nMonSqlRgHistory  \n| where TIMESTAMP > startTime\
+    ExecutedQuery: "let startTime = datetime(YYYY-MM-DD HH:mm:ss);  \nlet endTime = datetime(YYYY-MM-DD HH:mm:ss);  \nlet srvrName = '"{ServerName}"';  \nMonSqlRgHistory  \n| where TIMESTAMP > startTime\
       \  \n| where TIMESTAMP < endTime  \n| where AppTypeName == \"Worker.CL\"  \n| where LogicalServerName == srvrName  \n| where event == \"aggregated_resource_pools_plus_history\"  \n| summarize sum(delta_write_bytes_total),\
       \ sum(delta_write_io_issued_total) by pool_name, bin(TIMESTAMP, 5m)  \n| render timechart"
 - id: MI-performance-227
@@ -4861,7 +4877,7 @@ SqlSkills:
 
       | where TIMESTAMP > ago(1d)
 
-      | where logical_server_name =~ ''<ManagedServerName>''
+      | where logical_server_name =~ ''"{ServerName}"''
 
       | summarize arg_max(TIMESTAMP, ClusterName, NodeName, AppName) by logical_server_name'
 - id: MI-performance-242
@@ -4880,9 +4896,9 @@ SqlSkills:
 
       | where TIMESTAMP > ago(1h)
 
-      | where NodeName == "<NodeName_from_Step1b>"
+      | where NodeName == ""{NodeName}""
 
-      | where message has "<file_guid>"  // e.g. "ebb39c11" or "56b816d0"
+      | where message has ""{FileGuid}""  // e.g. "ebb39c11" or "56b816d0"
 
       | project TIMESTAMP, event, message
 
@@ -4899,15 +4915,15 @@ SqlSkills:
   - DatabaseName
   KustoQueries:
   - TableName: MonCounterOneMinute
-    ExecutedQuery: 'let _ClusterName = "<tenant_ring_name>";
+    ExecutedQuery: 'let _ClusterName = ""{ClusterName}"";
 
-      let _NodeName = "<NodeName_from_Step1b>";
+      let _NodeName = ""{NodeName}"";
 
       let _DriveLetter = "N:";  // from Step 1 DriveLetter column
 
-      let _StartTime = datetime(<before_cleanup_time>);
+      let _StartTime = datetime(ago({TimeRange}));
 
-      let _EndTime = datetime(<after_cleanup_time>);
+      let _EndTime = datetime(ago({TimeRange}));
 
       MonCounterOneMinute
 
@@ -4934,11 +4950,11 @@ SqlSkills:
 
       | where TIMESTAMP > ago(7d)
 
-      | where AppName == "<AppName_from_Step1>"
+      | where AppName == ""{AppName}""
 
       | where event == "aggregated_virtual_files_io_history"
 
-      | where file_path has "<file_guid>"  // GUID from file_container_path, e.g. "8abaf587"
+      | where file_path has ""{FileGuid}""  // GUID from file_container_path, e.g. "8abaf587"
 
       | summarize arg_max(TIMESTAMP, size_on_disk_bytes) by file_path
 
@@ -5553,3 +5569,3892 @@ SqlSkills:
       | extend (confidence,slope,variance,rvariance,interception,lineseries) = series\_fit\_line(max\_used\_memory\_percent)
 
       | project confidence, slope, interception, lineseries, max\_used\_memory\_percent, NodeName, TIMESTAMP;'
+<<<<<<< Updated upstream
+=======
+- id: MI-performance-217
+  Topic: Full-text-crawl-blocking-drop-view
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Blocking-and-deadlocks/Full-text-crawl-blocking-drop-view.md
+  Prompts:
+  - MI Full-text-crawl-blocking-drop-view
+  - Managed Instance Full-text-crawl-blocking-drop-view
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonFulltextActiveCatalogs
+    ExecutedQuery: 'MonFulltextActiveCatalogs
+
+      | where AppName == "appname"
+
+      | where PreciseTimeStamp  between (datetime(2023-05-03 00:00:00)..datetime(2023-05-03 08:00:00))
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | project PreciseTimeStamp, LogicalServerName, database_id, catalog_id, name, is_paused, is_enabled, status, crawl_start_date, crawl_end_date, has_crawl_completed
+
+      | sort by PreciseTimeStamp desc
+
+      3. **Check on the customer side (T-SQL)'
+- id: MI-performance-218
+  Topic: No-deadlock-information
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Blocking-and-deadlocks/No-deadlock-information.md
+  Prompts:
+  - MI No-deadlock-information
+  - Managed Instance No-deadlock-information
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: AlrSQLErrorsReported
+    ExecutedQuery: 'AlrSQLErrorsReported
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where error_number == 3617
+
+      | where TIMESTAMP > ago(3d)'
+- id: MI-performance-219
+  Topic: No-deadlock-information
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Blocking-and-deadlocks/No-deadlock-information.md
+  Prompts:
+  - MI No-deadlock-information
+  - Managed Instance No-deadlock-information
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where TIMESTAMP > ago(3d)
+
+      | where message contains "Version cleaner snapshotted aborted transactions"
+
+      | project PreciseTimeStamp, NodeName, message
+
+      If none of the above events are present in telemetry, you can conclude that no deadlock occurred during the specified timeframe.'
+- id: MI-performance-220
+  Topic: Storage-latency-troubleshooting
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/High-IO-utilization/Storage-latency-troubleshooting.md
+  Prompts:
+  - MI Storage-latency-troubleshooting
+  - Managed Instance Storage-latency-troubleshooting
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: 'MonSqlRgHistory
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where originalEventTimestamp between (datetime(2024-02-27 00:34:05.0599807)..datetime(2024-02-27 16:34:05.0599807))
+
+      | where event == ''aggregated_virtual_files_io_history''
+
+      | summarize by db_name, database_id, file_id, volume_name = file_path
+
+      | order by database_id asc, file_id asc'
+- id: MI-performance-223
+  Topic: Storage-latency-troubleshooting
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/High-IO-utilization/Storage-latency-troubleshooting.md
+  Prompts:
+  - MI Storage-latency-troubleshooting
+  - Managed Instance Storage-latency-troubleshooting
+  CustomizedParameters:
+  - AppName
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: 'MonSqlRgHistory
+
+      | where AppName =~  "{AppName}"
+
+      | where originalEventTimestamp between (datetime(2023-09-27 08:00:00)..datetime(2023-09-27 10:30:00))
+
+      | where event == ''aggregated_workload_groups_plus_history''
+
+      | project end_aggregated_sample, AppName, delta_ios_group_iops_delayed, NodeName, group_name, delta_writes_issued_total, delta_reads_issued_total
+
+      | summarize writes = sum(delta_writes_issued_total), reads = sum(delta_reads_issued_total) by bin(end_aggregated_sample, 15m) , group_name
+
+      | render timechart'
+- id: MI-performance-224
+  Topic: Storage-latency-troubleshooting
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/High-IO-utilization/Storage-latency-troubleshooting.md
+  Prompts:
+  - MI Storage-latency-troubleshooting
+  - Managed Instance Storage-latency-troubleshooting
+  CustomizedParameters:
+  - AppName
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSQLXStore
+    ExecutedQuery: 'MonSQLXStore
+
+      | where TIMESTAMP between (datetime(2023-09-27 08:00:00)..datetime(2023-09-27 10:30:00))
+
+      | where AppName =~  "{AppName}"
+
+      | where event == "xio_failed_request"
+
+      | summarize count(), max(retry_count) by request_type, http_errorcode, mapped_errorcode, bin(TIMESTAMP, binTime)
+
+      | extend request_mapped_http = strcat(request_type, "_", mapped_errorcode, "_", http_errorcode)'
+- id: MI-performance-225
+  Topic: Storage-latency-troubleshooting
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/High-IO-utilization/Storage-latency-troubleshooting.md
+  Prompts:
+  - MI Storage-latency-troubleshooting
+  - Managed Instance Storage-latency-troubleshooting
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLXStoreIOStats
+    ExecutedQuery: 'MonSQLXStoreIOStats
+
+      | where originalEventTimestamp between (datetime(2023-09-27 08:00:00)..datetime(2023-09-27 10:30:00))
+
+      | where LogicalServerName =~ "{ServerName}" // managed instance name
+
+      | where file_path contains "b93bef6a-b74a-4246-9143-68cdb3164afb" // You can get this from the first query in the previous section
+
+      | where event == ''xstore_io_stats''
+
+      | where file_path endswith ''.ldf'' or file_path endswith''.mdf'' or file_path endswith ''.ndf''
+
+      | extend period_ms = column_ifexists(''period_ms'',-1)
+
+      | extend period_ms = iif(isempty(period_ms), -1, period_ms)
+
+      | extend periodSeconds = iif(period_ms==-1, 30., period_ms/1000.)
+
+      | parse kind=regex file_path with* ''/data/'' file_name:string
+
+      | project TIMESTAMP, LogicalServerName, AppName, NodeName, file_path, file_name, period_ms, periodSeconds,
+
+      total_reads, total_writes, total_read_bytes, total_write_bytes, total_read_microsec, total_write_microsec, total_retries, total_retry_wait_time_ms, total_outstanding_io, page_blob_tier
+
+      | where file_name !in(''replicatedmaster_1.mdf'', ''msdb_1.mdf'', ''managed_model_1.mdf'', ''replicatedmaster_2.ldf'', ''msdb_2.ldf'', ''managed_model_2.ldf'')
+
+      | extend
+
+      // IOPS data, read, write and total
+
+      R_IOPS = round(1. * (total_reads) / periodSeconds, 2),
+
+      W_IOPS = round(1. * (total_writes) / periodSeconds, 2),
+
+      IOPS = round(1. * (total_writes+total_reads) / periodSeconds, 2),
+
+      // Throughput, read, write and total
+
+      R_MBPS = round(1. * (total_read_bytes) / periodSeconds/ 1024. / 1024., 2),
+
+      W_MBPS = round(1. * (total_write_bytes) / periodSeconds/ 1024. / 1024., 2),
+
+      MBPS = round(1. * (total_write_bytes+total_read_bytes) / periodSeconds/ 1024. / 1024., 2),
+
+      // Latencies in ms, read, write and total
+
+      r_io_lat_ms = round(1. * (total_read_microsec) / 1000. / (total_reads), 2),
+
+      w_io_lat_ms = round(1. * (total_write_microsec) / 1000. / (total_writes), 2),
+
+      io_lat_ms = round(1. * (total_write_microsec+total_read_microsec) / 1000. / (total_writes+total_reads), 2),
+
+      // Avg IO size for reads, writes and total
+
+      r_io_size_kb = round(1. * (total_read_bytes) / 1024. / (total_reads), 2),
+
+      w_io_size_kb = round(1. * (total_write_bytes) / 1024. / (total_writes), 2),
+
+      io_size_kb = round(1. * (total_write_bytes+total_read_bytes) / 1024. / (total_writes+total_reads)'
+- id: MI-performance-226
+  Topic: Rebuild-or-Create-Index-fails-with-Could-not-allocate-a-new-page-for-database
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Index-maintenance-and-statistics/Rebuild-or-Create-Index-fails-with-Could-not-allocate-a-new-page-for-database.md
+  Prompts:
+  - MI Rebuild-or-Create-Index-fails-with-Could-not-allocate-a-new-page-for-database
+  - Managed Instance Rebuild-or-Create-Index-fails-with-Could-not-allocate-a-new-page-for-database
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmIoVirtualFileStats
+    ExecutedQuery: 'MonDmIoVirtualFileStats
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where db_name =~ "database_name"
+
+      | where is_primary_replica == 1
+
+      | where type_desc = ''ROWS''
+
+      | project TIMESTAMP, type_desc,spaceused_mb, max_size_mb, size_on_disk_mb =(size_on_disk_bytes/1024/1024), file_id'
+- id: MI-performance-227
+  Topic: Workflow-for-Index-Maintenance-and-statistics
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Index-maintenance-and-statistics/Workflow-for-Index-Maintenance-and-statistics.md
+  Prompts:
+  - MI Workflow-for-Index-Maintenance-and-statistics
+  - Managed Instance Workflow-for-Index-Maintenance-and-statistics
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: AlrSQLErrorsReported
+    ExecutedQuery: 'let endTime = now();
+let startTime = ago({TimeRange});
+AlrSQLErrorsReported
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where originalEventTimestamp >= startTime
+
+      | where originalEventTimestamp <= endTime
+
+      | project originalEventTimestamp, database_name, error_number, state , session_id'
+- id: MI-performance-228
+  Topic: Backup-failing-due-to-Log-full-with-AVAILABILITY_REPLICA
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Managing-space-for-databases-and-pools/Backup-failing-due-to-Log-full-with-AVAILABILITY_REPLICA.md
+  Prompts:
+  - MI Backup-failing-due-to-Log-full-with-AVAILABILITY_REPLICA
+  - Managed Instance Backup-failing-due-to-Log-full-with-AVAILABILITY_REPLICA
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedInstanceResourceStats
+    ExecutedQuery: 'MonManagedInstanceResourceStats
+
+      | where TIMESTAMP > ago(1h)
+
+      | where LogicalServerName =~ ""{ServerName}""
+
+      | project TIMESTAMP, reserved_storage_mb, storage_space_used_mb, percent_used = round(storage_space_used_mb / reserved_storage_mb * 100, 2)'
+- id: MI-performance-229
+  Topic: Backup-failing-due-to-Log-full-with-AVAILABILITY_REPLICA
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Managing-space-for-databases-and-pools/Backup-failing-due-to-Log-full-with-AVAILABILITY_REPLICA.md
+  Prompts:
+  - MI Backup-failing-due-to-Log-full-with-AVAILABILITY_REPLICA
+  - Managed Instance Backup-failing-due-to-Log-full-with-AVAILABILITY_REPLICA
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: 'MonSqlRgHistory
+
+      | where LogicalServerName == ""{ServerName}""
+
+      | where NodeName == "_DB40C_0"
+
+      | where TIMESTAMP between (datetime(2025-11-06 13:20) .. datetime(2025-11-08 13:30))
+
+      | where file_path contains "9c3d9de9-55d0-4bcd-a4de-c767eaec67ab" //database logical id
+
+      | where file_path endswith "ldf"
+
+      | where event == "aggregated_virtual_files_io_history"
+
+      | project TIMESTAMP, file_path, size_on_disk_gb = size_on_disk_bytes/1024/1024/1024, spaceused_gb = spaceused_mb/1024, usage_pctg = spaceused_mb*1024*1024.0/size_on_disk_bytes*100, max_size_gb = max_size_mb/1024, growth'
+- id: MI-performance-231
+  Topic: Error-42019-when-adding-a-new-datafile
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Managing-space-for-databases-and-pools/Error-42019-when-adding-a-new-datafile.md
+  Prompts:
+  - MI Error-42019-when-adding-a-new-datafile
+  - Managed Instance Error-42019-when-adding-a-new-datafile
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: AlrSQLErrorsReported
+    ExecutedQuery: 'AlrSQLErrorsReported
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where originalEventTimestamp > ago({TimeRange})-10m and originalEventTimestamp  < now() + 10m
+
+      | summarize count() by error_number, severity, state'
+- id: MI-performance-232
+  Topic: Error-42019-when-adding-a-new-datafile
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Managing-space-for-databases-and-pools/Error-42019-when-adding-a-new-datafile.md
+  Prompts:
+  - MI Error-42019-when-adding-a-new-datafile
+  - Managed Instance Error-42019-when-adding-a-new-datafile
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where TIMESTAMP >=  go(3d)
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      |project TIMESTAMP , message'
+- id: MI-performance-233
+  Topic: Error-42019-when-adding-a-new-datafile
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Managing-space-for-databases-and-pools/Error-42019-when-adding-a-new-datafile.md
+  Prompts:
+  - MI Error-42019-when-adding-a-new-datafile
+  - Managed Instance Error-42019-when-adding-a-new-datafile
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonBackup
+    ExecutedQuery: 'MonBackup
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where event startswith "database_backup"
+
+      | where TIMESTAMP > ago({TimeRange})
+
+      | where logical_database_name =~ "{DatabaseName}" //physical database name'
+- id: MI-performance-234
+  Topic: Error-42019-when-adding-a-new-datafile
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Managing-space-for-databases-and-pools/Error-42019-when-adding-a-new-datafile.md
+  Prompts:
+  - MI Error-42019-when-adding-a-new-datafile
+  - Managed Instance Error-42019-when-adding-a-new-datafile
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmIoVirtualFileStats
+    ExecutedQuery: 'MonDmIoVirtualFileStats
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where (type_desc == ''ROWS'' or type_desc == ''LOG'')
+
+      | where TIMESTAMP > ago(1d)
+
+      | extend size_on_disk_GB= size_on_disk_bytes/1024.0/1024/1024, spaceused_GB = spaceused_mb / 1024.0, max_size_GB = max_size_mb / 1024.0
+
+      | extend unused_space_GB=(size_on_disk_GB-spaceused_GB)
+
+      | summarize max(spaceused_GB), max(max_size_GB), max(size_on_disk_GB), max(unused_space_GB) by bin(TIMESTAMP, 1h), db_name
+
+      //| render timechart
+
+      And determine if there is any database that stands out in **unused_space_GB. If yes, check with customer for the possibility to shrink the log or datafile.'
+- id: MI-performance-235
+  Topic: File-size-reduced-automatically
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Managing-space-for-databases-and-pools/File-size-reduced-automatically.md
+  Prompts:
+  - MI File-size-reduced-automatically
+  - Managed Instance File-size-reduced-automatically
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlShrinkInfo
+    ExecutedQuery: '`MonSqlShrinkInfo
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where logical_database_name =~ "{DatabaseName}"
+
+      | where TIMESTAMP > ago(30d)`'
+- id: MI-performance-236
+  Topic: Shrink-Database-that-have-ColumnStore-Indexes
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Managing-space-for-databases-and-pools/Shrink-Database-that-have-ColumnStore-Indexes.md
+  Prompts:
+  - MI Shrink-Database-that-have-ColumnStore-Indexes
+  - Managed Instance Shrink-Database-that-have-ColumnStore-Indexes
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlShrinkInfo
+    ExecutedQuery: 'MonSqlShrinkInfo
+
+      | where TIMESTAMP >= ago(3d)
+
+      | where LogicalServerName contains {MIName}
+
+      | where isnotempty(failure_reason) or status  == "shrink_fail"
+
+      | project TIMESTAMP, LogicalServerName, AppName, database_id, file_id, shrink_id, tag, status, target_mb = (toint(target_size)/128), file_size_mb = (toint(file_size)/128), diffingb = ((toint(file_size)-toint(target_size))*8/1024/1024)
+      percent_complete, failure_reason, code_package_version
+
+      | order by TIMESTAMP asc'
+- id: MI-performance-237
+  Topic: Shrink-Database-that-have-ColumnStore-Indexes
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Managing-space-for-databases-and-pools/Shrink-Database-that-have-ColumnStore-Indexes.md
+  Prompts:
+  - MI Shrink-Database-that-have-ColumnStore-Indexes
+  - Managed Instance Shrink-Database-that-have-ColumnStore-Indexes
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlShrinkInfo
+    ExecutedQuery: 'MonSqlShrinkInfo
+
+      | where TIMESTAMP >= ago(3d)
+
+      | where LogicalServerName contains {MIName}
+
+      | where status contains "shrink_last_pages_columnstore"
+
+      | project TIMESTAMP, LogicalServerName, AppName, database_id, file_id, shrink_id, tag, status, target_mb = (toint(target_size)/128), file_size_mb = (toint(file_size)/128), diffingb = ((toint(file_size)-toint(target_size))*8/1024/1024)
+      percent_complete, failure_reason, code_package_version
+
+      | order by TIMESTAMP asc'
+- id: MI-performance-238
+  Topic: Shrink-Database-that-have-ColumnStore-Indexes
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Managing-space-for-databases-and-pools/Shrink-Database-that-have-ColumnStore-Indexes.md
+  Prompts:
+  - MI Shrink-Database-that-have-ColumnStore-Indexes
+  - Managed Instance Shrink-Database-that-have-ColumnStore-Indexes
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where TIMESTAMP >= {StartTime} and TIMESTAMP <= {EndTime}
+
+      | where LogicalServerName == {MIName}
+
+      | where message contains "Page information during shrink" and message contains "IsColumnstore 1"
+
+      | project TIMESTAMP, message'
+- id: MI-performance-239
+  Topic: Shrink-fails-with-error-3140-Could-not-adjust-the-space-allocation-for-file
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Managing-space-for-databases-and-pools/Shrink-fails-with-error-3140-Could-not-adjust-the-space-allocation-for-file.md
+  Prompts:
+  - MI Shrink-fails-with-error-3140-Could-not-adjust-the-space-allocation-for-file
+  - Managed Instance Shrink-fails-with-error-3140-Could-not-adjust-the-space-allocation-for-file
+  CustomizedParameters:
+  - DatabaseId
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonBackup
+    ExecutedQuery: 'MonBackup
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where logical_database_id =~ "{DatabaseId}"
+
+      | where TIMESTAMP > ago(7d) and isnotempty(backup_set_guid)
+
+      | where backup_type == ''Diff'' //change this to Full if needed
+
+      | project backup_start_date, backup_end_date, backup_type, process_id, backup_set_guid,request_id
+
+      first_lsn, last_lsn, logical_database_id, physical_database_id
+
+      | order by backup_start_date, backup_end_date'
+- id: MI-performance-240
+  Topic: Shrink-not-working-on-column-store-tables-with-LOBs
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Managing-space-for-databases-and-pools/Shrink-not-working-on-column-store-tables-with-LOBs.md
+  Prompts:
+  - MI Shrink-not-working-on-column-store-tables-with-LOBs
+  - Managed Instance Shrink-not-working-on-column-store-tables-with-LOBs
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where TIMESTAMP > ago({TimeRange}) and TIMESTAMP <  now()
+
+      | where message !contains "Federated Auth"
+
+      | where message !contains "Login failed for user"
+
+      | where message contains "IsColumnStore 1"
+
+      | where message contains "shrink" or message contains "shrunk" or message contains "DBCC SHRINKFILE" or message contains "DBCC SHRINKDATABASE"
+
+      | where message contains "DbId: 26"
+
+      | project PreciseTimeStamp, NodeName, event, message'
+- id: MI-performance-241
+  Topic: Tempdb-size-increase-after-failover-on-Business-Critical
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Managing-space-for-databases-and-pools/Tempdb-size-increase-after-failover-on-Business-Critical.md
+  Prompts:
+  - MI Tempdb-size-increase-after-failover-on-Business-Critical
+  - Managed Instance Tempdb-size-increase-after-failover-on-Business-Critical
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'MonLogin
+
+      | where TIMESTAMP > ago({TimeRange}) and TIMESTAMP < now()
+
+      | where LogicalServerName =~ "{ServerName}" or logical_server_name =~ "{ServerName}"
+
+      | where event == "process_login_finish" and package == "xdbgateway" and event == "process_login_finish"
+
+      | extend bit21 = toint(login_flags / 2097152) % 2
+
+      | extend appIntentReadOnly = bit21
+
+      //| summarize count() by bin(originalEventTimestamp, time(1h)), is_success, instance_port, appIntentReadOnly, NodeName
+
+      | project originalEventTimestamp, appIntentReadOnly, is_success, instance_port, instance_name, application_name
+
+      | where appIntentReadOnly == 1
+
+      | sort by originalEventTimestamp desc'
+- id: MI-performance-242
+  Topic: Tempdb-size-increase-after-failover-on-Business-Critical
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Managing-space-for-databases-and-pools/Tempdb-size-increase-after-failover-on-Business-Critical.md
+  Prompts:
+  - MI Tempdb-size-increase-after-failover-on-Business-Critical
+  - Managed Instance Tempdb-size-increase-after-failover-on-Business-Critical
+  CustomizedParameters:
+  - ClusterName
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: 'let AggInterval_do_NOT_change = time(15m);
+
+      let FileSizes = materialize(MonSqlRgHistory
+
+      | where  (AppName =~  "appname" and ((originalEventTimestamp between (datetime(2024-01-05 07:35:04)..datetime(2024-01-10 10:04:19)) and ClusterName =~ "{ClusterName}" and NodeName =~ ''NodeName'')
+
+      )
+
+      )
+
+      | where event==''aggregated_virtual_files_io_history''
+
+      | where database_id == 2
+
+      | summarize file_space_used_gb =
+
+      sum(spaceused_mb / 1024.0),//Actual space used.
+
+      file_space_reserved_gb = sum(size_on_disk_bytes / 1024.0 / 1024.0 / 1024.0),//File size on the disk.
+
+      maximum_gb=sum(max_size_mb/1024.0)//the maximum size to which files can grow.
+
+      by  type_desc,bin(originalEventTimestamp, AggInterval_do_NOT_change), NodeName);
+
+      let LogSize = FileSizes
+
+      | where type_desc == ''LOG''
+
+      | extend log_space_used_gb = round(file_space_used_gb,1),
+
+      log_space_reserved_gb = round(file_space_reserved_gb,1),
+
+      log_maximum_gb = round(maximum_gb,1);
+
+      let DataSize = FileSizes
+
+      | where type_desc == ''ROWS''
+
+      | extend data_space_used_gb = round(file_space_used_gb,1),
+
+      data_space_reserved_gb = round(file_space_reserved_gb,1),
+
+      data_maximum_gb = round(maximum_gb,1);'
+- id: MI-performance-243
+  Topic: Tempdb-size-increase-after-failover-on-Business-Critical
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Managing-space-for-databases-and-pools/Tempdb-size-increase-after-failover-on-Business-Critical.md
+  Prompts:
+  - MI Tempdb-size-increase-after-failover-on-Business-Critical
+  - Managed Instance Tempdb-size-increase-after-failover-on-Business-Critical
+  CustomizedParameters:
+  - ClusterName
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmTempDbFileSpaceUsage
+    ExecutedQuery: 'MonDmTempDbFileSpaceUsage
+
+      | where  (AppName =~  "appname" and ((PreciseTimeStamp between (datetime(2024-01-07 07:35:04)..datetime(2024-01-10 10:04:19)) and ClusterName =~ "{ClusterName}" and NodeName =~ ''nodename'')
+
+      )
+
+      )
+
+      | extend version_store_usage_gb = round((version_store_reserved_page_count) * 8.0 /1024/1024, 0)//This should be 0 as ADR is enabled by default
+
+      | extend userObject_gb = round((user_object_reserved_page_count) * 8.0 /1024/1024, 0)
+
+      | extend internal_object_reserved_gb= round((internal_object_reserved_page_count) * 8.0 /1024/1024, 0)
+
+      | summarize userObject_gb=sum(userObject_gb),internal_object_reserved_gb=sum(internal_object_reserved_gb),version_store_usage_gb=sum(version_store_usage_gb) by bin(PreciseTimeStamp,AggregationInterval)
+      NodeName
+
+      | order by PreciseTimeStamp asc'
+- id: MI-performance-244
+  Topic: Transaction-log-usage-increases-during-failover
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Managing-space-for-databases-and-pools/Transaction-log-usage-increases-during-failover.md
+  Prompts:
+  - MI Transaction-log-usage-increases-during-failover
+  - Managed Instance Transaction-log-usage-increases-during-failover
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmIoVirtualFileStats
+    ExecutedQuery: 'MonDmIoVirtualFileStats
+
+      | where TIMESTAMP  between (datetime(2023-03-07 12:00:00)..datetime(2023-03-07 20:00:00))
+
+      | where db_name == ''{databaseName}''
+
+      | where LogicalServerName== "{ServerName}"
+
+      | where type_desc== "LOG"
+
+      | project TIMESTAMP, db_name, spaceused= spaceused_mb/ (1024.0)
+
+      | render timechart'
+- id: MI-performance-245
+  Topic: Transaction-log-usage-increases-during-failover
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Managing-space-for-databases-and-pools/Transaction-log-usage-increases-during-failover.md
+  Prompts:
+  - MI Transaction-log-usage-increases-during-failover
+  - Managed Instance Transaction-log-usage-increases-during-failover
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where TIMESTAMP  between (datetime(2023-03-07 12:00:00)..datetime(2023-03-07 17:00:00))
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | summarize min(PreciseTimeStamp), max(PreciseTimeStamp) by ClusterName, NodeName, process_id'
+- id: MI-performance-246
+  Topic: Transaction-log-usage-increases-during-failover
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Managing-space-for-databases-and-pools/Transaction-log-usage-increases-during-failover.md
+  Prompts:
+  - MI Transaction-log-usage-increases-during-failover
+  - Managed Instance Transaction-log-usage-increases-during-failover
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonClusterLoad
+    ExecutedQuery: 'MonClusterLoad
+
+      | where ClusterName contains "{cluster_name}"
+
+      | where TIMESTAMP  between (datetime(2023-03-07 12:00:00)..datetime(2023-03-07 17:00:00))
+
+      | where node_type == "DB"
+
+      | where event == "node_state_report"
+
+      | project SnapshotTimestamp, node_name, code_version, config_version, health_state, node_status, node_type, node_up_time, upgrade_domain
+
+      | summarize min(SnapshotTimestamp), max(SnapshotTimestamp) by  node_status, upgrade_domain, config_version, code_version, node_name, bin(SnapshotTimestamp,1h)'
+- id: MI-performance-248
+  Topic: Connection-errors-and-not-able-to-change-network-settings
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Other-errors-and-exceptions/Connection-errors-and-not-able-to-change-network-settings.md
+  Prompts:
+  - MI Connection-errors-and-not-able-to-change-network-settings
+  - Managed Instance Connection-errors-and-not-able-to-change-network-settings
+  CustomizedParameters:
+  - ClusterName
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonCounterOneMinute
+    ExecutedQuery: 'MonCounterOneMinute
+
+      | where TIMESTAMP between (datetime(2022-10-17 18:00)..datetime(2022-10-25 18:00)
+
+      | where NodeName =~ "DB4C.0" and ClusterName =~ "{ClusterName}"
+
+      | extend Category = case(CounterName =~  @"\Memory\Available MBytes", "Memory"
+
+      strlen(extract(@"\\Processor\([0-9]{1,2}\)\\% (Privileged Time|Processor Time)", 0, CounterName, typeof(string))) >0, "Processor"
+
+      strlen(extract(@"\\Processor\(_Total\)\\% (Processor Time|Privileged Time)", 0, CounterName, typeof(string))) >0, "Total Processor"
+
+      strlen(extract(@"\\LogicalDisk\([A-Z]:\)\\Avg. Disk sec/(Read|Write)", 0, CounterName, typeof(string))) >0, "Disk", "Other")
+
+      | where Category !in ( "Other", "Memory", "Disk")
+
+      | summarize avg(CounterValue) by bin(TIMESTAMP, 5min),  CounterName, Category
+
+      | render timechart'
+- id: MI-performance-249
+  Topic: Connection-errors-and-not-able-to-change-network-settings
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Other-errors-and-exceptions/Connection-errors-and-not-able-to-change-network-settings.md
+  Prompts:
+  - MI Connection-errors-and-not-able-to-change-network-settings
+  - Managed Instance Connection-errors-and-not-able-to-change-network-settings
+  CustomizedParameters:
+  - ClusterName
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'MonLogin
+
+      | where ClusterName startswith "{ClusterName}"
+
+      | where originalEventTimestamp >= issue_time - 2d
+
+      | where event == "process_login_finish"
+
+      | where is_success == 0
+
+      | where total_time_ms > ssl_treshold
+
+      | where isnotempty(message)
+
+      | project event, AppName, message
+
+      | extend parsed = parse_xml(message)
+
+      | project event, AppName, parsed_wait_stats = parsed.waitstats.wait
+
+      | mv-expand parsed_wait_stats
+
+      | extend wait_stat_name = tostring(parsed_wait_stats["@name"])
+
+      | extend wait_stat_max_time = toint(parsed_wait_stats["@maxTime"])
+
+      | project event, AppName, wait_stat_name, wait_stat_max_time
+
+      | summarize total_wait_stat_time = sum(wait_stat_max_time), avg_wait_stat_time = sum(wait_stat_max_time) / count() by AppName, wait_stat_name'
+- id: MI-performance-250
+  Topic: Database-corruption-on-Azure-SQL-Managed-Instance
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Other-errors-and-exceptions/Database-corruption-on-Azure-SQL-Managed-Instance.md
+  Prompts:
+  - MI Database-corruption-on-Azure-SQL-Managed-Instance
+  - Managed Instance Database-corruption-on-Azure-SQL-Managed-Instance
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: 'let srv = "{ServerName}";
+
+      let db = "{DatabaseName}";
+
+      let startTime = ago({TimeRange});
+
+      let endTime = now();
+
+      let timeRange = ago(7d);
+
+      let AppNames = MonAnalyticsDBSnapshot
+
+      | where logical_server_name =~ "{ServerName}"
+
+      | where logical_database_name =~ db
+
+      | extend AppName = sql_instance_name
+
+      | distinct AppName;'
+- id: MI-performance-251
+  Topic: Database-corruption-on-Azure-SQL-Managed-Instance
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Other-errors-and-exceptions/Database-corruption-on-Azure-SQL-Managed-Instance.md
+  Prompts:
+  - MI Database-corruption-on-Azure-SQL-Managed-Instance
+  - Managed Instance Database-corruption-on-Azure-SQL-Managed-Instance
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'let endTime = now();
+let startTime = ago({TimeRange});
+MonSQLSystemHealth
+
+      //| where TIMESTAMP > timeRange
+
+      | where  TIMESTAMP >= startTime
+
+      | where  TIMESTAMP <= endTime
+
+      | where AppName in~ ( AppNames )
+
+      | where'
+- id: MI-performance-252
+  Topic: Database-corruption-on-Azure-SQL-Managed-Instance
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Other-errors-and-exceptions/Database-corruption-on-Azure-SQL-Managed-Instance.md
+  Prompts:
+  - MI Database-corruption-on-Azure-SQL-Managed-Instance
+  - Managed Instance Database-corruption-on-Azure-SQL-Managed-Instance
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDatabaseMetadata
+    ExecutedQuery: 'let db = "{DatabaseName}"; MonDatabaseMetadata
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where logical_db_name =~ db
+
+      | project TIMESTAMP, NodeName, AppName, LogicalServerName, logical_db_name, table_name, name, id
+
+      | where table_name == ''sysschobjs''
+
+      | where id == 50099219 // object_id
+
+      | limit 100
+
+      | distinct LogicalServerName, logical_db_name, id, name'
+- id: MI-performance-253
+  Topic: Database-corruption-on-Azure-SQL-Managed-Instance
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Other-errors-and-exceptions/Database-corruption-on-Azure-SQL-Managed-Instance.md
+  Prompts:
+  - MI Database-corruption-on-Azure-SQL-Managed-Instance
+  - Managed Instance Database-corruption-on-Azure-SQL-Managed-Instance
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiSysIndexes
+    ExecutedQuery: 'let db = "{DatabaseName}"; MonWiSysIndexes
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where logical_database_name =~ db
+
+      | where object_id == 50099219  // object_id
+
+      //| where index_id == long(0)
+
+      | project TIMESTAMP, NodeName, AppName, LogicalServerName, logical_database_name, object_id, index_name, index_id, type_desc, is_unique, is_primary_key
+
+      | distinct LogicalServerName, logical_database_name, object_id, index_name, index_id, type_desc;'
+- id: MI-performance-254
+  Topic: Fulltext-Investigation-Tips
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Other-errors-and-exceptions/Fulltext-Investigation-Tips.md
+  Prompts:
+  - MI Fulltext-Investigation-Tips
+  - Managed Instance Fulltext-Investigation-Tips
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where TIMESTAMP >= ago({TimeRange})
+
+      | where TIMESTAMP <= now()
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where message contains "FDHost"
+
+      | project AppName, PreciseTimeStamp , TIMESTAMP , LogicalServerName , message'
+- id: MI-performance-255
+  Topic: Fulltext-Investigation-Tips
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Other-errors-and-exceptions/Fulltext-Investigation-Tips.md
+  Prompts:
+  - MI Fulltext-Investigation-Tips
+  - Managed Instance Fulltext-Investigation-Tips
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonFullTextInfo
+    ExecutedQuery: 'MonFullTextInfo
+
+      |summarize ErrorCount = countif(error_number > 0) by ClusterName, LogicalServerName, database_name
+
+      | where ErrorCount > 50
+
+      | top 50 by ErrorCount desc'
+- id: MI-performance-256
+  Topic: Fulltext-Investigation-Tips
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Other-errors-and-exceptions/Fulltext-Investigation-Tips.md
+  Prompts:
+  - MI Fulltext-Investigation-Tips
+  - Managed Instance Fulltext-Investigation-Tips
+  CustomizedParameters:
+  - AppName
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmOsExceptionStats
+    ExecutedQuery: 'MonDmOsExceptionStats
+
+      | where LogicalServerName =~ "{ServerName}" and exception_id == 30046 | where AppName == "{AppName}" | where TIMESTAMP > ago(30m)
+
+      | order by TIMESTAMP desc'
+- id: MI-performance-257
+  Topic: Fulltext-Investigation-Tips
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Other-errors-and-exceptions/Fulltext-Investigation-Tips.md
+  Prompts:
+  - MI Fulltext-Investigation-Tips
+  - Managed Instance Fulltext-Investigation-Tips
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRgLoad
+    ExecutedQuery: 'MonRgLoad | where code_package_name == "FullTextSearchService"
+
+      and event == "instance_load" and application_name == "fabric:/Worker.ISO.Premium/f978ec7fa418"
+
+      | project TIMESTAMP, cpu_percent = (cpu_load * 1.0 / cpu_load_cap )*100
+
+      | render timechart'
+- id: MI-performance-258
+  Topic: Fulltext-Investigation-Tips
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Other-errors-and-exceptions/Fulltext-Investigation-Tips.md
+  Prompts:
+  - MI Fulltext-Investigation-Tips
+  - Managed Instance Fulltext-Investigation-Tips
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRgLoad
+    ExecutedQuery: 'MonRgLoad | where code_package_name == "FullTextSearchService"
+
+      and event == "instance_load" and application_name == "fabric:/Worker.ISO.Premium/f978ec7fa418"
+
+      | project TIMESTAMP, mem_percent = (memory_load * 1.0 / memory_load_cap )*100
+
+      | render timechart'
+- id: MI-performance-259
+  Topic: Fulltext-Investigation-Tips
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Other-errors-and-exceptions/Fulltext-Investigation-Tips.md
+  Prompts:
+  - MI Fulltext-Investigation-Tips
+  - Managed Instance Fulltext-Investigation-Tips
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRgLoad
+    ExecutedQuery: 'MonRgLoad | where code_package_name == "FullTextSearchService"
+
+      and event == "instance_load" and application_name == "fabric:/Worker.ISO.Premium/f978ec7fa418"
+
+      | project TIMESTAMP, , iops_percent = (iops_load * 1.0 /iops_load_cap) * 100
+
+      | render timechart'
+- id: MI-performance-260
+  Topic: Fulltext-Investigation-Tips
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Other-errors-and-exceptions/Fulltext-Investigation-Tips.md
+  Prompts:
+  - MI Fulltext-Investigation-Tips
+  - Managed Instance Fulltext-Investigation-Tips
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRgLoad
+    ExecutedQuery: 'MonRgLoad | where code_package_name == "FullTextSearchService"
+
+      and event == "instance_load" and application_name == "fabric:/Worker.ISO.Premium/f978ec7fa418"
+
+      | order by TIMESTAMP asc'
+- id: MI-performance-261
+  Topic: Fulltext-Investigation-Tips
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Other-errors-and-exceptions/Fulltext-Investigation-Tips.md
+  Prompts:
+  - MI Fulltext-Investigation-Tips
+  - Managed Instance Fulltext-Investigation-Tips
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonFulltextActiveCatalogs
+    ExecutedQuery: 'MonFulltextActiveCatalogs
+
+      | where TIMESTAMP > ago({TimeRange})
+
+      | where TIMESTAMP < now()
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where has_crawl_completed == 0
+
+      | where catalog_id == 5
+
+      | where is_enabled == 1
+
+      | project TIMESTAMP, AppName, database_id, catalog_id, active_fts_index_count, auto_population_count, manual_population_count, object_id
+
+      has_crawl_completed, crawl_start_date, crawl_end_date, docs_processed, fail_count, item_count, pending_changes, populate_status, change_tracking_state_desc'
+- id: MI-performance-262
+  Topic: Fulltext-incremental-crawl-stopped-error-30098
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Other-errors-and-exceptions/Fulltext-incremental-crawl-stopped-error-30098.md
+  Prompts:
+  - MI Fulltext-incremental-crawl-stopped-error-30098
+  - Managed Instance Fulltext-incremental-crawl-stopped-error-30098
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonFulltextActiveCatalogs
+    ExecutedQuery: 'MonFulltextActiveCatalogs
+
+      //| where TIMESTAMP > ago(1d)
+
+      //| where TIMESTAMP > ago({TimeRange})
+
+      //| where TIMESTAMP < now()
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where has_crawl_completed == 0
+
+      //| where catalog_id == 5
+
+      | where is_enabled == 1
+
+      | project TIMESTAMP, AppName, database_id, catalog_id, active_fts_index_count, auto_population_count, manual_population_count, object_id
+
+      has_crawl_completed, crawl_start_date, crawl_end_date, docs_processed, fail_count, item_count, pending_changes, populate_status, change_tracking_state_desc'
+- id: MI-performance-263
+  Topic: Fulltext-incremental-crawl-stopped-error-30098
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Other-errors-and-exceptions/Fulltext-incremental-crawl-stopped-error-30098.md
+  Prompts:
+  - MI Fulltext-incremental-crawl-stopped-error-30098
+  - Managed Instance Fulltext-incremental-crawl-stopped-error-30098
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonFullTextCrawlLog
+    ExecutedQuery: 'MonFullTextCrawlLog
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      //| where error_id > 30000 and error_id != 30096
+
+      //| where TIMESTAMP > ago(10d)
+
+      //| where TIMESTAMP >= ago({TimeRange})
+
+      //| where TIMESTAMP <= now()
+
+      | where error_id == 30098
+
+      | project  TIMESTAMP, error_id, NodeName,message
+
+      | order by TIMESTAMP desc'
+- id: MI-performance-264
+  Topic: Known-issue%3AFrequent-FdHost-restart-issue-due-to-OOM
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Other-errors-and-exceptions/Known-issue%3AFrequent-FdHost-restart-issue-due-to-OOM.md
+  Prompts:
+  - MI MI Known issue:Frequent FdHost restart issue due to OOM
+  - Managed Instance Known-issue:Frequent-FdHost-restart-issue-due-to-OOM
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonRgLoad
+    ExecutedQuery: 'MonRgLoad
+
+      | where TIMESTAMP > ago({TimeRange}) and TIMESTAMP < now()
+
+      | where code_package_name == "FullTextSearchService"
+
+      and event == "instance_load" and application_name has "e3d411d590be"
+
+      | project TIMESTAMP, memory_percent = (memory_load * 1.0 / memory_load_cap )*100, rg_instance_process_id
+
+      | render timechart with (ycolumns = memory_percent, series = rg_instance_process_id)'
+- id: MI-performance-265
+  Topic: Known-issue%3AFrequent-FdHost-restart-issue-due-to-OOM
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Other-errors-and-exceptions/Known-issue%3AFrequent-FdHost-restart-issue-due-to-OOM.md
+  Prompts:
+  - MI MI Known issue:Frequent FdHost restart issue due to OOM
+  - Managed Instance Known-issue:Frequent-FdHost-restart-issue-due-to-OOM
+  CustomizedParameters:
+  - AppName
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmCloudDatabaseWaitStats
+    ExecutedQuery: 'MonDmCloudDatabaseWaitStats
+
+      | where TIMESTAMP between (datetime(2024-05-21 11:11)..datetime(2024-05-21 18:11))
+
+      | where wait_time_ms > 100000
+
+      | where wait_type contains "FT_IFTS_SRCH_FD_MANAGER"
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where AppName =="{AppName}"'
+- id: MI-performance-266
+  Topic: Known-issue%3AFrequent-FdHost-restart-issue-due-to-OOM
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Other-errors-and-exceptions/Known-issue%3AFrequent-FdHost-restart-issue-due-to-OOM.md
+  Prompts:
+  - MI MI Known issue:Frequent FdHost restart issue due to OOM
+  - Managed Instance Known-issue:Frequent-FdHost-restart-issue-due-to-OOM
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRgLoad
+    ExecutedQuery: 'MonRgLoad
+
+      | where application_name =="fabric:/Worker.ISO/b45106e89e7a"
+
+      | where TIMESTAMP > ago(3h)
+
+      | where code_package_name =="FullTextSearchService"
+
+      | project TIMESTAMP, memory_current_cap, memory_load_cap'
+- id: MI-performance-267
+  Topic: Query-fails-with-OOM-%2D-high-SQLQERESERVATION-memory-clerk
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Other-errors-and-exceptions/Query-fails-with-OOM-%2D-high-SQLQERESERVATION-memory-clerk.md
+  Prompts:
+  - MI MI Query fails with OOM   high SQLQERESERVATION memory clerk
+  - Managed Instance Query-fails-with-OOM---high-SQLQERESERVATION-memory-clerk
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: 'MonWiQdsExecStats
+
+      | where  TIMESTAMP >= datetime({StartTime}) and  TIMESTAMP <= datetime({EndTime})
+
+      | where LogicalServerName =~ "{LogicalServerName}" and   database_name  =~ "{LogicalDatabaseName}" and AppName == "{AppName}"
+
+      | where is_primary  == 1
+
+      | extend MaxQueryMemoryMB=round(max_max_query_memory_pages*8.0/1024,1)
+
+      | summarize max(MaxQueryMemoryMB) by query_hash
+
+      | top 20 by max_MaxQueryMemoryMB  desc nulls last'
+- id: MI-performance-268
+  Topic: Troubleshooting-plan-forcing-errors
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Other-errors-and-exceptions/Troubleshooting-plan-forcing-errors.md
+  Prompts:
+  - MI Troubleshooting-plan-forcing-errors
+  - Managed Instance Troubleshooting-plan-forcing-errors
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonQueryStoreFailures
+    ExecutedQuery: 'MonQueryStoreFailures
+
+      | where LogicalServerName =~ "{ServerName}" and logical_database_name =~ "{DatabaseName}"
+
+      | where TIMESTAMP > ago(5d)
+
+      | where event == "query_store_plan_forcing_failed_core"
+
+      | summarize count(), min(TIMESTAMP), max(TIMESTAMP) by query_id, plan_id,  event, error_number'
+- id: MI-performance-269
+  Topic: Workflow-for-other-Errors-and-exceptions
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Other-errors-and-exceptions/Workflow-for-other-Errors-and-exceptions.md
+  Prompts:
+  - MI Workflow-for-other-Errors-and-exceptions
+  - Managed Instance Workflow-for-other-Errors-and-exceptions
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: AlrSQLErrorsReported
+    ExecutedQuery: 'AlrSQLErrorsReported
+
+      | where TIMESTAMP > ago(3d)
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where database_name =~ "{DatabaseName}"
+
+      | project originalEventTimestamp, error_number, severity, state, session_id, database_name'
+- id: MI-performance-270
+  Topic: Workflow-for-other-Errors-and-exceptions
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Other-errors-and-exceptions/Workflow-for-other-Errors-and-exceptions.md
+  Prompts:
+  - MI Workflow-for-other-Errors-and-exceptions
+  - Managed Instance Workflow-for-other-Errors-and-exceptions
+  CustomizedParameters:
+  - AppName
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: 'MonWiQdsExecStats
+
+      | where TIMESTAMP > ago(6h)
+
+      | where AppName == "{AppName}" and database_name =~ "{DatabaseName}"
+
+      | summarize sum(execution_count), sum(cpu_time), sum(max_query_memory_pages), sum(max_logical_writes), sum(max_logical_reads) by query_id, plan_id
+
+      | project query_id, plan_id, sum_execution_count, sum_max_query_memory_pages, sum_max_logical_writes, sum_max_logical_reads
+
+      | order by sum_max_logical_writes, sum_max_logical_reads
+
+      | take 10'
+- id: MI-performance-271
+  Topic: Intermittent-timeout-or-long-execution-time-due-to-Auto-Stats
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Query-timeouts/Intermittent-timeout-or-long-execution-time-due-to-Auto-Stats.md
+  Prompts:
+  - MI Intermittent-timeout-or-long-execution-time-due-to-Auto-Stats
+  - Managed Instance Intermittent-timeout-or-long-execution-time-due-to-Auto-Stats
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonWiQueryParamData
+    ExecutedQuery: 'MonWiQueryParamData
+
+      | where TIMESTAMP > ago({TimeRange})  and TIMESTAMP < now()
+
+      | where LogicalServerName =~ "<Server Name>" and database_name  == ""{DatabaseName}""
+
+      | where query_hash == ""{QueryHash}""
+
+      | project TIMESTAMP, NodeName, AppName, LogicalServerName, logical_database_name, compile_cpu_time, compile_duration, auto_create_stats_cpu_time, auto_create_stats_elapsed_time, auto_update_stats_cpu_time
+      auto_update_stats_elapsed_time'
+- id: MI-performance-272
+  Topic: Lock-Request-Timeout-Error-1222-State-51
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Query-timeouts/Lock-Request-Timeout-Error-1222-State-51.md
+  Prompts:
+  - MI Lock-Request-Timeout-Error-1222-State-51
+  - Managed Instance Lock-Request-Timeout-Error-1222-State-51
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: AlrSQLErrorsReported
+    ExecutedQuery: 'AlrSQLErrorsReported
+
+      | where TIMESTAMP between ({StartDateTime}..{EndDateTime})
+
+      | where LogicalServerName == "{MIName}" //Input customer server name
+
+      | where error_number == ''1222''
+
+      | project originalEventTimestamp, NodeName, database_name, [''state''], code_package_version
+
+      | summarize count() by bin(originalEventTimestamp, 1h), database_name
+
+      | render timechart'
+- id: MI-performance-273
+  Topic: Lock-Request-Timeout-Error-1222-State-51
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Query-timeouts/Lock-Request-Timeout-Error-1222-State-51.md
+  Prompts:
+  - MI Lock-Request-Timeout-Error-1222-State-51
+  - Managed Instance Lock-Request-Timeout-Error-1222-State-51
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'MonLogin
+
+      | where TIMESTAMP between ({StartDateTime}..{EndDateTime})
+
+      | where logical_server_name == "{MIName}" //Input customer server name
+
+      | where event == "process_login_finish"   and package == "sqlserver"
+
+      | where is_user_error == 0
+
+      | extend success=case(is_success == 1, 1, 0)
+
+      | extend failure=case(is_success == 0, 1, 0)
+
+      | extend failure_enqueue_time_ms=case(is_success == 1, total_time_ms, 0)
+
+      | summarize Successful_Login_Count=sum(success), Failed_Login_Count=sum(failure) by bin(originalEventTimestamp, 1min)
+
+      | render timechart'
+- id: MI-performance-274
+  Topic: Lock-Request-Timeout-Error-1222-State-51
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Query-timeouts/Lock-Request-Timeout-Error-1222-State-51.md
+  Prompts:
+  - MI Lock-Request-Timeout-Error-1222-State-51
+  - Managed Instance Lock-Request-Timeout-Error-1222-State-51
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: 'MonWiQdsExecStats
+
+      | where TIMESTAMP between ({StartDateTime}..{EndDateTime})
+
+      | where LogicalServerName =~ "{MIName}" //Input customer server name
+
+      | summarize total_query_execution_count = sum(execution_count)
+
+      , timeout_query_count = sumif(execution_count, exec_type == 3)
+
+      , error_query_count = sumif(execution_count, exec_type == 4)
+
+      by bin(originalEventTimestamp, 15m)
+
+      | sort by originalEventTimestamp asc nulls last
+
+      | render timechart'
+- id: MI-performance-275
+  Topic: Customer-complains-of-slow-performance-pointing-into-a-possible-update-on-MI
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Query-tuning/Customer-complains-of-slow-performance-pointing-into-a-possible-update-on-MI.md
+  Prompts:
+  - MI Customer-complains-of-slow-performance-pointing-into-a-possible-update-on-MI
+  - Managed Instance Customer-complains-of-slow-performance-pointing-into-a-possible-update-on-MI
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where originalEventTimestamp > ago(10d)
+
+      | where logical_database_guid contains "b93eb8a9-f2ac-4d39-9649-e12a37037562"
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | project originalEventTimestamp, NodeName, AppName, AppTypeName, process_id, message, code_package_version, code_package_start_time
+
+      | summarize min(originalEventTimestamp), max(originalEventTimestamp) by code_package_version, AppName'
+- id: MI-performance-276
+  Topic: Different-execution-plan-when-executing-from-SSMS
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Query-tuning/Different-execution-plan-when-executing-from-SSMS.md
+  Prompts:
+  - MI Different-execution-plan-when-executing-from-SSMS
+  - Managed Instance Different-execution-plan-when-executing-from-SSMS
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQueryParamData
+    ExecutedQuery: 'MonWiQueryParamData | where LogicalServerName =~ "{ServerName}" and logical_database_name =~ "{DatabaseName}"
+
+      | where query_hash == ""
+
+      | project TIMESTAMP, plan_id, compile_code'
+- id: MI-performance-277
+  Topic: Error-8623-%2D-The-query-processor-ran-out-of-internal-resources-and-could-not-produce-a-query-plan
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Query-tuning/Error-8623-%2D-The-query-processor-ran-out-of-internal-resources-and-could-not-produce-a-query-plan.md
+  Prompts:
+  - MI MI Error 8623   The query processor ran out of internal resources and could not produce a query plan
+  - Managed Instance Error-8623---The-query-processor-ran-out-of-internal-resources-and-could-not-produce-a-query-plan
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonQueryProcessing
+    ExecutedQuery: 'let appName = "{AppName}"; MonQueryProcessing
+
+      | where LogicalServerName =~ "{ServerName}" and logical_database_name =~ "{DatabaseName}" //and AppName =~ appName
+
+      and originalEventTimestamp between (datetime(2025-11-26 11:00:00) ..datetime(2025-11-28 17:00:00) )
+
+      and event =~ "failed_compilation"
+
+      //and error_code in (3617,8684,8698)
+
+      | extend query_hash = strcat("0x", toupper(tohex(query_hash_signed)))
+
+      //| where query_hash == "0x4AA6B6F03E8D46B8"
+
+      | extend compile_duration_seconds = round(compile_duration/1000.0,1)
+
+      | extend compile_cpu_seconds      = round(compile_cpu/1000.0,1)
+
+      | project originalEventTimestamp, session_id, tasks_count, error_code, query_hash, query_id, compile_duration_seconds, compile_cpu_seconds, event;
+
+      // Second Period:2025-08-19~2025-08-21
+
+      let table2 ='
+- id: MI-performance-278
+  Topic: Error-8623-%2D-The-query-processor-ran-out-of-internal-resources-and-could-not-produce-a-query-plan
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Query-tuning/Error-8623-%2D-The-query-processor-ran-out-of-internal-resources-and-could-not-produce-a-query-plan.md
+  Prompts:
+  - MI MI Error 8623   The query processor ran out of internal resources and could not produce a query plan
+  - Managed Instance Error-8623---The-query-processor-ran-out-of-internal-resources-and-could-not-produce-a-query-plan
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonQueryProcessing
+    ExecutedQuery: 'let appName = "{AppName}"; MonQueryProcessing
+
+      | where LogicalServerName =~ "{ServerName}" and logical_database_name =~ "{DatabaseName}" //and AppName =~ appName
+
+      and originalEventTimestamp between (datetime(2025-11-26 11:00:00) ..datetime(2025-11-28 17:00:00) )
+
+      //and session_id in (78,131,140,149,57,150)
+
+      // and error_code in (3617,8684,8698)
+
+      and event =~ "failed_compilation"
+
+      | extend query_hash = strcat("0x", toupper(tohex(query_hash_signed)))
+
+      | extend compile_duration_seconds = round(compile_duration/1000.0,1)
+
+      | extend compile_cpu_seconds      = round(compile_cpu/1000.0,1)
+
+      | project originalEventTimestamp, session_id, tasks_count, error_code, query_hash, query_id, compile_duration_seconds, compile_cpu_seconds, event;
+
+      // union
+
+      union table1, table2
+
+      | order by originalEventTimestamp asc'
+- id: MI-performance-279
+  Topic: Query-with-suboptimal-plan-causing-blocking
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Query-tuning/Query-with-suboptimal-plan-causing-blocking.md
+  Prompts:
+  - MI Query-with-suboptimal-plan-causing-blocking
+  - Managed Instance Query-with-suboptimal-plan-causing-blocking
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: 'MonWiQdsExecStats
+
+      | where LogicalServerName == ""
+
+      | where query_hash == ""
+
+      | project TIMESTAMP, query_hash, plan_id, forced_plan_id, plan_forcing_type'
+- id: MI-performance-280
+  Topic: Scalar-UDF-Inlining-not-working-due-to-UDF-complexity
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Query-tuning/Scalar-UDF-Inlining-not-working-due-to-UDF-complexity.md
+  Prompts:
+  - MI Scalar-UDF-Inlining-not-working-due-to-UDF-complexity
+  - Managed Instance Scalar-UDF-Inlining-not-working-due-to-UDF-complexity
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonQueryProcessing
+    ExecutedQuery: 'MonQueryProcessing
+
+      | where LogicalServerName  == "{ServerName}"
+
+      | where event == "tsql_scalar_udf_not_inlineable"
+
+      | where udf_name contains "{UDFName}"
+
+      | distinct  blocked_reason, udf_name, object_id
+
+      | join (MonQueryProcessing
+
+      | where LogicalServerName  == "{ServerName}" and event == "tsql_scalar_udf_inlining_threshold"
+
+      | where threshold_type == "UdfInlineNodesLimit"
+
+      | distinct object_id, threshold_type, value) on object_id'
+- id: MI-performance-281
+  Topic: Additional-Memory
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Additional-Memory.md
+  Prompts:
+  - MI Additional-Memory
+  - Managed Instance Additional-Memory
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlIdleMemCollectorStats
+    ExecutedQuery: 'MonSqlIdleMemCollectorStats
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where TIMESTAMP > ago(3h)
+
+      | where event == ''sql_memory_perf_stats''
+
+      | project TIMESTAMP,  current_job_memory_cap_mb=(current_job_memory_cap)/128
+
+      | order by TIMESTAMP asc'
+- id: MI-performance-282
+  Topic: Check-IO-throttling
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Check-IO-throttling.md
+  Prompts:
+  - MI Check-IO-throttling
+  - Managed Instance Check-IO-throttling
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLXStoreIOStats
+    ExecutedQuery: 'MonSQLXStoreIOStats
+
+      | where TIMESTAMP > ago(2d)
+
+      | where LogicalServerName =~ "{ServerName}" // managed instance name
+
+      | where file_path contains "7441c03e-edab-4957-809e-84e0e514e917" //physical database name
+
+      | where isnotempty(page_blob_tier)
+
+      | summarize min(TIMESTAMP), max(TIMESTAMP) by file_path, page_blob_tier'
+- id: MI-performance-283
+  Topic: Check-IO-throttling
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Check-IO-throttling.md
+  Prompts:
+  - MI Check-IO-throttling
+  - Managed Instance Check-IO-throttling
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: 'MonSqlRgHistory
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where TIMESTAMP > ago(1d)
+
+      | project database_id, physical_database_name
+
+      | summarize by database_id, physical_database_name
+
+      | join kind = inner('
+- id: MI-performance-284
+  Topic: Check-IO-throttling
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Check-IO-throttling.md
+  Prompts:
+  - MI Check-IO-throttling
+  - Managed Instance Check-IO-throttling
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmRealTimeResourceStats
+    ExecutedQuery: 'MonDmRealTimeResourceStats
+
+      | where LogicalServerName =~ "{ServerName}" and database_name == "{DatabaseName}"
+
+      | where TIMESTAMP > ago(1d)
+
+      | project database_id, database_name
+
+      | summarize by database_id, database_name)'
+- id: MI-performance-285
+  Topic: Check-IO-throttling
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Check-IO-throttling.md
+  Prompts:
+  - MI Check-IO-throttling
+  - Managed Instance Check-IO-throttling
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLXStore
+    ExecutedQuery: 'MonSQLXStore
+
+      | where TIMESTAMP between (datetime(2023-05-28 16:00) .. datetime(2023-05-31 12:00))
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      //| where file_path endswith ".mdf"
+
+      | where file_path contains "physical database name"
+
+      | where http_errorcode == 503
+
+      | summarize xstore_throttling_count = count() by bin(TIMESTAMP, 5m)
+
+      | render timechart'
+- id: MI-performance-286
+  Topic: Check-IO-throttling
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Check-IO-throttling.md
+  Prompts:
+  - MI Check-IO-throttling
+  - Managed Instance Check-IO-throttling
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: 'let endTime = now();
+let startTime = ago({TimeRange});
+MonSqlRgHistory
+
+      | where TIMESTAMP >= startTime
+
+      | where TIMESTAMP <= endTime
+
+      | where LogicalServerName == srvrName
+
+      | where AppTypeName == ''Worker.CL.WCOW.SQL22''
+
+      | where event == ''aggregated_workload_groups_plus_history''
+
+      | where datetime_diff(''second'', end_aggregated_sample, start_aggregated_sample) >= 1
+
+      | extend LogicalServerName, NodeName, group_id, group_name,
+
+      R_IOPS = 1. * (delta_reads_completed_total) / datetime_diff(''second'', end_aggregated_sample, start_aggregated_sample),
+
+      W_IOPS = 1. * (delta_writes_completed_total) / datetime_diff(''second'', end_aggregated_sample, start_aggregated_sample),
+
+      B_W_IOPS = 1. * (delta_background_writes_total) / datetime_diff(''second'', end_aggregated_sample, start_aggregated_sample),
+
+      IOPS = 1. * (delta_reads_completed_total+delta_writes_completed_total) / datetime_diff(''second'', end_aggregated_sample, start_aggregated_sample),
+
+      R_MBPS = 1. * (delta_read_bytes_total) / 1024. / 1024. / datetime_diff(''second'', end_aggregated_sample, start_aggregated_sample),
+
+      W_MBPS = 1. * (delta_write_bytes_total) / 1024. / 1024. / datetime_diff(''second'', end_aggregated_sample, start_aggregated_sample),
+
+      B_W_MBPS = 1. * (delta_background_write_bytes_total) / 1024. / 1024. / datetime_diff(''second'', end_aggregated_sample, start_aggregated_sample),
+
+      MBPS = 1. * (delta_read_bytes_total+delta_write_bytes_total) / 1024. / 1024. / datetime_diff(''second'', end_aggregated_sample, start_aggregated_sample),
+
+      io_stall_ms = 1. * (delta_read_stall_total_ms + delta_write_stall_total_ms) / (delta_reads_completed_total + delta_writes_completed_total),
+
+      r_io_stall_ms = 1. * (delta_read_stall_total_ms) / (delta_reads_completed_total),
+
+      r_io_stall_queued_ms =  1. * (delta_read_stall_queued_ms) / (delta_reads_completed_total),
+
+      r_io_stall_disk_ms = 1. * (delta_read_stall_total_ms - delta_read_stall_queued_ms) / (delta_reads_completed_total),
+
+      w_io_stall_ms = 1. * (delta_write_stall_total_ms) / (delta_writes_completed_total),
+
+      io_size_kb = 1. * (delta_write_bytes_total + delta_read_bytes_total) / (delta_writes_completed_total + delta_reads_completed_total) / 1024.
+
+      | project TIMESTAMP, NodeName, group_id, group_name,
+
+      round(R_IOPS,2), round(W_IOPS,2), round(B_W_IOPS,2), round(IOPS,2),
+
+      round(R_MBPS,2), round(W_MBPS,2), round(B_W_MBPS,2), round(MBPS,2),
+
+      round(r_io_stall_ms,2), round(r_io_stall_queued_ms,2), round(r_io_stall_disk_ms,2),
+
+      round(w_io_stall_ms,2),
+
+      round(io_stall_ms,2),
+
+      round(io_size_kb,2)
+
+      | where r_io_stall_ms > 10
+
+      | order by r_io_stall_ms desc
+
+      | take 40'
+- id: MI-performance-287
+  Topic: Check-IO-throttling
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Check-IO-throttling.md
+  Prompts:
+  - MI Check-IO-throttling
+  - Managed Instance Check-IO-throttling
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: 'let endTime = now();
+let startTime = ago({TimeRange});
+MonWiQdsExecStats
+
+      | where TIMESTAMP >= startTime - 30min
+
+      | where TIMESTAMP <= endTime + 30min
+
+      | where LogicalServerName == logicalServerName
+
+      | where database_name =~ "{DatabaseName}"
+
+      | project TIMESTAMP, query_hash, query_plan_hash, max_num_physical_io_reads, num_physical_io_reads, max_physical_reads, max_logical_reads, execution_count, rowcount, tempdb_space_used, elapsed_time
+      max_elapsed_time
+
+      | order by max_num_physical_io_reads desc
+
+      | take 5'
+- id: MI-performance-289
+  Topic: Check-IO-throttling
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Check-IO-throttling.md
+  Prompts:
+  - MI Check-IO-throttling
+  - Managed Instance Check-IO-throttling
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLXStore
+    ExecutedQuery: 'let endTime = now();
+let startTime = ago({TimeRange});
+MonSQLXStore
+
+      | where LogicalServerName == srvrName
+
+      | where file_path contains physical_db_name and file_path endswith  ".mdf"
+
+      | where TIMESTAMP > (startTime - time(1h)) and TIMESTAMP < (endTime + time(1h))
+
+      | where event == ''xio_failed_request''
+
+      | where http_errorcode == ''503''
+
+      | summarize count(), max(retry_count) by bin(TIMESTAMP, 5m), file_path
+
+      | project count_, max_retry_count, TIMESTAMP, file=split(file_path, ''/'', 4)
+
+      )
+
+      | render timechart'
+- id: MI-performance-290
+  Topic: Comparing-performance-between-2-MIs
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Comparing-performance-between-2-MIs.md
+  Prompts:
+  - MI Comparing-performance-between-2-MIs
+  - Managed Instance Comparing-performance-between-2-MIs
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where AppName == {AppName}
+
+      | distinct code_package_version'
+- id: MI-performance-291
+  Topic: Frequent-OLDEST_PAGE-for-change-LogReuseWaitDesc-in-SQL-managed-instance
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Frequent-OLDEST_PAGE-for-change-LogReuseWaitDesc-in-SQL-managed-instance.md
+  Prompts:
+  - MI Frequent-OLDEST_PAGE-for-change-LogReuseWaitDesc-in-SQL-managed-instance
+  - Managed Instance Frequent-OLDEST_PAGE-for-change-LogReuseWaitDesc-in-SQL-managed-instance
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRecoveryTrace
+    ExecutedQuery: 'let endTime = now();
+let startTime = ago({TimeRange});
+MonRecoveryTrace
+
+      | where LogicalServerName =~ {MIName}
+
+      //| where database_name =~ {DBName}
+
+      | where TIMESTAMP >= {startTime} and TIMESTAMP <= {endTime}
+
+      | where trace_message contains "current log space"
+
+      | project TIMESTAMP, NodeName, database_id, trace_message
+
+      | order by TIMESTAMP asc'
+- id: MI-performance-292
+  Topic: General-Troubleshooting-of-space-used-on-managed-instance
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/General-Troubleshooting-of-space-used-on-managed-instance.md
+  Prompts:
+  - MI General-Troubleshooting-of-space-used-on-managed-instance
+  - Managed Instance General-Troubleshooting-of-space-used-on-managed-instance
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: 'MonSqlRgHistory
+
+      | where TIMESTAMP > ago({TimeRange}) and TIMESTAMP < now()
+
+      | where LogicalServerName =~ "{ServerName}" and AppName == "appname" and NodeName == "node_name"
+
+      | where event==''aggregated_virtual_files_io_history''
+
+      | summarize db_size_mb = sum(size_on_disk_gb =(size_on_disk_bytes/1024/1024)) by TIMESTAMP, db_name'
+- id: MI-performance-293
+  Topic: General-Troubleshooting-of-space-used-on-managed-instance
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/General-Troubleshooting-of-space-used-on-managed-instance.md
+  Prompts:
+  - MI General-Troubleshooting-of-space-used-on-managed-instance
+  - Managed Instance General-Troubleshooting-of-space-used-on-managed-instance
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: 'MonSqlRgHistory
+
+      | where TIMESTAMP > ago(1d)
+
+      | where LogicalServerName =~ "{ServerName}" and AppName == "appname" and NodeName == "node_name"
+
+      | where db_name =~ "database_name"
+
+      | where event==''aggregated_virtual_files_io_history''
+
+      | project TIMESTAMP, type_desc,spaceused_mb, max_size_mb, size_on_disk_mb =(size_on_disk_bytes/1024/1024), file_id'
+- id: MI-performance-294
+  Topic: How-to-check-gateway-database-MonRedirector-log-to-identify-OOM
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/How-to-check-gateway-database-MonRedirector-log-to-identify-OOM.md
+  Prompts:
+  - MI How-to-check-gateway-database-MonRedirector-log-to-identify-OOM
+  - Managed Instance How-to-check-gateway-database-MonRedirector-log-to-identify-OOM
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRedirector
+    ExecutedQuery: 'let endTime = now();
+let startTime = ago({TimeRange});
+MonRedirector
+
+      | where originalEventTimestamp between(startTime..endTime)
+
+      | where ClusterName in (''tr5896.southeastasia1-a.worker.database.windows.net'')
+
+      | where AppTypeName startswith ''Gateway.PDC''
+
+      | where event == ''sql_alias_odbc_failure''
+
+      | project TIMESTAMP,message,connection_string'
+- id: MI-performance-295
+  Topic: How-to-check-gateway-database-MonSQLSystemHealth-log-to-identify-OOM
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/How-to-check-gateway-database-MonSQLSystemHealth-log-to-identify-OOM.md
+  Prompts:
+  - MI How-to-check-gateway-database-MonSQLSystemHealth-log-to-identify-OOM
+  - Managed Instance How-to-check-gateway-database-MonSQLSystemHealth-log-to-identify-OOM
+  CustomizedParameters:
+  - AppName
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where originalEventTimestamp between (datetime(2024-06-26 06:00:00) ..datetime(2024-06-26 10:00:00) )
+
+      | where AppName =="{AppName}" ''
+
+      | project-away TIMESTAMP, PreciseTimeStamp, NodeRole, MachineName, ClusterName, AppTypeName, ResourceGroup, package, sessionName,
+
+      instance_rg_size, SourceNamespace, SourceMoniker, SourceVersion, code_package_version, process_id, collect_current_thread_id,
+
+      hotpatch_data_package_version, PartitionId, backup_lsn, oldest_xact_lsn, min_skip_lsn, message_sub_type'
+- id: MI-performance-296
+  Topic: How-to-check-gateway-database-MonSQLSystemHealth-log-to-identify-OOM
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/How-to-check-gateway-database-MonSQLSystemHealth-log-to-identify-OOM.md
+  Prompts:
+  - MI How-to-check-gateway-database-MonSQLSystemHealth-log-to-identify-OOM
+  - Managed Instance How-to-check-gateway-database-MonSQLSystemHealth-log-to-identify-OOM
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where originalEventTimestamp between (datetime(''2024-06-01 12:00:00'') ..datetime(''2024-07-06 17:00:00'') )
+
+      | where message contains "Failed allocate"
+
+      |where ClusterName =="''tr5896.southeastasia1-a.worker.database.windows.net" and instance_rg_size == "AliasDb"
+
+      |project NodeName,AppName,originalEventTimestamp,message
+
+      |order by originalEventTimestamp asc'
+- id: MI-performance-297
+  Topic: How-to-check-shrink-progress
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/How-to-check-shrink-progress.md
+  Prompts:
+  - MI How-to-check-shrink-progress
+  - Managed Instance How-to-check-shrink-progress
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmIoVirtualFileStats
+    ExecutedQuery: 'let MIName = "{ServerName}";
+MonDmIoVirtualFileStats
+
+      | where  (originalEventTimestamp between (startdate..enddate))
+
+      | where LogicalServerName == MIName
+
+      | extend file_size_mb = size_on_disk_bytes / 1024. / 1024
+
+      | extend file_size_gb = size_on_disk_bytes / 1024. / 1024 / 1024, spaceused_gb = spaceused_mb / 1024.
+
+      | extend file_tier =
+
+      case(file_size_gb <= 128, ''P10''
+
+      file_size_gb <= 512, ''P20''
+
+      file_size_gb <= 1024, ''P30''
+
+      file_size_gb <= 2048, ''P40''
+
+      file_size_gb <= 4096, ''P50''
+
+      file_size_gb <= 8192, ''P60''
+
+      ''UNKNOWN'')
+
+      | project logical_database_id, type_desc, file_id, file_tier, spaceused_gb, file_size_gb, file_size_mb, originalEventTimestamp
+
+      | join kind=inner ('
+- id: MI-performance-298
+  Topic: How-to-check-shrink-progress
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/How-to-check-shrink-progress.md
+  Prompts:
+  - MI How-to-check-shrink-progress
+  - Managed Instance How-to-check-shrink-progress
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: 'let MIName = "{ServerName}";
+MonAnalyticsDBSnapshot
+
+      | where  (PreciseTimeStamp between (startdate..enddate))
+
+      | where logical_server_name == MIName
+
+      | summarize arg_max(PreciseTimeStamp, logical_database_name) by logical_database_id
+
+      ) on logical_database_id
+
+      | where logical_database_name =~ dbname
+
+      | project logical_database_name, logical_database_id, type_desc, file_id, file_tier, spaceused_gb, file_size_gb, file_size_mb, originalEventTimestamp
+
+      | order by file_id asc , originalEventTimestamp desc'
+- id: MI-performance-299
+  Topic: How-to-shrink-a-transaction-log
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/How-to-shrink-a-transaction-log.md
+  Prompts:
+  - MI How-to-shrink-a-transaction-log
+  - Managed Instance How-to-shrink-a-transaction-log
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmIoVirtualFileStats
+    ExecutedQuery: 'MonDmIoVirtualFileStats
+
+      | where LogicalServerName =~ "{ServerName}" //server name
+
+      | where db_name =~ "9a17224c-26aa-49da-80d8-30bee7ea686a" //on MI the database name is equal to the physical_database_name
+
+      | where type_desc == "LOG" //looking only for data only
+
+      | where is_primary_replica == 1
+
+      | summarize sum(spaceused_mb), sum(size_on_disk_mb =(size_on_disk_bytes/1024/1024)) by TIMESTAMP
+
+      | render timechart'
+- id: MI-performance-300
+  Topic: How-to-troubleshoot-OOM-issues
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/How-to-troubleshoot-OOM-issues.md
+  Prompts:
+  - MI How-to-troubleshoot-OOM-issues
+  - Managed Instance How-to-troubleshoot-OOM-issues
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'let appName = "{AppName}"; MonSQLSystemHealth
+
+      | where AppName == appName
+
+      | where originalEventTimestamp between (incidentStartTime .. incidentEndTime)
+
+      | where event == "summarized_oom_snapshot"
+
+      | extend topClerks = parse_json(top_memory_clerks)
+
+      | extend topPools = parse_json(top_memory_pools)
+
+      | extend oomCause = case(oom_cause == 1, ''HEKATON_POOL_MEMORY_LOW'', oom_cause == 2, ''MEMORY_LOW'', oom_cause == 3, ''OS_MEMORY_PRESSURE''
+
+      oom_cause == 4, ''OS_MEMORY_PRESSURE_SQL'', oom_cause == 5, ''NON_SOS_MEMORY_LEAK'', oom_cause == 6, ''SERVERLESS_MEMORY_RECLAMATION''
+
+      oom_cause == 7, ''MEMORY_LEAK'', oom_cause == 8, ''SLOW_BUFFER_POOL_SHRINK'', oom_cause == 9, ''INTERNAL_POOL'', oom_cause == 10, ''SYSTEM_POOL''
+
+      oom_cause == 11, ''QUERY_MEMORY_GRANTS'', oom_cause == 12, ''REPLICAS_AND_AVAILABILITY'', ''UNKNOWN'')
+
+      | project originalEventTimestamp, ClusterName, NodeName, AppTypeName, instance_rg_size
+
+      is_non_sos_usage_leaked, oom_factor, oomCause, available_physical_memory_mb, current_job_cap_mb, process_memory_usage_mb
+
+      non_sos_usage_mb, committed_target_mb, committed_mb, allocation_potential_memory_mb
+
+      topClerks[0], topClerks[1], topClerks[2], topPools[0], oom_memory_pool'
+- id: MI-performance-301
+  Topic: How-to-troubleshoot-OOM-issues
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/How-to-troubleshoot-OOM-issues.md
+  Prompts:
+  - MI How-to-troubleshoot-OOM-issues
+  - Managed Instance How-to-troubleshoot-OOM-issues
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonSqlMemoryClerkStats
+    ExecutedQuery: 'let oomApp="appname";
+
+      let oomNode="node_name";
+
+      let startTime=ago({TimeRange});
+
+      let endTime=now();
+
+      let topConsumers=MonSqlMemoryClerkStats
+
+      | where TIMESTAMP > startTime and TIMESTAMP < endTime
+
+      | where AppName == oomApp and NodeName == oomNode
+
+      | where pages_kb > 50000 or vm_committed_kb > 50000
+
+      | summarize by [''memory_clerk_type''];'
+- id: MI-performance-302
+  Topic: How-to-troubleshoot-OOM-issues
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/How-to-troubleshoot-OOM-issues.md
+  Prompts:
+  - MI How-to-troubleshoot-OOM-issues
+  - Managed Instance How-to-troubleshoot-OOM-issues
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlMemoryClerkStats
+    ExecutedQuery: 'let endTime = now();
+let startTime = ago({TimeRange});
+MonSqlMemoryClerkStats
+
+      | where TIMESTAMP > startTime and TIMESTAMP < endTime
+
+      | where AppName == oomApp and NodeName == oomNode
+
+      | join kind= inner ('
+- id: MI-performance-303
+  Topic: How-to-troubleshoot-OOM-issues
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/How-to-troubleshoot-OOM-issues.md
+  Prompts:
+  - MI How-to-troubleshoot-OOM-issues
+  - Managed Instance How-to-troubleshoot-OOM-issues
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: 'MonWiQdsExecStats
+
+      | where TIMESTAMP > ago({TimeRange})-15m and TIMESTAMP < now()+15m
+
+      | where AppName == "Appname"
+
+      | summarize sum(execution_count), sum(cpu_time), sum(max_query_memory_pages), sum(max_logical_writes), sum(max_logical_reads) by plan_id, query_hash
+
+      | project  query_hash, plan_id, sum_execution_count, sum_max_query_memory_pages
+
+      | order by sum_max_query_memory_pages desc
+
+      | take 5'
+- id: MI-performance-304
+  Topic: How-to-work-on-the-MI-OOM-issue
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/How-to-work-on-the-MI-OOM-issue.md
+  Prompts:
+  - MI How-to-work-on-the-MI-OOM-issue
+  - Managed Instance How-to-work-on-the-MI-OOM-issue
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where PreciseTimeStamp >= datetime(****) and PreciseTimeStamp <= datetime(****)
+
+      | where AppName == "****"
+
+      | where message != ""
+
+      | where message contains "Error:"
+
+      | where not(message matches regex "Error: (35262|40613|913|18401|17187),")
+
+      | extend parsed_message = replace("[0-9-]+[ \t]+[0-9:.]+[ \t]+[a-zA-Z0-9]+[ ]+", "", message)
+
+      | project originalEventTimestamp, message, parsed_message
+
+      | summarize count(), min(originalEventTimestamp), max(originalEventTimestamp), any(message) by parsed_message
+
+      | order by count_ desc
+
+      | project min_originalEventTimestamp, max_originalEventTimestamp, count_, parsed_message, any_message'
+- id: MI-performance-305
+  Topic: How-to-work-on-the-MI-OOM-issue
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/How-to-work-on-the-MI-OOM-issue.md
+  Prompts:
+  - MI How-to-work-on-the-MI-OOM-issue
+  - Managed Instance How-to-work-on-the-MI-OOM-issue
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: Monitor
+    ExecutedQuery: '| `oom_cause_desc` | nvarchar(30), not null | Description of `oom_cause`, one of:  
+0. UNKNOWN - OOM cause could not be determined  
+1. HEKATON_POOL_MEMORY_LOW - Insufficient memory
+      in the resource pool used for In-Memory OLTP. For more information, see [Monitor In-Memory OLTP](https://learn.microsoft.com/en-us/azure/azure-sql/database/in-memory-oltp-monitor-space?view=azuresql-db&preserve-view=true).  
+2.
+      MEMORY_LOW - Insufficient memory available to the database engine process  
+3. OS_MEMORY_PRESSURE - OOM due to external memory pressure from the operating system  
+4. OS_MEMORY_PRESSURE_SQL
+      - OOM due to external memory pressure from other database engine instance(s)  
+5. NON_SOS_MEMORY_LEAK - OOM due to a leak in non-SOS memory, for example, loaded modules  
+6. SERVERLESS_MEMORY_RECLAMATION
+      - OOM related to memory reclamation in a serverless database  
+7. MEMORY_LEAK - OOM due to a leak in SOS memory  
+8. SLOW_BUFFER_POOL_SHRINK - OOM due to the buffer pool not releasing memory
+      fast enough under memory pressure  
+9. INTERNAL_POOL - Insufficient memory in the internal resource pool  
+10. SYSTEM_POOL - Insufficient memory in a system resource pool  
+11. QUERY_MEMORY_GRANTS
+      - OOM due to large memory grants held by queries  
+12. REPLICAS_AND_AVAILABILITY - OOM due to workloads in SloSecSharedPool resource pool |
+
+      | --- | --- | --- |'
+- id: MI-performance-306
+  Topic: How-to-work-on-the-MI-OOM-issue
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/How-to-work-on-the-MI-OOM-issue.md
+  Prompts:
+  - MI How-to-work-on-the-MI-OOM-issue
+  - Managed Instance How-to-work-on-the-MI-OOM-issue
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonSqlMemoryClerkStats
+    ExecutedQuery: 'MonSqlMemoryClerkStats
+
+      //| where PreciseTimeStamp >= ago({TimeRange}) and PreciseTimeStamp <= now()
+
+      | where PreciseTimeStamp >= ago({TimeRange}) and PreciseTimeStamp <= now()
+
+      | where LogicalServerName == "***"
+
+      | summarize sum(pages_kb) by bin(TIMESTAMP, 5m), memory_clerk_type
+
+      | render timechart'
+- id: MI-performance-307
+  Topic: How-to-work-on-the-MI-OOM-issue
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/How-to-work-on-the-MI-OOM-issue.md
+  Prompts:
+  - MI How-to-work-on-the-MI-OOM-issue
+  - Managed Instance How-to-work-on-the-MI-OOM-issue
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmDbResourceGovernance
+    ExecutedQuery: 'MonDmDbResourceGovernance
+
+      |where TIMESTAMP > ago(30d)
+
+      | where LogicalServerName == "***"
+
+      | summarize min(TIMESTAMP), max(TIMESTAMP) by job_low_memory_signal_threshold_mb, min_sos_gap_with_job_mem_limit_in_mb'
+- id: MI-performance-308
+  Topic: Memory-Grant-Feedback-Persistence-and-Percentile-grant
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Memory-Grant-Feedback-Persistence-and-Percentile-grant.md
+  Prompts:
+  - MI Memory-Grant-Feedback-Persistence-and-Percentile-grant
+  - Managed Instance Memory-Grant-Feedback-Persistence-and-Percentile-grant
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: 'let endTime = now();
+let startTime = ago({TimeRange});
+MonWiQdsExecStats
+
+      |  where  TIMESTAMP > startTime and  TIMESTAMP < endTime
+
+      |  where  NodeName == “node name” and  AppName == "app name"
+
+      |  summarize  sum(execution_count),  sum(cpu_time),  sum(max_query_memory_pages)  by  query_id,  plan_id
+
+      |  project  query_id,  plan_id,  sum_execution_count,  sum_max_query_memory_pages
+
+      |  order  by  sum_max_query_memory_pages
+
+      |  take 10'
+- id: MI-performance-309
+  Topic: Memory-Grant-Feedback-Persistence-and-Percentile-grant
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Memory-Grant-Feedback-Persistence-and-Percentile-grant.md
+  Prompts:
+  - MI Memory-Grant-Feedback-Persistence-and-Percentile-grant
+  - Managed Instance Memory-Grant-Feedback-Persistence-and-Percentile-grant
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonQueryProcessing
+    ExecutedQuery: 'let endTime = now();
+let startTime = ago({TimeRange});
+MonQueryProcessing
+
+      |   where   originalEventTimestamp  between(startTime..endTime)
+
+      |   where   AppName == aname
+
+      |   where   logical_database_name == dname
+
+      |   where   LogicalServerName == sname
+
+      |   where   query_plan_hash_signed == phash
+
+      |   where   event ==   "memory_grant_updated_by_feedback"
+
+      |   mv-expand   parse_json(memory_summary_by_operator_kb)
+
+      |   extend   ni = parse_json(memory_summary_by_operator_kb)
+
+      |   where   tolong(ni.Granted) == tolong(ni.Used)   and   tolong(ni.Granted) >   1024
+
+      |   project   TIMESTAMP, ideal_additional_memory_before_kb, ideal_additional_memory_after_kb, memory_summary_by_operator_kb'
+- id: MI-performance-310
+  Topic: Memory-Grant-Feedback-Persistence-and-Percentile-grant
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Memory-Grant-Feedback-Persistence-and-Percentile-grant.md
+  Prompts:
+  - MI Memory-Grant-Feedback-Persistence-and-Percentile-grant
+  - Managed Instance Memory-Grant-Feedback-Persistence-and-Percentile-grant
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonQueryProcessing
+    ExecutedQuery: 'let endTime = now();
+let startTime = ago({TimeRange});
+MonQueryProcessing
+
+      |   where   originalEventTimestamp  between(startTime..endTime)
+
+      |   where   AppName == aname
+
+      |   where   logical_database_name == dname
+
+      |   where   LogicalServerName == sname
+
+      |   where   query_plan_hash_signed == phash
+
+      |   where   event ==   "memory_grant_updated_by_feedback"
+
+      |   extend   overestimate_kb = ideal_additional_memory_before_kb - ideal_additional_memory_after_kb
+
+      |   where   overestimate_kb >   0
+
+      |   project   TIMESTAMP, overestimate_kb, ideal_additional_memory_before_kb, ideal_additional_memory_after_kb'
+- id: MI-performance-311
+  Topic: MonWiQueryParamData-(Compile-telemetry)
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/MonWiQueryParamData-(Compile-telemetry).md
+  Prompts:
+  - MI MonWiQueryParamData-(Compile-telemetry)
+  - Managed Instance MonWiQueryParamData-(Compile-telemetry)
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQueryParamData
+    ExecutedQuery: 'let appName = "{AppName}"; MonWiQueryParamData
+
+      | where TIMESTAMP > change_timestamp-analyzed_period and TIMESTAMP <= change_timestamp
+
+      | where NodeName == nodeName
+
+      | where  AppName =~  appName
+
+      | project TIMESTAMP, compile_cpu_time
+
+      | summarize compile_cpu_ms = sum(compile_cpu_time)/1000);
+
+      let total_compile_cpu_ms_after = toscalar ('
+- id: MI-performance-312
+  Topic: MonWiQueryParamData-(Compile-telemetry)
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/MonWiQueryParamData-(Compile-telemetry).md
+  Prompts:
+  - MI MonWiQueryParamData-(Compile-telemetry)
+  - Managed Instance MonWiQueryParamData-(Compile-telemetry)
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQueryParamData
+    ExecutedQuery: 'let appName = "{AppName}"; MonWiQueryParamData
+
+      | where TIMESTAMP > change_timestamp and TIMESTAMP <= change_timestamp+analyzed_period
+
+      | where NodeName == nodeName
+
+      | where  AppName =~  appName
+
+      | project TIMESTAMP, compile_cpu_time
+
+      | summarize compile_cpu_ms = sum(compile_cpu_time)/1000);'
+- id: MI-performance-313
+  Topic: MonSqlRgHistory-(Compile-telemetry)
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/MonSqlRgHistory-(Compile-telemetry).md
+  Prompts:
+  - MI MonSqlRgHistory-(Compile-telemetry)
+  - Managed Instance MonSqlRgHistory-(Compile-telemetry)
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: 'let appName = "{AppName}"; MonSqlRgHistory
+
+      | where  TIMESTAMP > change_timestamp-analyzed_period
+
+      | where NodeName == nodeName
+
+      | where  AppName =~  appName
+
+      | where event == "aggregated_workload_groups_plus_history"
+
+      | project TIMESTAMP, delta_total_cpu_usage_ms, group_name
+
+      | summarize cpu_usage_before_forced_param = sumif(delta_total_cpu_usage_ms, TIMESTAMP > change_timestamp-analyzed_period and TIMESTAMP <= change_timestamp)
+
+      usage_after_forced_param = sumif(delta_total_cpu_usage_ms, TIMESTAMP > change_timestamp and TIMESTAMP <= change_timestamp+analyzed_period) by group_name
+
+      | order by cpu_usage_before_forced_param desc
+
+      | take 10
+
+      | extend total_compile_cpu_ms_before, total_compile_cpu_ms_after
+
+      | extend percentage_compile_before = iif (''UserPrimaryGroup.DBId5'' == group_name, total_compile_cpu_ms_before*1.0/cpu_usage_before_forced_param*100,-1.0)
+
+      | extend percentage_compile_after =  iif (''UserPrimaryGroup.DBId5'' == group_name,total_compile_cpu_ms_after*1.0/cpu_usage_before_forced_param*100,-1.0)'
+- id: MI-performance-314
+  Topic: Shrink-with-low-priority
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Shrink-with-low-priority.md
+  Prompts:
+  - MI Shrink-with-low-priority
+  - Managed Instance Shrink-with-low-priority
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlShrinkInfo
+    ExecutedQuery: 'let endTime = now();
+let startTime = ago({TimeRange});
+MonSqlShrinkInfo
+
+      | where AppName contains {AppName}
+
+      | where TIMESTAMP >= startTime and TIMESTAMP <= endTime
+
+      | where event contains "shrink_file_telemetry"
+
+      | where tag contains "shrink_failure_reasons"
+
+      | where failure_reason contains "shrink timeout waiting to acquire schema modify lock in WLP mode"'
+- id: MI-performance-315
+  Topic: Shrink-with-low-priority
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Shrink-with-low-priority.md
+  Prompts:
+  - MI Shrink-with-low-priority
+  - Managed Instance Shrink-with-low-priority
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlShrinkInfo
+    ExecutedQuery: 'let endTime = now();
+let startTime = ago({TimeRange});
+MonSqlShrinkInfo
+
+      | where AppName contains {AppName}
+
+      | where TIMESTAMP >= startTime and TIMESTAMP <= endTime
+
+      | where event contains "shrink_file_telemetry"
+
+      | where status contains "shrink_wlp_wait_time"'
+- id: MI-performance-318
+  Topic: Useful-Kusto-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful-Kusto-queries
+  - Managed Instance Useful-Kusto-queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedInstanceResourceStats
+    ExecutedQuery: 'MonManagedInstanceResourceStats
+
+      | where LogicalServerName =~ ServerName
+
+      | where TIMESTAMP > ago(daysAgo)
+
+      | summarize CPU = avg(avg_cpu_percent) by bin(TIMESTAMP, 5m);
+
+      let limitationsThroughTime ='
+- id: MI-performance-319
+  Topic: Useful-Kusto-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful-Kusto-queries
+  - Managed Instance Useful-Kusto-queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedInstanceResourceStats
+    ExecutedQuery: 'MonManagedInstanceResourceStats
+
+      | where LogicalServerName =~ ServerName
+
+      | where TIMESTAMP > ago(daysAgo)
+
+      | summarize logWriteLimit = max(iff ((virtual_core_count) * 4 < 48, virtual_core_count * 4, 48)), iops_limit = max(virtual_core_count) * 1375 by bin(TIMESTAMP, 30m);
+
+      let ioStats ='
+- id: MI-performance-320
+  Topic: Useful-Kusto-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful-Kusto-queries
+  - Managed Instance Useful-Kusto-queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLXStoreIOStats
+    ExecutedQuery: 'MonSQLXStoreIOStats
+
+      | where LogicalServerName =~ ServerName
+
+      | where TIMESTAMP > ago(daysAgo)
+
+      | where file_path endswith ''df''
+
+      | where event == ''xstore_io_stats''
+
+      | extend TIMESPAN = bin(TIMESTAMP, 30m)
+
+      | join kind = inner ('
+- id: MI-performance-321
+  Topic: Useful-Kusto-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful-Kusto-queries
+  - Managed Instance Useful-Kusto-queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmRealTimeResourceStats
+    ExecutedQuery: 'MonDmRealTimeResourceStats
+
+      | where LogicalServerName == logical_srvr_name
+
+      | where AppName startswith _ApplicationName
+
+      | where TIMESTAMP between (StartTime..EndTime)
+
+      | where NodeName in (_NodeName)
+
+      | extend log_cap_mb=log_cap/1024./1024.
+
+      | summarize max(TIMESTAMP), min(TIMESTAMP) by LogicalServerName, NodeName, log_cap_mb'
+- id: MI-performance-322
+  Topic: Useful-Kusto-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful-Kusto-queries
+  - Managed Instance Useful-Kusto-queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmRealTimeResourceStats
+    ExecutedQuery: 'MonDmRealTimeResourceStats
+
+      | where LogicalServerName == logical_srvr_name
+
+      | where TIMESTAMP > ago(3d)
+
+      | summarize max(TIMESTAMP) by io_cap, AppName, NodeName'
+- id: MI-performance-323
+  Topic: Useful-Kusto-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful-Kusto-queries
+  - Managed Instance Useful-Kusto-queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmCloudDatabaseWaitStats
+    ExecutedQuery: 'MonDmCloudDatabaseWaitStats
+
+      | where AppName !startswith ''b-'' and AppName !startswith ''v-''
+
+      | where TIMESTAMP > ago(daysAgo)
+
+      | where LogicalServerName =~ ServerName
+
+      | top-nested of bin(TIMESTAMP, AggInterval) by sum(delta_wait_time_ms) asc
+
+      , top-nested 5 of wait_type by total_wait_time_ms_per_sec = round(sum(delta_wait_time_ms)/DurationInSec,1) desc
+
+      | sort by TIMESTAMP asc nulls last
+
+      | project TIMESTAMP, wait_type, total_wait_time_ms_per_sec'
+- id: MI-performance-324
+  Topic: Useful-Kusto-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful-Kusto-queries
+  - Managed Instance Useful-Kusto-queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedInstanceResourceStats
+    ExecutedQuery: 'MonManagedInstanceResourceStats
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where TIMESTAMP between(datetime(2024-10-01 20:00:00)..datetime(2024-10-02 05:00:00))
+
+      | project TIMESTAMP, NodeName, avg_cpu_percent, active_workers_percent, active_workers
+
+      | render timechart'
+- id: MI-performance-325
+  Topic: Useful-Kusto-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful-Kusto-queries
+  - Managed Instance Useful-Kusto-queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: 'let server = "{ServerName}"; MonSqlRgHistory
+
+      | where LogicalServerName =~ ''"{ServerName}"''
+
+      | where TIMESTAMP between(datetime(2024-10-01 20:00:00)..datetime(2024-10-02 05:00:00))
+
+      | where NodeName == ''"{NodeName}"''
+
+      | where event == "selective_rg_history"
+
+      | where group_name == "default"
+
+      | project originalEventTimestamp, group_name, active_worker_min, active_worker_max, active_worker_count, active_worker_avg
+
+      | render timechart'
+- id: MI-performance-326
+  Topic: Useful-Kusto-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful-Kusto-queries
+  - Managed Instance Useful-Kusto-queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCounterOneMinute
+    ExecutedQuery: 'MonCounterOneMinute
+
+      | where TIMESTAMP between(datetime(2024-10-01 20:00:00)..datetime(2024-10-02 05:00:00))
+
+      // | where TIMESTAMP > ago(30d)
+
+      | where ClusterName == tenantRingName
+
+      | where NodeName == nodeName
+
+      | where CounterName endswith "Rejected Connections/sec"
+
+      | project TIMESTAMP, NodeName, CounterValue
+
+      | render timechart'
+- id: MI-performance-328
+  Topic: Useful-Kusto-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful-Kusto-queries
+  - Managed Instance Useful-Kusto-queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLXStore
+    ExecutedQuery: 'let endTime = now();
+let startTime = ago({TimeRange});
+| extend DatabaseName = iff(db_physical_name == ''msdb'', ''msdb'', iff(db_physical_name == ''replicatedmaster'', ''master'',iff(db_physical_name == ''tempdb'', ''tempdb'', logical_database_name)));
+
+      let RemoteStorageThrottling = MonSQLXStore
+
+      | where originalEventTimestamp >= startTime and originalEventTimestamp <= endTime
+
+      | where SubscriptionId =~ ''{{SubscriptionId}}'' and LogicalServerName =~ ''{{ServerName}}''
+
+      | where file_path endswith  ''df''
+
+      | where event == ''xio_failed_request''
+
+      | where http_errorcode == ''503''
+
+      | summarize count(), max(retry_count) by SubscriptionId, LogicalServerName, file_path
+
+      | where max_retry_count >= 1
+
+      | parse file_path with * ".blob.core." sufix "/" location "/data/" db_physical_name "_" file_id "." extension
+
+      | join kind=inner
+
+      ('
+- id: MI-performance-329
+  Topic: Useful-Kusto-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful-Kusto-queries
+  - Managed Instance Useful-Kusto-queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: 'let endTime = now();
+let startTime = ago({TimeRange});
+MonWiQdsExecStats
+
+      | where TIMESTAMP >= startTime
+
+      | where TIMESTAMP <= endTime
+
+      | where LogicalServerName == logicalServerName
+
+      | where event == "query_store_runtime_stats_update"
+
+      | project TIMESTAMP, LogicalServerName, database_name, logical_database_guid
+
+      query_id, plan_id, statement_sql_hash, template_hash, query_hash, query_plan_hash
+
+      statement_type, exec_type
+
+      execution_count, elapsed_time, cpu_time, logical_reads, physical_reads, logical_writes, num_physical_io_reads, log_bytes_used
+
+      | summarize sum(cpu_time), sum(physical_reads), sum(logical_writes), sum(execution_count), sum(logical_reads) by database_name'
+- id: MI-performance-330
+  Topic: Useful-Kusto-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful-Kusto-queries
+  - Managed Instance Useful-Kusto-queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: 'let endTime = now();
+let startTime = ago({TimeRange});
+MonWiQdsExecStats
+
+      | where  originalEventTimestamp >= startTime and originalEventTimestamp <= endTime
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | summarize TotalQueryCPU_ms = sum(cpu_time) / 1000.0, db_name = take_any(database_name) by query_hash
+
+      | top 10 by TotalQueryCPU_ms desc
+
+      | project DatabaseName = db_name, QueryHash=query_hash, TotalQueryCPU_ms'
+- id: MI-performance-331
+  Topic: Useful-Kusto-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful-Kusto-queries
+  - Managed Instance Useful-Kusto-queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: 'let endTime = now();
+let startTime = ago({TimeRange});
+MonWiQdsExecStats
+
+      | where  originalEventTimestamp >= startTime and originalEventTimestamp <= endTime
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | summarize TotalQueryCPU_ms = sum(cpu_time) / 1000.0, db_name = take_any(database_name) by query_id
+
+      | top 10 by TotalQueryCPU_ms desc
+
+      | project DatabaseName = db_name, QueryId=query_id, TotalQueryCPU_ms'
+- id: MI-performance-332
+  Topic: Useful-Kusto-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful-Kusto-queries
+  - Managed Instance Useful-Kusto-queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: 'MonWiQdsExecStats
+
+      | where TIMESTAMP between (datetime(2025-03-01 00:00) .. datetime(2025-03-26 00:00))
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where query_id == "{QueryId}" 
+      | summarize sum(execution_count), sum(cpu_time) by bin(TIMESTAMP, 3h)
+
+      | render timechart'
+- id: MI-performance-333
+  Topic: Useful-Kusto-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful-Kusto-queries
+  - Managed Instance Useful-Kusto-queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: 'let endTime = now();
+let startTime = ago({TimeRange});
+MonWiQdsExecStats
+
+      | where (originalEventTimestamp >= startTime and originalEventTimestamp <= endTime)
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | summarize TotalExecutions = sum(execution_count), TotalLogicalReads = sum(logical_reads), AverageLogicalReads=round(sum(logical_reads)/sum(execution_count))by DatabaseName=database_name, QueryHash=query_hash
+
+      | top 10 by TotalLogicalReads desc'
+- id: MI-performance-334
+  Topic: Useful-Kusto-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful-Kusto-queries
+  - Managed Instance Useful-Kusto-queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: 'MonWiQdsExecStats
+
+      | where LogicalServerName =~ ServerName
+
+      | where TIMESTAMP > ago(daysAgo)
+
+      | top-nested 5 of query_hash by sum(logical_reads) desc, top-nested 5 of query_plan_hash by sum(logical_reads) desc
+
+      );'
+- id: MI-performance-335
+  Topic: Useful-Kusto-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful-Kusto-queries
+  - Managed Instance Useful-Kusto-queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: 'MonWiQdsExecStats
+
+      | where LogicalServerName =~ ServerName
+
+      | where TIMESTAMP > ago(daysAgo)
+
+      | extend orig_query_hash = query_hash, orig_plan_hash = query_plan_hash
+
+      | lookup kind = leftouter (Top5QueriesAndPlans | distinct query_hash, aggregated_query_hash) on query_hash
+
+      | extend query_hash = iff(isnull(aggregated_query_hash), ''OTHERS'', query_hash)
+
+      | extend statement_type = iff(isnull(aggregated_query_hash), '''', statement_type)
+
+      | lookup kind = leftouter (Top5QueriesAndPlans | project-away aggregated_query_hash) on query_hash, query_plan_hash
+
+      | extend query_plan_hash = iff(isnull(aggregated_query_plan_hash), ''OTHERS'', query_plan_hash)
+
+      | summarize query_ids = make_set(query_id, 4), plan_ids = make_set(plan_id, 4)
+
+      , DistinctQueryHashes = dcount(orig_query_hash), DistinctPlanHashes = dcount(orig_plan_hash)
+
+      , TotalExecutions = sum(execution_count)
+
+      , TotalTimeouts = sumif(execution_count, exec_type == 3), TotalErrors = sumif(execution_count, exec_type == 4)
+
+      , TotalQueryDuration_ms = sum(elapsed_time) / 1000.0, MaxQueryDuration_ms = max(max_elapsed_time) / 1000.0
+
+      , TotalQueryCPU_ms = sum(cpu_time) / 1000.0, MaxQueryCPU_ms = max(max_cpu_time) / 1000.0
+
+      , TotalLogicalReads = sum(logical_reads), MaxLogicalReads = sum(max_logical_reads)
+
+      , TotalLog_MB = sum(log_bytes_used) / 1024.0 / 1024.0, MaxLog_MB = sum(max_log_bytes_used) / 128.0 / 1024.0
+
+      , TotalMemoryGrant_MB = sum(max_query_memory_pages) / 128.0, MaxMemoryGrant_MB = max(max_max_query_memory_pages)
+
+      , TotalDop = sum(dop)
+
+      by query_hash, query_plan_hash, statement_type, aggregated_query_hash, aggregated_query_plan_hash
+
+      | lookup kind = leftouter ('
+- id: MI-performance-336
+  Topic: Useful-Kusto-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful-Kusto-queries
+  - Managed Instance Useful-Kusto-queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsWaitStats
+    ExecutedQuery: 'MonWiQdsWaitStats
+
+      | where LogicalServerName =~ ServerName
+
+      | where TIMESTAMP > ago(daysAgo)
+
+      | lookup kind = leftouter (Top5QueriesAndPlans | distinct query_hash, aggregated_query_hash) on query_hash
+
+      | extend query_hash = iff(isnull(aggregated_query_hash), ''OTHERS'', query_hash)
+
+      | lookup kind = leftouter (Top5QueriesAndPlans | project-away aggregated_query_hash) on query_hash, query_plan_hash
+
+      | extend query_plan_hash = iff(isnull(aggregated_query_plan_hash), ''OTHERS'', query_plan_hash)
+
+      | summarize category_wait_time_ms = sum(total_query_wait_time_ms)
+
+      , max_category_wait_time = max(max_query_wait_time_ms)
+
+      by query_hash, query_plan_hash, wait_category
+
+      | sort by category_wait_time_ms desc
+
+      | extend wait_pack = pack(wait_category, category_wait_time_ms)
+
+      | summarize TotalWaits_ms = sum(category_wait_time_ms)
+
+      , MaxWaits_ms = sum(max_category_wait_time)
+
+      , Top_3_WaitCategories_total_ms = tostring(make_list(wait_pack, 3))
+
+      by query_hash, query_plan_hash
+
+      ) on query_hash, query_plan_hash
+
+      | extend query_hash = iff(query_hash =~ ''OTHERS'', strcat(''OTHERS ('', DistinctQueryHashes, '' query hashes)''), query_hash)
+
+      | extend query_plan_hash = iff(query_plan_hash =~ ''OTHERS'', strcat(''OTHERS ('', DistinctPlanHashes, '' plan hashes)''), query_plan_hash)
+
+      | extend query_ids = iff(array_length(query_ids) > 3, strcat(''['',strcat_array(array_slice(query_ids, 0, 2), '',''), '',...]''), query_ids)
+
+      | extend plan_ids = iff(array_length(plan_ids) > 3, strcat(''['',strcat_array(array_slice(plan_ids, 0, 2), '',''), '',...]''), plan_ids)
+
+      | extend TotalQueryCPU_Pct = round(100.0 * (TotalQueryCPU_ms / (345669 * 1000.0)), 1)
+
+      | extend AvgQueryCPU_ms = round(TotalQueryCPU_ms / TotalExecutions, 1), MaxQueryCPU_ms = round(MaxQueryCPU_ms, 1)
+
+      | extend AvgQueryDuration_ms = round(TotalQueryDuration_ms / TotalExecutions, 1), MaxQueryDuration_ms = round(MaxQueryDuration_ms, 1)
+
+      | extend TotalWaits_ms = iff(isnull(TotalWaits_ms), 0, TotalWaits_ms), MaxWaits_ms = iff(isnull(MaxWaits_ms), 0, MaxWaits_ms)
+
+      | extend AvgWaits_ms = round(toreal(TotalWaits_ms) / TotalExecutions, 1)
+
+      | extend AvgLogicalReads = round(TotalLogicalReads / TotalExecutions, 0)
+
+      | extend TotalLog_MB = round(TotalLog_MB, 1), AvgLog_MB = round(TotalLog_MB / TotalExecutions, 1), MaxLog_MB = round(MaxLog_MB, 1)
+
+      | extend AvgMemoryGrant_MB = round(TotalMemoryGrant_MB / TotalExecutions, 1), MaxMemoryGrant_MB = round(MaxMemoryGrant_MB, 1)
+
+      | extend AvgDop = round(TotalDop * 1.0 / TotalExecutions, 1)
+
+      | sort by aggregated_query_hash desc nulls last, aggregated_query_plan_hash desc nulls last
+
+      | project query_hash, query_plan_hash, query_ids, plan_ids
+
+      , statement_type = trim_start(''x_estyp'', statement_type), TotalExecutions, TotalTimeouts, TotalErrors
+
+      , TotalQueryCPU_Pct, AvgQueryCPU_ms, MaxQueryCPU_ms, AvgQueryDuration_ms, MaxQueryDuration_ms
+
+      , TotalWaits_ms, AvgWaits_ms, MaxWaits_ms, Top_3_WaitCategories_total_ms
+
+      , TotalLogicalReads, AvgLogicalReads, MaxLogicalReads, TotalLog_MB, AvgLog_MB, MaxLog_MB
+
+      , AvgMemoryGrant_MB, MaxMemoryGrant_MB, AvgDop'
+- id: MI-performance-338
+  Topic: Useful-Kusto-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful-Kusto-queries
+  - Managed Instance Useful-Kusto-queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonQueryProcessing
+    ExecutedQuery: 'let endTime = now();
+let startTime = ago({TimeRange});
+MonQueryProcessing
+
+      | where (originalEventTimestamp >= startTime and originalEventTimestamp <= endTime)
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where event =~ ''query_antipattern''
+
+      | extend query_hash = strcat(''0x'', toupper(tohex(query_hash_signed)))
+
+      | where query_hash in ((querySummary | project query_hash))
+
+      | summarize occurrences = count() by query_hash, antipattern_type, logical_database_name
+
+      | extend occurrences_by_antipattern_type = strcat(antipattern_type, '': '', tostring(occurrences))
+
+      | summarize occurrences_by_antipattern_type = make_set(occurrences_by_antipattern_type)  by query_hash, logical_database_name
+
+      | join kind=inner querySummary on query_hash
+
+      | project DatabaseName=logical_database_name, QueryHash=query_hash, TotalQueryCPU_ms
+
+      | order by TotalQueryCPU_ms desc'
+- id: MI-performance-339
+  Topic: Useful-Kusto-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful-Kusto-queries
+  - Managed Instance Useful-Kusto-queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsWaitStats
+    ExecutedQuery: 'MonWiQdsWaitStats
+
+      | where LogicalServerName =~ ServerName
+
+      and database_name =~ DatabaseName
+
+      and originalEventTimestamp >= ago(daysAgo)
+
+      and query_hash =~ QueryHash
+
+      | summarize max_query_wait_time_ms=max(max_query_wait_time_ms) by wait_category, bin(originalEventTimestamp,1m), query_hash, query_plan_hash
+
+      | summarize wait_category=make_list(strcat(wait_category, '': '', max_query_wait_time_ms)), max_query_wait_time_ms=make_list(max_query_wait_time_ms)
+
+      by bin(originalEventTimestamp,1m), query_hash, query_plan_hash
+
+      | project originalEventTimestamp, query_hash, query_plan_hash, max_query_wait_type_desc = array_sort_desc(max_query_wait_time_ms, wait_category)[1])
+
+      on originalEventTimestamp, query_hash, query_plan_hash
+
+      | project originalEventTimestamp, query_hash, query_plan_hash, min_elapsed_time_s, max_elapsed_time_s, max_cpu_time_s, execution_count, max_logical_reads
+
+      , max_rowcount, max_dop, NumTimeouts, max_query_wait_type_desc'
+- id: MI-performance-340
+  Topic: Useful-Kusto-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful-Kusto-queries
+  - Managed Instance Useful-Kusto-queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: 'MonWiQdsExecStats
+
+      | where LogicalServerName =~ ServerName
+
+      and database_name =~ DatabaseName
+
+      | summarize by query_plan_hash
+
+      | join (MonWiQueryParamData
+
+      | where TIMESTAMP >= ago(1d)
+
+      | where LogicalServerName =~ ServerName
+
+      | where logical_database_name =~ DatabaseName
+
+      | project TIMESTAMP, compile_code, is_recompiled, is_cached, query_hash, query_plan_hash, statement_sql_hash
+
+      ) on query_plan_hash
+
+      | summarize count() by compile_code'
+- id: MI-performance-341
+  Topic: Useful-Kusto-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful-Kusto-queries
+  - Managed Instance Useful-Kusto-queries
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonWiQueryParamData
+    ExecutedQuery: 'MonWiQueryParamData
+
+      | where TIMESTAMP > ago({TimeRange})-6h and TIMESTAMP < now()+6h
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where NodeName == ''node_name''
+
+      | summarize count() by query_hash
+
+      | order by count_ desc
+
+      | take 20'
+- id: MI-performance-342
+  Topic: Useful-Kusto-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful-Kusto-queries
+  - Managed Instance Useful-Kusto-queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmTranActiveTransactions
+    ExecutedQuery: 'MonDmTranActiveTransactions
+
+      | where AppName !startswith ''b-'' and AppName !startswith ''v-''
+
+      | where AppName contains appname_name_input
+
+      | where TIMESTAMP >= startTime and TIMESTAMP < endTime
+
+      | where session_id != -1
+
+      | extend duration_hour = (end_utc_date - transaction_begin_time) / time(1h)
+
+      | summarize max_duration_hour = arg_max(duration_hour,
+
+      NodeName,
+
+      session_id,
+
+      transaction_id,
+
+      transaction_begin_time,
+
+      transaction_type,
+
+      transaction_state,
+
+      program_name'
+- id: MI-performance-343
+  Topic: Useful-Kusto-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful-Kusto-queries
+  - Managed Instance Useful-Kusto-queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: 'MonWiQdsExecStats
+
+      | where LogicalServerName =~ ServerName
+
+      and originalEventTimestamp between (StartTime..EndTime)
+
+      and database_name == Database
+
+      | extend Timeout = iif(exec_type == 3, ''Yes'',''No'')
+
+      , Error = iif(exec_type == 4, ''Yes'',''No'')
+
+      | summarize
+
+      ExecutionCount=sum(execution_count)
+
+      by bin(originalEventTimestamp,1h), statement_type
+
+      | render timechart'
+- id: MI-performance-345
+  Topic: Useful-Kusto-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful-Kusto-queries
+  - Managed Instance Useful-Kusto-queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: 'MonWiQdsExecStats
+
+      | where TIMESTAMP > ago(daysAgo)
+
+      | where LogicalServerName =~ ServerName
+
+      | summarize total_query_execution_count = sum(execution_count)
+
+      , timeout_query_count = sumif(execution_count, exec_type == 3)
+
+      , error_query_count = sumif(execution_count, exec_type == 4)
+
+      by bin(TIMESTAMP, 15min)
+
+      | sort by TIMESTAMP asc nulls last'
+- id: MI-performance-346
+  Topic: Useful-Kusto-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful-Kusto-queries
+  - Managed Instance Useful-Kusto-queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlMemoryClerkStats
+    ExecutedQuery: 'MonSqlMemoryClerkStats
+
+      | where LogicalServerName =~ ServerName
+
+      | where TIMESTAMP > ago(daysAgo)
+
+      | top-nested 5 of memory_clerk_type by sum(pages_kb) desc
+
+      ) on memory_clerk_type
+
+      | extend memory_clerk_type = iff(isnull(aggregated_memory_clerk_type), ''OTHERS'', memory_clerk_type)
+
+      | summarize MemoryInMB=sum(pages_kb)/1024 by bin(TIMESTAMP,AggInterval_do_NOT_change), memory_clerk_type
+
+      | project TIMESTAMP, memory_clerk_type, MemoryInMB
+
+      | order by TIMESTAMP asc
+
+      | render timechart'
+- id: MI-performance-347
+  Topic: Useful-Kusto-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful-Kusto-queries
+  - Managed Instance Useful-Kusto-queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: 'let endTime = now();
+let startTime = ago({TimeRange});
+MonWiQdsExecStats
+
+      | where (LogicalServerName =~ ServerName or server_name =~ ServerName)
+
+      and TIMESTAMP between (startTime..endTime)
+
+      | summarize MaxMemoryGrant_Total_MB = sum(max_query_memory_pages)/128, maxx= max(max_max_query_memory_pages)/128, execution_count=sum(execution_count)
+
+      by query_id, query_hash, bin(TIMESTAMP, Interval), database_name, max_dop, min_dop
+
+      | summarize MaxMemoryGrant_Total_MB=max(MaxMemoryGrant_Total_MB), MaxMemoryGrant_SingleExec_MB = max(maxx)
+
+      by query_id, query_hash, database_name, execution_count, max_dop, min_dop
+
+      | project database_name, query_id, query_hash, MaxMemoryGrant_Total_MB, MaxMemoryGrant_SingleExec_MB, execution_count, max_dop, min_dop
+
+      | order by MaxMemoryGrant_Total_MB desc'
+- id: MI-performance-348
+  Topic: Useful-Kusto-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful-Kusto-queries
+  - Managed Instance Useful-Kusto-queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsWaitStats
+    ExecutedQuery: 'MonWiQdsWaitStats
+
+      | where LogicalServerName =~ "{ServerName}" and database_name =~ "{DatabaseName}"
+
+      | where PreciseTimeStamp > ago(7d)
+
+      | where query_hash  =~ ''query_hash''
+
+      //| where query_plan_hash  =~ ''query_plan_hash''
+
+      | extend total_query_wait_time_second=round(total_query_wait_time_ms/1000.0,1)
+
+      | extend avg_query_wait_time_second=round(avg_query_wait_time_ms/1000.0,1)
+
+      | top-nested of query_hash by total_wait_time_secondOfAllWaitCategories=sum(total_query_wait_time_second) ,
+
+      top-nested 3 of wait_category by total_wait_time_secondOfEachWaitCategory=sum(total_query_wait_time_second)
+
+      | project query_hash,wait_category,total_wait_time_secondOfEachWaitCategory,total_wait_time_secondOfAllWaitCategories
+
+      | order by total_wait_time_secondOfAllWaitCategories'
+- id: MI-performance-349
+  Topic: Useful-Kusto-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful-Kusto-queries
+  - Managed Instance Useful-Kusto-queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: 'MonSqlRgHistory
+
+      | where TIMESTAMP > ago(1d)
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where event==''aggregated_virtual_files_io_history''
+
+      | summarize db_size_mb = sum(size_on_disk =(size_on_disk_bytes/1024/1024)) by TIMESTAMP, db_name, database_id'
+- id: MI-performance-350
+  Topic: Useful-Kusto-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful-Kusto-queries
+  - Managed Instance Useful-Kusto-queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedInstanceResourceStats
+    ExecutedQuery: 'MonManagedInstanceResourceStats
+
+      | where TIMESTAMP > ago(7d)
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | summarize
+
+      MaxStorageMB = max(reserved_storage_mb)
+
+      UsedStorageMB = max(storage_space_used_mb)'
+- id: MI-performance-351
+  Topic: Useful-Kusto-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful-Kusto-queries
+  - Managed Instance Useful-Kusto-queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: 'MonSqlRgHistory
+
+      | where TIMESTAMP > ago(15d)
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where database_id == 2 //database_id
+
+      | where file_path endswith "df"
+
+      | summarize file_size_gb = max(size_on_disk_bytes) / 1024.0 / 1024.0 / 1024.0 by bin(TIMESTAMP, 5m), file_path
+
+      | summarize sum(file_size_gb) by bin(TIMESTAMP, 5m)
+
+      | render timechart'
+- id: MI-performance-352
+  Topic: Useful-Kusto-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful-Kusto-queries
+  - Managed Instance Useful-Kusto-queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlTransactions
+    ExecutedQuery: 'MonSqlTransactions
+
+      | where TIMESTAMP >= TimeCheckStart and TIMESTAMP <= TimeCheckEnd
+
+      | where LogicalServerName == ServerName
+
+      | where database_id == toscalar(MonDmDbHadrReplicaStates
+
+      | where LogicalServerName =~ ServerName
+
+      | where logical_database_name =~ DatabaseName
+
+      | project database_id
+
+      | limit 1)
+
+      | where isnotnull(persisted_version_store_kb)
+
+      | project TIMESTAMP, PVS_size_in_GB = persisted_version_store_kb/(1024*1024)
+
+      | render timechart'
+- id: MI-performance-353
+  Topic: Useful-Kusto-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful-Kusto-queries
+  - Managed Instance Useful-Kusto-queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: '| extend example_message = strcat("The transaction log for database ''", '''', "'' is full due to ''", '''', "'' and the holdup lsn is (", '''', ")")
+
+      | extend error = tostring(coalesce(tolong(tostring(extract("Error: (\\d+),", 1, message))), -1)) // Extract the error code as a string and convert it to a long
+
+      | extend severity = tostring(coalesce(tolong(tostring(extract("Severity: (\\d+),", 1, message))), -1)) // Extract the severity as a string and convert it to a long
+
+      | extend state = tostring(coalesce(tolong(tostring(extract("State: (\\d+),", 1, message))), -1)) // Extract the state as a string and convert it to a long
+
+      | extend reason = tostring(extract(".*spid\\d+s*\\s+.+The transaction log for database ''(.+)'' is full due to ''(.+)'' and the holdup lsn is (.+)", 2, message))
+
+      | extend reason = iif(isempty(reason), tostring(extract(".*spid\\d+s*\\s+.+The transaction log for database ''(.+)'' is full due to (.+)", 2, message)), reason)
+
+      | join kind=inner (MonAnalyticsDBSnapshot
+
+      | where logical_server_name =~ ServerName
+
+      and logical_database_name =~ DatabaseName
+
+      and PreciseTimeStamp >= ago(1d)
+
+      | summarize by logical_database_guid=toupper(logical_database_id), logical_database_name)'
+- id: MI-performance-354
+  Topic: Useful-Kusto-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful-Kusto-queries
+  - Managed Instance Useful-Kusto-queries
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: 'let db = "{DatabaseName}"; let myAppName="appname";
+
+      let serverName = "{ServerName}";
+
+      let databaseName = "{DatabaseName}";
+
+      let physicaldbname = (MonAnalyticsDBSnapshot
+
+      | where LogicalServerName =~ "{ServerName}" or logical_server_name =~ "{ServerName}"
+
+      | where logical_database_name =~ "{DatabaseName}"
+
+      | summarize arg_max(TIMESTAMP,*) by logical_database_id
+
+      | project name=tolower(logical_database_id));
+
+      let PartitionStats=materialize(MonWiDmDbPartitionStats
+
+      | where AppName contains myAppName and logical_database_name !=''master'' and logical_database_name in (physicaldbname) and index_id in (0,1)
+
+      | summarize used_page_count=max(used_page_count), row_count=max(row_count) by database_id, logical_database_name, object_id, index_id, partition_number, data_date=bin(TIMESTAMP, 1d));
+
+      let FilteredResults=materialize(MonDatabaseMetadata
+
+      | where AppName contains myAppName and logical_db_name != ''master''
+
+      | where (table_name==''sysclsobjs'' and class==50) or (table_name==''sysschobjs'' and [''type'']==''U '') or (table_name==''sysidxstats'' and indid in (0,1))
+
+      | project TIMESTAMP, table_name, class, [''type''], id, name, nsid, indid);
+
+      let schemas=FilteredResults
+
+      | where (table_name==''sysclsobjs'' and class==50)
+
+      | summarize by schema_id=id, schema_name=tolower(name);
+
+      let tables=FilteredResults
+
+      | where (table_name==''sysschobjs'' and [''type'']==''U '')
+
+      | summarize by schema_id=nsid, object_id=id, table_name=name;
+
+      let indexes=FilteredResults
+
+      | where (table_name==''sysidxstats'' and indid in (0,1))
+
+      | extend index_type_desc=iff([''type'']==0, ''HEAP'', iff([''type'']==1, ''CLUSTERED'', iff([''type'']==5, ''CCI'', tostring([''type'']))))
+
+      | summarize by object_id=id,index_id=indid,index_type=type,index_type_desc;'
+- id: MI-performance-355
+  Topic: Useful-Kusto-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful-Kusto-queries
+  - Managed Instance Useful-Kusto-queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmIoVirtualFileStats
+    ExecutedQuery: 'MonDmIoVirtualFileStats
+
+      | where  originalEventTimestamp >= ago(daysAgo)
+
+      and LogicalServerName =~ ServerName
+
+      and database_id > 4
+
+      and type_desc == ''LOG'' //change to ROWS for datafile
+
+      | extend size_on_disk_gb = size_on_disk_bytes / 1024 / 1024 / 1024
+
+      | extend spaceused_gb=spaceused_mb / 1024
+
+      | project size_on_disk_gb, spaceused_gb, database_name=toupper(logical_database_id), originalEventTimestamp, type_desc
+
+      | join kind=inner (MonAnalyticsDBSnapshot
+
+      | where logical_server_name =~ ServerName
+
+      and logical_database_name =~ DatabaseName
+
+      and PreciseTimeStamp >= ago(daysAgo)
+
+      | summarize by database_name=toupper(logical_database_id), logical_database_name)'
+- id: MI-performance-356
+  Topic: Useful-Kusto-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful-Kusto-queries
+  - Managed Instance Useful-Kusto-queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: 'MonSqlRgHistory
+
+      | where TIMESTAMP > ago(12h)
+
+      | where LogicalServerName =~ "{ServerName}" and db_name == "database_name"
+
+      | where event == "aggregated_virtual_files_io_history"
+
+      | extend size_on_disk_gb = size_on_disk_bytes / 1024.0 / 1024.0 / 1024.0
+
+      | extend spaceused_gb=spaceused_mb / 1024.0
+
+      | extend maxsize_gb = max_size_mb/1024.0
+
+      | extend autogrowth_mb = ((growth*8)/1024.0)
+
+      | project TIMESTAMP, file_id, size_on_disk_gb, spaceused_gb, autogrowth_mb, maxsize_gb'
+- id: MI-performance-357
+  Topic: Useful-Kusto-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful-Kusto-queries
+  - Managed Instance Useful-Kusto-queries
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonSqlMemoryClerkStats
+    ExecutedQuery: 'MonSqlMemoryClerkStats
+
+      | where TIMESTAMP > ago({TimeRange}) and TIMESTAMP < now()
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where memory_clerk_type contains "SQLQERESERVATIONS" or memory_clerk_type contains "bufferpool"
+
+      | project originalEventTimestamp, memory_clerk_type, memory_gb = pages_kb / 1024.0 / 1024.0
+
+      | render timechart'
+- id: MI-performance-358
+  Topic: Useful-Kusto-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful-Kusto-queries
+  - Managed Instance Useful-Kusto-queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlShrinkInfo
+    ExecutedQuery: 'MonSqlShrinkInfo
+
+      | where TIMESTAMP > ago(daysAgo)
+
+      | where LogicalServerName =~ ServerName
+
+      |project TIMESTAMP, LogicalServerName, AppName, database_id, logical_database_name,file_id, shrink_id, tag, status
+
+      , target_mb = (toint(target_size)/128), file_size_mb = (toint(file_size)/128)
+
+      , diffingb = ((toint(file_size)-toint(target_size))*8/1024/1024), percent_complete, failure_reason, code_package_version
+
+      | order by TIMESTAMP asc'
+- id: MI-performance-359
+  Topic: Useful-Kusto-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful-Kusto-queries
+  - Managed Instance Useful-Kusto-queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmIoVirtualFileStats
+    ExecutedQuery: 'MonDmIoVirtualFileStats
+
+      | where originalEventTimestamp > lookBack
+
+      | project-rename tenant_ring_name = ClusterName, sql_instance_name = AppName, logical_server_name_1 = LogicalServerName, db_name = db_name
+
+      //| where tenant_ring_name == TenantRingName
+
+      | where sql_instance_name == SqlInstanceName
+
+      | where is_primary_replica == 1
+
+      | where type_desc == ''ROWS'' // logs _typically_ do not need to be shrunk
+
+      | project tenant_ring_name, file_id, sql_instance_name , NodeName , logical_server_name_1, db_name , type_desc, originalEventTimestamp, logical_database_id , spaceused_gb = round(spaceused_mb / 1024.0
+      2), max_size_mb , size_on_disk_Gb = round(size_on_disk_bytes / 1024.0 / 1024 / 1024, 2)
+
+      | summarize arg_max(originalEventTimestamp, *) by NodeName, logical_server_name_1, db_name, type_desc, file_id
+
+      | extend
+
+      free_percentage = round(iif(spaceused_gb == 0, 0.0 , 100 - spaceused_gb / (size_on_disk_Gb / 100)),2)
+
+      , shrinkPotentialGb = size_on_disk_Gb - spaceused_gb
+
+      | join kind= leftouter ('
+- id: MI-performance-360
+  Topic: Useful-Kusto-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful-Kusto-queries
+  - Managed Instance Useful-Kusto-queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: 'MonAnalyticsDBSnapshot
+
+      | where TIMESTAMP > lookBack
+
+      | where sql_instance_name == SqlInstanceName
+
+      | where tenant_ring_name == TenantRingName
+
+      | project-rename db_name = logical_database_name, logical_server_name_1 = logical_server_name
+
+      | summarize arg_max(TIMESTAMP, service_level_objective, physical_database_id) by tenant_ring_name, sql_instance_name, logical_server_name_1, db_name, logical_database_id
+
+      ) on tenant_ring_name, sql_instance_name , logical_server_name_1, logical_database_id //, db_name
+
+      //| project-away tenant_ring_name1, sql_instance_name1, logical_server_name_11, db_name1, logical_database_id1
+
+      | extend isWorthShrinking = (spaceused_gb * shrinkBuffer + 20 < size_on_disk_Gb)
+
+      | order by shrinkPotentialGb desc'
+- id: MI-performance-361
+  Topic: Useful-Kusto-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful-Kusto-queries
+  - Managed Instance Useful-Kusto-queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: 'MonAnalyticsDBSnapshot
+
+      | where LogicalServerName =~ "{ServerName}" or logical_server_name =~ "{ServerName}"
+
+      | summarize arg_max(TIMESTAMP,*) by logical_database_id
+
+      | project logical_database_name, create_time, create_mode'
+- id: MI-performance-362
+  Topic: Useful-Kusto-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful-Kusto-queries
+  - Managed Instance Useful-Kusto-queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDatabaseMetadata
+    ExecutedQuery: 'MonDatabaseMetadata
+
+      | where AppName !startswith ''b-'' and AppName !startswith ''v-''
+
+      | where TIMESTAMP > ago(daysAgo)
+
+      | where LogicalServerName =~ ServerName
+
+      //| where table_name== ''sysdbreg''
+
+      | extend is_parameterization_forced = (binary_and(status2, 0x08000000) == 0x08000000)
+
+      | extend is_auto_create_stats_on = (binary_and(status2, 0x1000000) == 0x1000000)
+
+      | extend is_auto_create_stats_incremental_on = (binary_and(status2, 0x00400000) == 0x00400000)
+
+      | extend is_auto_update_stats_async_on = (binary_and(status2, 0x80000000) == 0x80000000)
+
+      | extend is_auto_update_stats_async_on = (binary_and(status2, 0x80000000) == 0x80000000)
+
+      | extend is_query_store_on= (binary_and(status2, 0x00000010) == 0x00000010) //DBR_QDSENABLED
+
+      | extend is_auto_update_stats_on= iif((status2/1073741824) % 2 == 0, false, true)
+
+      | project TIMESTAMP, LogicalServerName, logical_db_name, cmptlevel, is_query_store_on, is_auto_create_stats_on, is_auto_update_stats_on, is_parameterization_forced, is_auto_update_stats_async_on,
+      is_auto_create_stats_incremental_on
+
+      | top 1 by TIMESTAMP desc
+
+      | project Packed = pack(
+
+      ''cmptlevel'', cmptlevel,
+
+      ''is_query_store_on'', is_query_store_on,
+
+      ''is_auto_create_stats_on'', is_auto_create_stats_on,
+
+      ''is_auto_update_stats_on'', is_auto_update_stats_on,
+
+      ''is_parameterization_forced'', is_parameterization_forced,
+
+      ''is_auto_update_stats_async_on'', is_auto_update_stats_async_on,
+
+      ''is_auto_create_stats_incremental_on'', is_auto_create_stats_incremental_on
+
+      )
+
+      | mvexpand Packed
+
+      | parse tostring(Packed) with ''{\x22''Property''\x22:''Value''}''
+
+      | project Property, Value
+
+      | order by Property asc'
+- id: MI-performance-363
+  Topic: Useful-Kusto-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful-Kusto-queries
+  - Managed Instance Useful-Kusto-queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: 'let DatabaseSnapshot = MonAnalyticsDBSnapshot
+
+      | where LogicalServerName =~ "{ServerName}" or logical_server_name =~ "{ServerName}"
+
+      | summarize arg_max(TIMESTAMP,*) by logical_database_id
+
+      | project name=tolower(logical_database_id), logical_database_name;'
+- id: MI-performance-364
+  Topic: Useful-Kusto-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful-Kusto-queries
+  - Managed Instance Useful-Kusto-queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDatabaseMetadata
+    ExecutedQuery: 'MonDatabaseMetadata
+
+      | where PreciseTimeStamp > ago(7d)
+
+      | where AppName !startswith ''b-'' and AppName !startswith ''v-''
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where table_name =~ ''sysdbreg''
+
+      | extend is_parameterization_forced = (binary_and(status2, 0x08000000) == 0x08000000)
+
+      | extend is_auto_create_stats_on = (binary_and(status2, 0x1000000) == 0x1000000)
+
+      | extend is_auto_create_stats_incremental_on = (binary_and(status2, 0x00400000) == 0x00400000)
+
+      | extend is_auto_update_stats_async_on = (binary_and(status2, 0x80000000) == 0x80000000)
+
+      | extend is_auto_update_stats_on = (binary_and(status2, 0x40000000) == 0x40000000)
+
+      | join kind=inner
+
+      ('
+- id: MI-performance-365
+  Topic: Useful-Kusto-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful-Kusto-queries
+  - Managed Instance Useful-Kusto-queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: AlrSQLErrorsReported
+    ExecutedQuery: 'AlrSQLErrorsReported
+
+      | where LogicalServerName =~ ServerName
+
+      | where database_name =~ DatabaseName
+
+      | project PreciseTimeStamp, database_name, error_number, state, session_id'
+- id: MI-performance-366
+  Topic: Useful-Kusto-queries
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful-Kusto-queries
+  - Managed Instance Useful-Kusto-queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlDump
+    ExecutedQuery: 'MonSqlDump
+
+      | where LogicalServerName =~ ServerName
+
+      | where TIMESTAMP > ago(7d)
+
+      | where CompleteFileName endswith ''.dmp''
+
+      | summarize TIMESTAMP = min(TIMESTAMP) by AppName, ClusterName, NodeName, CompleteFileName
+
+      | project TIMESTAMP, AppName, ClusterName, NodeName, CompleteFileName
+
+      | order by TIMESTAMP asc'
+- id: MI-performance-367
+  Topic: Waits-%2D-collect-and-description-of-common-wait-types
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Waits-%2D-collect-and-description-of-common-wait-types.md
+  Prompts:
+  - MI MI Waits   collect and description of common wait types
+  - Managed Instance Waits---collect-and-description-of-common-wait-types
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: 'MonWiQdsExecStats
+
+      | where TIMESTAMP > ago({TimeRange})-3d and TIMESTAMP <now()+3d
+
+      | where LogicalServerName =~ "{ServerName}" and database_name =~ "{DatabaseName}"
+
+      | extend statement = iif(statement_type in ("x_estypDelete", "x_estypInsert", "x_estypSelectInto", "x_estypMerge", "x_estypUpdate", "x_estypInsertExec", "x_estypInsertBulk"), "DML", ''Other'')
+
+      | summarize sum(execution_count) by bin(TIMESTAMP,15m), statement'
+- id: MI-performance-368
+  Topic: Waits-%2D-collect-and-description-of-common-wait-types
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Waits-%2D-collect-and-description-of-common-wait-types.md
+  Prompts:
+  - MI MI Waits   collect and description of common wait types
+  - Managed Instance Waits---collect-and-description-of-common-wait-types
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmCloudDatabaseWaitStats
+    ExecutedQuery: 'MonDmCloudDatabaseWaitStats
+
+      | where TIMESTAMP >= ago(1d)
+
+      | where LogicalServerName =~ "{ServerName}" and database_name =~ "{DatabaseName}"
+
+      | summarize sum(delta_wait_time_ms) by bin_at(TIMESTAMP, 1d, datetime(date_time)), wait_type
+
+      | order by TIMESTAMP, sum_delta_wait_time_ms desc
+
+      | render timechart'
+- id: MI-performance-369
+  Topic: Waits-%2D-collect-and-description-of-common-wait-types
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Performance-and-Query-Execution/Reference/Waits-%2D-collect-and-description-of-common-wait-types.md
+  Prompts:
+  - MI MI Waits   collect and description of common wait types
+  - Managed Instance Waits---collect-and-description-of-common-wait-types
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmCloudDatabaseWaitStats
+    ExecutedQuery: 'MonDmCloudDatabaseWaitStats
+
+      | where TIMESTAMP >= ago(1h)
+
+      | where LogicalServerName =~ "{ServerName}" and database_name =~ "{DatabaseName}" and (wait_type == "OLEDB" or wait_type == "WAIT_ON_SYNC_STATISTICS_REFRESH" or wait_type == "MSQL_DQ")
+
+      | summarize sum(delta_wait_time_ms) by bin_at(TIMESTAMP, 1d, datetime(2023-05-20 23:00)), wait_type
+
+      | order by TIMESTAMP, sum_delta_wait_time_ms desc
+
+      | render timechart'
+>>>>>>> Stashed changes

@@ -606,7 +606,7 @@ SqlSkills:
 
       | where ClusterName == ''<tenant-ring>''
 
-      | where NodeName == ''<node-name>''
+      | where NodeName == ''"{NodeName}"''
 
       | where CounterName endswith "Rejected Connections/sec"
 
@@ -1046,7 +1046,7 @@ SqlSkills:
 
       | where originalEventTimestamp > ago(3d)
 
-      | where logical_server_name == "<instance_from_incident_title>"
+      | where logical_server_name == ""{ServerName}""
 
       | where event == ''process_login_finish''
 
@@ -1069,9 +1069,9 @@ SqlSkills:
 
       | where TIMESTAMP > ago(1h)
 
-      | where ClusterName == "<tenant_ring_name>"
+      | where ClusterName == ""{ClusterName}""
 
-      | where NodeName == "<node_name>"
+      | where NodeName == ""{NodeName}""
 
       | where application_name contains "Worker.CL.WCOW"
 
@@ -1096,9 +1096,9 @@ SqlSkills:
 
       | where originalEventTimestamp > ago(1d)
 
-      | where ClusterName == "<tenant_ring_name>"
+      | where ClusterName == ""{ClusterName}""
 
-      | where logical_server_name =~ ''<managed_server_name>''
+      | where logical_server_name =~ ''"{ServerName}"''
 
       | where event == ''process_login_finish''
 
@@ -2477,9 +2477,9 @@ SqlSkills:
 
       | where TIMESTAMP > ago(48h)
 
-      | where ClusterName == ''<your-cluster-name>''
+      | where ClusterName == ''"{ClusterName}"''
 
-      | where NodeEntityName == ''<your-node-name>''
+      | where NodeEntityName == ''"{NodeName}"''
 
       | where Property == ''CrlWatchdog''
 
@@ -2504,9 +2504,9 @@ SqlSkills:
 
       | where TIMESTAMP > ago(2h)
 
-      | where ClusterName == ''<your-cluster-name>''
+      | where ClusterName == ''"{ClusterName}"''
 
-      | where NodeName == ''<your-node-name>''
+      | where NodeName == ''"{NodeName}"''
 
       | where component == "CrlWatchdog"
 
@@ -2529,9 +2529,9 @@ SqlSkills:
 
       | where TIMESTAMP > ago(15m)
 
-      | where ClusterName == ''<your-cluster-name>''
+      | where ClusterName == ''"{ClusterName}"''
 
-      | where node_name == ''<your-node-name>''
+      | where node_name == ''"{NodeName}"''
 
       | where event == ''node_state_report''
 
@@ -3316,6 +3316,638 @@ SqlSkills:
       ) on $left.logical_server_name == $right.name
 
       | extend client_minimal_tls_version = case('
+<<<<<<< Updated upstream
+=======
+- id: MI-networking-108
+  Topic: Workflow-for-Connect-via-Public-Endpoint
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Connectivity%3A-Configuration-and-How%2DTo-Questions/Connect-via-Public-Endpoint/Workflow-for-Connect-via-Public-Endpoint.md
+  Prompts:
+  - MI Workflow-for-Connect-via-Public-Endpoint
+  - Managed Instance Workflow-for-Connect-via-Public-Endpoint
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonEffectiveRoutes
+    ExecutedQuery: 'MonEffectiveRoutes
+
+      | where TIMESTAMP >= ago(1d)
+
+      | where subnet_resource_id =~ "X"
+
+      | summarize count(), min(originalEventTimestamp), max(originalEventTimestamp)
+
+      by name, source, status, address_prefixes, type, ip_addresses'
+- id: MI-networking-109
+  Topic: Error-47072-Login-failed-with-invalid-TLS-version-on-SQL-MI
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Connectivity%3A-Configuration-and-How%2DTo-Questions/Network-settings/Error-47072-Login-failed-with-invalid-TLS-version-on-SQL-MI.md
+  Prompts:
+  - MI Error-47072-Login-failed-with-invalid-TLS-version-on-SQL-MI
+  - Managed Instance Error-47072-Login-failed-with-invalid-TLS-version-on-SQL-MI
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'let server = "{ServerName}"; MonLogin
+
+      | where originalEventTimestamp >= ago(1d)
+
+      | where logical_server_name =~ server or LogicalServerName =~ server
+
+      | where database_name =~ database
+
+      | where error == 47072
+
+      | where event == ''process_login_finish''
+
+      | take 100
+
+      | project TIMESTAMP, error, [''state''], ssl_protocol, ssl_cipher, tds_flags
+
+      , tds_version, code_package_version, driver_version, driver_version_minor, connection_id'
+- id: MI-networking-110
+  Topic: Identify-customer-applications-using-TLS-version-lower-than-TLS-1.2
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Connectivity%3A-Configuration-and-How%2DTo-Questions/Network-settings/Identify-customer-applications-using-TLS-version-lower-than-TLS-1.2.md
+  Prompts:
+  - MI Identify-customer-applications-using-TLS-version-lower-than-TLS-1.2
+  - Managed Instance Identify-customer-applications-using-TLS-version-lower-than-TLS-1.2
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonGeoDRFailoverGroups
+    ExecutedQuery: 'let startTime = ago(60d);
+
+      let endTime = now();
+
+      let serverName = "{ServerName}";
+
+      let databaseName = '''';
+
+      let interval = iff(endTime-startTime > 7d, 10m, iff(endTime-startTime > 3d, 5m, 1m));
+
+      let FoGAliases = MonGeoDRFailoverGroups
+
+      | where TIMESTAMP between(startTime..endTime)
+
+      | where logical_server_name =~ "{ServerName}" or partner_server_name =~ "{ServerName}"
+
+      | distinct failover_group_name;'
+- id: MI-networking-111
+  Topic: Identify-customer-applications-using-TLS-version-lower-than-TLS-1.2
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Connectivity%3A-Configuration-and-How%2DTo-Questions/Network-settings/Identify-customer-applications-using-TLS-version-lower-than-TLS-1.2.md
+  Prompts:
+  - MI Identify-customer-applications-using-TLS-version-lower-than-TLS-1.2
+  - Managed Instance Identify-customer-applications-using-TLS-version-lower-than-TLS-1.2
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'let serverName = "{ServerName}"; let server = "{ServerName}"; let endTime = now();
+let startTime = ago({TimeRange});
+MonLogin
+
+      | where originalEventTimestamp between(startTime..endTime)
+
+      | where logical_server_name =~ "{ServerName}" or logical_server_name in (FoGAliases) or sni_server_name startswith strcat(serverName,''.'')
+
+      | where (isempty("{DatabaseName}") or database_name =~ "{DatabaseName}")
+
+      | where event == ''process_login_finish'''
+- id: MI-networking-112
+  Topic: Authentication-Metadata-Modes
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Connectivity%3A-Configuration-and-How%2DTo-Questions/Using-Windows-Authentication-for-Azure-AD-principals/Authentication-Metadata-Modes.md
+  Prompts:
+  - MI Authentication-Metadata-Modes
+  - Managed Instance Authentication-Metadata-Modes
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonFedAuthTicketService
+    ExecutedQuery: 'MonFedAuthTicketService
+
+      | where originalEventTimestamp >= ago(1d)
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where isnotempty(auth_metadata_lookup_mode)
+
+      | project originalEventTimestamp, event, fedauth_library_type, aad_retry_attempts, is_pooled_connection
+
+      , context_cache_lookup, context_cache_insert, external_group_expansion_required, auth_metadata_lookup_mode
+
+      | extend auth_metadata_lookup_mode = case(
+
+      auth_metadata_lookup_mode == 0, "EXTERNAL (AzureAD)"
+
+      auth_metadata_lookup_mode == 1, "PAIRED"
+
+      auth_metadata_lookup_mode == 2, "WINDOWS"
+
+      tostring(auth_metadata_lookup_mode)
+
+      )
+
+      | extend fedauth_library_type = case(
+
+      fedauth_library_type == 0, "SQL Server Auth"
+
+      fedauth_library_type == 2, "Token Base Auth"
+
+      fedauth_library_type == 3, "Entra ID Auth"
+
+      fedauth_library_type == 4, "Windows Auth"
+
+      tostring(fedauth_library_type)
+
+      )
+
+      | take 100'
+- id: MI-networking-113
+  Topic: Authentication-Metadata-Modes
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Connectivity%3A-Configuration-and-How%2DTo-Questions/Using-Windows-Authentication-for-Azure-AD-principals/Authentication-Metadata-Modes.md
+  Prompts:
+  - MI Authentication-Metadata-Modes
+  - Managed Instance Authentication-Metadata-Modes
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAzureActivDirService
+    ExecutedQuery: 'MonAzureActivDirService
+
+      | where sql_connection_id =~ ""{ConnectionId}""
+
+      | where operation_type == 10'
+- id: MI-networking-114
+  Topic: Error-18452
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Connectivity%3A-Configuration-and-How%2DTo-Questions/Using-Windows-Authentication-for-Azure-AD-principals/Error-18452.md
+  Prompts:
+  - MI Error-18452
+  - Managed Instance Error-18452
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'MonLogin
+
+      | where logical_server_name =~ "{ServerName}"//"rxc-per-fog"//| where error > 0
+
+      //| where database_name contains ""
+
+      //| where TIMESTAMP >= ago(1d)
+
+      | where TIMESTAMP between (datetime(2023-03-27 21:30)..datetime(2023-03-27 22:30))
+
+      | limit 10000
+
+      |project TIMESTAMP, logical_server_name, database_name, error, [''state''], severity, message'
+- id: MI-networking-115
+  Topic: Workflow-for-Using-Windows-Authentication-for-Azure-AD-principals
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Connectivity%3A-Configuration-and-How%2DTo-Questions/Using-Windows-Authentication-for-Azure-AD-principals/Workflow-for-Using-Windows-Authentication-for-Azure-AD-principals.md
+  Prompts:
+  - MI Workflow-for-Using-Windows-Authentication-for-Azure-AD-principals
+  - Managed Instance Workflow-for-Using-Windows-Authentication-for-Azure-AD-principals
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'let endTime = now();
+let startTime = ago({TimeRange});
+MonLogin
+
+      | where originalEventTimestamp between(startTime..endTime)
+
+      | where ClusterName =~ "{ClusterName}"
+
+      | where event == ''process_login_finish'' and isempty(logical_server_name)
+
+      | project originalEventTimestamp, NodeName, event, is_success, error, state, peer_address, extra_info
+
+      // | where error == 17830 and state == 11'
+- id: MI-networking-116
+  Topic: Error-40532-state-3
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Connectivity%3A-Troubleshoot-DB-Availability-and-Connection-Errors/Cannot-open-server-y-requested-by-the-login-(Error-40532-or-40615)/Error-40532-state-3.md
+  Prompts:
+  - MI Error-40532-state-3
+  - Managed Instance Error-40532-state-3
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'MonLogin
+
+      | where TIMESTAMP >= ago(1d)
+
+      | where ClusterName == "{trX.region.worker.database.windows.net}"
+
+      | where event == "process_login_finish"
+
+      | where AppTypeName startswith ''Gateway.PDC''
+
+      | where error == 40532 and [''state''] == 3
+
+      | summarize count() by error, state, server_name, logical_server_name, result, state_desc
+
+      | extend ServerNameWithoutPort1433 = replace(@''(\d+),1433'', @''\1'', server_name)
+
+      | extend IsIPV4 = isnotnull(parse_ipv4(ServerNameWithoutPort1433))'
+- id: MI-networking-117
+  Topic: Error-40532-state-4
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Connectivity%3A-Troubleshoot-DB-Availability-and-Connection-Errors/Cannot-open-server-y-requested-by-the-login-(Error-40532-or-40615)/Error-40532-state-4.md
+  Prompts:
+  - MI Error-40532-state-4
+  - Managed Instance Error-40532-state-4
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'let startTime = ago({TimeRange});
+MonLogin
+
+      | where originalEventTimestamp  between ({startTime}.. {endTIme})
+
+      |where logical_server_name == ""{FogAlias}"" or LogicalServerName == ""{FogAlias}""
+
+      | where event == "process_login_finish"
+
+      | summarize count(), min(TIMESTAMP), max(TIMESTAMP) by  is_success, package, bin(TIMESTAMP, 10min), error, state, state_desc'
+- id: MI-networking-118
+  Topic: Error-40532-state-4
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Connectivity%3A-Troubleshoot-DB-Availability-and-Connection-Errors/Cannot-open-server-y-requested-by-the-login-(Error-40532-or-40615)/Error-40532-state-4.md
+  Prompts:
+  - MI Error-40532-state-4
+  - Managed Instance Error-40532-state-4
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'let endTime = now();
+let startTime = ago({TimeRange});
+MonManagement
+
+      | where originalEventTimestamp between({startTime} .. {endTime})
+
+      | where request_id =~ ''4878BE85-DED9-415A-9B29-B22B35B898D5'' //request_id for scaling operation
+
+      | where state_machine_type in (''SqlAliasCacheRecordStateMachine'', ''AzureDnsRecordStateMachine'')
+
+      | where keys has '',{fogalias}''
+
+      | project originalEventTimestamp, state_machine_type, keys, event, old_state, new_state'
+- id: MI-networking-119
+  Topic: Error-40532-state-4
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Connectivity%3A-Troubleshoot-DB-Availability-and-Connection-Errors/Cannot-open-server-y-requested-by-the-login-(Error-40532-or-40615)/Error-40532-state-4.md
+  Prompts:
+  - MI Error-40532-state-4
+  - Managed Instance Error-40532-state-4
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'MonLogin
+
+      | where originalEventTimestamp >= timeWindow
+
+      | where logical_server_name =~ "{ServerName}"
+
+      | where AppTypeName startswith ''Gateway.PDC''
+
+      | where error == 40532 and state == 4
+
+      | project originalEventTimestamp, ClusterName, logical_server_name, server_name, error, state'
+- id: MI-networking-120
+  Topic: Troubleshooting-Guide-for-Connection-Timeout-in-Post%2DLogin-Phase-in-Azure-SQLMI
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Connectivity%3A-Troubleshoot-DB-Availability-and-Connection-Errors/Connection-timeouts/Troubleshooting-Guide-for-Connection-Timeout-in-Post%2DLogin-Phase-in-Azure-SQLMI.md
+  Prompts:
+  - MI MI Troubleshooting Guide for Connection Timeout in Post Login Phase in Azure SQLMI
+  - Managed Instance Troubleshooting-Guide-for-Connection-Timeout-in-Post-Login-Phase-in-Azure-SQLMI
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'MonLogin
+
+      | where TIMESTAMP >= ago({TimeRange})
+
+      | where TIMESTAMP <= now()
+
+      | where logical_server_name =~ "{ServerName}"
+
+      | where event == "process_login_finish"
+
+      | where (is_success == false)
+
+      | where error == 26078
+
+      | project TIMESTAMP, NodeName, package,logical_server_name, database_name, event, error, [''state''], peer_address, is_success, is_user_error, total_time_ms, enqueue_time_ms, netread_time_ms, ssl_time_ms
+      ssl_read_time_ms, lookup_error_code, lookup_state, fabric_node_name, conn_dup_result, message'
+- id: MI-networking-121
+  Topic: Workflow-for-Error-40613
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Connectivity%3A-Troubleshoot-DB-Availability-and-Connection-Errors/Database-x-on-server-y-is-not-currently-available-(Error-40613)/Workflow-for-Error-40613.md
+  Prompts:
+  - MI Workflow-for-Error-40613
+  - Managed Instance Workflow-for-Error-40613
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'MonLogin
+
+      | where TIMESTAMP >=ago(1d)
+
+      | where connection_id =~ ''930C8965-E5C1-4139-ACCE-B3E3F4529295''
+
+      | project originalEventTimestamp, NodeName, package, error, state, state_desc, logical_server_name, logical_database_name, LogicalServerName, database_name, server_name, connection_peer_id'
+- id: MI-networking-122
+  Topic: Workflow-for-Login-failed-(Error-18456)
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Connectivity%3A-Troubleshoot-DB-Availability-and-Connection-Errors/Login-failed-(Error-18456)/Workflow-for-Login-failed-(Error-18456).md
+  Prompts:
+  - MI Workflow-for-Login-failed-(Error-18456)
+  - Managed Instance Workflow-for-Login-failed-(Error-18456)
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: "| 1   |  |  | To make it harder for hackers to perform a guessing attack to login in, SQL DB always returns State = 1 in the error message sent to the client application\\. The SQL Server\
+      \ errorlog contains the original state for the error, but customers can't access the errorlog so they may have to call us for assistance\\. We can get the State/SubState from MonLogin\\.   | (x\\\
+      _elf) Default   |\n| 2   |  | User ID is not valid\\.   | The login (whether using SQL or Windows Authentication) does not exist\\. For Windows Auth, it likely means that the login hasn't explicitly\
+      \ been given access to SQL Server – which may mean it is not a member of an appropriate domain group\\. It could also mean that you've created a server\\-level login, mapped a database user with a\
+      \ different name to that login, and are trying to connect using the user name, not the login name\\. This is the same as State 5, but State 2 indicates that the login attempt came from a remote machine\\\
+      .   | (x\\_elf) SecGetLogin1   |\n| 3   |  |  |  | (x\\_elf) SecUnprotectMem1 |\n| 4   |  |  |  | (x\\_elf) SecUnprotectMem2 |\n| 5   | [Error 18456, State 5](https://supportability.visualstudio.com/AzureSQLDB/_wiki/wikis/AzureSQLDB.wiki/363112/Error-18456-State-5-Login-failed-for-user-'-token-identified-principal-')\
+      \  | User ID is not valid\\.   | Like state 2, the login does not exist in SQL Server, but the login attempt came from the local machine\\. For both state 2 and 5, prior to SQL Server 2008, the reason\
+      \ was not included in the error log – just the login failed message\\. And starting in Denali, for both state 2 and 5, this error can happen if you specify the correct username and password for a\
+      \ contained database user, but the wrong (or no) database\\. Note that if you are trying to connect to a contained database using the connection dialog in SSMS, and you try to <Browse server…> for\
+      \ the database instead of typing the name explicitly, you will first receive a prompt \"Browsing the available databases on the server requires connecting to the server\\. This may take a few moments\\\
+      . Would you like to continue?\" If the SQL auth credentials do not also match a login at the server level, you will then receive an error message, because your contained user does not have access\
+      \ to master\\.sys\\.databases\\. The error message in the UI is, \"Failed to connect to server <server>\\. (Microsoft\\.SqlServer\\.ConnectionInfo)Login failed for user '<x>'\\. (Microsoft SQL Server,\
+      \ Error: 18456)\\.\" The takeaway here: always specify the database name explicitly in the options tab of the connection dialog; do not use the browse feature\\. | (x\\_elf) SecGetLogin2   |\n| 6\
+      \   |  | Attempting to use an NT account name with SQL Server Authentication\\.   | This means you tried to specify SQL authentication but entered a Windows\\-style login in the form of Domain\\\\\
+      Username\\. Make sure you choose Windows Authentication (and you shouldn't have to enter your domain / username when using Win Auth unless you are using runas /netonly to launch Management Studio)\\\
+      . In SQL Server 2012 at least, you will only get state 6 if the domain\\\\username format matches an actual domain and username that SQL Server recognizes\\. If the domain is invalid or if the username\
+      \ isn't an actual Windows account in that domain, it will revert to state 5 (for local attempts) or state 2 (for remote attempts), since the login doesn't exist\\.   | (x\\_elf) SecLoginType   |\n\
+      | 7   |  | Login is disabled, and the password is incorrect\\.   | The login is disabled \\*and\\* the password is incorrect\\. This shows that password validation occurs first, since if the password\
+      \ is correct and the login is disabled, you get error 18470 (see state 1 above)\\. It's possible that your application is sending cached credentials and the password has been changed or reset in the\
+      \ meantime – you may try logging out and logging back in to refresh these credentials\\.   | (x\\_elf) SecLoginDisabled   |\n| 8   | [Error 18456, State 8](https://supportability\\.visualstudio\\\
+      .com/AzureSQLDB/\\_wiki/wikis/AzureSQLDB\\.wiki/395337/) | The password is incorrect\\.   | Probably the simplest of all: the password is incorrect (cASe sEnsiTiVitY catches a lot of folks here)\\\
+      . Note that it will say \"the login provided\" even if you attempted to connect as a contained database user but forgot to specify a database, specified the wrong database, or typed the password incorrectly\
+      \ – unless it finds a match, SQL Server doesn't have any idea you were attempting to use a contained database user\\.   | (x\\_elf) SecPasswordNotMatch   |\n| 9   |   | Password is not valid\\.  \
+      \ | Like state 2, I have not seen this in the wild\\. It allegedly means that the password violated a password policy check, but I tried creating a login conforming to a weak password policy, strengthened\
+      \ the policy, and I could still log in fine\\. And obviously you can't create a login with, or later set, a password that doesn't meet the policy\\. Let me know if you've seen it\\.   | (x\\_elf)\
+      \ SecBadPassword   |\n| 10   |  |  | This is a rather complicated variation on state 9; as KB \\#925744 states, this means that password checking could not be performed because the login is disabled\
+      \ or locked on the domain controller (note that if SQL Server does not start, it could be because the account that is locked or disabled is the SQL Server service account)\\. No reason or additional\
+      \ information is provided in the \"verbose\" message in the error log\\.   | (x\\_elf) SecBadResult   |\n| 11   |  |  | Login is valid, but server access failed\\. One possible cause of this error\
+      \ is when the Windows user has access to SQL Server as a member of the local administrators group, but Windows is not providing administrator credentials\\. To connect, start the connecting program\
+      \ using the Run as administrator option, and then add the Windows user to SQL Server as a specific login\\. See more at https://sqlblog\\.org/2020/07/28/troubleshooting\\-error\\-18456   | (x\\_elf)\
+      \ SecFCheckSrvAccess1   |\n| 12   |  |  | Login is valid login, but server access failed\\. See more at https://sqlblog\\.org/2020/07/28/troubleshooting\\-error\\-18456   | (x\\_elf) SecFCheckSrvAccess2\
+      \   |\n| 13   |  |  | This state occurs when the SQL Server service has been paused\\.   | (x\\_elf) LoginSrvPaused   |\n| 14   |  |  |  | (x\\_elf) LoginType  |\n| 15   | [Error 18456, State 15](https://supportability\\\
+      .visualstudio\\.com/AzureSQLDB/\\_wiki/wikis/AzureSQLDB\\.wiki/323244/)  |   |  | LoginSwitchDb  |\n| 16   |  |  | State 16, which only occurs prior to SQL Server 2008, means that the default database\
+      \ was inaccessible\\. This could be because the database has been removed, renamed, or is offline (it may be set to AutoClose)\\. This state does not indicate a reason in the error log\\. In 2008\
+      \ and beyond, this is reported as state 40 (see below), with a reason\\. In SQL Server 2005, this state may also be reported if the user's default database is online but the database they explicitly\
+      \ requested is not available for the reasons stated above (also see state 27)\\. If you get the pre\\-login handshake message, it may be because you've disabled SSL on the server\\.   | LoginSessDb\
+      \  |\n| 17   |  |   |  | (x\\_elf) LoginSessLang  |\n| 18   |  | Password must be changed\\.  |  | (x\\_elf) LoginChangePwd  |\n| 19   |  |  |  | (x\\_elf) LoginUnprotectMem  |\n| 20   |  |  |  |\
+      \ (x\\_elf) RedoLoginTrace  |\n| 21   |   |   |   | (x\\_elf) RedoLoginPause   |\n| 22   |   |   |   | (x\\_elf) RedoLoginInitSec   |\n| 23   |   | Access to server validation failed while revalidating\
+      \ the login on the connection\\.   | There could be a few reasons for state 23\\. The most common one is that connections are being attempted while the service is being shut down\\. However if this\
+      \ error occurs and it is not surrounded in the log by messages about SQL Server shutting down, and there is no companion reason along with the message, I would look at KB \\#937745, which implies\
+      \ that this could be the result of an overloaded server that can't service any additional logins because of connection pooling issues\\. Finally, if there \\*is\\* a companion reason, it may be the\
+      \ message indicated to the right, indicating that SQL Server was running as a valid domain account and, upon restarting, it can't validate the account because the domain controller is offline or the\
+      \ account is locked or no longer valid\\. Try changing the service account to LocalSystem until you can sort out the domain issues\\.   | (x\\_elf) RedoLoginAccessCheck   |\n| 24   |   |   |   | (x\\\
+      _elf) RedoLoginSwitchDb   |\n| 25   |   |   |   | (x\\_elf) RedoLoginUserInst   |\n| 26   |   |   |   | (x\\_elf) RedoLoginAttachDb   |\n| 27   |   |   |   | (x\\_elf) RedoLoginSessDb   |\n| 28  \
+      \ |   |   |   | (x\\_elf) RedoLoginSessLang   |\n| 29   |   |   |   | (x\\_elf) RedoLoginException   |\n| 30   |   |   |   | (x\\_elf) ReauthLoginTrace   |\n| 31   |   |   |   | (x\\_elf) ReauthLoginPause\
+      \   |\n| 32   |   |   |   | (x\\_elf) ReauthLoginInitSec   |\n| 33   |   |   |   | (x\\_elf) ReauthLoginAccessCheck   |\n| 34   |   |   |   | (x\\_elf) ReauthLoginSwitchDb   |\n| 35   |   |   |  \
+      \ | (x\\_elf) ReauthLoginException   |\n| 36   |   |   |   | (x\\_elf) LoginSessDb\\_GetDbNameAndSetItemDomain   |\n| 37   |   |   |   | (x\\_elf) LoginSessDb\\_IsNonShareLoginAllowed   |\n| 38  \
+      \ | [Error 18456, State 38](https://supportability.visualstudio.com/AzureSQLDB/_wiki/wikis/AzureSQLDB.wiki/395329/) | Could not find database requested by user\\.   | Note that this could also be\
+      \ a symptom of an orphaned login\\. After establishing mirroring, Availability Groups, log shipping, etc\\. you may have created a new login or associated a user with a login on the primary database\\\
+      . The database\\-level user information gets replayed on the secondary servers, but the login information does not\\. Everything will work fine – until you have a failover\\. In this situation, you\
+      \ will need to synchronize the login and user information\\.   | (x\\_elf) LoginSessDb\\_UseDbExplicit   |\n| 39   |   |   |   | (x\\_elf) LoginSessDb\\_GetDbNameFromPath   |\n| 40   |   | Failed\
+      \ to open the explicitly specified database\\.   | Usually this means the login's default database is offline (perhaps due to AutoClose) or no longer exists\\. Resolve by fixing the missing database,\
+      \ or changing the login's default database using ALTER LOGIN (for older versions, use sp\\_defaultdb, which is now deprecated)\\. This error and state can also mean that the Instance is on starting\
+      \ phase. Look at the workflow [Workflow for Instance-stop or start](https://supportability.visualstudio.com/AzureSQLMI/_wiki/wikis/AzureSQLMI/1740300/), especially at the TSG  [Instance stuck on starting\
+      \ state](https://supportability.visualstudio.com/AzureSQLMI/_wiki/wikis/AzureSQLMI/1740298/). The idea is to look at any errors while trying to bring the database(s) online   | (x\\_elf) LoginSessDb\\\
+      _UseDbImplicit   |\n| 41   |   |   |   | (x\\_elf) LoginSessDb\\_StoreDbColl   |\n| 42   |   |   |   | (x\\_elf) LoginSessDb\\_SameDbColl   |\n| 43   |   |   |   | (x\\_elf) LoginSessDb\\_SendLogShippingEnvChange\
+      \   |\n| 44   |   |   |   | (x\\_elf) RedoLoginSessDb\\_GetDbNameAndSetItemDomain   |\n| 45   |   |   |   | (x\\_elf) RedoLoginSessDb\\_IsNonShareLoginAllowed   |\n| 46   |   | Could not find database\
+      \ requested by user\\.   |   | (x\\_elf) RedoLoginSessDb\\_UseDbExplicit   |\n| 47   |   |   |   | (x\\_elf) RedoLoginSessDb\\_GetDbNameFromPath   |\n| 48   |   |   |   | (x\\_elf) RedoLoginSessDb\\\
+      _UseDbImplicit   |\n| 49   |   |   |   | (x\\_elf) RedoLoginSessDb\\_StoreDbColl   |\n| 50   |   | Current collation did not match the database's collation during connection reset\\.   | As the message\
+      \ implies, this can occur if the default collation for the login is incompatible with the collation of their default database (or the database explicitly specified in the connection string)\\. It\
+      \ can also happen if they are using a client tool like Management Studio which may, when they have been disconnected, try to connect to master upon reconnection instead of their default database\\\
+      .   | (x\\_elf) RedoLoginSessDb\\_SameDbColl   |\n| 51   |   | Failed to send an environment change notification to a log shipping partner node while revalidating the login\\.   |   | (x\\_elf) RedoLoginSessDb\\\
+      _SendLogShippingEnvChange   |\n| 52   |   |   |   | (x\\_elf) SecImpersonateClient   |\n| 53   |   |   |   | (x\\_elf) SecRevertToSelf   |\n| 54   |   |   |   | (x\\_elf) SecGetTokenInfo   |\n| 55\
+      \   |   |   |   | (x\\_elf) SecDuplicateToken   |\n| 56   | [Error 18456, State 58](https://supportability.visualstudio.com/AzureSQLDB/_wiki/wikis/AzureSQLDB.wiki/395345/Error-18456-State-58)  | Failed\
+      \ attempted retry of a process token validation\\.   |   | (x\\_elf) SecRetryProcessToken   |\n| 57   |   |   |   | (x\\_elf) LoginChangePwdErr   |\n| 58   |   | An attempt to login using SQL authentication\
+      \ failed\\. Server is configured for Windows authentication only\\.   | When SQL Server is set to use Windows Authentication only, and a client attempts to log in using SQL authentication\\. Another\
+      \ cause is when SIDs do not match\\.   | (x\\_elf) WinAuthOnlyErr   |\n| 59   |   |   |   | (x\\_elf) SecDbAuthGetLogin1   |\n| 60   |   |   |   | (x\\_elf) SecDbAuthUnprotectMem1   |\n| 61   |  \
+      \ |   |   | (x\\_elf) SecDbAuthUnprotectMem2   |\n| 62   | [Error 18456, State 62](https://supportability\\.visualstudio\\.com/AzureSQLDB/\\_wiki/wikis/AzureSQLDB\\.wiki/283175/)  |   | State 62 occurs\
+      \ when a Windows Authentication account tries to access a contained database, and the contained database exists, but the SIDs do not match\\.   | (x\\_elf) SecDbAuthGetLogin2   |\n| 63   |   |   |\
+      \   | (x\\_elf) SecDbAuthLoginType   |\n| 64   |   |   |   | (x\\_elf) SecDbAuthLoginDisabled   |\n| 65   |   | Password did not match that for the user provided\\. \\\\[Database: '<x>'\\\\]   | Contained\
+      \ user exists, the database is correct, but the password is invalid\\. This can also happen if you use a SQL login to connect to a contained database that has a contained user with the same name but\
+      \ a different password (one of several reasons this is not recommended)\\.   | (x\\_elf) SecDbAuthPasswordNotMatch   |\n| 66   |   |   |   | (x\\_elf) SecDbAuthBadPassword   |\n| 67   |   |   |  \
+      \ | (x\\_elf) SecDbAuthBadResult   |\n| 68   |   |   |   | (x\\_elf) SecDbAuthFCheckSrvAccess1   |\n| 69   |   |   |   | (x\\_elf) SecDbAuthFCheckSrvAccess2   |\n| 70   |   |   |   | (x\\_elf) SecOldHash\
+      \   |\n| 71   |   |   |   | (x\\_elf) LoginSessDb\\_ObtainRoutingEnvChange   |\n| 72   |   |   |   | (x\\_elf) DbAcceptsGatewayConnOnly   |\n| 73   |   | Failed to open the database {X} configured\
+      \ in the session recovery object while recovering the connection.  |   | (x\\_elf) SessionRecoveryUseDb   |\n| 74   |   |   |   | (x\\_elf) SessionRecoveryRedoLoginUseDb   |\n| 75   |   |   |   |\
+      \ (x\\_elf) SessionRecoveryLoginSameCol   |\n| 76   |   |   |   | (x\\_elf) SessionRecoveryIdentityInsert   |\n| 77   |   |   |   | (x\\_elf) SessionRecoveryIdentity   |\n| 78   |   |   |   | (x\\\
+      _elf) SecAccountLockedOut   |\n| 79   |   |   |   | (x\\_elf) SecAccountInvalidCertificate   |\n| 80   |   |   |   | (x\\_elf) LogicalMasterNotFound   |\n| 81   |   |   |   | (x\\_elf) RetrieveIpAddressFailed\
+      \   |\n| 82   |   |   |   | (x\\_elf) FirewallBlockedAddress   |\n| 83   |   |   |   | (x\\_elf) LogicalMasterOpenFailed   |\n| 84   |   |   |   | (x\\_elf) LogicalMasterConnectionFailed   |\n| 85\
+      \   |   |   |   | (x\\_elf) CloudExtensionAutheticateFailed   |\n| 86   |   |   |   | (x\\_elf) FedAuthRpsFetchCLSIDFromProgID   |\n| 87   |   |   |   | (x\\_elf) FedAuthRpsCoCreateInstance   |\n\
+      | 88   |   |   |   | (x\\_elf) FedAuthRpsInitialize   |\n| 89   |   |   |   | (x\\_elf) FedAuthRpsGetObjectRpsAuth   |\n| 90   |   |   |   | (x\\_elf) FedAuthRpsGetObjectRpsPropertyBag   |\n| 91 \
+      \  |   |   |   | (x\\_elf) FedAuthRpsAuthenticate   |\n| 92   |   |   |   | (x\\_elf) FedAuthRpsGetObjectRpsValidatedPropertyBag   |\n| 93   |   |   |   | (x\\_elf) FedAuthRpsSetAuthPolicyValue  \
+      \ |\n| 94   |   |   |   | (x\\_elf) FedAuthRpsValidateTicketWithAuthPolicy   |\n| 95   |   |   |   | (x\\_elf) FedAuthRpsFetchSessionKey   |\n| 96   |   |   |   | (x\\_elf) FedAuthRpsInitHMACHash\
+      \   |\n| 97   |   |   |   | (x\\_elf) FedAuthRpsComputeHMACHash   |\n| 98   |   |   |   | (x\\_elf) FedAuthRpsCompareHashSignature   |\n| 99   |   |   |   | (x\\_elf) FedAuthRpsFetchMemberIdLow  \
+      \ |\n| 100   |   |   |   | (x\\_elf) FedAuthRpsFetchMemberIdHigh   |\n| 101   |   |   |   | (x\\_elf) FedAuthRpsFetchMemberName   |\n| 102   | Potentially server issue\\. Escalate   | AAD failure\
+      \   |   | (x\\_elf) FedAuthAADCertOpenStore   |\n| 103   | Potentially server issue\\. Escalate   | AAD failure   |   | (x\\_elf) FedAuthAADCertFindInStore   |\n| 104   | Potentially server issue\\\
+      . Escalate   | AAD failure   |   | (x\\_elf) FedAuthAADInitializeErrorForProxy   |\n| 105   | Potentially server issue\\. Escalate   | AAD failure   |   | (x\\_elf) FedAuthAADCreateServiceProxy  \
+      \ |\n| 106   | Potentially server issue\\. Escalate   | AAD failure   |   | (x\\_elf) FedAuthAADOpenServiceProxy   |\n| 107   | Potentially server issue\\. Escalate   | AAD failure   |   | (x\\_elf)\
+      \ FedAuthAADCreateHeapForGroupLookup   |\n| 108   | Potentially server issue\\. Escalate   | AAD failure   |   | (x\\_elf) FedAuthAADInitializeErrorForGroupLookup   |\n| 109   | Potentially server\
+      \ issue\\. Escalate   | AAD failure   |   | (x\\_elf) FedAuthAADGroupLookup   |\n| 110   | Should not fire\\. Escalate   | AAD failure   |   | (x\\_elf) FedAuthAADValidateFederatedContext   |\n| 111\
+      \   | Unknown issue\\. Escalate   | AAD failure   |   | (x\\_elf) FedAuthAADUnknown   |\n| 112   |   |   |   | (x\\_elf) DosGuardFailure   |\n| 113   | [Error 18456, State 113](https://supportability\\\
+      .visualstudio\\.com/AzureSQLDB/\\_wiki/wikis/AzureSQLDB\\.wiki/372553/) |   |   | (x\\_elf) DosGuardRejectedConnection   |\n| 114   |   |   |   | (x\\_elf) RetrieveServerFirewallRulesFailed   |\n\
+      | 115   |   |   |   | (x\\_elf) CloudExtensionAuthenticationUnexpectedFailure   |\n| 116   |   |   |   | (x\\_elf) FedAuthGetHMACSignatureForFeatureAck   |\n| 117   | Should not fire\\. Escalate \
+      \  |   |   | (x\\_elf) FedAuthNonSDSNonMicrosoftConnection   |\n| 118   |   |   |   | (x\\_elf) FedAuthUnSupportedLibrary   |\n| 119   | Validate the access token\\.   |   |   | (x\\_elf) FedAuthUnSupportedTicketType\
+      \   |\n| 120   | Should not fire\\. Escalate   |   |   | (x\\_elf) FedAuthFeatureSwitchOff   |\n| 121   |   |   |   | (x\\_elf) FedAuthAADGetMaxHeapSizeForGroupsFromConfig   |\n| 122   | [Error 18456,\
+      \ State 122](https://supportability.visualstudio.com/AzureSQLDB/_wiki/wikis/AzureSQLDB.wiki/395326/) | Failure due to empty user name or password\\.   |   | (x\\_elf) CloudEmptyUserName   |\n| 123\
+      \   | [Error 18456, State 123](https://supportability.visualstudio.com/AzureSQLDB/_wiki/wikis/AzureSQLDB.wiki/395327/) | Failure due to empty user name or password\\.   |   | (x\\_elf) CloudEmptyPassword\
+      \   |\n| 124   | [Error 18456, State 124](https://supportability.visualstudio.com/AzureSQLDB/_wiki/wikis/AzureSQLDB.wiki/395328/) | Failure due to empty user name or password\\.   |   | (x\\_elf)\
+      \ CloudEmptyPasswordPreTDS7   |\n| 125   |  |   |   | (x\\_elf) OpenUserDbFailed   |\n| 126   | [Error 18456, State 126](https://supportability.visualstudio.com/AzureSQLDB/_wiki/wikis/AzureSQLDB.wiki/395325/)\
+      \ | Database requested by user does not exist\\.   |   | LoginSessDb\\_DbNotFound   |\n| 127   | Availability issue\\. Check for potential SQL Azure outages\\.   |   |   | (x\\_elf) LoginSessDb\\\
+      _DbUnavailable   |\n| 128   |   |   |   | (x\\_elf) RetrieveDatabaseFirewallRulesFailed   |\n| 129   |   |   |   | (x\\_elf) FindLoginForContainedDBAuthUnexpectedFailure   |\n| 130   |   |   |   |\
+      \ (x\\_elf) FirewallBlockedAddressAllowAzureIpRulePresent   |\n| 131   |   |   |   | (x\\_elf) CloudUnsecuredConnectionDisallowed   |\n| 132   | [Error 18456, State 132](https://supportability.visualstudio.com/AzureSQLDB/_wiki/wikis/AzureSQLDB.wiki/394764/)\
+      \ | AAD failure\\. See substates for more information\\.   |   | FedAuthAADLoginJWTUserError   |\n| 133   | Potentially server issue\\. Escalate   | AAD failure\\.   |   | (x\\_elf) FedAuthAADLoginJWTSystemError\
+      \   |\n| 134   |   |   |   | (x\\_elf) LoginSessDb\\_DbRecovering   |\n| 135   |   |   |   | (x\\_elf) WinAuthNotSupportedError   |\n| 136   |   |   |   | (x\\_elf) UseDbFailedInRetrieveDatabaseFirewallRules\
+      \   |\n| 137   |   |   |   | (x\\_elf) DenyExternalConnectionsOn   |\n| 138   |   |   |   | (x\\_elf) ClientDisconnectDuringFedAuthProcessing   |\n| 139   |   |   |   | (x\\_elf) BadCrossInstanceConnection\
+      \   |\n| 140   |   |   |   | (x\\_elf) BadCrossInstanceDatabase   |\n| 141   |   |   |   | (x\\_elf) BadCrossInstanceNoLoginTokenExtension   |\n| 142   |   |   |   | (x\\_elf) BadCrossInstanceBadLoginTokenExtension\
+      \   |\n| 143   |   |   |   | (x\\_elf) Deactivating   |\n| 144   |   |   |   | (x\\_elf) SecFCheckSrvAccessLoginDisabledWindowsAuth   |\n| 145   |   |   |   | (x\\_elf) SecFCheckSrvAccessLoginDisabledSQLAuth\
+      \   |\n| 146   | [Error 18456 state 146](https://supportability.visualstudio.com/AzureSQLMI/_wiki/wikis/AzureSQLMI/1740231/)  | Token\\-based server access validation failed with an infrastructure\
+      \ error\\. Login lacks Connect SQL permission\\.   |   | (x\\_elf) SecFCheckSrvAccessNoConnectSQLPermissionWindowsAuth   |\n| 147   |  [Error 18456 state 147](https://supportability.visualstudio.com/AzureSQLDB/_wiki/wikis/AzureSQLDB.wiki/618458/)\
+      \ | Login\\-based server access validation failed with an infrastructure error\\. Login lacks Connect SQL permission\\.   |   | (x\\_elf) SecFCheckSrvAccessNoConnectSQLPermissionSQLAuth   |\n| 148\
+      \   |   | Token\\-based server access validation failed with an infrastructure error\\. Login lacks connect endpoint permission\\. |   | (x\\_elf) SecFCheckSrvAccessNoConnectEndpointPermissionWindowsAuth\
+      \   |\n| 149   |   | Login\\-based server access validation failed with an infrastructure error\\. Login lacks connect endpoint permission\\. |   | (x\\_elf) SecFCheckSrvAccessNoConnectEndpointPermissionSQLAuth\
+      \   |\n| 150   |   |   |   | (x\\_elf) VnetFirewallBlockedAddress   |\n| 151   |   |   |   | (x\\_elf) ServerVnetFirewallRuleCopyAddressFailed   |\n| 152   |   |   |   | (x\\_elf) ServerVnetFirewallRuleIpv6ParsingFailed\
+      \   |\n| 153   |   |   |   | (x\\_elf) ServerVnetFirewallRuleVnetParsingFailed   |\n| 154   |   |   |   | (x\\_elf) LookupVnetFirewallRulesFailed   |\n| 155   |   |   |   | (x\\_elf) LookupCountOfVnetFirewallRulesFailed\
+      \   |\n| 156   |   |   |   | (x\\_elf) VnetFirewallBlockedAddressDueToNonVnetLogin   |\n| 157   |   |   |   | (x\\_elf) VnetDatabaseFirewallBlockedAddressDueToVnetLogin   |\n| 158   |   |   |   |\
+      \ (x\\_elf) CheckFirewallRulesFailedVnetAddressUnexpected   |\n| 159   |   |   |   | (x\\_elf) LookupVnetFirewallRulesChekingAllowAllIPsFailed   |\n| 160   |   |   |   | (x\\_elf) VnetCAPeerAddressSwapFailed\
+      \   |\n| 161   |   |   |   | (x\\_elf) SNITDSBadFormat   |\n| 162   |   |   |   | (x\\_elf) ReplicatedMasterNotReady   |\n| 163   |   |   |   | (x\\_el) VnetInterfaceEndpointsListExistsVnetIdLockTimeout\
+      \   |\n| 164   |   |   |   | (x\\_el)VnetInterfaceEndpointsListExistsResourceIdLockTimeout |\n| 165   |   |   |   | (x\\_el)VnetInterfaceEndpointsMismatch   |\n| 166   |   |   |   | (x\\_el)VnetInterfaceEndpointsUnexpected\
+      \   |\n| 167   |   |   |   | (x\\_el)VnetInterfaceEndpointsDbLevelAllowAllAzureBlocked   |\n| 168   |   |   |   | (x\\_elf) VldbPageServerUnexpectedConnection   |\n| 169   |   |   |   | (x\\_elf)\
+      \ ReplicatedMasterNotOnline   |\n| 170   |   | Azure Active Directory only authentication is enabled. |   | (x\\_elf) AadOnlyAuthenicationEnabled   |\n| 171   |   |   |   | (x\\_elf) InvalidTlsVersion\
+      \   |\n| 172   |   |   |   | (x\\_elf) PublicDataEndpointFeature   |\n| 173   |   |   |   | (x\\_elf) SqlDevopsInvalidPrincipalTypeOnPort   |\n| 174   |   |   |   | (x\\_elf) InvalidFeatureExtOffset\
+      \   |\n| 175   |   |   |   | (x\\_elf) AzureSqlDnsFeatureExtParsingFailure   |\n| 176   |   |   |   | (x\\_elf) SecSqlPoolNameFailure                           |\n| 177   |   |   |   | (x\\_elf) SecSqlPoolAccessNoConnectPermissionSQLAuth\
+      \      |\n| 178   |   |   |   | (x\\_elf) SecSqlPoolAccessNoConnectPermissionWindowsAuth  |\n| 179   |   |   |   | (x\\_elf) LoginFailedToDWReservedDatabase                 |\n| 180   |   |   |  \
+      \ | (x\\_elf) RetrieveIpv6AddressFailed                       |\n| 181   |   |   |   | (x\\_elf) RetrieveIpv6ServerFirewallRulesFailed           |\n| 182   |   |   |   | (x\\_elf) RetrieveIpv6DatabaseFirewallRulesFailed\
+      \         |\n| 183   |   |   |   | (x\\_elf) PublicIpv6LoginDisabled                         |\n| 184   |   |   |   | (x\\_elf) PublicIpv4MappedIpv6LoginDisabled               |\n| 185   |   |   |\
+      \   | (x\\_elf) RetrieveIpv4FromIpv4MappedIpv6Ipv6AddressFailed |\n| 186   |   |   |   | (x\\_elf) AzureKerberosFeatureSwitchOff                   |\n| 187   |   |   |   | (x\\_elf) AzureKerberosAADUserError\
+      \                       |\n| 188   | [Error 18456 state 188](https://supportability.visualstudio.com/AzureSQLMI/_wiki/wikis/AzureSQLMI/1740233/)  | There was an internal error while attempting Windows\
+      \ Authentication for Azure AD Principals  |   | (x\\_elf) AzureKerberosAADSystemError                     |\n| 189   |   |   |   | (x\\_elf) ContainedDBAuthDisabled1                        |\n| 190\
+      \   |   |   |   | (x\\_elf) ContainedDBAuthDisabled2                        |\n| 191   |   |   |   | (x\\_elf) ContainedDBAuthDisabled3                        |\n| 192   |   |   |   | (x\\_elf) NetworkSecurityPerimeterFailed\
+      \                  |\n| 193   |   |   |   | (x\\_elf) ExternalConnectionDisallowed                    |\n| 194   |   |   |   | (x\\_elf) FCheckSrvAccessFailureDueToNoConnectRBACDenied  |\n| 195  \
+      \ |   |   |   | (x\\_elf) MwcTokenMalformed                               |\n| 196   |   |   |   | (x\\_elf) MwcIncorrectToken                               |\n| 197   |   |   |   | (x\\_elf) MwcInvalidDatabaseForPerms\
+      \                      |\n| 198   |   |   |   | (x\\_elf) MwcInsufficientLoginPerms                       |\n| 199   |   |   |   | (x\\_elf) TridentSqlAuthLoginNotSupported                 |\n| 200\
+      \   |   |   |   | (x\\_elf) SecuredByPerimeterButNotInPerimeter             |\n| 201   |   |   |   | (x\\_elf) LoginFailedMpdw                                 |\n| 202   |   |   |   | (x\\_elf) LoginAckFailedMpdw\
+      \                              |\n| 203   |   |   |   | (x\\_elf) SpinnakerLoginBlocked_ForcePauseFSNotEnabled    |\n| 204   |   |   |   | (x\\_elf) SpinnakerLoginBlocked_NotEligibleForForcePause\
+      \  |\n| 205   |   |   |   | (x\\_elf) SpinnakerLoginBlocked_FreeMonthlyCreditsExpired |\n| 206   |   |   |   | (x\\_elf) ConnectionDeniedSloUpdateInProgress             |\n| 207   |   |   |   | (x\\\
+      _elf) ConnectionDeniedGeoFailoverInProgress           |\n| 208   |   |   |   | (x\\_elf) ConnectionDeniedDatabaseIsDropping              |\n| 209   |   |   |   | (x\\_elf) LoginMetadataLocksUnavailable\
+      \                   |\n| 210   |   |   |   | (x\\_elf) DatabaseIsInFailover                            |\n| 211   |   |   |   | (x\\_elf) AccessRejectedForUserConnections,               |\n| 231 \
+      \  |   |   |   | (e\\_lfuf) CannotVerifyDBExplicit                        |\n| 232   |   |   |   | (e\\_lfuf) CannotVerifyDBDefault                         |\n| 233   |   |   |   | (e\\_lfuf) TokenExpired\
+      \                                  |\n| 234   |   |   |   | (e\\_lfuf) InvalidToken                                  |\n| 235   |   |   |   | (e\\_lfuf) UnacceptableToken\t                       \
+      \   |\n| 236   |   |   |   | (e\\_lfuf) AADOnlyAuthenticationEnabled                  |\n| 237   |   |   |   | (e\\_lfuf) AzureKerberosAADNoServicePrincipal            |\n| 238   |   |   |   | (e\\\
+      _lfuf) AzureKerberosAADNoPermissions                 |\n| 239   |   |   |   | (e\\_lfuf) e_lfufAzureKerberosCAPolicy                   |"
+- id: MI-networking-123
+  Topic: Error-926%3A-Database-'X'-cannot-be-opened.-It-has-been-marked-SUSPECT-by-recovery
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Connectivity%3A-Troubleshoot-DB-Availability-and-Connection-Errors/Other-error-not-listed/Error-926%3A-Database-'X'-cannot-be-opened.-It-has-been-marked-SUSPECT-by-recovery.md
+  Prompts:
+  - MI MI Error 926: Database 'X' cannot be opened. It has been marked SUSPECT by recovery
+  - Managed Instance Error-926:-Database-'X'-cannot-be-opened.-It-has-been-marked-SUSPECT-by-recovery
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'let instanceName = "{ServerName}"; let endTime = now();
+let startTime = ago({TimeRange});
+MonSQLSystemHealth
+
+      | where originalEventTimestamp between (startTime .. endTime)
+
+      | where LogicalServerName == tolower(instanceName)
+
+      | where message has "Error: 926"
+
+      | project originalEventTimestamp, NodeName, AppName, message'
+- id: MI-networking-124
+  Topic: Verification-of-Availability-metrics-graph-on-portal
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Connectivity%3A-Troubleshoot-DB-Availability-and-Connection-Errors/Resource-Health-events/Verification-of-Availability-metrics-graph-on-portal.md
+  Prompts:
+  - MI Verification-of-Availability-metrics-graph-on-portal
+  - Managed Instance Verification-of-Availability-metrics-graph-on-portal
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'let db = "{DatabaseName}"; MonLogin
+
+      | where TIMESTAMP between (datetime(2024-01-07 00:01:00) .. datetime(2024-01-08 09:10:00))
+
+      | where logical_server_name =~ "" and database_name =~ "" and event =~ "process_login_finish"
+
+      //| summarize  min(TIMESTAMP) , max(TIMESTAMP), count() by error, state, package, is_success, is_user_error, database_name, bin(TIMESTAMP, 1h)
+
+      | project TIMESTAMP, error ,state, package, is_success, is_user_error, database_name
+
+      | where not (is_success == ''False'' and error == 0)
+
+      | where (package in (''xdbhost'',''xdbgateway'') and is_success == ''False'' ) or package == ''sqlserver''
+
+      //| summarize  min(TIMESTAMP) , max(TIMESTAMP), count() by error, state, package, is_success, is_user_error//, bin(TIMESTAMP, 1m)
+
+      | summarize min(TIMESTAMP) , max(TIMESTAMP), count(), make_set(is_user_error), make_set(is_success) by bin(TIMESTAMP, 1m), database_name
+
+      | where set_is_user_error !contains "true" and set_is_success !contains "true"
+
+      | extend IST = TIMESTAMP + 330m // To convert the timestamp to local time.'
+- id: MI-networking-125
+  Topic: How-to-check-if-SQL-MI-DevOps-Policies-are-enabled%3F
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Security,-Privacy-and-Compliance/Access-Control/How-to-check-if-SQL-MI-DevOps-Policies-are-enabled%3F.md
+  Prompts:
+  - MI MI How to check if SQL MI DevOps Policies are enabled?
+  - Managed Instance How-to-check-if-SQL-MI-DevOps-Policies-are-enabled%3F
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSecurityEvents
+    ExecutedQuery: 'MonSecurityEvents
+
+      | where originalEventTimestamp > ago(1h)
+
+      | where logical_server_name == ''"{ServerName}"'' or LogicalServerName == ''"{ServerName}"''
+
+      | where AppTypeName == ''Worker.CL'' or AppTypeName  == ''Worker.CL.WCOW''
+
+      | project originalEventTimestamp, database_id, external_governance_decision, data_action, object_name, schema_name`'
+- id: MI-networking-126
+  Topic: How-to-check-if-SQL-MI-DevOps-Policies-are-enabled%3F
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Security,-Privacy-and-Compliance/Access-Control/How-to-check-if-SQL-MI-DevOps-Policies-are-enabled%3F.md
+  Prompts:
+  - MI MI How to check if SQL MI DevOps Policies are enabled?
+  - Managed Instance How-to-check-if-SQL-MI-DevOps-Policies-are-enabled%3F
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonExternalGovernance
+    ExecutedQuery: '`MonExternalGovernance
+
+      | where ClusterName == ''"{ClusterName}"'''
+- id: MI-networking-127
+  Topic: How-to-check-if-SQL-MI-DevOps-Policies-are-enabled%3F
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Security,-Privacy-and-Compliance/Access-Control/How-to-check-if-SQL-MI-DevOps-Policies-are-enabled%3F.md
+  Prompts:
+  - MI MI How to check if SQL MI DevOps Policies are enabled?
+  - Managed Instance How-to-check-if-SQL-MI-DevOps-Policies-are-enabled%3F
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'MonLogin
+
+      | where logical_server_name == ''"{ServerName}"'' or LogicalServerName == ''"{ServerName}"''
+
+      | summarize count() by external_governance_policy_authorization'
+- id: MI-networking-128
+  Topic: Managed-instance-unavailable-after-upgrade-due-to-msdb-%2D-system-schema-owning-jobs
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Security,-Privacy-and-Compliance/Access-Control/Managed-instance-unavailable-after-upgrade-due-to-msdb-%2D-system-schema-owning-jobs.md
+  Prompts:
+  - MI MI Managed instance unavailable after upgrade due to msdb   system schema owning jobs
+  - Managed Instance Managed-instance-unavailable-after-upgrade-due-to-msdb---system-schema-owning-jobs
+  CustomizedParameters:
+  - AppName
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where PreciseTimeStamp > ago(30m)
+
+      | where AppName == "{AppName}" or LogicalServerName =~ "{ServerName}"
+
+      | where message contains "Error:"
+
+      | project TIMESTAMP, AppName, NodeName, error_id, message'
+>>>>>>> Stashed changes
 - id: MI-networking-129
   Topic: live-site-runners-and-monitors
   Source: TSG-SQL-MI-Networking/content/operational/live-site-runners-and-monitors/live-site-runners-and-monitors.md
@@ -3490,4 +4122,318 @@ SqlSkills:
 
       | Connectivity/Networking SLI Monitor | Completed | Completed | Maturing SLI | Owned by NW team |
 
+<<<<<<< Updated upstream
       | Login Success Monitor | Completed | Completed | Active | Not planned for sev 2 |'
+=======
+      | project PreciseTimeStamp, event, object_id, verify_all_tables, from_storage, is_successful, total_verification_time_seconds, verification_time_seconds, database_ledger_verification_time_seconds
+      = database_ledger_verification_time_seconds / 1000'
+- id: MI-networking-132
+  Topic: Kusto-Telemetry-for-troubleshooting-common-issues-for-SQL-Ledger
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Security,-Privacy-and-Compliance/SQL-Ledger/Kusto-Telemetry-for-troubleshooting-common-issues-for-SQL-Ledger.md
+  Prompts:
+  - MI Kusto-Telemetry-for-troubleshooting-common-issues-for-SQL-Ledger
+  - Managed Instance Kusto-Telemetry-for-troubleshooting-common-issues-for-SQL-Ledger
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSecurityEvents
+    ExecutedQuery: 'MonSecurityEvents
+
+      | where LogicalServerName =~ "{ServerName}" and logical_database_name =~ "{DatabaseName}"
+
+      | where event contains "verification"
+
+      | where is_successful == false
+
+      | project PreciseTimeStamp, event, object_id, verify_all_tables, from_storage, is_append_only, error_code, input_error, digest_verification_failed, inter_block_verification_failed, intra_block_verification_failed'
+- id: MI-networking-133
+  Topic: Kusto-Telemetry-for-troubleshooting-common-issues-for-SQL-Ledger
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Security,-Privacy-and-Compliance/SQL-Ledger/Kusto-Telemetry-for-troubleshooting-common-issues-for-SQL-Ledger.md
+  Prompts:
+  - MI Kusto-Telemetry-for-troubleshooting-common-issues-for-SQL-Ledger
+  - Managed Instance Kusto-Telemetry-for-troubleshooting-common-issues-for-SQL-Ledger
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSecurityEvents
+    ExecutedQuery: 'MonSecurityEvents
+
+      | where LogicalServerName =~ "{ServerName}" and logical_database_name =~ "{DatabaseName}"
+
+      | where event startswith "ledger_digest_upload_" // Success or failure: ledger_digest_upload_success, ledger_digest_upload_failed
+
+      | project PreciseTimeStamp, event, error, error_description, state, storage_type'
+- id: MI-networking-134
+  Topic: Kusto-Telemetry-for-troubleshooting-common-issues-for-SQL-Ledger
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Security,-Privacy-and-Compliance/SQL-Ledger/Kusto-Telemetry-for-troubleshooting-common-issues-for-SQL-Ledger.md
+  Prompts:
+  - MI Kusto-Telemetry-for-troubleshooting-common-issues-for-SQL-Ledger
+  - Managed Instance Kusto-Telemetry-for-troubleshooting-common-issues-for-SQL-Ledger
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSecurityEvents
+    ExecutedQuery: 'MonSecurityEvents
+
+      | where LogicalServerName =~ "{ServerName}" and logical_database_name =~ "{DatabaseName}"
+
+      | where event == "ledger_settings"
+
+      | project PreciseTimeStamp, is_ledger_enabled, is_ledger_database, storage_type'
+- id: MI-networking-135
+  Topic: Kusto-Telemetry-for-troubleshooting-common-issues-for-SQL-Ledger
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Security,-Privacy-and-Compliance/SQL-Ledger/Kusto-Telemetry-for-troubleshooting-common-issues-for-SQL-Ledger.md
+  Prompts:
+  - MI Kusto-Telemetry-for-troubleshooting-common-issues-for-SQL-Ledger
+  - Managed Instance Kusto-Telemetry-for-troubleshooting-common-issues-for-SQL-Ledger
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSecurityEvents
+    ExecutedQuery: 'MonSecurityEvents
+
+      | where LogicalServerName =~ "{ServerName}" and logical_database_name =~ "{DatabaseName}"
+
+      | where event == "ledger_transaction_count"
+
+      | project PreciseTimeStamp, ledger_transaction_count = message
+
+      | order by PreciseTimeStamp asc'
+- id: MI-networking-136
+  Topic: Kusto-Telemetry-for-troubleshooting-common-issues-for-SQL-Ledger
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Security,-Privacy-and-Compliance/SQL-Ledger/Kusto-Telemetry-for-troubleshooting-common-issues-for-SQL-Ledger.md
+  Prompts:
+  - MI Kusto-Telemetry-for-troubleshooting-common-issues-for-SQL-Ledger
+  - Managed Instance Kusto-Telemetry-for-troubleshooting-common-issues-for-SQL-Ledger
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDatabaseMetadata
+    ExecutedQuery: 'MonDatabaseMetadata
+
+      | where LogicalServerName =~ "{ServerName}" and logical_database_name =~ "{DatabaseName}"
+
+      | extend is_ledger_updateable = binary_and(status2, 0x00040000) == 0x00040000, is_ledger_append_only = binary_and(status2, 0x00080000) == 0x00080000
+
+      | where table_name == "sysschobjs" and (is_ledger_append_only == true or is_ledger_updateable == true)
+
+      | where nsid != 4 // Ignoring system tables
+
+      | project name, is_ledger_updateable, is_ledger_append_only'
+- id: MI-networking-137
+  Topic: How-to-check-TDE-encryption-status-of-MI-DB
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Security,-Privacy-and-Compliance/TDE-and-Customer-Managed-Key-(CMK)/How-to-check-TDE-encryption-status-of-MI-DB.md
+  Prompts:
+  - MI How-to-check-TDE-encryption-status-of-MI-DB
+  - Managed Instance How-to-check-TDE-encryption-status-of-MI-DB
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDatabaseEncryptionKeys
+    ExecutedQuery: 'MonDatabaseEncryptionKeys
+
+      | where TIMESTAMP >= {StartDateTime} and TIMESTAMP <= {EndDateTime}
+
+      | where LogicalServerName == {MIName}
+
+      | where logical_database_id =~ {DB_guid}
+
+      | extend encryption_state_desc = case(
+
+      encryption_state == 1, ''Unencrypted''
+
+      encryption_state == 2, ''Encryption in progress''
+
+      encryption_state == 3, ''Encrypted''
+
+      encryption_state == 4, ''Key change in progress''
+
+      encryption_state == 5, ''Decryption in progress''
+
+      encryption_state == 6, ''Protection change in progress''
+
+      ''No database encryption key present, no encryption'')
+
+      | project TIMESTAMP, PreciseTimeStamp, end_utc_date, start_utc_date, is_primary_replica, is_encrypted, encryption_state, encryption_state_desc, encryptor_thumbprint, encryptor_type, percent_complete'
+- id: MI-networking-138
+  Topic: The-Azure-Key-Vault-client-encountered-an-error-with-message
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Security,-Privacy-and-Compliance/TDE-and-Customer-Managed-Key-(CMK)/The-Azure-Key-Vault-client-encountered-an-error-with-message.md
+  Prompts:
+  - MI The-Azure-Key-Vault-client-encountered-an-error-with-message
+  - Managed Instance The-Azure-Key-Vault-client-encountered-an-error-with-message
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where originalEventTimestamp >= ago(1d)
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where event == "systemmetadata_written"
+
+      | where message contains ''The Azure Key Vault client encountered an error with message'' or message contains ''AKV''
+
+      | parse message with * "The Azure Key Vault client encountered an error with message ''[error:" error ", info:"  info ", state:" state "] " msg1
+
+      | parse message with * " [AzureKeyVaultClientHelper::CheckDbAkvWrapUnwrap]: Failed WRAP access check with msg: [error:" error ", info:"  info ", state:" state "] " msg2
+
+      | project originalEventTimestamp, ClusterName, AppName, LogicalServerName, error, info, msg1, msg2'
+- id: MI-networking-139
+  Topic: UpsertDatabaseTransparentDataEncryption-long-running-or-stuck
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Security,-Privacy-and-Compliance/TDE-and-Customer-Managed-Key-(CMK)/UpsertDatabaseTransparentDataEncryption-long-running-or-stuck.md
+  Prompts:
+  - MI UpsertDatabaseTransparentDataEncryption-long-running-or-stuck
+  - Managed Instance UpsertDatabaseTransparentDataEncryption-long-running-or-stuck
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagementOperations
+    ExecutedQuery: 'MonManagementOperations
+
+      | where TIMESTAMP >= ago(2d)
+
+      | where operation_type == ''UpsertDatabaseTransparentDataEncryption''
+
+      | where request_id =~ ''12345....'' //request_id from ASC
+
+      | project TIMESTAMP, request_id, operation_type, event, operation_parameters, error_code, error_message, operation_result'
+- id: MI-networking-140
+  Topic: UpsertDatabaseTransparentDataEncryption-long-running-or-stuck
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Security,-Privacy-and-Compliance/TDE-and-Customer-Managed-Key-(CMK)/UpsertDatabaseTransparentDataEncryption-long-running-or-stuck.md
+  Prompts:
+  - MI UpsertDatabaseTransparentDataEncryption-long-running-or-stuck
+  - Managed Instance UpsertDatabaseTransparentDataEncryption-long-running-or-stuck
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonDatabaseEncryptionKeys
+    ExecutedQuery: 'let MIName = "{ServerName}"; MonDatabaseEncryptionKeys
+
+      | where TIMESTAMP >= ago({TimeRange}) and TIMESTAMP <= now()
+
+      | where LogicalServerName == ''"{ServerName}"''
+
+      | where logical_database_id =~ ''"{DatabaseGuid}"''
+
+      | extend encryption_state_desc = case(
+
+      encryption_state == 1, ''Unencrypted'',
+
+      encryption_state == 2, ''Encryption in progress'',
+
+      encryption_state == 3, ''Encrypted'',
+
+      encryption_state == 4, ''Key change in progress'',
+
+      encryption_state == 5, ''Decryption in progress'',
+
+      encryption_state == 6, ''Protection change in progress'',
+
+      ''No database encryption key present, no encryption'')
+
+      | project TIMESTAMP, PreciseTimeStamp, end_utc_date, start_utc_date, is_primary_replica, is_encrypted, encryption_state, encryption_state_desc, encryptor_thumbprint, encryptor_type, percent_complete
+
+      | summarize min(TIMESTAMP), max(TIMESTAMP) by encryption_state_desc'
+- id: MI-networking-142
+  Topic: UpsertDatabaseTransparentDataEncryption-long-running-or-stuck
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Security,-Privacy-and-Compliance/TDE-and-Customer-Managed-Key-(CMK)/UpsertDatabaseTransparentDataEncryption-long-running-or-stuck.md
+  Prompts:
+  - MI UpsertDatabaseTransparentDataEncryption-long-running-or-stuck
+  - Managed Instance UpsertDatabaseTransparentDataEncryption-long-running-or-stuck
+  CustomizedParameters:
+  - AppName
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where TIMESTAMP >= ago({TimeRange}) and TIMESTAMP <= now()
+
+      | where AppName == "{AppName}"
+
+      | where message contains "a4fc24bf-d638-4e14-b42e-562b0c48cf2f" //DB_guid
+
+      | project PreciseTimeStamp, message'
+- id: MI-networking-143
+  Topic: UpsertDatabaseTransparentDataEncryption-long-running-or-stuck
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Security,-Privacy-and-Compliance/TDE-and-Customer-Managed-Key-(CMK)/UpsertDatabaseTransparentDataEncryption-long-running-or-stuck.md
+  Prompts:
+  - MI UpsertDatabaseTransparentDataEncryption-long-running-or-stuck
+  - Managed Instance UpsertDatabaseTransparentDataEncryption-long-running-or-stuck
+  CustomizedParameters:
+  - DatabaseId
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonBackup
+    ExecutedQuery: 'let MIName = "{ServerName}"; MonBackup
+
+      | where TIMESTAMP >= ago({TimeRange}) and TIMESTAMP <= now() //start a few hours before encryption request time
+
+      | where LogicalServerName =~ ''"{ServerName}"''
+
+      | where logical_database_id =~ "{DatabaseId}" //DB_guid
+
+      | where backup_type != ''Log''
+
+      | where event_type startswith ''BACKUP_''
+
+      | project TIMESTAMP, event, event_type, backup_type'
+- id: MI-networking-144
+  Topic: Invalid-Managed-identity-error
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Security,-Privacy-and-Compliance/Vulnerability-assessment/Invalid-Managed-identity-error.md
+  Prompts:
+  - MI Invalid-Managed-identity-error
+  - Managed Instance Invalid-Managed-identity-error
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagementOperations
+    ExecutedQuery: 'MonManagementOperations
+
+      | where TIMESTAMP between (starttime .. endtime)
+
+      | where operation_type =~ "ExecuteDatabaseVulnerabilityAssessmentScan"
+
+      | where operation_parameters contains servername
+
+      | project TIMESTAMP, request_id, event, operation_parameters'
+- id: MI-networking-145
+  Topic: Invalid-Managed-identity-error
+  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Security,-Privacy-and-Compliance/Vulnerability-assessment/Invalid-Managed-identity-error.md
+  Prompts:
+  - MI Invalid-Managed-identity-error
+  - Managed Instance Invalid-Managed-identity-error
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where TIMESTAMP between (starttime .. endtime)
+
+      | where request_id =~ requestid
+
+      | where event =~ "data_security_state_machine_info"
+
+      | where message startswith "Effective"
+
+      | distinct message'
+>>>>>>> Stashed changes

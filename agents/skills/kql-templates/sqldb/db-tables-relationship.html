@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SQL DB Kusto Tables — Relationship Diagram v2</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  body { font-family: 'Segoe UI', sans-serif; background: #1e1e1e; color: #d4d4d4; margin: 24px; max-width: 1400px; }
+  h1 { color: #569cd6; border-bottom: 1px solid #333; padding-bottom: 8px; }
+  h2 { color: #4ec9b0; margin-top: 36px; }
+  p { line-height: 1.6; }
+  .mermaid { background: #252526; padding: 20px; border-radius: 8px; overflow-x: auto; margin: 12px 0; }
+  table { border-collapse: collapse; margin: 12px 0; width: 100%; }
+  th { background: #333; color: #9cdcfe; padding: 8px 14px; border: 1px solid #555; text-align: left; }
+  td { padding: 8px 14px; border: 1px solid #444; }
+  tr:hover td { background: #2a2a2a; }
+  code { background: #333; padding: 2px 6px; border-radius: 3px; color: #ce9178; font-size: 0.95em; }
+  .legend { display: flex; gap: 20px; margin: 12px 0; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.95em; }
+  .dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+  .note { color: #888; font-size: 0.9em; margin-top: 20px; }
+  .diff { background: #1a3a1a; border: 1px solid #4ec9b0; border-radius: 4px; padding: 8px 12px; margin: 8px 0; font-size: 0.9em; }
+</style>
+</head>
+<body>
+
+<h1>SQL DB Kusto Tables — Relationship Diagram v2</h1>
+<p>30 core tables from <strong>3854 KQL skills</strong> + dashboard across 10 SQL DB TSG categories. Generated 2026-04-30.</p>
+
+<div class="diff">
+  <strong>DB vs MI Key Differences:</strong>
+  Server filter: <code>LogicalServerName</code> / <code>logical_server_name</code> — Database filter: <code>DatabaseName</code> / <code>database_name</code> (MI is instance-level, DB is database-level) —
+  Worker type: <code>Worker.ISO</code> / <code>Worker.ISO.Premium</code> / <code>Worker.DW</code> (MI uses <code>Worker.CL</code>) —
+  DB-only tables: <code>MonElasticPoolStats</code>, <code>MonSocrates</code> (Hyperscale), <code>MonDataSync</code>, <code>MonRedirector</code> (Gateway)
+</div>
+
+<div class="legend">
+  <div class="legend-item"><div class="dot" style="background:#4ec9b0"></div> Inventory / Metadata</div>
+  <div class="legend-item"><div class="dot" style="background:#569cd6"></div> Availability / HA</div>
+  <div class="legend-item"><div class="dot" style="background:#c586c0"></div> Performance / RG</div>
+  <div class="legend-item"><div class="dot" style="background:#ce9178"></div> Backup / Restore</div>
+  <div class="legend-item"><div class="dot" style="background:#d7ba7d"></div> Error / Health</div>
+  <div class="legend-item"><div class="dot" style="background:#6a9955"></div> Login / Gateway</div>
+  <div class="legend-item"><div class="dot" style="background:#9cdcfe"></div> Platform / Deployment</div>
+  <div class="legend-item"><div class="dot" style="background:#dcdcaa"></div> Hyperscale / Socrates</div>
+</div>
+
+<!-- ==================== CORE ER ==================== -->
+<h2>1. Core Entity Relationships</h2>
+<p>Hub: <code>MonAnalyticsDBSnapshot</code> — the DB-level inventory table. Unlike MI, SQL DB has no <code>MonManagedServers</code>; use <code>MonAnalyticsDBSnapshot</code> as the anchor.</p>
+
+<div class="mermaid">
+erDiagram
+    MonAnalyticsDBSnapshot {
+        string logical_server_name PK "Server名 (167x)"
+        string logical_database_name "DB名"
+        string logical_database_id UK "DB GUID"
+        string state "Online/Copying"
+        string edition "GP/BC/HS"
+        string service_level_objective "SLO"
+        string failover_group_id FK "FOG"
+        string logical_resource_pool_id "Pool"
+    }
+    MonGeoDRFailoverGroups {
+        string failover_group_id PK "FOG GUID"
+        string logical_server_name FK "Server"
+        string role "Primary/Secondary"
+        string partner_server_name "Partner"
+        string partner_region "Region"
+        string failover_policy "Auto/Manual"
+    }
+    MonCapacityTenantSnapshot {
+        string tenant_ring_name PK "Ring名 (31x)"
+        string state "Ring state"
+        long node_count "Nodes"
+        long current_cpu_capacity "CPU cap"
+    }
+
+    MonAnalyticsDBSnapshot ||--o| MonGeoDRFailoverGroups : "failover_group_id"
+    MonAnalyticsDBSnapshot }|--|| MonCapacityTenantSnapshot : "tenant_ring_name"
+</div>
+
+<!-- ==================== PERFORMANCE ==================== -->
+<h2>2. Performance Investigation Chain</h2>
+
+<div class="mermaid">
+graph TD
+    subgraph "Instance / Node Level"
+        RGL[MonRgLoad<br/><small>node RG load — 183x</small>]
+        RGM[MonRgManager<br/><small>RG cap changes — 75x</small>]
+        CL[MonClusterLoad<br/><small>node health — 36x</small>]
+    end
+    subgraph "Database Level"
+        RTRS[MonDmRealTimeResourceStats<br/><small>per-DB CPU/IO/log — 113x</small>]
+        RGH[MonSqlRgHistory<br/><small>RG detailed delta — 129x</small>]
+        WS[MonDmCloudDatabaseWaitStats<br/><small>wait types — 43x</small>]
+        IVFS[MonDmIoVirtualFileStats<br/><small>file IO latency — 57x</small>]
+        RPS[MonResourcePoolStats<br/><small>pool-level stats — 40x</small>]
+    end
+    subgraph "Query Level"
+        QDS[MonWiQdsExecStats<br/><small>top queries — 138x</small>]
+        QDW[MonWiQdsWaitStats<br/><small>per-query waits — 37x</small>]
+        QPD[MonWiQueryParamData<br/><small>query params — 40x</small>]
+        QP[MonQueryProcessing<br/><small>compilation — 46x</small>]
+        QSI[MonQueryStoreInfo<br/><small>QDS diagnostics — 36x</small>]
+        BPR[MonBlockedProcessReportFiltered<br/><small>blocking — 31x</small>]
+    end
+
+    RGL --> RTRS
+    RGM --> RGL
+    RTRS --> WS
+    RTRS --> RGH
+    RTRS --> IVFS
+    RTRS --> RPS
+    WS --> QDS
+    QDS --> QDW
+    QDS --> QPD
+    QDS --> QP
+    QDS --> QSI
+    WS --> BPR
+
+    style RGL fill:#4b2d6e,stroke:#c586c0,color:#e0e0e0
+    style RGM fill:#4b2d6e,stroke:#c586c0,color:#e0e0e0
+    style CL fill:#4b2d6e,stroke:#c586c0,color:#e0e0e0
+    style RTRS fill:#4b2d6e,stroke:#c586c0,color:#e0e0e0
+    style RGH fill:#4b2d6e,stroke:#c586c0,color:#e0e0e0
+    style WS fill:#4b2d6e,stroke:#c586c0,color:#e0e0e0
+    style IVFS fill:#4b2d6e,stroke:#c586c0,color:#e0e0e0
+    style RPS fill:#4b2d6e,stroke:#c586c0,color:#e0e0e0
+    style QDS fill:#4b2d6e,stroke:#c586c0,color:#e0e0e0
+    style QDW fill:#4b2d6e,stroke:#c586c0,color:#e0e0e0
+    style QPD fill:#4b2d6e,stroke:#c586c0,color:#e0e0e0
+    style QP fill:#4b2d6e,stroke:#c586c0,color:#e0e0e0
+    style QSI fill:#4b2d6e,stroke:#c586c0,color:#e0e0e0
+    style BPR fill:#4b2d6e,stroke:#c586c0,color:#e0e0e0
+</div>
+
+<!-- ==================== AVAILABILITY ==================== -->
+<h2>3. Availability / Outage Investigation Chain</h2>
+
+<div class="mermaid">
+graph TD
+    subgraph "Error Detection"
+        SSH[MonSQLSystemHealth<br/><small>errorlog + crash — 267x</small>]
+        AER[AlrSQLErrorsReported<br/><small>SQL errors — 28x</small>]
+        DUMP[MonSqlDumperActivity<br/><small>dump/crash — 31x</small>]
+    end
+    subgraph "Cause Analysis"
+        MGT[MonManagement<br/><small>reconfig/failover — 312x</small>]
+        MOP[MonManagementOperations<br/><small>operation detail — 138x</small>]
+        MRP[MonManagementResourceProvider<br/><small>ARM requests — 41x</small>]
+        REC[MonRecoveryTrace<br/><small>DB recovery — 18x</small>]
+        ROLL[MonRolloutProgress<br/><small>deployment — 18x</small>]
+    end
+    subgraph "HA / Replica"
+        HADR[MonDmDbHadrReplicaStates<br/><small>replica lag — 75x</small>]
+        SEED[MonDbSeedTraces<br/><small>seeding — 15x</small>]
+        FOG[MonGeoDRFailoverGroups]
+    end
+
+    SSH --> AER
+    SSH --> DUMP
+    SSH --> MGT
+    MGT --> MOP
+    MGT --> MRP
+    MGT --> REC
+    MGT --> ROLL
+    FOG --> SEED
+    FOG --> HADR
+
+    style SSH fill:#6b3a3a,stroke:#d7ba7d,color:#e0e0e0
+    style AER fill:#6b3a3a,stroke:#d7ba7d,color:#e0e0e0
+    style DUMP fill:#6b3a3a,stroke:#d7ba7d,color:#e0e0e0
+    style MGT fill:#264f78,stroke:#569cd6,color:#e0e0e0
+    style MOP fill:#264f78,stroke:#569cd6,color:#e0e0e0
+    style MRP fill:#264f78,stroke:#569cd6,color:#e0e0e0
+    style REC fill:#264f78,stroke:#569cd6,color:#e0e0e0
+    style ROLL fill:#264f78,stroke:#569cd6,color:#e0e0e0
+    style HADR fill:#264f78,stroke:#569cd6,color:#e0e0e0
+    style SEED fill:#264f78,stroke:#569cd6,color:#e0e0e0
+    style FOG fill:#264f78,stroke:#569cd6,color:#e0e0e0
+</div>
+
+<!-- ==================== BACKUP ==================== -->
+<h2>4. Backup / Restore Investigation Chain</h2>
+
+<div class="mermaid">
+graph LR
+    BK[MonBackup<br/><small>backup history — 114x</small>] --> IVFS2[MonDmIoVirtualFileStats<br/><small>file sizes</small>]
+    BK --> XS[MonSQLXStore<br/><small>XStore IO — 83x</small>]
+    RE[MonRestoreEvents<br/><small>restore progress — 47x</small>] --> BK
+    CDC[MonCDCTraces<br/><small>CDC traces — 36x</small>] --> BK
+    SYNC[MonDataSync<br/><small>data sync — 42x</small>] --> BK
+
+    style BK fill:#5a3e1b,stroke:#ce9178,color:#e0e0e0
+    style IVFS2 fill:#5a3e1b,stroke:#ce9178,color:#e0e0e0
+    style XS fill:#5a3e1b,stroke:#ce9178,color:#e0e0e0
+    style RE fill:#5a3e1b,stroke:#ce9178,color:#e0e0e0
+    style CDC fill:#5a3e1b,stroke:#ce9178,color:#e0e0e0
+    style SYNC fill:#5a3e1b,stroke:#ce9178,color:#e0e0e0
+</div>
+
+<!-- ==================== LOGIN / GATEWAY ==================== -->
+<h2>5. Login / Gateway Investigation Chain</h2>
+
+<div class="mermaid">
+graph TD
+    subgraph "Gateway Layer"
+        RED[MonRedirector<br/><small>routing/cache — 58x</small>]
+    end
+    subgraph "Login Layer"
+        LG[MonLogin<br/><small>login success/fail — 463x</small>]
+        FAT[MonFedAuthTicketService<br/><small>AAD auth — 15x</small>]
+    end
+    subgraph "Context"
+        ADS[MonAnalyticsDBSnapshot<br/><small>DB state/SLO</small>]
+        SSH2[MonSQLSystemHealth<br/><small>auth errors</small>]
+        MGT2[MonManagement<br/><small>firewall changes</small>]
+    end
+
+    RED --> LG
+    LG --> FAT
+    LG --> SSH2
+    LG --> MGT2
+    LG --> ADS
+
+    style RED fill:#3a5a3a,stroke:#6a9955,color:#e0e0e0
+    style LG fill:#3a5a3a,stroke:#6a9955,color:#e0e0e0
+    style FAT fill:#3a5a3a,stroke:#6a9955,color:#e0e0e0
+    style ADS fill:#264f4e,stroke:#4ec9b0,color:#e0e0e0
+    style SSH2 fill:#6b3a3a,stroke:#d7ba7d,color:#e0e0e0
+    style MGT2 fill:#264f78,stroke:#569cd6,color:#e0e0e0
+</div>
+
+<!-- ==================== HYPERSCALE ==================== -->
+<h2>6. Hyperscale / Socrates Investigation Chain</h2>
+
+<div class="mermaid">
+graph LR
+    SOC[MonSocrates<br/><small>Hyperscale signals — 137x</small>] --> XLOG[MonXlogSrv<br/><small>xlog server — 37x</small>]
+    SOC --> SYN[MonSynapseLinkTraces<br/><small>Synapse Link — 71x</small>]
+    SOC --> IVFS3[MonDmIoVirtualFileStats<br/><small>page server IO</small>]
+    SOC --> RTRS2[MonDmRealTimeResourceStats<br/><small>compute stats</small>]
+
+    style SOC fill:#5a4a1b,stroke:#dcdcaa,color:#e0e0e0
+    style XLOG fill:#5a4a1b,stroke:#dcdcaa,color:#e0e0e0
+    style SYN fill:#5a4a1b,stroke:#dcdcaa,color:#e0e0e0
+    style IVFS3 fill:#5a4a1b,stroke:#dcdcaa,color:#e0e0e0
+    style RTRS2 fill:#5a4a1b,stroke:#dcdcaa,color:#e0e0e0
+</div>
+
+<!-- ==================== JOIN REFERENCE ==================== -->
+<h2>7. Join Dimension Reference</h2>
+
+<table>
+<tr><th>Dimension</th><th>Column Variants (use <code>=~</code>)</th><th>Notes</th></tr>
+<tr><td><strong>Server</strong></td><td><code>LogicalServerName</code>, <code>logical_server_name</code>, <code>server_name</code></td><td>Primary DB filter. Unlike MI, no <code>MonManagedServers.name</code>.</td></tr>
+<tr><td><strong>Database</strong></td><td><code>DatabaseName</code>, <code>database_name</code>, <code>logical_database_name</code>, <code>db_name</code></td><td>DB-level granularity — always include with server filter.</td></tr>
+<tr><td><strong>Database GUID</strong></td><td><code>logical_database_id</code>, <code>database_id</code>, <code>logical_database_guid</code></td><td>Stable ID for joins across snapshot/metadata.</td></tr>
+<tr><td><strong>FOG</strong></td><td><code>failover_group_id</code></td><td>GeoDR / Failover Group correlation.</td></tr>
+<tr><td><strong>Elastic Pool</strong></td><td><code>elastic_pool_name</code>, <code>vldb_pool_id</code>, <code>logical_resource_pool_id</code></td><td>DB-specific (MI has no elastic pools).</td></tr>
+<tr><td><strong>Node / App</strong></td><td><code>NodeName</code>, <code>AppName</code>, <code>ClusterName</code></td><td>Worker type: <code>Worker.ISO</code> (GP), <code>Worker.ISO.Premium</code> (BC), <code>Worker.DW</code> (DW).</td></tr>
+<tr><td><strong>Gateway</strong></td><td><code>ClusterName</code> (on MonRedirector/MonLogin)</td><td>Gateway cluster ≠ backend cluster. Use for routing analysis.</td></tr>
+</table>
+
+<!-- ==================== FREQUENCY TABLE ==================== -->
+<h2>8. Table Usage Frequency (Top 30)</h2>
+<table>
+<tr><th>#</th><th>Table</th><th>Skills</th><th>Category</th></tr>
+<tr><td>1</td><td>MonLogin</td><td>463</td><td>Login / Gateway</td></tr>
+<tr><td>2</td><td>MonManagement</td><td>312</td><td>Platform</td></tr>
+<tr><td>3</td><td>MonSQLSystemHealth</td><td>267</td><td>Error / Health</td></tr>
+<tr><td>4</td><td>MonRgLoad</td><td>183</td><td>Performance / RG</td></tr>
+<tr><td>5</td><td>MonAnalyticsDBSnapshot</td><td>167</td><td>Inventory</td></tr>
+<tr><td>6</td><td>MonManagementOperations</td><td>138</td><td>Platform</td></tr>
+<tr><td>7</td><td>MonWiQdsExecStats</td><td>138</td><td>Performance</td></tr>
+<tr><td>8</td><td>MonSocrates</td><td>137</td><td>Hyperscale</td></tr>
+<tr><td>9</td><td>MonSqlRgHistory</td><td>129</td><td>Performance</td></tr>
+<tr><td>10</td><td>MonBackup</td><td>114</td><td>Backup</td></tr>
+<tr><td>11</td><td>MonDmRealTimeResourceStats</td><td>113</td><td>Performance</td></tr>
+<tr><td>12</td><td>MonSQLXStore</td><td>83</td><td>Storage</td></tr>
+<tr><td>13</td><td>MonDmDbHadrReplicaStates</td><td>75</td><td>Availability</td></tr>
+<tr><td>14</td><td>MonRgManager</td><td>75</td><td>Performance</td></tr>
+<tr><td>15</td><td>MonSynapseLinkTraces</td><td>71</td><td>Hyperscale</td></tr>
+<tr><td>16</td><td>MonRedirector</td><td>58</td><td>Gateway</td></tr>
+<tr><td>17</td><td>MonDmIoVirtualFileStats</td><td>57</td><td>Performance</td></tr>
+<tr><td>18</td><td>MonRestoreEvents</td><td>47</td><td>Backup</td></tr>
+<tr><td>19</td><td>MonQueryProcessing</td><td>46</td><td>Performance</td></tr>
+<tr><td>20</td><td>MonDmCloudDatabaseWaitStats</td><td>43</td><td>Performance</td></tr>
+<tr><td>21</td><td>MonDataSync</td><td>42</td><td>Data Sync</td></tr>
+<tr><td>22</td><td>MonSqlMemoryClerkStats</td><td>41</td><td>Performance</td></tr>
+<tr><td>23</td><td>MonManagementResourceProvider</td><td>41</td><td>Platform</td></tr>
+<tr><td>24</td><td>MonResourcePoolStats</td><td>40</td><td>Performance</td></tr>
+<tr><td>25</td><td>MonWiQueryParamData</td><td>40</td><td>Performance</td></tr>
+<tr><td>26</td><td>MonXlogSrv</td><td>37</td><td>Hyperscale</td></tr>
+<tr><td>27</td><td>MonWiQdsWaitStats</td><td>37</td><td>Performance</td></tr>
+<tr><td>28</td><td>MonClusterLoad</td><td>36</td><td>Platform</td></tr>
+<tr><td>29</td><td>MonQueryStoreInfo</td><td>36</td><td>Performance</td></tr>
+<tr><td>30</td><td>MonCDCTraces</td><td>36</td><td>Replication</td></tr>
+</table>
+
+<p class="note">v2 generated 2026-04-30 from 3854 DB KQL skills + dashboard. Previous version had 14 tables; v2 covers 30 core tables with 6 investigation chains.</p>
+</body>
+</html>

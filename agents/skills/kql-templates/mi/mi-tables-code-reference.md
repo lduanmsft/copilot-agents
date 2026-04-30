@@ -789,7 +789,7 @@ Explicitly modeled in unit-test seed data with `.create table` statements and sa
 | `is_regression_detected` | bool | Regression detection flag | `DataSeeding.yaml` |
 | `is_regression_corrected` | bool | Correction flag | `DataSeeding.yaml` |
 
-## 31. MonAzureActiveDirService — Azure AD service telemetry
+## 31. MonAzureActivDirService — Azure AD service telemetry
 
 ### Definition
 Referenced in KQL templates only. I did not find a reliable producer/schema file in the allotted searches.
@@ -1344,7 +1344,7 @@ No durable source-code definition was found in the searched repos. The table app
 |--------|------|---------|-------------|
 | — | — | No code-derived columns identified in searched repos. | — |
 
-## 62. MonDmOsWaitstats — Wait statistics DMV telemetry
+## 62. MonDmOsWaitStats — Wait statistics DMV telemetry
 
 ### Definition
 Search results only showed consumer code, not a producer/schema definition. The table is clearly used for performance analysis, but the searched files did not define its schema.

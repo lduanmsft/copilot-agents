@@ -111,14 +111,14 @@ msdata.visualstudio.com/Database Systems/_git/
 
 **2c. Last Resort — AI Generate with Schema Reference**
 If no template found, generate KQL using:
-- Table schema from `~/.copilot/agents/skills/kql-templates/mi-tables-reference.md` (148 tables, all columns)
-- Table code definitions from `~/.copilot/agents/skills/kql-templates/mi-tables-code-reference.md`
+- Table schema from `~/.copilot/agents/skills/kql-templates/mi/mi-tables-reference.md` (148 tables, all columns)
+- Table code definitions from `~/.copilot/agents/skills/kql-templates/mi/mi-tables-code-reference.md`
 - Always verify column names against schema before generating
 
 ### Step 3: Determine Cluster Endpoint
 Look up the region in the cluster mapping CSV:
 ```
-grep "{region}" ~/.copilot/agents/skills/kql-templates/SQLClusterMappings.Followers.csv
+grep "{region}" ~/.copilot/agents/skills/kql-templates/shared/SQLClusterMappings.Followers.csv
 ```
 - Prefer **Follower** clusters (read-only, lower load) for ad-hoc queries
 - Use **Primary** clusters only if Follower returns no data or for real-time needs
@@ -249,7 +249,7 @@ MonDbSeedTraces
 **Step 4: Switch to Partner Region Cluster**
 Look up partner_region in `SQLClusterMappings.Followers.csv`
 ```
-grep "{partner_region}" ~/.copilot/agents/skills/kql-templates/SQLClusterMappings.Followers.csv
+grep "{partner_region}" ~/.copilot/agents/skills/kql-templates/shared/SQLClusterMappings.Followers.csv
 ```
 
 **Step 5: Query Seeding on Secondary (Destination) side**
