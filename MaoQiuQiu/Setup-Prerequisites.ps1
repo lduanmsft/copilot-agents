@@ -26,11 +26,15 @@ if ($node) {
     Write-Host "OK ($nodeVer)" -ForegroundColor Green
 } else {
     Write-Host "NOT FOUND" -ForegroundColor Red
-    Write-Host "       Install from https://nodejs.org/ or: winget install OpenJS.NodeJS.LTS" -ForegroundColor Yellow
+    $install = Read-Host "       Install Node.js LTS now? (y/n)"
+    if ($install -eq 'y') {
+        Write-Host "       Installing Node.js via winget..." -ForegroundColor Cyan
+        winget install OpenJS.NodeJS.LTS --accept-source-agreements --accept-package-agreements 2>&1
+        Write-Host "       Done. Please restart this script after installation." -ForegroundColor Yellow
+    } else {
+        Write-Host "       Manual: winget install OpenJS.NodeJS.LTS" -ForegroundColor Yellow
+    }
     $allGood = $false
-}
-
-# --- 2. npx ---
 Write-Host "[2/6] npx ... " -NoNewline
 $npx = Get-Command npx -ErrorAction SilentlyContinue
 if ($npx) {
@@ -58,7 +62,14 @@ if ($az) {
     }
 } else {
     Write-Host "NOT FOUND" -ForegroundColor Red
-    Write-Host "       Install from https://aka.ms/installazurecli or: winget install Microsoft.AzureCLI" -ForegroundColor Yellow
+    $install = Read-Host "       Install Azure CLI now? (y/n)"
+    if ($install -eq 'y') {
+        Write-Host "       Installing Azure CLI via winget..." -ForegroundColor Cyan
+        winget install Microsoft.AzureCLI --accept-source-agreements --accept-package-agreements 2>&1
+        Write-Host "       Done. Please restart this script, then run: az login" -ForegroundColor Yellow
+    } else {
+        Write-Host "       Manual: winget install Microsoft.AzureCLI" -ForegroundColor Yellow
+    }
     $allGood = $false
 }
 
@@ -85,9 +96,27 @@ if ($enghub) {
     Write-Host "OK" -ForegroundColor Green
 } else {
     Write-Host "NOT FOUND" -ForegroundColor Yellow
-    Write-Host "       Install: npm install -g @user/enghub-mcp (or check eng.ms setup docs)" -ForegroundColor Yellow
-    Write-Host "       See: shared-docs/setup-enghub-mcp.md for detailed instructions" -ForegroundColor Yellow
-}
+    Write-Host "       Install options:" -ForegroundColor Yellow
+    Write-Host "         Option A (recommended): gh release download" -ForegroundColor Yellow
+    Write-Host "         Option B: npm install from source" -ForegroundColor Yellow
+    Write-Host "       See: docs/setup-enghub-mcp.md for detailed instructions" -ForegroundColor Yellow
+    $installEng = Read-Host "       Try auto-install via gh? Requires gh auth login to azure-core org (y/n)"
+    if ($installEng -eq 'y') {
+        $gh = Get-Command gh -ErrorAction SilentlyContinue
+        if ($gh) {
+            Write-Host "       Downloading enghub-mcp..." -ForegroundColor Cyan
+            gh release download --repo azure-core/enghub-mcp-server-tools --pattern "azure-core-enghub-mcp.tgz" --output enghub-mcp.tgz --clobber 2>&1
+            if (Test-Path "enghub-mcp.tgz") {
+                npm install -g enghub-mcp.tgz 2>&1
+                Remove-Item "enghub-mcp.tgz" -Force
+                Write-Host "       enghub-mcp installed!" -ForegroundColor Green
+            } else {
+                Write-Host "       Download failed. Check gh auth and azure-core org access." -ForegroundColor Red
+            }
+        } else {
+            Write-Host "       gh CLI not found. Install: winget install GitHub.cli" -ForegroundColor Red
+        }
+    }
 
 # --- 6. VS Code + Copilot ---
 Write-Host "[6/6] VS Code Insiders ... " -NoNewline
@@ -100,7 +129,14 @@ if ($code) {
         Write-Host "stable version found (Insiders recommended)" -ForegroundColor Yellow
     } else {
         Write-Host "NOT FOUND" -ForegroundColor Red
-        Write-Host "       Install VS Code Insiders from https://code.visualstudio.com/insiders/" -ForegroundColor Yellow
+        $install = Read-Host "       Install VS Code Insiders now? (y/n)"
+        if ($install -eq 'y') {
+            Write-Host "       Installing VS Code Insiders via winget..." -ForegroundColor Cyan
+            winget install Microsoft.VisualStudioCode.Insiders --accept-source-agreements --accept-package-agreements 2>&1
+            Write-Host "       Done." -ForegroundColor Green
+        } else {
+            Write-Host "       Manual: winget install Microsoft.VisualStudioCode.Insiders" -ForegroundColor Yellow
+        }
         $allGood = $false
     }
 }
