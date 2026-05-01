@@ -117,7 +117,7 @@ MonAnalyticsDBSnapshot
 
 **当前有 auto_investigation.md 的类别：**
 - `availability/auto_investigation.md` — 11 routes (failover, quorum-loss, node-health, error-40613, ...)
-- `connectivity/investigation.md` — 7 routes (login-failure, session-disconnect, xdbhost-restart, ...)
+- `connectivity/auto_investigation.md` — 7 routes (login-failure, session-disconnect, xdbhost-restart, ...)
 
 **如果用户选择 YES → 执行 auto_investigation.md，完成后询问: "自动调查已完成，是否还需要继续搜索 KQL/TSG 补充调查？(Step 3-7)"**
 **如果用户选择 NO → 继续正常的 Step 3 (搜 KQL + TSG) 流程。**
@@ -159,7 +159,7 @@ Use local YAML / extracted skills first because they are fastest and usually alr
 │   ├── node-health/                      (SKILL.md + kql-livesite.yaml + references/)
 │   └── login-failure/                    (SKILL.md + kql-livesite.yaml + references/)
 ├── connectivity/                         ← Connectivity (118 livesite skills)
-│   ├── investigation.md                  ← 🤖 自动调查入口 (7 routes)
+│   ├── auto_investigation.md             ← 🤖 自动调查入口 (7 routes)
 │   ├── connectivity-base/                (kql-livesite.yaml — 8 skills + ring-health 12 skills)
 │   ├── connectivity-errors/              (12 error dirs, 33 KQL + 5 knowledge)
 │   ├── connectivity-scenarios/           (6 scenarios, 49 KQL)
