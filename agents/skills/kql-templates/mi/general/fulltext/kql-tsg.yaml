@@ -1,0 +1,114 @@
+SqlSkills:
+- id: MI-fulltext-1
+  Topic: Fulltext-Investigation-Tips
+  Source: Performance-and-Query-Execution/Other-errors-and-exceptions/Fulltext-Investigation-Tips.md
+  Prompts:
+  - MI Fulltext Investigation Tips
+  - Managed Instance Fulltext Investigation Tips
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: |-
+      MonSQLSystemHealth
+      | where TIMESTAMP >= datetime(2016-11-01 10:30:00Z)
+      | where TIMESTAMP <= datetime(2016-11-23 18:50:00Z)
+      | where LogicalServerName =~ "{ServerName}"
+      | where message contains"FDHost"
+      | project AppName, PreciseTimeStamp , TIMESTAMP , LogicalServerName , message
+- id: MI-fulltext-2
+  Topic: Fulltext-Investigation-Tips
+  Source: Performance-and-Query-Execution/Other-errors-and-exceptions/Fulltext-Investigation-Tips.md
+  Prompts:
+  - MI Fulltext Investigation Tips
+  - Managed Instance Fulltext Investigation Tips
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonFullTextInfo
+    ExecutedQuery: |-
+      MonFullTextInfo
+      |summarize ErrorCount = countif(error_number > 0) by ClusterName, LogicalServerName, database_name
+      | where ErrorCount > 50
+      | top 50 by ErrorCount desc
+- id: MI-fulltext-3
+  Topic: Fulltext-Investigation-Tips
+  Source: Performance-and-Query-Execution/Other-errors-and-exceptions/Fulltext-Investigation-Tips.md
+  Prompts:
+  - MI Fulltext Investigation Tips
+  - Managed Instance Fulltext Investigation Tips
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmOsExceptionStats
+    ExecutedQuery: |-
+      MonDmOsExceptionStats
+      | where LogicalServerName =~ "{ServerName}" and exception_id == 30046
+      | where AppName == "{AppName}"
+      | where TIMESTAMP > ago(30m)
+      | order by TIMESTAMP desc
+- id: MI-fulltext-4
+  Topic: Fulltext-Investigation-Tips
+  Source: Performance-and-Query-Execution/Other-errors-and-exceptions/Fulltext-Investigation-Tips.md
+  Prompts:
+  - MI Fulltext Investigation Tips
+  - Managed Instance Fulltext Investigation Tips
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonFulltextActiveCatalogs
+    ExecutedQuery: |-
+      MonFulltextActiveCatalogs
+      | where TIMESTAMP > datetime(2020-06-11 02:40:27)
+      | where TIMESTAMP < datetime(2020-06-11 03:40:27)
+      | where LogicalServerName =~ "{ServerName}"
+      | where has_crawl_completed == 0
+      | where catalog_id == 5
+      | where is_enabled == 1
+      | project TIMESTAMP, AppName, database_id, catalog_id, active_fts_index_count, auto_population_count, manual_population_count, object_id,
+- id: MI-fulltext-5
+  Topic: Fulltext-incremental-crawl-stopped-error-30098
+  Source: Performance-and-Query-Execution/Other-errors-and-exceptions/Fulltext-incremental-crawl-stopped-error-30098.md
+  Prompts:
+  - MI Fulltext incremental crawl stopped error 30098
+  - Managed Instance Fulltext incremental crawl stopped error 30098
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonFulltextActiveCatalogs
+    ExecutedQuery: |-
+      MonFulltextActiveCatalogs
+      //| where TIMESTAMP > ago(1d)
+      //| where TIMESTAMP > datetime(2020-06-11 02:40:27)
+      //| where TIMESTAMP < datetime(2020-06-11 03:40:27)
+      | where LogicalServerName =~ "{ServerName}"
+      | where has_crawl_completed == 0
+      //| where catalog_id == 5
+      | where is_enabled == 1
+      | project TIMESTAMP, AppName, database_id, catalog_id, active_fts_index_count, auto_population_count, manual_population_count, object_id,
+- id: MI-fulltext-6
+  Topic: Fulltext-incremental-crawl-stopped-error-30098
+  Source: Performance-and-Query-Execution/Other-errors-and-exceptions/Fulltext-incremental-crawl-stopped-error-30098.md
+  Prompts:
+  - MI Fulltext incremental crawl stopped error 30098
+  - Managed Instance Fulltext incremental crawl stopped error 30098
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonFullTextCrawlLog
+    ExecutedQuery: |-
+      MonFullTextCrawlLog
+      | where LogicalServerName =~ "{ServerName}"
+      //| where error_id > 30000 and error_id != 30096
+      //| where TIMESTAMP > ago(10d)
+      //| where TIMESTAMP >= datetime(2023-12-15 20:30:00)
+      //| where TIMESTAMP <= datetime(2023-12-15 23:00:00)
+      | where error_id == 30098
+      | project  TIMESTAMP, error_id, NodeName,message
+      | order by TIMESTAMP desc

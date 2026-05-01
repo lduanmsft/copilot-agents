@@ -1,0 +1,288 @@
+# ============================================================================
+# Ported from SQLDB SQLLivesiteAgents, adapted for Managed Instance (MI)
+# kql-livesite.yaml — CPU KQL Templates from SQLLivesiteAgents
+# ============================================================================
+# Priority: P1 (highest)
+# Source: SQLLivesiteAgents / Performance / CPU / references/
+# Distilled: 2026-04-30
+# ============================================================================
+# These KQL queries come directly from the engineering team's livesite agents.
+# They are the authoritative source for CPU investigation.
+# ============================================================================
+
+SqlSkills:
+
+  # ──────────────────────────────────────────────────────
+  # 1. User Pool CPU Analysis — Singleton
+  # Source: Performance/CPU/references/user-pool-cpu-analysis-singleton.md
+  # Table: MonDmRealTimeResourceStats
+  # Threshold: ≥80% high, ≥40% change significant
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-CPU-01
+    name: "User Pool CPU Summary (Singleton)"
+    source: "SQLLivesiteAgents/Performance/CPU/references/user-pool-cpu-analysis-singleton.md"
+    deployment: Singleton
+    table: MonDmRealTimeResourceStats
+    thresholds:
+      high_cpu: 80
+      significant_change: 40
+    KustoQueries:
+      - TableName: MonDmRealTimeResourceStats
+        ExecutedQuery: |
+          let HighCpuThreshold=80;
+          let SignificantChangeThreshold=40;
+          MonDmRealTimeResourceStats
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where database_name =~ '{DatabaseName}'
+          | summarize avg_cpu_percent=round(avg(avg_cpu_percent),2),
+            max_cpu_percent=round(max(avg_cpu_percent),2),
+            min_cpu_percent=round(min(avg_cpu_percent),2),
+            high_cpu_duration_seconds=countif(avg_cpu_percent>=HighCpuThreshold)*15
+          | extend cpu_change_percent=round(max_cpu_percent - min_cpu_percent, 2)
+          | extend significant_change_detected=(cpu_change_percent >= SignificantChangeThreshold)
+    OutputFields:
+      - avg_cpu_percent
+      - max_cpu_percent
+      - min_cpu_percent
+      - high_cpu_duration_seconds
+      - cpu_change_percent
+      - significant_change_detected
+    IssueDetection:
+      high: "max_cpu_percent >= 80 → continue to hourly breakdown"
+      warning: "max_cpu_percent < 80 AND significant_change_detected = true → warn"
+      normal: "max_cpu_percent < 80 AND significant_change_detected = false → no issue"
+
+  # ──────────────────────────────────────────────────────
+  # 1b. User Pool CPU Hourly Pattern (Singleton)
+  # Condition: Only if max_cpu_percent >= 80
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-CPU-01b
+    name: "User Pool CPU Hourly Pattern (Singleton)"
+    source: "SQLLivesiteAgents/Performance/CPU/references/user-pool-cpu-analysis-singleton.md"
+    condition: "MI-LS-CPU-01.max_cpu_percent >= 80"
+    deployment: Singleton
+    table: MonDmRealTimeResourceStats
+    KustoQueries:
+      - TableName: MonDmRealTimeResourceStats
+        ExecutedQuery: |
+          MonDmRealTimeResourceStats
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where database_name =~ '{DatabaseName}'
+          | summarize 
+              avg_cpu_percent=round(avg(avg_cpu_percent),2), 
+              max_cpu_percent=round(max(avg_cpu_percent),2),
+              min_cpu_percent=round(min(avg_cpu_percent),2)
+            by bin(originalEventTimestamp, 1h)
+          | order by originalEventTimestamp asc
+    StatusLogic:
+      critical: "max >= 95%"
+      high: "max >= 80%"
+      rising: "max >= 60%"
+      normal: "max < 60%"
+
+  # ──────────────────────────────────────────────────────
+  # 2. User Pool CPU Analysis — Elastic Pool
+  # Source: Performance/CPU/references/user-pool-cpu-analysis-ep.md
+  # Table: MonResourcePoolStats
+  # ──────────────────────────────────────────────────────
+  # ──────────────────────────────────────────────────────
+  # 2b. User Pool CPU Hourly Pattern (Elastic Pool)
+  # ──────────────────────────────────────────────────────
+  # ──────────────────────────────────────────────────────
+  # 3. Kernel Mode CPU Analysis
+  # Source: Performance/CPU/references/kernel-mode-cpu-analysis.md
+  # Table: MonRgLoad
+  # Threshold: ≥15% high, ≥10% moderate
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-CPU-03
+    name: "Kernel Mode CPU Analysis"
+    source: "SQLLivesiteAgents/Performance/CPU/references/kernel-mode-cpu-analysis.md"
+    table: MonRgLoad
+    thresholds:
+      normal: "< 10%"
+      moderate: ">= 10% and < 15%"
+      high: ">= 15%"
+    KustoQueries:
+      - TableName: MonRgLoad
+        ExecutedQuery: |
+          let HighCpuThreshold=15;
+          MonRgLoad
+          | extend originalEventTimestamp = originalEventTimestampFrom
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime})) and AppTypeName == 'Worker.CL'
+          | where (event =~ 'instance_load' and code_package_name contains 'Code')
+          | extend KernelCpuUsagePeakPercent = round((kernel_load_peak*1.0 / cpu_load_cap) * 100,1)
+          | summarize peak_process_kernel_cpu_percent=max(KernelCpuUsagePeakPercent) by bin(originalEventTimestamp, 5min)
+          | summarize avg_kernel_cpu_percent=round(avg(peak_process_kernel_cpu_percent),1),
+            max_kernel_cpu_percent=round(max(peak_process_kernel_cpu_percent),1),
+            min_kernel_cpu_percent=round(min(peak_process_kernel_cpu_percent),1),
+            high_cpu_duration_minutes=countif(peak_process_kernel_cpu_percent>=HighCpuThreshold)*5
+    OutputFields:
+      - avg_kernel_cpu_percent
+      - max_kernel_cpu_percent
+      - min_kernel_cpu_percent
+      - high_cpu_duration_minutes
+    IssueDetection:
+      high: "max_kernel_cpu_percent >= 15 → Kernel CPU bottleneck"
+      moderate: "max_kernel_cpu_percent >= 10 and < 15 → attention needed"
+      normal: "max_kernel_cpu_percent < 10 → no issue"
+    recommendation_on_high: "Collect Azure Profiler Trace"
+
+  # ──────────────────────────────────────────────────────
+  # 4. System Pool CPU Analysis
+  # Source: Performance/CPU/references/system-pool-cpu-analysis.md
+  # Tables: MonSqlRgHistory + MonDmRealTimeResourceStats
+  # Threshold: ≥30% high, ≥20% moderate
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-CPU-04
+    name: "System Pool CPU Analysis"
+    source: "SQLLivesiteAgents/Performance/CPU/references/system-pool-cpu-analysis.md"
+    tables: [MonSqlRgHistory, MonDmRealTimeResourceStats]
+    thresholds:
+      normal: "< 20%"
+      moderate: ">= 20% and < 30%"
+      high: ">= 30%"
+    KustoQueries:
+      - TableName: MonSqlRgHistory
+        ExecutedQuery: |
+          let aggInterval_doNOTchange = time(15m);
+          let HighCpuThreshold=30;
+          let cap_interval = materialize(MonDmRealTimeResourceStats
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where database_name =~ '{DatabaseName}'
+          | summarize min(cpu_cap_in_sec) by bin (originalEventTimestamp, aggInterval_doNOTchange));
+          let systemPoolCpuResource=materialize(MonSqlRgHistory
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where event =~ 'aggregated_resource_pools_plus_history'
+          | extend originalEventTimestamp = end_aggregated_sample
+          | extend pool_name= iff(pool_name =~ 'SloSharedPool1' or pool_name startswith 'UserPool.DBid','User Pool',pool_name)
+          | extend pool_name= iff(pool_name!='User Pool','System Pools', pool_name)
+          | where pool_name =='System Pools'
+          | summarize delta_total_cpu_usage_ms = sum(delta_total_cpu_usage_ms), start_aggregated_sample = min(start_aggregated_sample), end_aggregated_sample = max(end_aggregated_sample) by originalEventTimestamp = bin(end_aggregated_sample, aggInterval_doNOTchange), pool_name
+          | extend avg_cores_sec = delta_total_cpu_usage_ms/((end_aggregated_sample-start_aggregated_sample)/1ms)
+          | project-away delta_total_cpu_usage_ms
+          | lookup kind=leftouter (cap_interval) on originalEventTimestamp
+          | extend PercentCPU = round(100.0*avg_cores_sec/min_cpu_cap_in_sec,1)
+          | extend Timestamp=originalEventTimestamp
+          | project Timestamp, PercentCPU);
+          systemPoolCpuResource
+          | summarize avg_cpu_percent=round(avg(PercentCPU),1),
+            max_cpu_percent=round(max(PercentCPU),1),
+            min_cpu_percent=round(min(PercentCPU),1),
+            high_cpu_duration_minutes=countif(PercentCPU>=HighCpuThreshold)*15
+    IssueDetection:
+      high: "max_cpu_percent >= 30 → system pool bottleneck, run MI-LS-CPU-05"
+      moderate: ">= 20 and < 30 → monitor"
+      normal: "< 20 → no issue"
+
+  # ──────────────────────────────────────────────────────
+  # 5. Top N System Pool CPU Breakdown
+  # Source: Performance/CPU/references/top-system-pool-cpu-analysis.md
+  # Condition: Only if System Pool max >= 30%
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-CPU-05
+    name: "Top N System Pool CPU Breakdown"
+    source: "SQLLivesiteAgents/Performance/CPU/references/top-system-pool-cpu-analysis.md"
+    condition: "MI-LS-CPU-04.max_cpu_percent >= 30"
+    tables: [MonSqlRgHistory, MonDmRealTimeResourceStats]
+    KustoQueries:
+      - TableName: MonSqlRgHistory
+        ExecutedQuery: |
+          let aggInterval_doNOTchange = time(15m) ;
+          let cap_interval = materialize(MonDmRealTimeResourceStats
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where database_name =~ '{DatabaseName}'
+          | summarize min(cpu_cap_in_sec) by bin (originalEventTimestamp, aggInterval_doNOTchange));
+          MonSqlRgHistory
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where event =~ 'aggregated_resource_pools_plus_history'
+          | where LogicalServerName =~ '{ServerName}'
+          | extend originalEventTimestamp = end_aggregated_sample
+          | extend pool_name !~ 'SloSharedPool1' and pool_name !startswith 'UserPool.DBid'
+          | lookup kind = inner(
+          MonSqlRgHistory
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where event =~ 'aggregated_resource_pools_plus_history'
+          | where LogicalServerName =~ '{ServerName}'
+          | where pool_name !~ 'SloSharedPool1' and pool_name !startswith 'UserPool.DBid'
+          | top-nested {TopN} of pool_name by max(delta_total_cpu_usage_ms) desc
+          ) on pool_name
+          | summarize delta_total_cpu_usage_ms = sum(delta_total_cpu_usage_ms), start_aggregated_sample = min(start_aggregated_sample), end_aggregated_sample = max(end_aggregated_sample) by originalEventTimestamp = bin(end_aggregated_sample, aggInterval_doNOTchange), pool_name
+          | extend avg_cores_sec = delta_total_cpu_usage_ms/((end_aggregated_sample-start_aggregated_sample)/1ms)
+          | project-away delta_total_cpu_usage_ms
+          | lookup kind=leftouter (cap_interval) on originalEventTimestamp
+          | extend PercentCPU = round(100.0*avg_cores_sec/min_cpu_cap_in_sec,3)
+          | extend Timestamp=originalEventTimestamp
+          | project Timestamp, pool_name, PercentCPU
+    PoolReference:
+      internal: "Core SQL engine ops (geo-replication, redo, recovery)"
+      SloSecSharedPool: "Secondary/geo-replication workloads"
+      InMemDmvCollectorPool: "DMV data collection"
+      InMemQueryStorePool: "Query Store operations"
+      InMemBackupRestorePool: "Backup and restore"
+      InMemXdbLoginPool: "Cross-database login and authentication"
+      InMemXdbSeedingPool: "Cross-database seeding (geo-replica init)"
+      PVSCleanerPool: "Persistent Version Store cleanup (ADR)"
+      PVSPreAllocPool: "PVS pre-allocation"
+
+  # ──────────────────────────────────────────────────────
+  # 6. User Pool CPU Discrepancy Analysis
+  # Source: Performance/CPU/references/user-pool-cpu-discrepancy-analysis.md
+  # Tables: MonDmRealTimeResourceStats + MonWiQdsExecStats + MonWiQueryParamData + MonQueryProcessing
+  # Threshold: ratio < 80% → discrepancy
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-CPU-06
+    name: "User Pool CPU Discrepancy Analysis"
+    source: "SQLLivesiteAgents/Performance/CPU/references/user-pool-cpu-discrepancy-analysis.md"
+    condition: "MI-LS-CPU-01.max_cpu_percent >= 80"
+    tables: [MonDmRealTimeResourceStats, MonWiQdsExecStats, MonWiQueryParamData, MonQueryProcessing]
+    thresholds:
+      discrepancy_ratio: 80    # recorded/userPool < 80% → discrepancy
+    KustoQueries:
+      - TableName: MonDmRealTimeResourceStats
+        ExecutedQuery: |
+          let MonDmRealTimeResourceStats_Sample_sec=15;
+          let totalUserPoolCpu_ms=toscalar(MonDmRealTimeResourceStats
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where database_name =~ '{DatabaseName}'
+          | summarize  tolong(sum(avg_cpu_percent*cpu_cap_in_sec *MonDmRealTimeResourceStats_Sample_sec*1000/100)));
+          let qdscpu_ms=toscalar(MonWiQdsExecStats
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where database_name =~ '{DatabaseName}'
+          | summarize tolong(sum(cpu_time)/1000));
+          let successful_compilecpu_ms=toscalar(MonWiQueryParamData
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where logical_database_name =~ '{DatabaseName}'
+          | summarize tolong(sum(compile_cpu_time)/1000));
+          let failed_compilecpu_ms=toscalar(MonQueryProcessing
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where logical_database_name =~ '{DatabaseName}'
+          | where event =~'failed_compilation'
+          | summarize tolong(sum(compile_cpu)));
+          let totalRecordedCPU_ms=qdscpu_ms+successful_compilecpu_ms+failed_compilecpu_ms;
+          let totalRecordedCPU_totalUserPoolCpu_ratio=round(totalRecordedCPU_ms*100/totalUserPoolCpu_ms,1);
+          let IssueDetected=case(totalRecordedCPU_totalUserPoolCpu_ratio >= 80, 'false','true');
+          let avgCPUPercentage=round(totalUserPoolCpu_ms*100.0/1 // MI: CPU capacity placeholder not available, raw values used,1);
+          let totalRecordedCPUPercentage=round(totalRecordedCPU_ms*100.0/1 // MI: CPU capacity placeholder not available, raw values used,1);
+          let qdsPercentage=round(qdscpu_ms*100/1 // MI: CPU capacity placeholder not available, raw values used,1);
+          let successful_CompileCpuPercentage=round(successful_compilecpu_ms*100/1 // MI: CPU capacity placeholder not available, raw values used,1);
+          let failed_CompileCpuPercentage=round(failed_compilecpu_ms*100/1 // MI: CPU capacity placeholder not available, raw values used,1);
+          print IssueDetected=IssueDetected,
+                totalUserPoolCpu_ms=totalUserPoolCpu_ms,
+                avgCPUPercentage=avgCPUPercentage,
+                totalRecordedCPU_ms=totalRecordedCPU_ms,
+                totalRecordedCPUPercentage=totalRecordedCPUPercentage,
+                qdscpu_ms=qdscpu_ms,
+                qdsPercentage=qdsPercentage,
+                successful_compilecpu_ms=successful_compilecpu_ms,
+                successful_CompileCpuPercentage=successful_CompileCpuPercentage,
+                failed_compilecpu_ms=failed_compilecpu_ms,
+                failed_CompileCpuPercentage=failed_CompileCpuPercentage
+    IssueDetection:
+      discrepancy: "ratio < 80% → CPU unaccounted for"
+      normal: "ratio >= 80% → QDS + Compile accounts for User Pool CPU"
+    NextStepsOnDiscrepancy:
+      - "Check SQL restart/failover"
+      - "Check kill commands"
+      - "Check QDS readonly"
+      - "Check long-running transactions"
+      - "If all negative → analyze Azure Profiler traces"

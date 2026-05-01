@@ -1,0 +1,803 @@
+SqlSkills:
+- id: MI-io-storage-1
+  Topic: 2_-Managed-Instance-log-growth-in-danger-of-fillin
+  Source: content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/2.-Managed-Instance-log-growth-in-danger-of-fillin.ipynb
+  Prompts:
+  - MI 2. Managed Instance log growth in danger of fillin
+  - Managed Instance 2. Managed Instance log growth in danger of fillin
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonBackup
+    ExecutedQuery: |-
+      let BackupsInProgress = MonBackup
+      | where FilterFunc (TIMESTAMP, ago(BackupInProgressQueryTimeWindow), true, AppTypeName, ClusterName, ClusterNameParam, NodeName)
+      | where package == 'XdbBackupServiceXEvents'
+      | where event_type in ('BACKUP_START', 'BACKUP_END', 'BACKUP_ERROR')
+      | where backup_type=='Full'
+      | where database_name !in ('msdb','replicatedmaster','managed_model', 'master','')
+      | summarize by logical_server_name, database_name, originalEventTimestamp, event_type
+      | summarize arg_max (originalEventTimestamp, event_type) by logical_server_name, database_name
+      | where event_type=='BACKUP_START'
+      | project LogicalServerName = logical_server_name, DatabaseNameGuid = database_name, BackupStartTimestamp = originalEventTimestamp;
+      // Data about throughput of backups for databases under backup
+- id: MI-io-storage-2
+  Topic: 2_-Managed-Instance-log-growth-in-danger-of-fillin
+  Source: content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/2.-Managed-Instance-log-growth-in-danger-of-fillin.ipynb
+  Prompts:
+  - MI 2. Managed Instance log growth in danger of fillin
+  - Managed Instance 2. Managed Instance log growth in danger of fillin
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: "let BackupsInProgressDataInfo = BackupsInProgress\n| join kind=inner (  \nMonSqlRgHistory\n| where FilterFunc (TIMESTAMP, ago(BackupInProgressQueryTimeWindow), true, AppTypeName, ClusterName,\
+      \ ClusterNameParam, NodeName)\n| where event == 'aggregated_workload_groups_plus_history' and group_name == 'InMemFullBackupGroup'\n| project TIMESTAMP, LogicalServerName, ReadThroughput = delta_read_bytes_total\
+      \ / datetime_diff('second', end_aggregated_sample, start_aggregated_sample) / 1024. / 1024.  \n) on LogicalServerName\n| where TIMESTAMP >= BackupStartTimestamp;\n// Data about completed MBs of backups\
+      \ for databases under backup  \nlet BackupsInProgressCompletedData = BackupsInProgressDataInfo\n| summarize AvgBackupDiskThroughputSinceBackupStartMBPerS=avg(ReadThroughput) by LogicalServerName,\
+      \ DatabaseNameGuid, BackupStartTimestamp\n| extend BackupDurationInS = (now()-BackupStartTimestamp) / 1s\n| extend EstimatedBackupDoneInMB = AvgBackupDiskThroughputSinceBackupStartMBPerS * BackupDurationInS\n\
+      | project LogicalServerName, DatabaseNameGuid, AvgBackupDiskThroughputSinceBackupStartMBPerS, BackupDurationInS, EstimatedBackupDoneInMB;\n// Data about throughputs of backups for databases under\
+      \ backup"
+- id: MI-io-storage-3
+  Topic: 2_-Managed-Instance-log-growth-in-danger-of-fillin
+  Source: content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/2.-Managed-Instance-log-growth-in-danger-of-fillin.ipynb
+  Prompts:
+  - MI 2. Managed Instance log growth in danger of fillin
+  - Managed Instance 2. Managed Instance log growth in danger of fillin
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLXStoreIOStats
+    ExecutedQuery: "let BackupsInProgressLogData = BackupsInProgress\n| join kind=inner (  \nMonSQLXStoreIOStats\n| where FilterFunc (TIMESTAMP, ago(BackupInProgressQueryTimeWindow), true, AppTypeName,\
+      \ ClusterName, ClusterNameParam, NodeName)\n| where event == 'xstore_io_stats'\n| where file_path endswith '.ldf'\n| project TIMESTAMP, LogicalServerName, total_MB_write = total_write_bytes / 1024.\
+      \ /1024, file_path\n| parse file_path with * '/data/' db_name '_' *\n| where db_name !in ('msdb','replicatedmaster','managed_model', 'master','')\n| summarize sum(total_MB_write) by LogicalServerName,\
+      \ db_name, bin(TIMESTAMP, 10m)\n| project TIMESTAMP, LogicalServerName , total_MB_write = sum_total_MB_write , DatabaseNameGuid = db_name  \n) on LogicalServerName, DatabaseNameGuid\n| where TIMESTAMP\
+      \ >= BackupStartTimestamp\n| where TIMESTAMP >= ago(QueryTimeWindow)\n| summarize LogWritesTotalMB=sum(total_MB_write) by LogicalServerName, DatabaseNameGuid, BackupStartTimestamp\n| extend LogWritesAvgMBPerS\
+      \ = LogWritesTotalMB / (1.* ((ago(0s)-BackupStartTimestamp) / 1s))\n| project LogicalServerName, DatabaseNameGuid, BackupStartTimestamp, LogWritesTotalMB, LogWritesAvgMBPerS;\n// Database sizes"
+- id: MI-io-storage-4
+  Topic: TSGCL0156-SVM-Network-Throughput-Saturation
+  Source: content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/TSGCL0156-SVM-Network-Throughput-Saturation.ipynb
+  Prompts:
+  - MI TSGCL0156 SVM Network Throughput Saturation
+  - Managed Instance TSGCL0156 SVM Network Throughput Saturation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonBackup
+    ExecutedQuery: |-
+      MonBackup
+      | where TIMESTAMP > ago(36h)
+      | where LogicalServerName == "{ServerName}"
+      | where package == 'XdbBackupServiceXEvents'
+      | where event_type in ('BACKUP_START', 'BACKUP_END', 'BACKUP_ERROR')
+      | where backup_type=='Full'
+      | where database_name !in ('msdb','replicatedmaster','managed_model', 'master','')
+      | summarize by logical_server_name, database_name, originalEventTimestamp, event_type
+      | summarize arg_max (originalEventTimestamp, event_type) by logical_server_name, database_name
+      | where event_type=='BACKUP_START'
+      | project LogicalServerName = logical_server_name, DatabaseNameGuid = database_name, BackupStartTimestamp = originalEventTimestamp
+- id: MI-io-storage-5
+  Topic: TSGCL0156-SVM-Network-Throughput-Saturation
+  Source: content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/TSGCL0156-SVM-Network-Throughput-Saturation.ipynb
+  Prompts:
+  - MI TSGCL0156 SVM Network Throughput Saturation
+  - Managed Instance TSGCL0156 SVM Network Throughput Saturation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: "MonSqlRgHistory\n| where TIMESTAMP between (todatetime(\"{StartTime}\")..todatetime(\"{EndTime}\"))\n| where LogicalServerName==\"{ServerName}\"\n| where event == \"aggregated_workload_groups_plus_history\"\
+      \ and group_name == \"InMemFullBackupGroup\"\n| project  \n TIMESTAMP,  \nNodeName,  \nread_throughput = delta_read_bytes_total / datetime_diff('second', end_aggregated_sample, start_aggregated_sample)¯\
+      \ / 1024. / 1024.\n| render timechart"
+- id: MI-io-storage-6
+  Topic: TSGCL0156-SVM-Network-Throughput-Saturation
+  Source: content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/TSGCL0156-SVM-Network-Throughput-Saturation.ipynb
+  Prompts:
+  - MI TSGCL0156 SVM Network Throughput Saturation
+  - Managed Instance TSGCL0156 SVM Network Throughput Saturation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLXStoreIOStats
+    ExecutedQuery: |-
+      MonSQLXStoreIOStats
+      | where TIMESTAMP between (todatetime("{StartTime}")..todatetime("{EndTime}"))
+      | where LogicalServerName == "{ServerName}"
+      | where event == 'xstore_io_stats'
+      | where file_path endswith '.ldf'
+      | project TIMESTAMP, LogicalServerName, total_MB_write = total_write_bytes / 1024. /1024, file_path
+      | parse file_path with * '/data/' db_name '_' *
+      | where db_name == "{DatabaseName}"
+      | where db_name !in ('msdb','replicatedmaster','managed_model', 'master','')
+      | summarize sum(total_MB_write) by LogicalServerName, db_name, bin(TIMESTAMP, 10m)
+      | project TIMESTAMP, LogicalServerName, DatabaseNameGuid = db_name, total_MB_write = sum_total_MB_write
+      | render timechart
+- id: MI-io-storage-7
+  Topic: TSGCL0270-GP-Log-Rates-Mitigation-options-_MIPerf2
+  Source: content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/TSGCL0270-GP-Log-Rates-Mitigation-options-_MIPerf2.ipynb
+  Prompts:
+  - MI TSGCL0270 GP Log Rates Mitigation options _MIPerf2
+  - Managed Instance TSGCL0270 GP Log Rates Mitigation options _MIPerf2
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLXStoreIOStats
+    ExecutedQuery: "MonSQLXStoreIOStats\n| where event == 'xstore_io_stats'\n| where LogicalServerName =~ \"{ServerName}\"\n| where TIMESTAMP > ago(4h) and TIMESTAMP < datetime(2020-03-09 22:01:18.9993556)\n\
+      | where file_path endswith \".ldf\"\n| extend file_path = split(file_path,'/')[5]\n| project TIMESTAMP , rps = total_requests / (period_ms/1000.0),  \nnrps = total_xio_requests / (period_ms/1000.0)\
+      \ ,  \nmbs = (total_read_bytes + total_write_bytes)/ (1024. * 1024 * period_ms/1000.0),  \nmbsw = (total_write_bytes)/ (1024. * 1024 * period_ms/1000.0),  \nmbsr = (total_read_bytes)/ (1024. * 1024\
+      \ * period_ms/1000.0),  \navgio_kb = (total_read_bytes + total_write_bytes)/1024./ total_xio_requests,total_xio_requests,  \ntotal_retries,  \nfile_path, page_blob_tier\n| render timechart"
+- id: MI-io-storage-8
+  Topic: TSGCL0270-GP-Log-Rates-Mitigation-options-_MIPerf2
+  Source: content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/TSGCL0270-GP-Log-Rates-Mitigation-options-_MIPerf2.ipynb
+  Prompts:
+  - MI TSGCL0270 GP Log Rates Mitigation options _MIPerf2
+  - Managed Instance TSGCL0270 GP Log Rates Mitigation options _MIPerf2
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonBackup
+    ExecutedQuery: |-
+      MonBackup
+      | where LogicalServerName =~ "{ServerName}"
+      | where TIMESTAMP > datetime(2020-02-14 11:35:36.390) and TIMESTAMP < datetime(2020-02-14 00:40:52.110)
+      | where event == 'database_backup'
+      | where isnotnull(toguid(database_name))
+      | where event_type in ('BACKUP_START', 'BACKUP_END', 'BACKUP_ERROR','BACKUP_METADATA_DETAILS')
+      | project AppName, TIMESTAMP, event_type, database_name, backup_type, backup_size_gb = todouble(backup_size) / (1024. * 1024 * 1024), backup_start_date, backup_end_date, duration =todatetime(backup_end_date)-todatetime(backup_start_date)
+      | extend avg_backup_throughput_Mbs = backup_size_gb*1024. / (duration/1s)
+- id: MI-io-storage-9
+  Topic: TSGCL0270-GP-Log-Rates-Mitigation-options-_MIPerf2
+  Source: content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/TSGCL0270-GP-Log-Rates-Mitigation-options-_MIPerf2.ipynb
+  Prompts:
+  - MI TSGCL0270 GP Log Rates Mitigation options _MIPerf2
+  - Managed Instance TSGCL0270 GP Log Rates Mitigation options _MIPerf2
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLXStoreIOStats
+    ExecutedQuery: "MonSQLXStoreIOStats\n| where event == 'xstore_io_stats'\n| where LogicalServerName startswith \"managed_server_name\"\n| where TIMESTAMP > datetime(2020-02-10 17:23:42.757)\n| where\
+      \ file_path endswith '.ldf'\n| where event == 'xstore_io_stats'\n| extend file_path = split(file_path,'/')[5]\n| project TIMESTAMP, file_path, avg_request_time = total_microsec/ 1000. / total_requests,\
+      \ total_requests, total_microsec,  \navg_write_time = total_write_microsec/1000./total_writes,  \navg_read_time = total_read_microsec/1000.0/total_reads,  \ntotal_reads,  \ntotal_writes,  \navg_write_size_kb\
+      \ = total_write_bytes/1024./total_writes,  \navg_read_size_kb = total_read_bytes/1024./total_reads,  \npage_blob_tier, total_retries, total_retry_wait_time_ms\n| render timechart"
+- id: MI-io-storage-10
+  Topic: TSGCLHE005-Stuck_Database_Drop_Hermes_Drive_Path_Mismatch
+  Source: content/Hermes/TSGCLHE005-Stuck_Database_Drop_Hermes_Drive_Path_Mismatch.md
+  Prompts:
+  - MI TSGCLHE005 Stuck_Database_Drop_Hermes_Drive_Path_Mismatch
+  - Managed Instance TSGCLHE005 Stuck_Database_Drop_Hermes_Drive_Path_Mismatch
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: |-
+      MonSqlRgHistory
+      | where TIMESTAMP > ago(7d)
+      | where AppName == "<AppName_from_Step1>"
+      | where event == "aggregated_virtual_files_io_history"
+      | where file_path has "<file_guid>"  // GUID from file_container_path, e.g. "8abaf587"
+      | summarize arg_max(TIMESTAMP, size_on_disk_bytes) by file_path
+      | extend size_on_disk_gb = round(size_on_disk_bytes / 1073741824.0, 2)
+      | project file_path, size_on_disk_gb, TIMESTAMP
+      | order by file_path
+- id: MI-io-storage-11
+  Topic: TSG-Increase-SQL-MI-reserved-storage-on-the-fly
+  Source: content/sql_cloud_lifter_notebook/TSG-Increase-SQL-MI-reserved-storage-on-the-fly.md
+  Prompts:
+  - MI TSG Increase SQL MI reserved storage on the fly
+  - Managed Instance TSG Increase SQL MI reserved storage on the fly
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: |-
+      MonSqlRgHistory
+      | where TIMESTAMP > ago(6h)
+      | where LogicalServerName == "{LogicalServerName}"
+      | where event == "aggregated_virtual_files_io_history"
+      | where file_path endswith "df"
+      | take 1
+      | project file_path
+- id: MI-io-storage-12
+  Topic: TSG-PLATVLDT-ErrorNode-DiskWatchdog-FullDisk
+  Source: content/sql_cloud_lifter_notebook/TSG-PLATVLDT-ErrorNode-DiskWatchdog-FullDisk.md
+  Prompts:
+  - MI TSG PLATVLDT ErrorNode DiskWatchdog FullDisk
+  - Managed Instance TSG PLATVLDT ErrorNode DiskWatchdog FullDisk
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: |-
+      MonSqlRgHistory
+      | where TIMESTAMP between (startTime .. endTime)
+      | where ClusterName =~ clusterName
+      | where NodeName in (nodeNames)
+      | where event == 'aggregated_virtual_files_io_history'
+      | where file_path contains 'templog' and file_path endswith '.ldf'
+      | summarize
+- id: MI-io-storage-13
+  Topic: Storage-latency-troubleshooting
+  Source: Performance-and-Query-Execution/High-IO-utilization/Storage-latency-troubleshooting.md
+  Prompts:
+  - MI Storage latency troubleshooting
+  - Managed Instance Storage latency troubleshooting
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: |-
+      MonSqlRgHistory
+      | where LogicalServerName =~ "{ServerName}"
+      | where originalEventTimestamp between (datetime(2024-02-27 00:34:05.0599807)..datetime(2024-02-27 16:34:05.0599807))
+      | where event == 'aggregated_virtual_files_io_history'
+      | summarize by db_name, database_id, file_id, volume_name = file_path
+      | order by database_id asc, file_id asc
+- id: MI-io-storage-14
+  Topic: Storage-latency-troubleshooting
+  Source: Performance-and-Query-Execution/High-IO-utilization/Storage-latency-troubleshooting.md
+  Prompts:
+  - MI Storage latency troubleshooting
+  - Managed Instance Storage latency troubleshooting
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: |-
+      MonSqlRgHistory
+      | where LogicalServerName =~ "{ServerName}"
+      | where originalEventTimestamp between (datetime(2024-02-27 00:34:05.0599807)..datetime(2024-02-27 16:34:05.0599807))
+      | where event == 'volume_entity_stats'
+      | where is_agg_volume == 0 and is_categorized == 1
+      | where total_io_count > 0
+      // In case of BC, remove volume_name filter and change volume_type to 0
+      | where volume_name contains "Volume Name From Previous Query"
+      | where volume_type == 2 // 0-SSD, 2-XIO
+      | extend max_ms = max_of(latency_max_us_very_high, target_latency_very_high_us) / 1000.
+      | summarize hint.strategy=shuffle
+- id: MI-io-storage-15
+  Topic: Storage-latency-troubleshooting
+  Source: Performance-and-Query-Execution/High-IO-utilization/Storage-latency-troubleshooting.md
+  Prompts:
+  - MI Storage latency troubleshooting
+  - Managed Instance Storage latency troubleshooting
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: |-
+      MonSqlRgHistory
+      | where LogicalServerName =~ "{ServerName}"
+      | where originalEventTimestamp between (datetime(2024-02-27 00:34:05.0599807)..datetime(2024-02-27 16:34:05.0599807))
+      | where event == 'aggregated_virtual_files_io_history'
+      | where type_desc =~ "ROWS"
+      | where database_id == 5 and file_id == 1 // Change for the database and file id you are investigating
+      | extend IOStallMsPerIO = round(delta_io_stall*1.0/(delta_num_of_writes + delta_num_of_reads),1)
+      | extend IOStallWriteMsPerWrite = round(delta_io_stall_write_ms*1.0/delta_num_of_writes,1)
+      | extend IOStallQueueMsPerWrite = round (delta_io_stall_queued_write_ms*1.0/delta_num_of_writes,2)
+      | extend IOStallQueueMsPerRead = round (delta_io_stall_queued_read_ms*1.0/delta_num_of_reads,2)
+      | extend IOStallReadMsPerRead = round(delta_io_stall_read_ms*1.0/delta_num_of_reads,1)
+      | where IOStallMsPerIO > 0
+      | project end_utc_date = end_aggregated_sample
+- id: MI-io-storage-16
+  Topic: Storage-latency-troubleshooting
+  Source: Performance-and-Query-Execution/High-IO-utilization/Storage-latency-troubleshooting.md
+  Prompts:
+  - MI Storage latency troubleshooting
+  - Managed Instance Storage latency troubleshooting
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: |-
+      MonSqlRgHistory
+      | where AppName =~ "{AppName}"
+      | where originalEventTimestamp between (datetime(2023-09-27 08:00:00)..datetime(2023-09-27 10:30:00))
+      | where event == 'aggregated_workload_groups_plus_history'
+      | project end_aggregated_sample, AppName, delta_ios_group_iops_delayed, NodeName, group_name, delta_writes_issued_total, delta_reads_issued_total
+      | summarize writes = sum(delta_writes_issued_total), reads = sum(delta_reads_issued_total) by bin(end_aggregated_sample, 15m) , group_name
+      | render timechart
+- id: MI-io-storage-17
+  Topic: Storage-latency-troubleshooting
+  Source: Performance-and-Query-Execution/High-IO-utilization/Storage-latency-troubleshooting.md
+  Prompts:
+  - MI Storage latency troubleshooting
+  - Managed Instance Storage latency troubleshooting
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLXStore
+    ExecutedQuery: |-
+      MonSQLXStore
+      | where TIMESTAMP between (datetime(2023-09-27 08:00:00)..datetime(2023-09-27 10:30:00))
+      | where AppName =~ "{AppName}"
+      | where event == "xio_failed_request"
+      | summarize count(), max(retry_count) by request_type, http_errorcode, mapped_errorcode, bin(TIMESTAMP, binTime)
+      | extend request_mapped_http = strcat(request_type, "_", mapped_errorcode, "_", http_errorcode)
+- id: MI-io-storage-18
+  Topic: Storage-latency-troubleshooting
+  Source: Performance-and-Query-Execution/High-IO-utilization/Storage-latency-troubleshooting.md
+  Prompts:
+  - MI Storage latency troubleshooting
+  - Managed Instance Storage latency troubleshooting
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLXStoreIOStats
+    ExecutedQuery: |-
+      MonSQLXStoreIOStats
+      | where originalEventTimestamp between (datetime(2023-09-27 08:00:00)..datetime(2023-09-27 10:30:00))
+      | where LogicalServerName =~ "{ServerName}" // managed instance name
+      | where file_path contains "b93bef6a-b74a-4246-9143-68cdb3164afb" // You can get this from the first query in the previous section
+      | where event == 'xstore_io_stats'
+      | where file_path endswith '.ldf' or file_path endswith'.mdf' or file_path endswith '.ndf'
+      | extend period_ms = column_ifexists('period_ms',-1)
+      | extend period_ms = iif(isempty(period_ms), -1, period_ms)
+      | extend periodSeconds = iif(period_ms==-1, 30., period_ms/1000.)
+      | parse kind=regex file_path with* '/data/' file_name:string
+      | project TIMESTAMP, LogicalServerName, AppName, NodeName, file_path, file_name, period_ms, periodSeconds,
+- id: MI-io-storage-19
+  Topic: Backup-failing-due-to-Log-full-with-AVAILABILITY_REPLICA
+  Source: Performance-and-Query-Execution/Managing-space-for-databases-and-pools/Backup-failing-due-to-Log-full-with-AVAILABILITY_REPLICA.md
+  Prompts:
+  - MI Backup failing due to Log full with AVAILABILITY_REPLICA
+  - Managed Instance Backup failing due to Log full with AVAILABILITY_REPLICA
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: |-
+      MonSqlRgHistory
+      | where LogicalServerName == "<MI-Name>"
+      | where NodeName == "_DB40C_0"
+      | where TIMESTAMP between (datetime(2025-11-06 13:20) .. datetime(2025-11-08 13:30))
+      | where file_path contains "9c3d9de9-55d0-4bcd-a4de-c767eaec67ab" //database logical id
+      | where file_path endswith "ldf"
+      | where event == "aggregated_virtual_files_io_history"
+      | project TIMESTAMP, file_path, size_on_disk_gb = size_on_disk_bytes/1024/1024/1024, spaceused_gb = spaceused_mb/1024, usage_pctg = spaceused_mb*1024*1024.0/size_on_disk_bytes*100, max_size_gb = max_size_mb/1024, growth
+- id: MI-io-storage-20
+  Topic: Customer-complains-about-used-space-is-growing-or-too-high
+  Source: Performance-and-Query-Execution/Managing-space-for-databases-and-pools/Customer-complains-about-used-space-is-growing-or-too-high.md
+  Prompts:
+  - MI Customer complains about used space is growing or too high
+  - Managed Instance Customer complains about used space is growing or too high
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: |-
+      MonSqlRgHistory
+      | where TIMESTAMP > ago(1d)
+      | where LogicalServerName =~ "{ServerName}" //server name
+      | where db_name =~ "{DatabaseName}" // database_name
+      | where type_desc == "ROWS" //looking only for data only
+      | where is_primary_replica == 1
+      | summarize sum(spaceused_mb), sum(size_on_disk_mb =(size_on_disk_bytes/1024/1024)) by TIMESTAMP
+- id: MI-io-storage-21
+  Topic: Customer-complains-about-used-space-is-growing-or-too-high
+  Source: Performance-and-Query-Execution/Managing-space-for-databases-and-pools/Customer-complains-about-used-space-is-growing-or-too-high.md
+  Prompts:
+  - MI Customer complains about used space is growing or too high
+  - Managed Instance Customer complains about used space is growing or too high
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: |-
+      MonSqlRgHistory
+      | where TIMESTAMP > ago(1d)
+      | where LogicalServerName =~ "{ServerName}" //server name
+      | where db_name =~ "{DatabaseName}" // database_name
+      | where type_desc == "ROWS" //looking only for data
+      | project TIMESTAMP, file_id, type_desc,spaceused_mb, max_size_mb, size_on_disk_mb =(size_on_disk_bytes/1024/1024)
+- id: MI-io-storage-22
+  Topic: OnePager_-Understanding-Database-Space-Usage-in-Azure-SQL-MI
+  Source: Performance-and-Query-Execution/Managing-space-for-databases-and-pools/[OnePager]-Understanding-Database-Space-Usage-in-Azure-SQL-MI.md
+  Prompts:
+  - MI [OnePager] Understanding Database Space Usage in Azure SQL MI
+  - Managed Instance [OnePager] Understanding Database Space Usage in Azure SQL MI
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: |-
+      MonSqlRgHistory
+      | where TIMESTAMP > ago(1d)
+      | where LogicalServerName =~ "{ServerName}"
+      | where db_name =~ "{DatabaseName}"
+      | where type_desc == 'ROWS'
+      | where is_primary_replica == 1
+      | summarize sum(spaceused_mb), sum(size_on_disk_mb =(size_on_disk_bytes/1024/1024)) by TIMESTAMP
+- id: MI-io-storage-23
+  Topic: Database-corruption-on-Azure-SQL-Managed-Instance
+  Source: Performance-and-Query-Execution/Other-errors-and-exceptions/Database-corruption-on-Azure-SQL-Managed-Instance.md
+  Prompts:
+  - MI Database corruption on Azure SQL Managed Instance
+  - Managed Instance Database corruption on Azure SQL Managed Instance
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: |-
+      let AppNames = MonAnalyticsDBSnapshot
+      | where logical_server_name =~ srv
+      | where logical_database_name =~ db
+      | extend AppName = sql_instance_name
+      | distinct AppName;
+- id: MI-io-storage-24
+  Topic: Check-IO-throttling
+  Source: Performance-and-Query-Execution/Reference/Check-IO-throttling.md
+  Prompts:
+  - MI Check IO throttling
+  - Managed Instance Check IO throttling
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLXStoreIOStats
+    ExecutedQuery: |-
+      MonSQLXStoreIOStats
+      | where TIMESTAMP > ago(2d)
+      | where LogicalServerName =~ "{ServerName}" // managed instance name
+      | where file_path contains "7441c03e-edab-4957-809e-84e0e514e917" //physical database name
+      | where isnotempty(page_blob_tier)
+      | summarize min(TIMESTAMP), max(TIMESTAMP) by file_path, page_blob_tier
+- id: MI-io-storage-25
+  Topic: Check-IO-throttling
+  Source: Performance-and-Query-Execution/Reference/Check-IO-throttling.md
+  Prompts:
+  - MI Check IO throttling
+  - Managed Instance Check IO throttling
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: |-
+      MonSqlRgHistory
+      | where LogicalServerName =~ serverName
+      | where TIMESTAMP > ago(1d)
+      | project database_id, physical_database_name
+      | summarize by database_id, physical_database_name
+      | join kind = inner(
+- id: MI-io-storage-26
+  Topic: Check-IO-throttling
+  Source: Performance-and-Query-Execution/Reference/Check-IO-throttling.md
+  Prompts:
+  - MI Check IO throttling
+  - Managed Instance Check IO throttling
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLXStore
+    ExecutedQuery: |-
+      MonSQLXStore
+      | where TIMESTAMP between (datetime(2023-05-28 16:00) .. datetime(2023-05-31 12:00))
+      | where LogicalServerName =~ "{ServerName}"
+      //| where file_path endswith ".mdf"
+      | where file_path contains "physical database name"
+      | where http_errorcode == 503
+      | summarize xstore_throttling_count = count() by bin(TIMESTAMP, 5m)
+      | render timechart
+- id: MI-io-storage-27
+  Topic: Check-IO-throttling
+  Source: Performance-and-Query-Execution/Reference/Check-IO-throttling.md
+  Prompts:
+  - MI Check IO throttling
+  - Managed Instance Check IO throttling
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: |-
+      MonSqlRgHistory
+      | where TIMESTAMP >= startTime
+      | where TIMESTAMP <= endTime
+      | where LogicalServerName == srvrName
+      | where AppTypeName == 'Worker.CL.WCOW.SQL22'
+      | where event == 'aggregated_workload_groups_plus_history'
+      | where datetime_diff('second', end_aggregated_sample, start_aggregated_sample) >= 1
+      | extend LogicalServerName, NodeName, group_id, group_name,
+- id: MI-io-storage-28
+  Topic: Check-IO-throttling
+  Source: Performance-and-Query-Execution/Reference/Check-IO-throttling.md
+  Prompts:
+  - MI Check IO throttling
+  - Managed Instance Check IO throttling
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLXStore
+    ExecutedQuery: |-
+      MonSQLXStore
+      | where LogicalServerName == srvrName
+      | where file_path contains physical_db_name and file_path endswith  ".mdf"
+      | where TIMESTAMP > (startTime - time(1h)) and TIMESTAMP < (endTime + time(1h))
+      | where event == 'xio_failed_request'
+      | where http_errorcode == '503'
+      | summarize count(), max(retry_count) by bin(TIMESTAMP, 5m), file_path
+      | project count_, max_retry_count, TIMESTAMP, file=split(file_path, '/', 4)
+- id: MI-io-storage-29
+  Topic: General-Troubleshooting-of-space-used-on-managed-instance
+  Source: Performance-and-Query-Execution/Reference/General-Troubleshooting-of-space-used-on-managed-instance.md
+  Prompts:
+  - MI General Troubleshooting of space used on managed instance
+  - Managed Instance General Troubleshooting of space used on managed instance
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: |-
+      MonSqlRgHistory
+      | where TIMESTAMP > datetime(2023-12-01 02:30:50.8660736) and TIMESTAMP < datetime(2023-12-01 04:00:55.5221357)
+      | where LogicalServerName =~ "{ServerName}" and AppName == "appname" and NodeName == "node_name"
+      | where event=='aggregated_virtual_files_io_history'
+      | summarize db_size_mb = sum(size_on_disk_gb =(size_on_disk_bytes/1024/1024)) by TIMESTAMP, db_name
+- id: MI-io-storage-30
+  Topic: General-Troubleshooting-of-space-used-on-managed-instance
+  Source: Performance-and-Query-Execution/Reference/General-Troubleshooting-of-space-used-on-managed-instance.md
+  Prompts:
+  - MI General Troubleshooting of space used on managed instance
+  - Managed Instance General Troubleshooting of space used on managed instance
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: |-
+      MonSqlRgHistory
+      | where TIMESTAMP > ago(1d)
+      | where LogicalServerName =~ "{ServerName}" and AppName == "appname" and NodeName == "node_name"
+      | where db_name =~ "{DatabaseName}"
+      | where event=='aggregated_virtual_files_io_history'
+      | project TIMESTAMP, type_desc,spaceused_mb, max_size_mb, size_on_disk_mb =(size_on_disk_bytes/1024/1024), file_id
+- id: MI-io-storage-31
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLXStoreIOStats
+    ExecutedQuery: |-
+      MonSQLXStoreIOStats
+      | where LogicalServerName =~ ServerName
+      | where TIMESTAMP > ago(daysAgo)
+      | where file_path endswith 'df'
+      | where event == 'xstore_io_stats'
+      | extend TIMESPAN = bin(TIMESTAMP, 30m)
+      | join kind = inner (
+- id: MI-io-storage-32
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: |-
+      MonSqlRgHistory
+      | where LogicalServerName =~ '<server-name>'
+      | where TIMESTAMP between(datetime(2024-10-01 20:00:00)..datetime(2024-10-02 05:00:00))
+      | where NodeName == '<node-name>'
+      | where event == "selective_rg_history"
+      | where group_name == "default"
+      | project originalEventTimestamp, group_name, active_worker_min, active_worker_max, active_worker_count, active_worker_avg
+      | render timechart
+- id: MI-io-storage-33
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: |-
+      let DatabaseSnapshot = MonAnalyticsDBSnapshot
+      | where (SubscriptionId =~ '{{SubscriptionId}}' or customer_subscription_id =~ '{{SubscriptionId}}') and (LogicalServerName =~ '{{ServerName}}' or logical_server_name =~ '{{ServerName}}')
+      | summarize arg_max(TIMESTAMP,*) by logical_database_id
+      | project db_physical_name=tolower(logical_database_id), logical_database_name;
+- id: MI-io-storage-34
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLXStoreIOStats
+    ExecutedQuery: |-
+      let SQLServerSideThrottlings = MonSQLXStoreIOStats
+      | where originalEventTimestamp >= startTime and originalEventTimestamp <= endTime
+      | where SubscriptionId =~ '{{SubscriptionId}}' and LogicalServerName =~ '{{ServerName}}'
+      | where file_path endswith 'df'
+      | where event == 'xstore_io_stats'
+      | order by file_path, originalEventTimestamp asc
+      | extend duration_time = iff(file_path == prev(file_path, 1), datetime_diff('second', originalEventTimestamp, prev(originalEventTimestamp,1)), 30)
+      | where duration_time != 0
+      | where page_blob_tier != 'P60'
+      | extend iops_limit =
+- id: MI-io-storage-35
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLXStore
+    ExecutedQuery: |-
+      let RemoteStorageThrottling = MonSQLXStore
+      | where originalEventTimestamp >= startTime and originalEventTimestamp <= endTime
+      | where SubscriptionId =~ '{{SubscriptionId}}' and LogicalServerName =~ '{{ServerName}}'
+      | where file_path endswith  'df'
+      | where event == 'xio_failed_request'
+      | where http_errorcode == '503'
+      | summarize count(), max(retry_count) by SubscriptionId, LogicalServerName, file_path
+      | where max_retry_count >= 1
+      | parse file_path with * ".blob.core." sufix "/" location "/data/" db_physical_name "_" file_id "." extension
+      | join kind=inner
+- id: MI-io-storage-36
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: |-
+      MonSqlRgHistory
+      | where TIMESTAMP > ago(1d)
+      | where LogicalServerName =~ "{ServerName}"
+      | where event=='aggregated_virtual_files_io_history'
+      | summarize db_size_mb = sum(size_on_disk =(size_on_disk_bytes/1024/1024)) by TIMESTAMP, db_name, database_id
+- id: MI-io-storage-37
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: |-
+      MonSqlRgHistory
+      | where TIMESTAMP > ago(15d)
+      | where LogicalServerName =~ "{ServerName}"
+      | where database_id == 2 //database_id
+      | where file_path endswith "df"
+      | summarize file_size_gb = max(size_on_disk_bytes) / 1024.0 / 1024.0 / 1024.0 by bin(TIMESTAMP, 5m), file_path
+      | summarize sum(file_size_gb) by bin(TIMESTAMP, 5m)
+      | render timechart
+- id: MI-io-storage-38
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: |-
+      let physicaldbname = (MonAnalyticsDBSnapshot
+      | where LogicalServerName =~ serverName or logical_server_name =~ serverName
+      | where logical_database_name =~ databaseName
+      | summarize arg_max(TIMESTAMP,*) by logical_database_id
+      | project name=tolower(logical_database_id));
+- id: MI-io-storage-39
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: |-
+      MonSqlRgHistory
+      | where TIMESTAMP > ago(12h)
+      | where LogicalServerName =~ "{ServerName}" and db_name =~ "{DatabaseName}"
+      | where event == "aggregated_virtual_files_io_history"
+      | extend size_on_disk_gb = size_on_disk_bytes / 1024.0 / 1024.0 / 1024.0
+      | extend spaceused_gb=spaceused_mb / 1024.0
+      | extend maxsize_gb = max_size_mb/1024.0
+      | extend autogrowth_mb = ((growth*8)/1024.0)
+      | project TIMESTAMP, file_id, size_on_disk_gb, spaceused_gb, autogrowth_mb, maxsize_gb
+- id: MI-io-storage-40
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: |-
+      MonAnalyticsDBSnapshot
+      | where TIMESTAMP > lookBack
+      | where sql_instance_name == SqlInstanceName
+      | where tenant_ring_name == TenantRingName
+      | project-rename db_name = logical_database_name, logical_server_name_1 = logical_server_name
+      | summarize arg_max(TIMESTAMP, service_level_objective, physical_database_id) by tenant_ring_name, sql_instance_name, logical_server_name_1, db_name, logical_database_id
+- id: MI-io-storage-41
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: |-
+      MonAnalyticsDBSnapshot
+      | where LogicalServerName =~ "{ServerName}" or logical_server_name =~ "{ServerName}"
+      | summarize arg_max(TIMESTAMP,*) by logical_database_id
+      | project logical_database_name, create_time, create_mode
+- id: MI-io-storage-42
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: |-
+      let DatabaseSnapshot = MonAnalyticsDBSnapshot
+      | where LogicalServerName =~ "{ServerName}" or logical_server_name =~ "{ServerName}"
+      | summarize arg_max(TIMESTAMP,*) by logical_database_id
+      | project name=tolower(logical_database_id), logical_database_name;

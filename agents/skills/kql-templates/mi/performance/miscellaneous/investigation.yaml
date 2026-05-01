@@ -1,0 +1,129 @@
+# ============================================================================
+# Ported from SQLDB SQLLivesiteAgents, adapted for Managed Instance (MI)
+# MI_SQLLSinvest_perf_misc — Miscellaneous Investigation Workflow
+# ============================================================================
+# Source: SQLLivesiteAgents / Performance / miscellaneous / SKILL.md + references/
+# Distilled: 2026-04-30
+# Purpose: Layer 1 — 定义 Misc 调查的执行顺序
+# KQL 模板引用: miscellaneous/kql-livesite.yaml (Layer 2)
+# ============================================================================
+
+Investigation:
+  id: perf-miscellaneous
+  name: "Miscellaneous Performance Checks"
+  description: >
+    Collection of supplementary checks: worker thread exhaustion, DB corruption,
+    AKV errors, SQL restart/failover, kill commands, Azure Profiler traces,
+    XEvent sessions, and process IDs.
+  source: "SQLLivesiteAgents/Performance/miscellaneous"
+
+  RequiredParameters:
+    - ServerName           # MI uses ServerName
+    - DatabaseName         # MI uses DatabaseName
+    - AppName              # MI fallback when LogicalServerName is empty
+    - StartTime
+    - EndTime
+
+  Steps:
+    # ────────────────────────────────────────────────────
+    # Step 1: Worker Thread Exhaustion
+    # ────────────────────────────────────────────────────
+    - step: 1
+      name: "Worker Thread Exhaustion"
+      kql_ref: "miscellaneous/kql-livesite.yaml#MI-LS-MISC-01"
+      description: "Check for request limit errors (worker thread exhaustion)"
+      table: MonSQLSystemHealth
+      output_fields:
+        - count by hourly bin
+
+    # ────────────────────────────────────────────────────
+    # Step 2: Worker-Session Similarity
+    # ────────────────────────────────────────────────────
+    - step: 2
+      name: "Worker-Session Cosine Similarity"
+      kql_ref: "miscellaneous/kql-livesite.yaml#MI-LS-MISC-02"
+      description: "Check if worker thread spike correlates with session spike"
+      table: MonDmRealTimeResourceStats
+      thresholds:
+        high_similarity: 0.9    # cosine similarity > 0.9 → correlated
+      output_fields:
+        - similarity
+        - resultMessage
+        - IssueDetected
+
+    # ────────────────────────────────────────────────────
+    # Step 3: Database Corruption
+    # ────────────────────────────────────────────────────
+    - step: 3
+      name: "Database Corruption Detection (Non-Hyperscale)"
+      kql_ref: "miscellaneous/kql-livesite.yaml#MI-LS-MISC-03"
+      description: "Check for corruption-related error IDs in errorlog"
+      table: MonSQLSystemHealth
+      error_ids: [211, 823, 824, 825, 829, 2533, 2570, 2576, 3203, 7985, 7989, 8909, 8914, 8916, 8928, 8939, 8942, 8948, 8964, 8965, 8978, 8992, 8998, 8999]
+
+    # ────────────────────────────────────────────────────
+    # Step 4: AKV Errors
+    # ────────────────────────────────────────────────────
+    - step: 4
+      name: "Azure Key Vault Error Detection (Non-Hyperscale)"
+      kql_ref: "miscellaneous/kql-livesite.yaml#MI-LS-MISC-05"
+      description: "Check for AKV-related error IDs"
+      table: MonSQLSystemHealth
+      error_ids: [33183, 37412, 33184, 37542, 37566, 37567, 37568, 37569, 37570, 37571, 37572, 37573, 37574, 37576, 40981, 45320, 45321, 45322, 45324, 45325, 45326, 45327, 45329, 45330, 45362, 45415, 45463, 45472, 45494, 45532, 45538, 45539, 45654, 45656, 45720, 45731, 45746, 45747, 49981]
+
+    # ────────────────────────────────────────────────────
+    # Step 5: SQL Restart / Failover
+    # ────────────────────────────────────────────────────
+    - step: 5
+      name: "SQL Restart and Failover Detection"
+      kql_ref: "miscellaneous/kql-livesite.yaml#MI-LS-MISC-07"
+      description: "Detect process restarts by tracking process_id changes"
+      table: MonSQLSystemHealth
+
+    # ────────────────────────────────────────────────────
+    # Step 6: Kill Command
+    # ────────────────────────────────────────────────────
+    - step: 6
+      name: "Kill Command Detection"
+      kql_ref: "miscellaneous/kql-livesite.yaml#MI-LS-MISC-08"
+      description: "Detect KILL commands in errorlog"
+      table: MonSQLSystemHealth
+
+    # ────────────────────────────────────────────────────
+    # Step 7: Azure Profiler Traces
+    # ────────────────────────────────────────────────────
+    - step: 7
+      name: "Azure Profiler Trace Detection"
+      kql_ref: "miscellaneous/kql-livesite.yaml#MI-LS-MISC-09"
+      description: "Check if Azure Profiler traces are available"
+      tables: [MonRgManager, MonManagement]
+      notes:
+        - "analyze-azure-profiler-trace uses external CLI tool, no KQL"
+
+    # ────────────────────────────────────────────────────
+    # Step 8: XEvent Sessions
+    # ────────────────────────────────────────────────────
+    - step: 8
+      name: "XEvent Session Detection"
+      kql_ref: "miscellaneous/kql-livesite.yaml#MI-LS-MISC-10"
+      description: "List active extended event sessions"
+      table: MonXeventsTelemetry
+
+    # ────────────────────────────────────────────────────
+    # Step 9: Process ID Display
+    # ────────────────────────────────────────────────────
+    - step: 9
+      name: "Process ID Display"
+      kql_ref: "miscellaneous/kql-livesite.yaml#MI-LS-MISC-11"
+      description: "Show SQL process IDs active during the time window"
+      table: MonSQLSystemHealth
+
+  ExecutionOrder:
+    always_run: [1, 2, 3, 5, 6, 9]
+    conditional:
+      - steps: [3b]
+        condition: "TDE/AKV is relevant"
+      - steps: [4b]
+        condition: "kernel CPU high or CPU discrepancy"
+      - steps: [8]
+        condition: "user request or XEvent impact suspected"

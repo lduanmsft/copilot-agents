@@ -1,0 +1,314 @@
+
+# ── Merged from OOD.yaml ──
+SqlSkills:
+  - id: "100"
+    Prompts:
+      - "OOD Detection"
+      - "Out-of-Disk Detection"
+      - "Out-of-Space Detection"
+      - "OOD"
+    EvaluationTrueMessage: "Out-of-Disk issue is detected. Please type 'OOD Analysis' to get more details."
+    EvaluationFalseMessage: "Out-of-Disk issue is not detected."
+    SuppressOutputOfDescendants: true
+    SubSqlSkills:
+      - Prompts:
+          - "OOD Analysis"
+
+  - id: "100.0"
+    Prompts:
+      - "OOD Analysis"
+      - "OOD Summary"
+      - "Out-of-Disk Summary"
+      - "Out-of-Space Summary"
+    EvaluationTrueMessage: "Out-of-Disk issue is detected. Here are the details:"
+    EvaluationFalseMessage: "Out-of-Disk issue is not detected."
+    SubSqlSkills:
+      - Prompts:
+          - "Drive Out Of Disk Analysis"
+      - Prompts:
+          - "Directory Quota Limit Analysis"
+
+
+  - id: "100.2"
+    Prompts:
+      - "Drive Out Of Disk Analysis"
+      - "Drive Space Usage Analysis"
+   #The ExecutedQuery in inspired by the "Drive was out of space" in ASC portal, you may search keywords 'DriveOutOfSpace' in https://msazure.visualstudio.com/One/_git/EngSys-ads-partner/pullrequests
+    KustoQueries:
+      - TableName: "OOD_Drive_MonRgLoad"
+        ExecutedQuery: |
+          let OODMessage=(Nodes:string,Drives:string, MaxPercentage:real,count_ReachAlertThreshold:int,count_DriveNearFull:int,StartTime:datetime,EndTime:datetime )
+                    {
+                    let  startTime=format_datetime(StartTime,'yyyy-MM-dd HH:mm:ss');
+                    let endTime=format_datetime(EndTime,'yyyy-MM-dd HH:mm:ss');
+                    case(
+                              count_DriveNearFull == 0 and count_ReachAlertThreshold > 0,strcat("The disk drive in Azure sql Node did not encounter an out-of-disk issue. However, it reached the Alert Threshold (96%) ", PluralOrSingular(count_ReachAlertThreshold,"time")," between ",startTime," and ",endTime,", with a maximum usage ", MaxPercentage, "%."),
+                              count_DriveNearFull > 0,strcat("The disk drive '",Drives,"'' in Azure sql Node '", Nodes,"' encountered out-of-disk issues ", PluralOrSingular(count_DriveNearFull,"time"), " and reached the Alert Threshold (96%) ", PluralOrSingular(count_ReachAlertThreshold,"time")," between ",startTime," and ",endTime,"."),
+                              "The disk drives on the nodes hosting the Azure DB did not encounter any Out-of-Disk issues."
+                       )
+          };
+          let NearfullThreshold=99;
+          let driveUsage=materialize(MonRgLoad
+                                | extend originalEventTimestamp = originalEventTimestampFrom
+                                | where {NodeNamesWithOriginalEventTimeRange}
+                                | where event == 'drive_usage_report_load' and drive_name != '' and drive_capacity_in_bytes > 0
+                                | summarize MaxDriveUsagePercentage= max(drive_usage_percentage),count_ReachAlertThreshold=countif(drive_usage_percentage>=drive_usage_alert_threshold_percentage),count_DriveNearFull=countif(drive_usage_percentage>=NearfullThreshold),
+                                StartTime=min(originalEventTimestamp), EndTime=max(originalEventTimestamp) by ClusterName, NodeName, drive_name, drive_usage_alert_threshold_percentage
+                                );
+          MonRgLoad
+          | extend originalEventTimestamp = originalEventTimestampFrom
+          | where event == 'directory_quota_report_load' and target_directory endswith 'work\\data'
+          | extend AppName = tostring(split(application_name, '/')[-1])
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | extend drive_name = substring(target_directory, 4, 3)
+          | summarize by drive_name,ClusterName, application_name, NodeName, target_directory
+          | join kind = inner (driveUsage) on ClusterName, NodeName, drive_name
+          | project NodeName, drive_name,target_directory, MaxDriveUsagePercentage, count_ReachAlertThreshold,count_DriveNearFull,StartTime, EndTime,drive_usage_alert_threshold_percentage, ClusterName
+          | where count_ReachAlertThreshold>0
+          | summarize MaxDriveUsagePercentage=round(max(MaxDriveUsagePercentage),4),count_ReachAlertThreshold=sum(count_ReachAlertThreshold),count_DriveNearFull=sum(count_DriveNearFull),Nodes=make_set(NodeName) ,Drives=make_set(drive_name),StartTime=min(StartTime), EndTime=max(EndTime)
+          | extend ResultMessage=OODMessage(FilterMakeSetResult(Nodes),FilterMakeSetResult(Drives),MaxDriveUsagePercentage,count_ReachAlertThreshold,count_DriveNearFull,StartTime,EndTime)
+          | extend IssueDetected=iff(count_ReachAlertThreshold>0, 'true', 'false')
+          | project IssueDetected,ResultMessage
+        DisplayedQuery: |
+          let NearfullThreshold=99;
+          let driveUsage=materialize(MonRgLoad
+                                | extend originalEventTimestamp = originalEventTimestampFrom
+                                | where {NodeNamesWithOriginalEventTimeRange}
+                                | where event == 'drive_usage_report_load' and drive_name != '' and drive_capacity_in_bytes > 0
+                                | summarize MaxDriveUsagePercentage= max(drive_usage_percentage),count_ReachAlertThreshold= countif(drive_usage_percentage>=drive_usage_alert_threshold_percentage),count_DriveNearFull=countif(drive_usage_percentage>=NearfullThreshold),
+                                StartTime=min(originalEventTimestamp), EndTime=max(originalEventTimestamp) by ClusterName, NodeName, drive_name, drive_usage_alert_threshold_percentage
+                                );
+          MonRgLoad
+          | extend originalEventTimestamp = originalEventTimestampFrom
+          | extend AppName = tostring(split(application_name, '/')[-1])
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where event == 'directory_quota_report_load' and target_directory endswith 'work\\data'
+          | extend drive_name = substring(target_directory, 4, 3)
+          | summarize by drive_name,ClusterName, application_name, NodeName, target_directory
+          | join kind = inner (driveUsage) on ClusterName, NodeName, drive_name
+          | project NodeName, drive_name,target_directory, count_ReachAlertThreshold,drive_usage_alert_threshold_percentage,MaxDriveUsagePercentage,count_DriveNearFull,StartTime, EndTime, ClusterName
+          | where count_ReachAlertThreshold>0// Please comment this line to see all disk drive usage data
+    MessageForEmptyKustoResult: "The disk drives on the nodes hosting the Azure DB did not encounter any Out-of-Disk issues."
+    QuestionToAI: |-
+      ### Rules
+      1. Store the value of IssueDetected column in {{IssueDetected}}.
+      2. Store the value of ResultMessage column in {{ResultMessage}}.
+      
+
+  - id: "100.3"
+    Prompts:
+      - "Directory Quota Hit Analysis"
+      - "Directory quota Hit Summary"
+##The ExecutedQuery in inspired by the "Directory quota hit limit" in ASC portal, you may search keywords 'DirectoryQuotaHitLimit' in https://msazure.visualstudio.com/One/_git/EngSys-ads-partner/pullrequests
+    KustoQueries:
+      - TableName: "OOD_DirectoryQuota_MonRgLoad"
+        ExecutedQuery: |
+          MonRgLoad
+          | extend originalEventTimestamp = originalEventTimestampFrom
+          | extend AppName = split(application_name, '/')[-1]
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where event =~ 'directory_quota_report_load'
+          | extend quota_limit_in_GB= quota_limit_in_bytes/1024.0/1024/1024, quota_usage_in_GB=quota_usage_in_bytes/1024.0/1024/1024
+          | summarize Count_QuotaLimitHit = countif(quota_usage_in_GB >= quota_limit_in_GB) by top_monitored_directory //data,log,dump,wiqds
+          | where Count_QuotaLimitHit>0
+          | summarize Count_QuotaLimitHit = sum(Count_QuotaLimitHit) ,top_monitored_directories=make_set(top_monitored_directory)
+          | extend IssueDetected=iff(Count_QuotaLimitHit>0, 'true', 'false')
+          | extend ResultMessage=iff(Count_QuotaLimitHit>0,strcat("This Azure DB hit the ",top_monitored_directories," quota limit ", PluralOrSingular(Count_QuotaLimitHit,"time"),"."),"This Azure DB did not hit any directory quota limits (data, log, dump, or WIQDS).")
+        DisplayedQuery: |
+          MonRgLoad
+          | extend originalEventTimestamp = originalEventTimestampFrom
+          | extend AppName = split(application_name, '/')[-1]
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | extend AppName=tostring(AppName)
+          | where event =~ 'directory_quota_report_load'
+          | extend quota_limit_in_GB= quota_limit_in_bytes/1024.0/1024/1024, quota_usage_in_GB=quota_usage_in_bytes/1024.0/1024/1024
+          | summarize Count_QuotaLimitHit = countif(quota_usage_in_GB >= quota_limit_in_GB) by top_monitored_directory, AppName, ClusterName, NodeName
+    MessageForEmptyKustoResult: "This Azure DB didn't hit the directory quota limit."
+    QuestionToAI: |-
+      ### Rules
+      1. Store the value of IssueDetected column in {{IssueDetected}}.
+      2. Store the value of ResultMessage column in {{ResultMessage}}.
+
+  - id: "100.4"
+    Prompts:
+      - "User DB MaxSize Analysis"
+    KustoQueries:
+      - TableName: "OOD_UserDBMaxSize_MonSqlRgHistory"
+        ExecutedQuery: |
+          MonSqlRgHistory
+          | where {StartOriginalEventTimestampEndOriginalEventTimestamp}
+          | where AppName in ({AppNamesOnly})
+          | where event =~ 'aggregated_virtual_files_io_history'
+          | where(type_desc =~ 'ROWS' or type_desc =~ 'LOG')
+          | where (database_id > 4 and database_id < 32700) 
+          | extend size_on_disk_MB = round(size_on_disk_bytes / 1024.0 / 1024, 1),max_size_mb
+          | summarize max_size_mb=max(max_size_mb), size_on_disk_MB=max(size_on_disk_MB) by type_desc , file_id, database_id
+          | extend MaxSizeHit = countiff(size_on_disk_MB >= max_size_mb)
+          | summarize Count_MaxSizeHit = sum(MaxSizeHit)
+          | extend IssueDetected=iff(Count_MaxSizeHit>0, 'true', 'false')
+          | extend ResultMessage=iff(Count_MaxSizeHit>0,strcat("This Azure Db  hit the directory quota limit ", PluralOrSingular(Count_QuotaLimitHit,"time"),"."),"This Azure DB didn't hit the directory quota limit.")
+        DisplayedQuery: |
+          MonRgLoad
+          | extend originalEventTimestamp = originalEventTimestampFrom
+          | where {StartOriginalEventTimestampEndOriginalEventTimestamp}
+          | extend AppName = split(application_name, '/')[-1]
+          | where AppName in {AppNamesOnly}
+          | where event =~ 'directory_quota_report_load'
+          | extend quota_limit_in_GB= quota_limit_in_bytes/1024.0/1024/1024, quota_usage_in_GB=quota_usage_in_bytes/1024.0/1024/1024
+          | summarize Count_QuotaLimitHit = countif(quota_usage_in_GB >= quota_limit_in_GB) by AppName, ClusterName, NodeName
+    MessageForEmptyKustoResult: "This Azure DB didn't hit the directory quota limit."
+    QuestionToAI: |-
+      ### Rules
+      1. Store the value of IssueDetected column in {{IssueDetected}}.
+      2. Store the value of ResultMessage column in {{ResultMessage}}.
+
+# ── Merged from Disk.yaml ──
+SqlSkills:
+  - id: "3.0"
+    Offline: true
+    Description: >
+      This skill will check disk usage in the User Pool,  and System Pool, and identify the root cause if bottleneck are detected.
+    Prompts:
+      - "Disk Bottleneck Analysis"
+      - "Disk Bottleneck"
+      - "Disk Analysis"
+# ── Merged from Filefulll.yaml ──
+SqlSkills:
+  - id: "17"
+    Prompts:
+      - "Tempdb Full Analysis"
+      - "Tempdb Full"
+      - "Is Tempdb full"
+      - "Is Temp Database Full"
+      - "Is Temp Database File Full"
+    KustoQueries:
+      - TableName: "TempdbFileFull"
+        ExecutedQuery: |
+          let AllocationErrorCount=toscalar( MonSQLSystemHealth
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | where error_id in (1101,1104,1105,5149)
+          | count
+          );
+          let AggInterval_do_NOT_change = time(15m);
+          MonSqlRgHistory
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | where event=='aggregated_virtual_files_io_history'
+          | where database_id == 2
+          | where type_desc =~'ROWS'
+          | where AllocationErrorCount>0
+          | summarize
+          spaceused_gb = round(sum(spaceused_mb / 1024.0),1),
+          size_on_disk_gb = round(sum(size_on_disk_bytes / 1024.0 / 1024.0 / 1024.0),1),
+          max_size_gb=round(sum(max_size_mb/1024.0),1)
+          by  type_desc, bin(originalEventTimestamp, AggInterval_do_NOT_change)
+          | project originalEventTimestamp,file_type=type_desc,spaceused_gb,size_on_disk_gb,max_size_gb
+          | where size_on_disk_gb==max_size_gb
+          | extend Timestamp=originalEventTimestamp
+          | summarize Timestamp=max(Timestamp),count=count()
+        DisplayedQuery: |
+          let AllocationErrorCount=toscalar( MonSQLSystemHealth
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | where error_id in (1101,1104,1105,5149)
+          | count
+          );
+          let AggInterval_do_NOT_change = time(15m);
+          MonSqlRgHistory
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | where event=='aggregated_virtual_files_io_history'
+          | where database_id == 2
+          | where type_desc =~'ROWS'
+          | where AllocationErrorCount>0
+          | summarize
+          spaceused_gb = round(sum(spaceused_mb / 1024.0),1),
+          size_on_disk_gb = round(sum(size_on_disk_bytes / 1024.0 / 1024.0 / 1024.0),1),
+          max_size_gb=round(sum(max_size_mb/1024.0),1)
+          by  type_desc, bin(originalEventTimestamp, AggInterval_do_NOT_change)
+          | project originalEventTimestamp,file_type=type_desc,spaceused_gb,size_on_disk_gb,max_size_gb
+          | where size_on_disk_gb==max_size_gb
+          | extend Timestamp=originalEventTimestamp
+          | summarize Timestamp=max(Timestamp),count=count()
+    TSGs:
+      - Title: "tempdb full"
+        Link: "https://aka.ms/tempdb1"
+    QuestionToAI: |-
+      Read the 'UserPoolCPUTable' and 'tempdbLogFull' tables, each containing a single row, and assign values to the variables below based on its data and the following rules
+      Besides of previous three variables, there are another 5 variables:
+      1.{{TimestampTempdbFileFull}}, the data type is Datetime.
+      2.{{countTempdbFileFull}}, the data type is Integer.
+      3.{{TimestampTempdbLogFull}}, the data type is Datetime.
+      4.{{messageTempdbLogFull}}, the data type is String.
+      5.{{countTempdbLogFull}}, the data type is Integer.
+
+      Rules:
+      1. Store the value of Timestamp column of 'tempdbFileFull' table in {{TimestampTempdbFileFull}}.
+      2. Store the value of count column of 'tempdbFileFull' table in {{countTempdbFileFull}}.
+      3. Store the value of Timestamp column of 'tempdbLogFull' table in {{TimestampTempdbLogFull}}.
+      4. Store the value of message column of 'tempdbLogFull' table in {{messageTempdbLogFull}}.
+      5. Store the value of count column 'tempdbLogFull' table in {{countTempdbLogFull}}.
+      6. If either {{countTempdbFileFull}} or {{countTempdbLogFull}} is greater than 0, then {{IssueDetected}} is 'true', else {{IssueDetected}} is 'false'.
+      7. The {{ResultMessage}} depends on following conditions, When assigning the value to {{ResultMessage}}, please strictly adhere to these conditions and rules and you must replace the variables with actual values:
+      8. If {{countTempdbFileFull}} is greater  than 0, then {{ResultMessage}} will be set to "Tempdb database file was full, with first occurrence around {{TimestampTempdbFileFull}}. "
+      9. If {{countTempdbLogFull}} is greater  than 0, then following string will be appended to {{ResultMessage}} "Tempdb log file was full, with first occurrence at {{TimestampTempdbLogFull}}. Here is the corresponding message:{{messageTempdbLogFull}}."
+      10. if {{IssueDetected}} is 'false', then {{ResultMessage}} will be set to "Tempdb is not full."
+    SubSqlSkills:
+      - ExecutedWhenParentIssueDetected: true
+        IsKusto: true
+        Prompts:
+          - "tempdb file size"
+      - id: "17.2"
+        ExecutedWhenParentIssueDetected: true
+        IsKusto: true
+        Prompts:
+          - "Tempdb Space Usage"
+
+# ── Merged from Storage_XStore.yaml ──
+SqlSkills:
+  - id: "232.1"
+    Prompts:
+      - "XStore Error Analysis"
+      - "XStore Outage Analysis"
+    MessageForEmptyKustoResult: "We didn't detect any XStore related errors."
+    KustoQueries:
+      - TableName: "MonSQLXStore_xio_failed_request"
+        ExecutedQuery: |
+          let ErrorMessage=(totalCount: int,errorcodeArray:string,
+          count_TopError: int,mapped_errorcode: int,dcount_errorcode: int
+          )
+          {
+          let summary=strcat(
+          "The Azure DB Storage run into error ",totalCount, iif(totalCount == 1, " time", " times"),
+          " with ",dcount_errorcode, iif(dcount_errorcode == 1, " single error ", " different errors"),errorcodeArray,".");
+          let topError=iif(dcount_errorcode ==1,"",
+          strcat(" The top error was ",mapped_errorcode, ", happening ",count_TopError, iif(count_TopError == 1, " time", " times")));
+          strcat(summary,topError)
+          };
+          MonSQLXStore
+          | where AppName in ({AppNames})
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | where TIMESTAMP between (datetime({StartTime})..datetime({EndTime}))
+          | where event =='xio_failed_request
+          | where file_path contains '.mdf' or file_path contains '.ndf' or file_path contains '.ldf'
+          | summarize count_=count() by mapped_errorcode
+          | summarize totalCount=sum(count_),errorcodeArray=make_set(mapped_errorcode),count_TopError=arg_max(count_, mapped_errorcode),dcount_errorcode=dcount(mapped_errorcode)
+          | where totalCount >0
+          | extend errorMessage=ErrorMessage(totalCount,errorcodeArray,count_TopError,mapped_errorcode,dcount_errorcode)
+          | project errorMessage
+        DisplayedQuery: |
+          MonSQLXStore
+          | where AppName in ({AppNames})
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | where TIMESTAMP between (datetime({StartTime})..datetime({EndTime}))
+          | where event =='xio_failed_request'
+          | project originalEventTimestamp,request_type, errorcode,error_response,http_errorcode,mapped_errorcode,ssl_errorcode,retry_count,retry_reason,correlation_id,primary_correlation_id
+    QuestionToAI: |-
+      -  {{errorMessage}}, the data type is String.
+
+      ### Rules
+      1. Store the value of errorMessage column in {{errorMessage}}.
+      2. Set {{IssueDetected}} to 'true'.
+      3. Set {{ResultMessage}} to {{errorMessage}}.
+

@@ -1,0 +1,734 @@
+SqlSkills:
+- id: MI-ASMI-MEMORY-01
+  Topic: Fulltext
+  Source: kusto-queries/Fulltext.md
+  Prompts:
+  - MI resource governor manager telemetry
+  - MonRgManager
+  - Investigate Fulltext
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRgManager
+    ExecutedQuery: 'MonRgManager
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where originalEventTimestamp > ago(1h)'
+- id: MI-ASMI-MEMORY-02
+  Topic: Investigation memory incidents
+  Source: kusto-queries/Investigation memory incidents.md
+  Prompts:
+  - MI memory clerk stats by LogicalServerName, ServerName
+  - MonSqlMemoryClerkStats LogicalServerName ServerName let daysAgo
+  - Investigate Investigation memory incidents
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlMemoryClerkStats
+    ExecutedQuery: 'let ServerName = "{ServerName}" ;
+
+      let AggInterval_do_NOT_change=time(5m);
+
+      let daysAgo=3d;
+
+      MonSqlMemoryClerkStats
+
+      | where LogicalServerName =~ ServerName
+
+      | where TIMESTAMP > ago(daysAgo)
+
+      | lookup kind = leftouter (
+
+      MonSqlMemoryClerkStats
+
+      | where LogicalServerName =~ ServerName
+
+      | where TIMESTAMP > ago(daysAgo)
+
+      | top-nested 5 of memory_clerk_type by sum(pages_kb) desc
+
+      ) on memory_clerk_type'
+- id: MI-ASMI-MEMORY-03
+  Topic: Investigation memory incidents
+  Source: kusto-queries/Investigation memory incidents.md
+  Prompts:
+  - MonSqlRmRingBuffer by notification, MEMPHYSICAL_LOW
+  - MonSqlRmRingBuffer notification MEMPHYSICAL_LOW
+  - Investigate Investigation memory incidents
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlRmRingBuffer
+    ExecutedQuery: 'MonSqlRmRingBuffer
+
+      | where TIMESTAMP > now(-6h)
+
+      | where notification == "MEMPHYSICAL_LOW"
+
+      | where AppName =~ "{AppName}" and NodeName == "{NodeName}"'
+- id: MI-ASMI-MEMORY-04
+  Topic: Investigation memory incidents
+  Source: kusto-queries/Investigation memory incidents.md
+  Prompts:
+  - MonSqlCaches for clock hand stats
+  - MonSqlCaches event clock_hand_stats store_type CP
+  - Investigate Investigation memory incidents
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlCaches
+    ExecutedQuery: 'MonSqlCaches
+
+      | where AppName =~ "{AppName}"
+
+      | where event == "clock_hand_stats"
+
+      | where NodeName == "{NodeName}"
+
+      | where store_type endswith "CP"
+
+      | project PreciseTimeStamp, store_name, clock_hand_id, rounds_count, visited_last_round, removed_last_round, is_system_physical_memory_low, is_process_physical_memory_low,
+      is_process_virtual_memory_low, pool_physical_memory_indicator_mask'
+- id: MI-ASMI-MEMORY-05
+  Topic: Investigation memory incidents
+  Source: kusto-queries/Investigation memory incidents.md
+  Prompts:
+  - MonSqlCaches
+  - Investigate Investigation memory incidents
+  - MI performance MonSqlCaches
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlCaches
+    ExecutedQuery: 'MonSqlCaches
+
+      | where AppName =~ "{AppName}"
+
+      | where NodeName == "{NodeName}"'
+- id: MI-ASMI-MEMORY-06
+  Topic: Investigation memory incidents
+  Source: kusto-queries/Investigation memory incidents.md
+  Prompts:
+  - MonSqlCaches for memory cache hash table stats
+  - MonSqlCaches event memory_cache_hash_table_stats tag_id store_name
+  - Investigate Investigation memory incidents
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlCaches
+    ExecutedQuery: 'MonSqlCaches
+
+      | where AppName =~ "{AppName}"
+
+      | where event == "memory_cache_hash_table_stats"
+
+      | where NodeName == "{NodeName}"
+
+      | project PreciseTimeStamp, tag_id, store_name, store_type, store_address, table_level, buckets_count, buckets_in_use_count, buckets_min_length, buckets_max_length,
+      buckets_avg_length, buckets_max_length_ever, hits_count, misses_count, buckets_avg_scan_hit_length, buckets_avg_scan_miss_length'
+- id: MI-ASMI-MEMORY-07
+  Topic: Investigation memory incidents
+  Source: kusto-queries/Investigation memory incidents.md
+  Prompts:
+  - MonSqlCaches for clock hand stats
+  - MonSqlCaches event removed_ratio removed_last_round visited_last_round
+  - Investigate Investigation memory incidents
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlCaches
+    ExecutedQuery: 'MonSqlCaches
+
+      | where TIMESTAMP > ago(1d)
+
+      | where AppName =~ "{AppName}"
+
+      | where event == "clock_hand_stats"
+
+      | where NodeName == "{NodeName}"
+
+      | where store_type == "OBJECTSTORE_LOCK_MANAGER"
+
+      | extend removed_ratio = removed_last_round*1.0/visited_last_round
+
+      | project PreciseTimeStamp, removed_ratio, visited_last_round, removed_last_round'
+- id: MI-ASMI-MEMORY-08
+  Topic: Investigation memory incidents
+  Source: kusto-queries/Investigation memory incidents.md
+  Prompts:
+  - MonDmExecCachedPlansSummary by pool_id
+  - MonDmExecCachedPlansSummary pool_id
+  - Investigate Investigation memory incidents
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmExecCachedPlansSummary
+    ExecutedQuery: 'MonDmExecCachedPlansSummary
+
+      | where TIMESTAMP > ago(1d)
+
+      | where AppName =~ "{AppName}"
+
+      | where NodeName == "{NodeName}"
+
+      | where pool_id == 2000000012'
+- id: MI-ASMI-MEMORY-09
+  Topic: Investigation memory incidents
+  Source: kusto-queries/Investigation memory incidents.md
+  Prompts:
+  - MonSqlBrokerRingBuffer by DB1, pool_metadata_id
+  - MonSqlBrokerRingBuffer DB1 pool_metadata_id
+  - Investigate Investigation memory incidents
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlBrokerRingBuffer
+    ExecutedQuery: 'MonSqlBrokerRingBuffer
+
+      | where NodeName == "DB1" and AppName =~ "{AppName}"
+
+      | summarize by pool_metadata_id'
+- id: MI-ASMI-MEMORY-10
+  Topic: Investigation memory incidents
+  Source: kusto-queries/Investigation memory incidents.md
+  Prompts:
+  - MonSqlBrokerRingBuffer by pool_metadata_id, broker
+  - MonSqlBrokerRingBuffer pool_metadata_id broker notification currently_allocated_kb
+  - Investigate Investigation memory incidents
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlBrokerRingBuffer
+    ExecutedQuery: 'MonSqlBrokerRingBuffer
+
+      | where TIMESTAMP > ago(1d)
+
+      | where NodeName == "{NodeName}" and AppName =~ "{AppName}"
+
+      | where pool_metadata_id == 2000000012
+
+      | project TIMESTAMP, broker, notification, currently_allocated_kb=currently_allocated*8, previously_allocated_kb=previously_allocated*8, overall_kb=overall*8,
+      currently_predicated_kb=currently_predicated*8, new_target_kb=new_target*8'
+- id: MI-ASMI-MEMORY-11
+  Topic: Investigation memory incidents
+  Source: kusto-queries/Investigation memory incidents.md
+  Prompts:
+  - MI resource governor load telemetry for instance load / Code
+  - MonRgLoad event application_name instance_load code_package_name
+  - Investigate Investigation memory incidents
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRgLoad
+    ExecutedQuery: 'MonRgLoad
+
+      | where application_name has "{AppName}" and event == "instance_load" and code_package_name == "Code"
+
+      | where TIMESTAMP >= ago(1h)'
+- id: MI-ASMI-MEMORY-12
+  Topic: Investigation memory incidents
+  Source: kusto-queries/Investigation memory incidents.md
+  Prompts:
+  - MI resource governor load telemetry for instance load / Code
+  - MonRgLoad event application_name a0949cb3798d instance_load
+  - Investigate Investigation memory incidents
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRgLoad
+    ExecutedQuery: 'MonRgLoad
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where application_name contains "a0949cb3798d" and event == "instance_load" and code_package_name == "Code"
+
+      | where TIMESTAMP >= ago(1h)'
+- id: MI-ASMI-MEMORY-13
+  Topic: Investigation memory incidents
+  Source: kusto-queries/Investigation memory incidents.md
+  Prompts:
+  - MonGovernorWorkloadGroups by end_utc_date, name
+  - MonGovernorWorkloadGroups end_utc_date name pool_id delta_total_request_count
+  - Investigate Investigation memory incidents
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonGovernorWorkloadGroups
+    ExecutedQuery: 'MonGovernorWorkloadGroups
+
+      | where AppName =~ "{AppName}"
+
+      | project end_utc_date , name , pool_id , delta_total_request_count , delta_active_memgrant_kb, delta_used_memgrant_kb , delta_active_memgrant_count , delta_memgrant_waiter_count
+      , delta_total_memgrant_timeout_count , delta_is_valid'
+- id: MI-ASMI-MEMORY-14
+  Topic: Investigation memory incidents
+  Source: kusto-queries/Investigation memory incidents.md
+  Prompts:
+  - MonSqlMemNodeOomRingBuffer by LogicalServerName, failure
+  - MonSqlMemNodeOomRingBuffer LogicalServerName failure factor last_error
+  - Investigate Investigation memory incidents
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlMemNodeOomRingBuffer
+    ExecutedQuery: 'MonSqlMemNodeOomRingBuffer
+
+      | where AppName =~ "{AppName}"
+
+      | project TIMESTAMP, AppName, LogicalServerName, failure, factor, last_error, task, pool_metadata_id, committed_kb, job_object_limit_job_mem_kb, is_system_physical_memory_low,
+      instance_rg_size'
+- id: MI-ASMI-MEMORY-15
+  Topic: Investigation memory incidents
+  Source: kusto-queries/Investigation memory incidents.md
+  Prompts:
+  - MonSqlMemNodeOomRingBuffer trend by nonSosMemKb, job_object_limit_job_mem_kb
+  - MonSqlMemNodeOomRingBuffer nonSosMemKb job_object_limit_job_mem_kb committed_kb timechart
+  - Investigate Investigation memory incidents
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlMemNodeOomRingBuffer
+    ExecutedQuery: 'MonSqlMemNodeOomRingBuffer
+
+      | where AppName =~ "{AppName}" and NodeName == "{NodeName}"
+
+      | extend nonSosMemKb=job_object_limit_job_mem_kb - committed_kb
+
+      | project TIMESTAMP, job_object_limit_job_mem_kb, committed_kb, nonSosMemKb
+
+      | render timechart'
+- id: MI-ASMI-MEMORY-16
+  Topic: Investigation memory incidents
+  Source: kusto-queries/Investigation memory incidents.md
+  Prompts:
+  - MI SQL system health telemetry by message, MSR
+  - MonSQLSystemHealth message MSR replace to
+  - Investigate Investigation memory incidents
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where AppName =~ "{AppName}"
+
+      | where message contains "MSR-1" // replace to "MSR-" in case multiple dumps.
+
+      | project originalEventTimestamp, message'
+- id: MI-ASMI-MEMORY-17
+  Topic: Investigation memory incidents
+  Source: kusto-queries/Investigation memory incidents.md
+  Prompts:
+  - MonDmDbResourceGovernance by job_low_memory_signal_threshold_mb, min_sos_gap_with_job_mem_limit_in_mb
+  - MonDmDbResourceGovernance job_low_memory_signal_threshold_mb min_sos_gap_with_job_mem_limit_in_mb
+  - Investigate Investigation memory incidents
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmDbResourceGovernance
+    ExecutedQuery: 'MonDmDbResourceGovernance
+
+      | where TIMESTAMP > ago(1d)
+
+      | where AppName =~ "{AppName}"
+
+      | project job_low_memory_signal_threshold_mb, min_sos_gap_with_job_mem_limit_in_mb, TIMESTAMP'
+- id: MI-ASMI-MEMORY-18
+  Topic: Investigation memory incidents
+  Source: kusto-queries/Investigation memory incidents.md
+  Prompts:
+  - MonDmOsMemoryManagerCounters by counter_name
+  - MonDmOsMemoryManagerCounters counter_name
+  - Investigate Investigation memory incidents
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmOsMemoryManagerCounters
+    ExecutedQuery: 'MonDmOsMemoryManagerCounters
+
+      | where AppName =~ "{AppName}"
+
+      | summarize by counter_name'
+- id: MI-ASMI-MEMORY-19
+  Topic: Investigation memory incidents
+  Source: kusto-queries/Investigation memory incidents.md
+  Prompts:
+  - MonDmOsBPoolPerfCounters by counter_name
+  - MonDmOsBPoolPerfCounters counter_name
+  - Investigate Investigation memory incidents
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmOsBPoolPerfCounters
+    ExecutedQuery: 'MonDmOsBPoolPerfCounters | where AppName =~ "{AppName}"
+
+      | summarize by counter_name'
+- id: MI-ASMI-MEMORY-20
+  Topic: Investigation memory incidents
+  Source: kusto-queries/Investigation memory incidents.md
+  Prompts:
+  - MonResourcePoolStats trend by LogicalServerName, ServerName
+  - MonResourcePoolStats LogicalServerName ServerName resource_pool_name P25M1000
+  - Investigate Investigation memory incidents
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonResourcePoolStats
+    ExecutedQuery: 'MonResourcePoolStats
+
+      | where TIMESTAMP > ago(2h)
+
+      | where LogicalServerName =~ "{ServerName}" and resource_pool_name == "P25M1000"
+
+      | project start_time, avg_cpu_percent, avg_data_io_percent, avg_log_write_percent, avg_memory_usage_percent, data_storage_percent, peak_worker_percent, peak_session_percent
+
+      | render timechart'
+- id: MI-ASMI-MEMORY-21
+  Topic: Investigation memory incidents
+  Source: kusto-queries/Investigation memory incidents.md
+  Prompts:
+  - MonSqlFrontend for frontend memory usage
+  - MonSqlFrontend event frontend_memory_usage
+  - Investigate Investigation memory incidents
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlFrontend
+    ExecutedQuery: 'MonSqlFrontend
+
+      | where event == "frontend_memory_usage"
+
+      | where AppName =~ "{AppName}"
+
+      | order by originalEventTimestamp desc'
+- id: MI-ASMI-MEMORY-22
+  Topic: Investigation memory incidents
+  Source: kusto-queries/Investigation memory incidents.md
+  Prompts:
+  - MonDmUserActivityDetection by LogicalServerName, database_name
+  - MonDmUserActivityDetection LogicalServerName database_name event like
+  - Investigate Investigation memory incidents
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmUserActivityDetection
+    ExecutedQuery: 'MonDmUserActivityDetection
+
+      | where event like “defl” and AppName == “?” and database_name == “?” and LogicalServerName == “?”'
+- id: MI-ASMI-MEMORY-23
+  Topic: Investigation memory incidents
+  Source: kusto-queries/Investigation memory incidents.md
+  Prompts:
+  - MonSqlSampledBufferPoolDescriptors trend counts by tag_id, page_type
+  - MonSqlSampledBufferPoolDescriptors tag_id page_type away min_TIMESTAMP
+  - Investigate Investigation memory incidents
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlSampledBufferPoolDescriptors
+    ExecutedQuery: 'MonSqlSampledBufferPoolDescriptors
+
+      | where AppName =~ "{AppName}"
+
+      | where NodeName == "{NodeName}"
+
+      | summarize count(), min(TIMESTAMP) by tag_id, page_type
+
+      | project-away tag_id
+
+      | project min_TIMESTAMP, page_type , count_
+
+      | render timechart'
+- id: MI-ASMI-MEMORY-24
+  Topic: Investigation memory incidents
+  Source: kusto-queries/Investigation memory incidents.md
+  Prompts:
+  - MonSqlRgHistory for aggregated workload groups plus history
+  - MonSqlRgHistory event aggregated_workload_groups_plus_history group_name
+  - Investigate Investigation memory incidents
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: 'MonSqlRgHistory
+
+      | where AppName =~ "{AppName}"
+
+      | where NodeName == "{NodeName}"
+
+      | where TIMESTAMP between(ago(1d)..now())
+
+      | where event == "aggregated_workload_groups_plus_history"
+
+      | project TIMESTAMP, group_name,'
+- id: MI-ASMI-MEMORY-25
+  Topic: Investigation memory incidents
+  Source: kusto-queries/Investigation memory incidents.md
+  Prompts:
+  - MonSqlRgHistory for aggregated resource pools plus history
+  - MonSqlRgHistory event pool_name aggregated_resource_pools_plus_history DBId
+  - Investigate Investigation memory incidents
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: 'MonSqlRgHistory
+
+      | where AppName =~ "{AppName}"
+
+      | where event == "aggregated_resource_pools_plus_history"
+
+      | where pool_name contains "DBId"
+
+      | where NodeName == "{NodeName}"
+
+      | project TIMESTAMP, NodeName, pool_name, target_memory_kb_avg, memory_cap_kb'
+- id: MI-ASMI-MEMORY-26
+  Topic: Investigation memory incidents
+  Source: kusto-queries/Investigation memory incidents.md
+  Prompts:
+  - MonDmOsSpinlockStats by delta_collisions
+  - MonDmOsSpinlockStats delta_collisions
+  - Investigate Investigation memory incidents
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmOsSpinlockStats
+    ExecutedQuery: 'MonDmOsSpinlockStats
+
+      | where TIMESTAMP > ago(1d)
+
+      | where AppName =~ "{AppName}"
+
+      | where NodeName == "{NodeName}"
+
+      | where delta_collisions > 100000'
+- id: MI-ASMI-MEMORY-27
+  Topic: Investigation memory incidents
+  Source: kusto-queries/Investigation memory incidents.md
+  Prompts:
+  - MI database metadata telemetry by LogicalServerName, ServerName
+  - MonDatabaseMetadata LogicalServerName ServerName logical_db_name DatabaseName
+  - Investigate Investigation memory incidents
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDatabaseMetadata
+    ExecutedQuery: 'MonDatabaseMetadata
+
+      | where LogicalServerName =~ "{ServerName}" and AppName=~"{AppName}" //logical_db_name =~ "{DatabaseName}"
+
+      | where table_name== "sysobjvalues" and valclass ==7 and objid == 1032 //DB_CONFIG_MAX_DOP
+
+      | project TIMESTAMP, MAXDOP=value'
+- id: MI-ASMI-MEMORY-28
+  Topic: Investigation memory incidents
+  Source: kusto-queries/Investigation memory incidents.md
+  Prompts:
+  - MonSqlIdleMemCollectorStats for sql memory perf stats
+  - MonSqlIdleMemCollectorStats event sql_memory_perf_stats initial_job_memory_cap current_job_memory_cap
+  - Investigate Investigation memory incidents
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlIdleMemCollectorStats
+    ExecutedQuery: 'MonSqlIdleMemCollectorStats
+
+      | where event == "sql_memory_perf_stats"
+
+      | where AppName =~ "{AppName}"
+
+      | where NodeName == "{NodeName}"
+
+      | project TIMESTAMP, initial_job_memory_cap, current_job_memory_cap, node_available_physical_memory, ideal_target, current_target, memory_usage, current_commit,
+      non_sos_usage, memory_pressure'
+- id: MI-ASMI-MEMORY-29
+  Topic: Memory-optimized object
+  Source: kusto-queries/Memory-optimized object.md
+  Prompts:
+  - MI database metadata telemetry by let, database_metadata
+  - MonDatabaseMetadata let database_metadata
+  - Investigate Memory optimized object
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDatabaseMetadata
+    ExecutedQuery: 'let database_metadata =
+
+      MonDatabaseMetadata
+
+      | where AppName == {AppName}
+
+      | where TIMESTAMP > ago(2d)
+
+      | extend'
+- id: MI-ASMI-MEMORY-30
+  Topic: Memory-optimized object
+  Source: kusto-queries/Memory-optimized object.md
+  Prompts:
+  - MI real-time resource telemetry by LogicalServerName, database_name
+  - MonDmRealTimeResourceStats LogicalServerName database_name MIServerName bd40df2e
+  - Investigate Memory optimized object
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmRealTimeResourceStats
+    ExecutedQuery: 'MonDmRealTimeResourceStats
+
+      | where LogicalServerName == {MIServerName}
+
+      | where * contains "bd40df2e-11eb-41d3-a98e-8c30270c8f2f"
+
+      | take 1
+
+      | distinct database_name'
+- id: MI-ASMI-MEMORY-31
+  Topic: OOM
+  Source: kusto-queries/OOM.md
+  Prompts:
+  - MI SQL system health telemetry by LogicalServerName, message
+  - MonSQLSystemHealth LogicalServerName message Failed pages
+  - Investigate OOM
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where TIMESTAMP > ago(1d)
+
+      | where AppName =~ "{AppName}"
+
+      | where message contains "Failed allocate pages: FAIL_PAGE_ALLOCATION" or message contains "Failed Virtual Allocate Bytes: FAIL_VIRTUAL_RESERVE" or message
+      contains "Failed to reserve pages: FAIL_PAGE_RESERVATION" or message contains "FAIL_VIRTUAL_COMMIT"
+
+      | project TIMESTAMP, AppName, LogicalServerName, NodeName, message'
+- id: MI-ASMI-MEMORY-32
+  Topic: OOM
+  Source: kusto-queries/OOM.md
+  Prompts:
+  - MonSqlMemNodeOomRingBuffer by LogicalServerName, job_object_limit_job_mem_kb
+  - MonSqlMemNodeOomRingBuffer LogicalServerName job_object_limit_job_mem_kb min_sos_gap_with_job_mem_limit_in_mb UserAppName
+  - Investigate OOM
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlMemNodeOomRingBuffer
+    ExecutedQuery: 'MonSqlMemNodeOomRingBuffer
+
+      | where TIMESTAMP > ago(1d)
+
+      | where AppName == UserAppName
+
+      | project TIMESTAMP, ClusterName, AppName, AppTypeName, LogicalServerName, NodeName, factor, failure, pool_metadata_id, committed_kb, job_object_limit_job_mem_kb,
+      is_system_physical_memory_low, is_process_physical_memory_low, is_process_virtual_memory_low
+
+      | join kind= inner (
+
+      MonDmDbResourceGovernance
+
+      | where AppName == UserAppName
+
+      | summarize by ClusterName, AppTypeName, AppName, LogicalServerName, NodeName, slo_name, min_sos_gap_with_job_mem_limit_in_mb
+
+      ) on ClusterName, AppTypeName, AppName, LogicalServerName, NodeName
+
+      | extend MaxPoolSizeKb=job_object_limit_job_mem_kb-min_sos_gap_with_job_mem_limit_in_mb*1024
+
+      | project TIMESTAMP, AppName, AppTypeName, LogicalServerName, NodeName, factor, failure, pool_metadata_id, committed_kb, job_object_limit_job_mem_kb, MaxPoolSizeKb,
+      min_sos_gap_with_job_mem_limit_in_mb, slo_name Table 2'
+- id: MI-ASMI-MEMORY-33
+  Topic: OOM
+  Source: kusto-queries/OOM.md
+  Prompts:
+  - MonSqlMemNodeOomRingBuffer by LogicalServerName, UserAppName
+  - MonSqlMemNodeOomRingBuffer LogicalServerName UserAppName job_object_limit_job_mem_kb min_sos_gap_with_job_mem_limit_in_mb
+  - Investigate OOM
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlMemNodeOomRingBuffer
+    ExecutedQuery: 'let UserAppName="d1a1607bb400";
+
+      MonSqlMemNodeOomRingBuffer
+
+      | where TIMESTAMP > ago(1d)
+
+      | where AppName == UserAppName
+
+      | project TIMESTAMP, ClusterName, AppName, AppTypeName, LogicalServerName, NodeName, factor, failure, pool_metadata_id, committed_kb, job_object_limit_job_mem_kb,
+      is_system_physical_memory_low, is_process_physical_memory_low, is_process_virtual_memory_low
+
+      | join kind= inner (
+
+      MonDmDbResourceGovernance
+
+      | where AppName == UserAppName
+
+      | summarize by ClusterName, AppTypeName, AppName, LogicalServerName, NodeName, slo_name, min_sos_gap_with_job_mem_limit_in_mb
+
+      ) on ClusterName, AppTypeName, AppName, LogicalServerName, NodeName
+
+      | extend MaxPoolSizeKb=job_object_limit_job_mem_kb-min_sos_gap_with_job_mem_limit_in_mb*1024
+
+      | project TIMESTAMP, AppName, AppTypeName, LogicalServerName, NodeName, factor, failure, pool_metadata_id, committed_kb, job_object_limit_job_mem_kb, MaxPoolSizeKb,
+      min_sos_gap_with_job_mem_limit_in_mb, slo_name'
+- id: MI-ASMI-MEMORY-34
+  Topic: Performance Counter + Alias ODBC failure
+  Source: kusto-queries/Performance Counter + Alias ODBC failure.md
+  Prompts:
+  - MI one-minute performance counter telemetry by let, tr52896
+  - MonCounterOneMinute let tr52896 eastus1 Specify
+  - Investigate Performance Counter + Alias ODBC failure
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCounterOneMinute
+    ExecutedQuery: 'let clusterName = ''tr52896.eastus1''; //Specify affected cluster name
+
+      MonCounterOneMinute
+
+      | where AppName =~ "{AppName}"
+
+      | where TIMESTAMP > ago(6d)
+
+      | where ClusterName contains clusterName
+
+      | where NodeName contains ''WF''
+
+      | where CounterName == ''\\Memory\\Available MBytes'''

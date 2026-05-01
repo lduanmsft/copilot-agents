@@ -1,0 +1,223 @@
+SqlSkills:
+- id: MI-ASMI-COMPILATION-01
+  Topic: Memory grant feedback
+  Source: kusto-queries/Memory grant feedback.md
+  Prompts:
+  - MonQueryProcessing for memory grant updated by feedback
+  - MonQueryProcessing LogicalServerName logical_database_name event let
+  - Investigate Memory grant feedback
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonQueryProcessing
+    ExecutedQuery: 'let sname = "<server name>";
+
+      let dname = "<db name>";
+
+      let aname = "<app name>";
+
+      let phash = tolong("<hex plan hash>");
+
+      let startTime = "<start time>";
+
+      let endTime = "<end time>";
+
+      MonQueryProcessing
+
+      | where originalEventTimestamp between(startTime..endTime)
+
+      | where AppName == aname
+
+      | where logical_database_name == dname
+
+      | where LogicalServerName == sname
+
+      | where query_plan_hash_signed == phash
+
+      | where event == "memory_grant_updated_by_feedback"
+
+      | mv-expand parse_json(memory_summary_by_operator_kb)'
+- id: MI-ASMI-COMPILATION-02
+  Topic: Memory grant feedback
+  Source: kusto-queries/Memory grant feedback.md
+  Prompts:
+  - MonQueryProcessing for memory grant updated by feedback
+  - MonQueryProcessing LogicalServerName logical_database_name event let
+  - Investigate Memory grant feedback
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonQueryProcessing
+    ExecutedQuery: 'let sname = "<server name>";
+
+      let dname = "<db name>";
+
+      let aname = "<app name>";
+
+      let phash = tolong("<hex plan hash>");
+
+      let startTime = "<start time>";
+
+      let endTime = "<end time>";
+
+      MonQueryProcessing
+
+      | where originalEventTimestamp between(startTime..endTime)
+
+      | where AppName == aname
+
+      | where logical_database_name == dname
+
+      | where LogicalServerName == sname
+
+      | where query_plan_hash_signed == phash
+
+      | where event == "memory_grant_updated_by_feedback"'
+- id: MI-ASMI-COMPILATION-03
+  Topic: Memory grant feedback
+  Source: kusto-queries/Memory grant feedback.md
+  Prompts:
+  - MonWiQueryParamData for query parameterization data
+  - MonWiQueryParamData LogicalServerName logical_database_name event let
+  - Investigate Memory grant feedback
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQueryParamData
+    ExecutedQuery: 'let sname = "<server name>";
+
+      let dname = "<db name>";
+
+      let aname = "<app name>";
+
+      let phash = tolong("<hex plan hash>");
+
+      let startTime = "<start time>";
+
+      let endTime = "<end time>";
+
+      MonWiQueryParamData
+
+      | where originalEventTimestamp between(startTime..endTime)
+
+      | where AppName == aname
+
+      | where logical_database_name == dname
+
+      | where LogicalServerName == sname
+
+      | where event == "query_parameterization_data"
+
+      | where query_plan_hash == phash
+
+      | where mgf_persistence_used_status == ''FeedbackApplied'''
+- id: MI-ASMI-COMPILATION-04
+  Topic: Memory grant feedback
+  Source: kusto-queries/Memory grant feedback.md
+  Prompts:
+  - MonQueryProcessing for memory grant feedback percentile grant
+  - MonQueryProcessing LogicalServerName logical_database_name event let
+  - Investigate Memory grant feedback
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonQueryProcessing
+    ExecutedQuery: 'let sname = "<server name>";
+
+      let dname = "<db name>";
+
+      let aname = "<app name>";
+
+      let startTime = "<start time>";
+
+      let endTime = "<end time>";
+
+      MonQueryProcessing
+
+      | where originalEventTimestamp between(startTime..endTime)
+
+      | where AppName == aname
+
+      | where logical_database_name == dname
+
+      | where LogicalServerName == sname
+
+      | where event == "memory_grant_feedback_percentile_grant"'
+- id: MI-ASMI-COMPILATION-05
+  Topic: MonQueryProcessing(Statistic & Index create & drop
+  Source: kusto-queries/MonQueryProcessing(Statistic & Index create & drop.md
+  Prompts:
+  - MonQueryProcessing for metadata change
+  - MonQueryProcessing LogicalServerName logical_database_name event DatabaseName
+  - Investigate MonQueryProcessing(Statistic & Index create & drop
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonQueryProcessing
+    ExecutedQuery: 'let serverName = "{ServerName}";
+
+      let DatabaseName = "{DatabaseName}";
+
+      MonQueryProcessing
+
+      | where TIMESTAMP between(ago(1d)..now())
+
+      | where event == "metadata_change"
+
+      | where LogicalServerName == serverName and logical_database_name == DatabaseName'
+- id: MI-ASMI-COMPILATION-06
+  Topic: MonQueryProcessing(Statistic & Index create & drop
+  Source: kusto-queries/MonQueryProcessing(Statistic & Index create & drop.md
+  Prompts:
+  - MonQueryProcessing for metadata change / {ServerName}
+  - MonQueryProcessing LogicalServerName database_name logical_database_name event
+  - Investigate MonQueryProcessing(Statistic & Index create & drop
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonQueryProcessing
+    ExecutedQuery: MonQueryProcessing | where (originalEventTimestamp > ago(1d)) | where AppName !startswith 'b-' and AppName !startswith 'v-' | where event == 'metadata_change'
+      | extend database_name=logical_database_name | where LogicalServerName =~ '{ServerName}' | project originalEventTimestamp, database_name, object_id,object_name,
+      operation_type, operation_code | order by originalEventTimestamp desc
+- id: MI-ASMI-COMPILATION-07
+  Topic: MonQueryProcessing(Statistic & Index create & drop
+  Source: kusto-queries/MonQueryProcessing(Statistic & Index create & drop.md
+  Prompts:
+  - MonQueryProcessing for metadata change
+  - MonQueryProcessing event b v metadata_change
+  - Investigate MonQueryProcessing(Statistic & Index create & drop
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonQueryProcessing
+    ExecutedQuery: 'MonQueryProcessing
+
+      | where (originalEventTimestamp > ago(1d))
+
+      | where AppName !startswith ''b-'' and AppName !startswith ''v-''
+
+      | where event == ''metadata_change'''
+- id: MI-ASMI-COMPILATION-08
+  Topic: Query Compile & Recompile - Parameterization
+  Source: kusto-queries/Query Compile & Recompile - Parameterization.md
+  Prompts:
+  - MonWiQueryParamData by LogicalServerName, logical_database_name
+  - MonWiQueryParamData LogicalServerName logical_database_name ServerName DatabaseName
+  - Investigate Query Compile & Recompile Parameterization
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQueryParamData
+    ExecutedQuery: 'MonWiQueryParamData
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where logical_database_name =~ "{DatabaseName}"'

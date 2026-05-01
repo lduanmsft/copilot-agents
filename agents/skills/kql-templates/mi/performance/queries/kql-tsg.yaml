@@ -1,0 +1,568 @@
+SqlSkills:
+- id: MI-queries-1
+  Topic: Query-fails-with-OOM-_2D-high-SQLQERESERVATION-memory-clerk
+  Source: Performance-and-Query-Execution/Other-errors-and-exceptions/Query-fails-with-OOM-%2D-high-SQLQERESERVATION-memory-clerk.md
+  Prompts:
+  - MI Query fails with OOM %2D high SQLQERESERVATION memory clerk
+  - Managed Instance Query fails with OOM %2D high SQLQERESERVATION memory clerk
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: |-
+      MonWiQdsExecStats
+      | where  TIMESTAMP >= datetime({StartTime}) and  TIMESTAMP <= datetime({EndTime})
+      | where LogicalServerName =~ "{LogicalServerName}" and   database_name  =~ "{LogicalDatabaseName}" and AppName == "{AppName}"
+      | where is_primary  == 1
+      | extend MaxQueryMemoryMB=round(max_max_query_memory_pages*8.0/1024,1)
+      | summarize max(MaxQueryMemoryMB) by query_hash
+      | top 20 by max_MaxQueryMemoryMB  desc nulls last
+- id: MI-queries-2
+  Topic: Workflow-for-other-Errors-and-exceptions
+  Source: Performance-and-Query-Execution/Other-errors-and-exceptions/Workflow-for-other-Errors-and-exceptions.md
+  Prompts:
+  - MI Workflow for other Errors and exceptions
+  - Managed Instance Workflow for other Errors and exceptions
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: |-
+      MonWiQdsExecStats
+      | where TIMESTAMP > ago(6h)
+      | where AppName == "{AppName}" and database_name =~ "{DatabaseName}"
+      | summarize sum(execution_count), sum(cpu_time), sum(max_query_memory_pages), sum(max_logical_writes), sum(max_logical_reads) by query_id, plan_id
+      | project query_id, plan_id, sum_execution_count, sum_max_query_memory_pages, sum_max_logical_writes, sum_max_logical_reads
+      | order by sum_max_logical_writes, sum_max_logical_reads
+      | take 10
+- id: MI-queries-3
+  Topic: Intermittent-timeout-or-long-execution-time-due-to-Auto-Stats
+  Source: Performance-and-Query-Execution/Query-timeouts/Intermittent-timeout-or-long-execution-time-due-to-Auto-Stats.md
+  Prompts:
+  - MI Intermittent timeout or long execution time due to Auto Stats
+  - Managed Instance Intermittent timeout or long execution time due to Auto Stats
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQueryParamData
+    ExecutedQuery: |-
+      MonWiQueryParamData
+      | where TIMESTAMP > datetime(2025-09-10 00:15)  and TIMESTAMP < datetime(2025-09-10 23:32)
+      | where LogicalServerName =~ "<Server Name>" and database_name  == "<database name>"
+      | where query_hash == "<Query Hash>"
+      | project TIMESTAMP, NodeName, AppName, LogicalServerName, logical_database_name, compile_cpu_time, compile_duration, auto_create_stats_cpu_time, auto_create_stats_elapsed_time, auto_update_stats_cpu_time, auto_update_stats_elapsed_time
+- id: MI-queries-4
+  Topic: Lock-Request-Timeout-Error-1222-State-51
+  Source: Performance-and-Query-Execution/Query-timeouts/Lock-Request-Timeout-Error-1222-State-51.md
+  Prompts:
+  - MI Lock Request Timeout Error 1222 State 51
+  - Managed Instance Lock Request Timeout Error 1222 State 51
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: |-
+      MonWiQdsExecStats
+      | where TIMESTAMP between ({StartDateTime}..{EndDateTime})
+      | where LogicalServerName =~ "{MIName}" //Input customer server name
+      | summarize total_query_execution_count = sum(execution_count)
+      , timeout_query_count = sumif(execution_count, exec_type == 3)
+      , error_query_count = sumif(execution_count, exec_type == 4)
+- id: MI-queries-5
+  Topic: Different-execution-plan-when-executing-from-SSMS
+  Source: Performance-and-Query-Execution/Query-tuning/Different-execution-plan-when-executing-from-SSMS.md
+  Prompts:
+  - MI Different execution plan when executing from SSMS
+  - Managed Instance Different execution plan when executing from SSMS
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQueryParamData
+    ExecutedQuery: |-
+      MonWiQueryParamData
+      | where LogicalServerName =~ "{ServerName}" and logical_database_name =~ "{DatabaseName}"
+      | where query_hash == ""
+      | project TIMESTAMP, plan_id, compile_code
+- id: MI-queries-6
+  Topic: Error-8623-_2D-The-query-processor-ran-out-of-internal-resources-and-could-not-p
+  Source: Performance-and-Query-Execution/Query-tuning/Error-8623-%2D-The-query-processor-ran-out-of-internal-resources-and-could-not-produce-a-query-plan.md
+  Prompts:
+  - MI Error 8623 %2D The query processor ran out of internal resources and could not produce a query plan
+  - Managed Instance Error 8623 %2D The query processor ran out of internal resources and could not produce a query plan
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonQueryProcessing
+    ExecutedQuery: |-
+      MonQueryProcessing
+      | where LogicalServerName =~ serverName and logical_database_name =~ dbName //and AppName =~ appName
+      and originalEventTimestamp between (datetime(2025-11-26 11:00:00) ..datetime(2025-11-28 17:00:00) )
+      and event =~ "failed_compilation"
+      //and error_code in (3617,8684,8698)
+      | extend query_hash = strcat("0x", toupper(tohex(query_hash_signed)))
+      //| where query_hash == "0x4AA6B6F03E8D46B8"
+      | extend compile_duration_seconds = round(compile_duration/1000.0,1)
+      | extend compile_cpu_seconds      = round(compile_cpu/1000.0,1)
+      | project originalEventTimestamp, session_id, tasks_count, error_code, query_hash, query_id, compile_duration_seconds, compile_cpu_seconds, event;
+      // Second Period:2025-08-19~2025-08-21
+- id: MI-queries-7
+  Topic: Error-8623-_2D-The-query-processor-ran-out-of-internal-resources-and-could-not-p
+  Source: Performance-and-Query-Execution/Query-tuning/Error-8623-%2D-The-query-processor-ran-out-of-internal-resources-and-could-not-produce-a-query-plan.md
+  Prompts:
+  - MI Error 8623 %2D The query processor ran out of internal resources and could not produce a query plan
+  - Managed Instance Error 8623 %2D The query processor ran out of internal resources and could not produce a query plan
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonQueryProcessing
+    ExecutedQuery: |-
+      MonQueryProcessing
+      | where LogicalServerName =~ serverName and logical_database_name =~ dbName //and AppName =~ appName
+      and originalEventTimestamp between (datetime(2025-11-26 11:00:00) ..datetime(2025-11-28 17:00:00) )
+      //and session_id in (78,131,140,149,57,150)
+      // and error_code in (3617,8684,8698)
+      and event =~ "failed_compilation"
+      | extend query_hash = strcat("0x", toupper(tohex(query_hash_signed)))
+      | extend compile_duration_seconds = round(compile_duration/1000.0,1)
+      | extend compile_cpu_seconds      = round(compile_cpu/1000.0,1)
+      | project originalEventTimestamp, session_id, tasks_count, error_code, query_hash, query_id, compile_duration_seconds, compile_cpu_seconds, event;
+      // union
+- id: MI-queries-8
+  Topic: Check-IO-throttling
+  Source: Performance-and-Query-Execution/Reference/Check-IO-throttling.md
+  Prompts:
+  - MI Check IO throttling
+  - Managed Instance Check IO throttling
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: |-
+      MonWiQdsExecStats
+      | where TIMESTAMP >= startTime - 30min
+      | where TIMESTAMP <= endTime + 30min
+      | where LogicalServerName == logicalServerName
+      | where database_name =~ "{DatabaseName}"
+      | project TIMESTAMP, query_hash, query_plan_hash, max_num_physical_io_reads, num_physical_io_reads, max_physical_reads, max_logical_reads, execution_count, rowcount, tempdb_space_used, elapsed_time, max_elapsed_time
+      | order by max_num_physical_io_reads desc
+      | take 5
+- id: MI-queries-9
+  Topic: How-to-troubleshoot-OOM-issues
+  Source: Performance-and-Query-Execution/Reference/How-to-troubleshoot-OOM-issues.md
+  Prompts:
+  - MI How to troubleshoot OOM issues
+  - Managed Instance How to troubleshoot OOM issues
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: |-
+      MonWiQdsExecStats
+      | where TIMESTAMP > datetime(2021-05-26 22:09:38.0994729)-15m and TIMESTAMP < datetime(2021-05-26 22:09:38.0994729)+15m
+      | where AppName == "Appname"
+      | summarize sum(execution_count), sum(cpu_time), sum(max_query_memory_pages), sum(max_logical_writes), sum(max_logical_reads) by plan_id, query_hash
+      | project  query_hash, plan_id, sum_execution_count, sum_max_query_memory_pages
+      | order by sum_max_query_memory_pages desc
+      | take 5
+- id: MI-queries-10
+  Topic: Memory-Grant-Feedback-Persistence-and-Percentile-grant
+  Source: Performance-and-Query-Execution/Reference/Memory-Grant-Feedback-Persistence-and-Percentile-grant.md
+  Prompts:
+  - MI Memory Grant Feedback Persistence and Percentile grant
+  - Managed Instance Memory Grant Feedback Persistence and Percentile grant
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: |-
+      MonWiQdsExecStats
+      |  where  TIMESTAMP > startTime and  TIMESTAMP < endTime
+      |  where  NodeName == “node name” and  AppName == "app name"
+      |  summarize  sum(execution_count),  sum(cpu_time),  sum(max_query_memory_pages)  by  query_id,  plan_id
+      |  project  query_id,  plan_id,  sum_execution_count,  sum_max_query_memory_pages
+      |  order  by  sum_max_query_memory_pages
+      |  take 10
+- id: MI-queries-11
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: |-
+      MonWiQdsExecStats
+      | where TIMESTAMP >= startTime
+      | where TIMESTAMP <= endTime
+      | where LogicalServerName == logicalServerName
+      | where event == "query_store_runtime_stats_update"
+      | project TIMESTAMP, LogicalServerName, database_name, logical_database_guid,
+- id: MI-queries-12
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: |-
+      MonWiQdsExecStats
+      | where  originalEventTimestamp >= startTime and originalEventTimestamp <= endTime
+      | where LogicalServerName =~ instanceName
+      | summarize TotalQueryCPU_ms = sum(cpu_time) / 1000.0, db_name = take_any(database_name) by query_hash
+      | top 10 by TotalQueryCPU_ms desc
+      | project DatabaseName = db_name, QueryHash=query_hash, TotalQueryCPU_ms
+- id: MI-queries-13
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: |-
+      MonWiQdsExecStats
+      | where  originalEventTimestamp >= startTime and originalEventTimestamp <= endTime
+      | where LogicalServerName =~ instanceName
+      | summarize TotalQueryCPU_ms = sum(cpu_time) / 1000.0, db_name = take_any(database_name) by query_id
+      | top 10 by TotalQueryCPU_ms desc
+      | project DatabaseName = db_name, QueryId=query_id, TotalQueryCPU_ms
+- id: MI-queries-14
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: |-
+      MonWiQdsExecStats
+      | where TIMESTAMP between (datetime(2025-03-01 00:00) .. datetime(2025-03-26 00:00))
+      | where LogicalServerName =~ "{ServerName}"
+      | where query_id == <query_id>
+      | summarize sum(execution_count), sum(cpu_time) by bin(TIMESTAMP, 3h)
+      | render timechart
+- id: MI-queries-15
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: |-
+      MonWiQdsExecStats
+      | where (originalEventTimestamp >= startTime and originalEventTimestamp <= endTime)
+      | where LogicalServerName =~ instanceName
+      | summarize TotalExecutions = sum(execution_count), TotalLogicalReads = sum(logical_reads), AverageLogicalReads=round(sum(logical_reads)/sum(execution_count))by DatabaseName=database_name, QueryHash=query_hash
+      | top 10 by TotalLogicalReads desc
+- id: MI-queries-16
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: |-
+      MonWiQdsExecStats
+      | where LogicalServerName =~ ServerName
+      | where TIMESTAMP > ago(daysAgo)
+      | top-nested 5 of query_hash by sum(logical_reads) desc, top-nested 5 of query_plan_hash by sum(logical_reads) desc
+- id: MI-queries-17
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: |-
+      MonWiQdsExecStats
+      | where LogicalServerName =~ ServerName
+      | where TIMESTAMP > ago(daysAgo)
+      | extend orig_query_hash = query_hash, orig_plan_hash = query_plan_hash
+      | lookup kind = leftouter (Top5QueriesAndPlans
+      | distinct query_hash, aggregated_query_hash) on query_hash
+      | extend query_hash = iff(isnull(aggregated_query_hash), 'OTHERS', query_hash)
+      | extend statement_type = iff(isnull(aggregated_query_hash), '', statement_type)
+      | lookup kind = leftouter (Top5QueriesAndPlans
+      | project-away aggregated_query_hash) on query_hash, query_plan_hash
+      | extend query_plan_hash = iff(isnull(aggregated_query_plan_hash), 'OTHERS', query_plan_hash)
+      | summarize query_ids = make_set(query_id, 4), plan_ids = make_set(plan_id, 4)
+- id: MI-queries-18
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsWaitStats
+    ExecutedQuery: |-
+      MonWiQdsWaitStats
+      | where LogicalServerName =~ ServerName
+      | where TIMESTAMP > ago(daysAgo)
+      | lookup kind = leftouter (Top5QueriesAndPlans
+      | distinct query_hash, aggregated_query_hash) on query_hash
+      | extend query_hash = iff(isnull(aggregated_query_hash), 'OTHERS', query_hash)
+      | lookup kind = leftouter (Top5QueriesAndPlans
+      | project-away aggregated_query_hash) on query_hash, query_plan_hash
+      | extend query_plan_hash = iff(isnull(aggregated_query_plan_hash), 'OTHERS', query_plan_hash)
+      | summarize category_wait_time_ms = sum(total_query_wait_time_ms)
+- id: MI-queries-19
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: |-
+      let querySummary = materialize(MonWiQdsExecStats
+      | where  (originalEventTimestamp >= startTime and originalEventTimestamp <= endTime)
+      | where LogicalServerName =~ instanceName
+      | summarize TotalQueryCPU_ms = sum(cpu_time) by query_hash
+      | top 20 by TotalQueryCPU_ms desc);
+- id: MI-queries-20
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonQueryProcessing
+    ExecutedQuery: |-
+      MonQueryProcessing
+      | where (originalEventTimestamp >= startTime and originalEventTimestamp <= endTime)
+      | where LogicalServerName =~ instanceName
+      | where event =~ 'query_antipattern'
+      | extend query_hash = strcat('0x', toupper(tohex(query_hash_signed)))
+      | where query_hash in ((querySummary
+      | project query_hash))
+      | summarize occurrences = count() by query_hash, antipattern_type, logical_database_name
+      | extend occurrences_by_antipattern_type = strcat(antipattern_type, ': ', tostring(occurrences))
+      | summarize occurrences_by_antipattern_type = make_set(occurrences_by_antipattern_type)  by query_hash, logical_database_name
+      | join kind=inner querySummary on query_hash
+      | project DatabaseName=logical_database_name, QueryHash=query_hash, TotalQueryCPU_ms
+      | order by TotalQueryCPU_ms desc
+- id: MI-queries-21
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: |-
+      MonWiQdsExecStats
+      | where LogicalServerName =~ ServerName
+      and database_name =~ DatabaseName
+      and originalEventTimestamp >= ago(daysAgo)
+      and query_hash =~ QueryHash
+      | extend Timeout = iif(exec_type == 3, 'Yes','No')
+      , Error = iif(exec_type == 4, 'Yes','No')
+      | summarize min_elapsed_time_s=min(min_elapsed_time)/1000/1000
+- id: MI-queries-22
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsWaitStats
+    ExecutedQuery: |-
+      MonWiQdsWaitStats
+      | where LogicalServerName =~ ServerName
+      and database_name =~ DatabaseName
+      and originalEventTimestamp >= ago(daysAgo)
+      and query_hash =~ QueryHash
+      | summarize max_query_wait_time_ms=max(max_query_wait_time_ms) by wait_category, bin(originalEventTimestamp,1m), query_hash, query_plan_hash
+      | summarize wait_category=make_list(strcat(wait_category, ': ', max_query_wait_time_ms)), max_query_wait_time_ms=make_list(max_query_wait_time_ms)
+- id: MI-queries-23
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: |-
+      MonWiQdsExecStats
+      | where LogicalServerName =~ ServerName
+      and database_name =~ DatabaseName
+      | summarize by query_plan_hash
+      | join (MonWiQueryParamData
+      | where TIMESTAMP >= ago(1d)
+      | where LogicalServerName =~ ServerName
+      | where logical_database_name =~ DatabaseName
+      | project TIMESTAMP, compile_code, is_recompiled, is_cached, query_hash, query_plan_hash, statement_sql_hash
+- id: MI-queries-24
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQueryParamData
+    ExecutedQuery: |-
+      MonWiQueryParamData
+      | where TIMESTAMP > datetime(2024-03-22 21:55)-6h and TIMESTAMP < datetime(2024-03-22 21:55)+6h
+      | where LogicalServerName =~ "{ServerName}"
+      | where NodeName == 'node_name'
+      | summarize count() by query_hash
+      | order by count_ desc
+      | take 20
+- id: MI-queries-25
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: |-
+      MonWiQdsExecStats
+      | where LogicalServerName =~ ServerName
+- id: MI-queries-26
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: |-
+      MonWiQdsExecStats
+      | where TIMESTAMP > ago(daysAgo)
+      | where LogicalServerName =~ ServerName
+      | summarize total_query_execution_count = sum(execution_count)
+      , timeout_query_count = sumif(execution_count, exec_type == 3)
+      , error_query_count = sumif(execution_count, exec_type == 4)
+- id: MI-queries-27
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: |-
+      MonWiQdsExecStats
+      | where (LogicalServerName =~ ServerName or server_name =~ ServerName)
+- id: MI-queries-28
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: |-
+      MonWiQdsExecStats
+      | where LogicalServerName =~ ServerName
+      and database_name =~ DatabaseName
+      and originalEventTimestamp >= ago(daysAgo)
+      | extend Timeout = iif(exec_type == 3, 'Yes','No')
+      , Error = iif(exec_type == 4, 'Yes','No')
+      | project originalEventTimestamp
+- id: MI-queries-29
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsWaitStats
+    ExecutedQuery: |-
+      MonWiQdsWaitStats
+      | where LogicalServerName =~ "{ServerName}" and database_name =~ "{DatabaseName}"
+      | where PreciseTimeStamp > ago(7d)
+      | where query_hash  =~ 'query_hash'
+      //| where query_plan_hash  =~ 'query_plan_hash'
+      | extend total_query_wait_time_second=round(total_query_wait_time_ms/1000.0,1)
+      | extend avg_query_wait_time_second=round(avg_query_wait_time_ms/1000.0,1)
+      | top-nested of query_hash by total_wait_time_secondOfAllWaitCategories=sum(total_query_wait_time_second) ,
+- id: MI-queries-30
+  Topic: Waits-_2D-collect-and-description-of-common-wait-types
+  Source: Performance-and-Query-Execution/Reference/Waits-%2D-collect-and-description-of-common-wait-types.md
+  Prompts:
+  - MI Waits %2D collect and description of common wait types
+  - Managed Instance Waits %2D collect and description of common wait types
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: |-
+      MonWiQdsExecStats
+      | where TIMESTAMP > datetime(2023-03-02 23:00)-3d and TIMESTAMP <datetime(2023-03-02 23:00)+3d
+      | where LogicalServerName =~ "{ServerName}" and database_name =~ "{DatabaseName}"
+      | extend statement = iif(statement_type in ("x_estypDelete", "x_estypInsert", "x_estypSelectInto", "x_estypMerge", "x_estypUpdate", "x_estypInsertExec", "x_estypInsertBulk"), "DML", 'Other')
+      | summarize sum(execution_count) by bin(TIMESTAMP,15m), statement

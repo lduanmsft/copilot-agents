@@ -1,0 +1,340 @@
+SqlSkills:
+- id: MI-cpu-1
+  Topic: 1_-Managed-Instance-network-throughput-saturated-
+  Source: content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/1.-Managed-Instance-network-throughput-saturated-_.ipynb
+  Prompts:
+  - MI 1. Managed Instance network throughput saturated _
+  - Managed Instance 1. Managed Instance network throughput saturated _
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmRealTimeResourceStats
+    ExecutedQuery: |-
+      let SvmManagedServersWhichDidNotChangeNodes = MonDmRealTimeResourceStats
+      | where FilterFunc (TIMESTAMP, ago(QueryTimeWindow), true, AppTypeName, ClusterName, ClusterNameParam, NodeName)
+      | where slo_name contains 'MIGP' and slo_name contains 'G5_NP'
+      | summarize by LogicalServerName, NodeName
+      | summarize dcount(NodeName) by LogicalServerName
+      | project LogicalServerName;
+      // SVM total input network throughput
+- id: MI-cpu-2
+  Topic: 1_-Managed-Instance-network-throughput-saturated-
+  Source: content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/1.-Managed-Instance-network-throughput-saturated-_.ipynb
+  Prompts:
+  - MI 1. Managed Instance network throughput saturated _
+  - Managed Instance 1. Managed Instance network throughput saturated _
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCounterOneMinute
+    ExecutedQuery: "let TotalNetworkThroughput = MonCounterOneMinute\n| where FilterFunc (TIMESTAMP, ago(QueryTimeWindow), false, '', ClusterName, ClusterNameParam, NodeName)\n| where CounterName startswith\
+      \ '[Network](file://Network) Interface(Microsoft Hyper-V' and CounterName endswith '[Bytes](file://Bytes) Received/sec'\n| summarize avg(CounterValue) by ClusterName, NodeName\n| extend AvgTotalNetworkThroughputMBPerS\
+      \ = avg_CounterValue / 1024. / 1024 // the counters get reported as total bytes per second\n| join kind=inner (  \nMonDmRealTimeResourceStats\n| where FilterFunc (TIMESTAMP, ago(QueryTimeWindow),\
+      \ true, AppTypeName, ClusterName, ClusterNameParam, NodeName)\n| summarize arg_max(TIMESTAMP, ClusterName, NodeName, slo_name) by LogicalServerName\n| where slo_name contains 'MIGP' and slo_name contains\
+      \ 'G5_NP'\n| join kind=inner (\n    SvmManagedServersWhichDidNotChangeNodes \n) on LogicalServerName\n| project LogicalServerName, ClusterName, NodeName, Slo = slo_name  \n) on ClusterName, NodeName\n\
+      | parse NodeName with 'DB' VMVCoreCount:int 'C.' *\n| extend MaxTotalNetworkThroughputMBPerS = VMVCoreCount * NodeNetworkThroughputPerVCoreParam\n| project ClusterName, NodeName, LogicalServerName,\
+      \ Slo, VMVCoreCount, AvgTotalNetworkThroughputMBPerS , MaxTotalNetworkThroughputMBPerS;\n// #1 “ Detect SVM Managed Servers which have total network throughput saturated  \n// We only get data for\
+      \ SVM sizes less than 80 (no full nodes) \nTotalNetworkThroughput\n| where AvgTotalNetworkThroughputMBPerS > PercentageOfNetworkTakenInOrderToProclaimSaturation * MaxTotalNetworkThroughputMBPerS\n\
+      | where VMVCoreCount < 80"
+- id: MI-cpu-3
+  Topic: 2_-Managed-Instance-log-growth-in-danger-of-fillin
+  Source: content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/2.-Managed-Instance-log-growth-in-danger-of-fillin.ipynb
+  Prompts:
+  - MI 2. Managed Instance log growth in danger of fillin
+  - Managed Instance 2. Managed Instance log growth in danger of fillin
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCounterOneMinute
+    ExecutedQuery: "let TotalNetworkThroughput = MonCounterOneMinute\n| where FilterFunc (TIMESTAMP, ago(QueryTimeWindow), false, '', ClusterName, ClusterNameParam, NodeName)\n| where CounterName startswith\
+      \ '[Network](file://Network) Interface(Microsoft Hyper-V' and CounterName endswith '[Bytes](file://Bytes) Received/sec'\n| summarize avg(CounterValue) by ClusterName, NodeName\n| extend AvgTotalNetworkThroughputMBPerS\
+      \ = avg_CounterValue / 1024. / 1024 // the counters get reported as total bytes per second\n| join kind=inner (  \nMonDmRealTimeResourceStats\n| where FilterFunc (TIMESTAMP, ago(QueryTimeWindow),\
+      \ true, AppTypeName, ClusterName, ClusterNameParam, NodeName)\n| summarize arg_max(TIMESTAMP, ClusterName, NodeName, slo_name) by LogicalServerName\n| where slo_name contains 'MIGP' and slo_name contains\
+      \ 'G5_NP'\n| join kind=inner (  \n    SvmManagedServersWhichDidNotChangeNodes \n) on LogicalServerName\n| project LogicalServerName, ClusterName, NodeName, Slo = slo_name  \n) on ClusterName, NodeName\n\
+      | parse NodeName with 'DB' VMVCoreCount:int 'C.' *\n| extend MaxTotalNetworkThroughputMBPerS = VMVCoreCount * NodeNetworkThroughputPerVCoreParam\n| project ClusterName, NodeName, LogicalServerName,\
+      \ Slo, VMVCoreCount, AvgTotalNetworkThroughputMBPerS , MaxTotalNetworkThroughputMBPerS;\n// SVM databases under backup"
+- id: MI-cpu-4
+  Topic: 2_-Managed-Instance-log-growth-in-danger-of-fillin
+  Source: content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/2.-Managed-Instance-log-growth-in-danger-of-fillin.ipynb
+  Prompts:
+  - MI 2. Managed Instance log growth in danger of fillin
+  - Managed Instance 2. Managed Instance log growth in danger of fillin
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmRealTimeResourceStats
+    ExecutedQuery: |-
+      let SvmManagedServersWhichDidNotChangeSize = MonDmRealTimeResourceStats
+      | where FilterFunc (TIMESTAMP, ago(SloChangeQueryTimeWindow), true, AppTypeName, ClusterName, ClusterNameParam, NodeName)
+      | where slo_name contains 'MIGP' and slo_name contains 'G5_NP'
+      | summarize by LogicalServerName, NodeName
+      | parse NodeName with 'DB' VMVCoreCount:int 'C.' *
+      | summarize by LogicalServerName , VMVCoreCount
+      | summarize count() by LogicalServerName
+      | where count_==1
+      | project LogicalServerName;
+      // #4 - Detect SVM Managed Servers which have total network throughput saturated and are under full backup
+- id: MI-cpu-5
+  Topic: SOPCL00193-CloudLifter-High-disk-usage-detection
+  Source: content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/SOPCL00193-CloudLifter-High-disk-usage-detection.ipynb
+  Prompts:
+  - MI SOPCL00193 CloudLifter High disk usage detection
+  - Managed Instance SOPCL00193 CloudLifter High disk usage detection
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRgLoad
+    ExecutedQuery: |-
+      MonRgLoad
+      | where event == "drive_usage_report_load" and TIMESTAMP > now() - time(15m) and ClusterName !contains "onebox"
+      | summarize avg(drive_usage_percentage) by ClusterName, NodeName, drive_name
+      | extend RingName = toupper(extract("(.*).(.*).(worker|control).(database|sqltest-eg1).(windows.net|chinacloudapi.cn|mscds.com)", 1, ClusterName, typeof(string)))
+      | extend Cluster = extract("(.*).(.*).(worker|control).(database|sqltest-eg1).(windows.net|chinacloudapi.cn|mscds.com)", 2, ClusterName, typeof(string))
+      | extend Select = strcat("Select-SqlAzureCluster wasd-prod-", Cluster, "-", RingName)
+      | extend Command = strcat("Get-FabricNode -NodeName ", NodeName," -NodeClusterName ", ClusterName, "
+      | Remove-FabricNodeFile -Directory C:WFRootlogPerformanceCountersBinary -Filename fabric_counters_*.blg")
+      | where avg_drive_usage_percentage >= 70
+      | where drive_name contains "C:"
+      | extend DiskUsage = avg_drive_usage_percentage
+      | project ClusterName, Cluster, RingName, NodeName, DiskUsage, drive_name, Command, Select
+      | order by DiskUsage
+- id: MI-cpu-6
+  Topic: SOPCL00193-CloudLifter-High-disk-usage-detection
+  Source: content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/SOPCL00193-CloudLifter-High-disk-usage-detection.ipynb
+  Prompts:
+  - MI SOPCL00193 CloudLifter High disk usage detection
+  - Managed Instance SOPCL00193 CloudLifter High disk usage detection
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRgLoad
+    ExecutedQuery: |-
+      MonRgLoad
+      | where event == "drive_usage_report_load" and TIMESTAMP > now() - time(15m) and ClusterName !contains "onebox"
+      | where drive_name contains "C:"
+      | extend DiskUsage = drive_usage_percentage
+      | where ClusterName == "{ClusterName}"
+      | where NodeName == "WF2C.0"
+      | project TIMESTAMP, ClusterName, NodeName, drive_name, DiskUsage
+      | order by TIMESTAMP
+      | take 10
+- id: MI-cpu-7
+  Topic: TSGCL0156-SVM-Network-Throughput-Saturation
+  Source: content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/TSGCL0156-SVM-Network-Throughput-Saturation.ipynb
+  Prompts:
+  - MI TSGCL0156 SVM Network Throughput Saturation
+  - Managed Instance TSGCL0156 SVM Network Throughput Saturation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmRealTimeResourceStats
+    ExecutedQuery: "MonDmRealTimeResourceStats\n| where TIMESTAMP between (todatetime(\"{StartTime}\")..todatetime(\"{EndTime}\"))\n| where LogicalServerName == \"{ServerName}\"\n| distinct NodeName, ClusterName\n\
+      | join kind=inner (  \nMonCounterOneMinute  \n) on NodeName, ClusterName\n| where TIMESTAMP between (todatetime(\"{StartTime}\")..todatetime(\"{EndTime}\"))\n| where CounterName startswith '[Network](file://Network)\
+      \ Interface(Microsoft Hyper-V' and CounterName endswith '[Bytes](file://Bytes) Received/sec'\n| project TIMESTAMP, CounterName, NodeName, CounterValue/1024./1024.\n| render timechart"
+- id: MI-cpu-8
+  Topic: TSG-PLATVLDT-ErrorNode-DiskWatchdog-FullDisk
+  Source: content/sql_cloud_lifter_notebook/TSG-PLATVLDT-ErrorNode-DiskWatchdog-FullDisk.md
+  Prompts:
+  - MI TSG PLATVLDT ErrorNode DiskWatchdog FullDisk
+  - Managed Instance TSG PLATVLDT ErrorNode DiskWatchdog FullDisk
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRgLoad
+    ExecutedQuery: |-
+      MonRgLoad
+      | where TIMESTAMP between (startTime .. endTime)
+      | where ClusterName == clusterName
+      | where NodeName in (nodeNames)
+      | where event == 'drive_usage_report_load'
+      | extend drive = strcat(NodeName, '_', substring(drive_name, 0, 1))
+      | summarize max(drive_usage_percentage), max(drive_usage_alert_threshold_percentage) by bin(TIMESTAMP, timestampBinInterval), drive
+      | render timechart
+- id: MI-cpu-9
+  Topic: TSG-PLATVLDT-ErrorNode-DiskWatchdog-FullDisk
+  Source: content/sql_cloud_lifter_notebook/TSG-PLATVLDT-ErrorNode-DiskWatchdog-FullDisk.md
+  Prompts:
+  - MI TSG PLATVLDT ErrorNode DiskWatchdog FullDisk
+  - Managed Instance TSG PLATVLDT ErrorNode DiskWatchdog FullDisk
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRgLoad
+    ExecutedQuery: |-
+      MonRgLoad
+      | where TIMESTAMP between (startTime .. endTime)
+      | where ClusterName == clusterName
+      | where NodeName in (nodeNames)
+      | where event == 'drive_usage_report_load'
+      | extend drive = strcat(NodeName, '_', substring(drive_name, 0, 1))
+      | extend drive_capacity_in_gb = drive_capacity_in_bytes / 1024. / 1024. / 1024.
+      | summarize max(drive_capacity_in_gb) by bin(TIMESTAMP, timestampBinInterval), drive
+      | render timechart
+- id: MI-cpu-10
+  Topic: TSG-PLATVLDT-ErrorNode-DiskWatchdog-FullDisk
+  Source: content/sql_cloud_lifter_notebook/TSG-PLATVLDT-ErrorNode-DiskWatchdog-FullDisk.md
+  Prompts:
+  - MI TSG PLATVLDT ErrorNode DiskWatchdog FullDisk
+  - Managed Instance TSG PLATVLDT ErrorNode DiskWatchdog FullDisk
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRgLoad
+    ExecutedQuery: |-
+      MonRgLoad
+      | where TIMESTAMP between (startTime .. endTime)
+      | where ClusterName == clusterName
+      | where NodeName in (nodeNames)
+      | where event == 'directory_quota_report_load'
+      | extend quota_usage_in_gb = quota_usage_in_bytes / 1024. / 1024. / 1024.
+      | extend quota_limit_in_gb = quota_limit_in_bytes / 1024. / 1024. / 1024.
+      | extend quota_usage_percentage = 100. * quota_usage_in_gb / todouble(quota_limit_in_gb)
+      | where quota_usage_percentage > thresholdPercentage
+      | project TIMESTAMP, NodeName, application_name, target_directory, quota_usage_percentage, quota_usage_in_gb, quota_limit_in_gb, top_monitored_directory
+      | summarize arg_max(TIMESTAMP, quota_usage_percentage, quota_usage_in_gb, quota_limit_in_gb)
+- id: MI-cpu-11
+  Topic: Fulltext-Investigation-Tips
+  Source: Performance-and-Query-Execution/Other-errors-and-exceptions/Fulltext-Investigation-Tips.md
+  Prompts:
+  - MI Fulltext Investigation Tips
+  - Managed Instance Fulltext Investigation Tips
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRgLoad
+    ExecutedQuery: |-
+      MonRgLoad
+      | where code_package_name == "FullTextSearchService"
+      and event == "instance_load" and application_name == "{FabricAppName}"
+      | project TIMESTAMP, cpu_percent = (cpu_load * 1.0 / cpu_load_cap )*100
+      | render timechart
+- id: MI-cpu-12
+  Topic: Fulltext-Investigation-Tips
+  Source: Performance-and-Query-Execution/Other-errors-and-exceptions/Fulltext-Investigation-Tips.md
+  Prompts:
+  - MI Fulltext Investigation Tips
+  - Managed Instance Fulltext Investigation Tips
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRgLoad
+    ExecutedQuery: |-
+      MonRgLoad
+      | where code_package_name == "FullTextSearchService"
+      and event == "instance_load" and application_name == "{FabricAppName}"
+      | project TIMESTAMP, , iops_percent = (iops_load * 1.0 /iops_load_cap) * 100
+      | render timechart
+- id: MI-cpu-13
+  Topic: Fulltext-Investigation-Tips
+  Source: Performance-and-Query-Execution/Other-errors-and-exceptions/Fulltext-Investigation-Tips.md
+  Prompts:
+  - MI Fulltext Investigation Tips
+  - Managed Instance Fulltext Investigation Tips
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRgLoad
+    ExecutedQuery: |-
+      MonRgLoad
+      | where code_package_name == "FullTextSearchService"
+      and event == "instance_load" and application_name == "{FabricAppName}"
+      | order by TIMESTAMP asc
+- id: MI-cpu-14
+  Topic: Check-IO-throttling
+  Source: Performance-and-Query-Execution/Reference/Check-IO-throttling.md
+  Prompts:
+  - MI Check IO throttling
+  - Managed Instance Check IO throttling
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmRealTimeResourceStats
+    ExecutedQuery: |-
+      MonDmRealTimeResourceStats
+      | where LogicalServerName =~ serverName and database_name == databaseName
+      | where TIMESTAMP > ago(1d)
+      | project database_id, database_name
+      | summarize by database_id, database_name)
+- id: MI-cpu-15
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmRealTimeResourceStats
+    ExecutedQuery: |-
+      MonDmRealTimeResourceStats
+      | where AppName !startswith 'b-' and AppName !startswith 'v-'
+      | where LogicalServerName =~ ServerName
+      | where replica_type == 0
+      | summarize StartTime=min(TIMESTAMP), EndTime=max(TIMESTAMP) by AppName, slo_name, io_cap
+      | lookup kind=leftouter
+- id: MI-cpu-16
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmDbResourceGovernance
+    ExecutedQuery: |-
+      MonDmDbResourceGovernance
+      | where AppName !startswith 'b-' and AppName !startswith 'v-'
+      | extend MaxCPUCores = case (primary_bucket_fill_rate_cpu == 0, (primary_group_max_cpu*min_cores)/100.0, primary_bucket_fill_rate_cpu/1000.0)
+      | summarize MaxCPUCores=any(MaxCPUCores) by slo_name
+- id: MI-cpu-17
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmRealTimeResourceStats
+    ExecutedQuery: |-
+      MonDmRealTimeResourceStats
+      | where LogicalServerName == logical_srvr_name
+      | where AppName startswith _ApplicationName
+      | where TIMESTAMP between (StartTime..EndTime)
+      | where NodeName in (_NodeName)
+      | extend log_cap_mb=log_cap/1024./1024.
+      | summarize max(TIMESTAMP), min(TIMESTAMP) by LogicalServerName, NodeName, log_cap_mb
+- id: MI-cpu-18
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmRealTimeResourceStats
+    ExecutedQuery: |-
+      MonDmRealTimeResourceStats
+      | where LogicalServerName == logical_srvr_name
+      | where TIMESTAMP > ago(3d)
+      | summarize max(TIMESTAMP) by io_cap, AppName, NodeName

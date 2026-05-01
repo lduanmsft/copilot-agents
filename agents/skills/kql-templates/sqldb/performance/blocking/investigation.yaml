@@ -1,0 +1,159 @@
+# ============================================================================
+# SQLLSinvest_perf_blocking — Blocking Investigation Workflow
+# ============================================================================
+# Source: SQLLivesiteAgents / Performance / Blocking / SKILL.md + references/
+# Distilled: 2026-04-30
+# Purpose: Layer 1 — 定义 Blocking 调查的执行顺序、阈值判断、条件分支
+# KQL 模板引用: blocking/kql-livesite.yaml (Layer 2)
+# ============================================================================
+
+Investigation:
+  id: perf-blocking
+  name: "Blocking & Deadlock Investigation"
+  description: >
+    Detects blocking chains and deadlocks. Measures blocking severity by
+    blockee session count as percentage of worker thread capacity.
+    Identifies lead blockers and long-running transactions.
+  source: "SQLLivesiteAgents/Performance/Blocking"
+
+  RequiredParameters:
+    - LogicalServerName
+    - LogicalDatabaseName
+    - StartTime
+    - EndTime
+    - AppNamesNodeNamesWithOriginalEventTimeRange
+
+  # ────────────────────────────────────────────────────
+  # Step 1: Peak Blocking Detection (always run)
+  # ────────────────────────────────────────────────────
+  Steps:
+    - step: 1
+      name: "Peak Blocking Detection"
+      kql_ref: "blocking/kql-livesite.yaml#LS-BLOCKING-01"
+      description: "Detect peak blocking and calculate severity based on worker thread capacity"
+      tables: [MonBlockedProcessReportFiltered, MonDmDbResourceGovernance]
+      thresholds:
+        small: "blockeeSessionPercent <= 1%"
+        moderate: "1% < blockeeSessionPercent <= 2%"
+        massive: "2% < blockeeSessionPercent <= 10%"
+        severe: "10% < blockeeSessionPercent <= 30%"
+        extremely_severe: "blockeeSessionPercent > 30%"
+      output_fields:
+        - blockeeSessionCount
+        - blockeeSessionPercent
+        - blockingStatus
+        - IssueDetected
+      branching:
+        on_issue:
+          - step: 1.1    # Hourly distribution
+          - step: 3      # Lead Blocker Sessions
+          - step: 4      # Long Running Transactions
+        on_small: "Report small blocking, optionally run lead blocker"
+        on_normal: "No blocking detected"
+
+    - step: 1.1
+      name: "Blocking Events Distribution (Hourly)"
+      condition: "step-1.IssueDetected == true"
+      kql_ref: "blocking/kql-livesite.yaml#LS-BLOCKING-02"
+      description: "Hourly breakdown of blocking event counts"
+      table: MonBlockedProcessReportFiltered
+
+    # ────────────────────────────────────────────────────
+    # Step 2: Deadlock Detection (always run)
+    # ────────────────────────────────────────────────────
+    - step: 2
+      name: "Deadlock Detection"
+      kql_ref: "blocking/kql-livesite.yaml#LS-BLOCKING-03"
+      description: "Detect deadlocks and calculate frequency"
+      table: MonDeadlockReportsFiltered
+      thresholds:
+        issue: "TotalDeadlocks > 5"
+      output_fields:
+        - TotalDeadlocks
+        - FirstDeadlock
+        - LastDeadlock
+        - HourlyAverage
+        - IssueDetected
+      branching:
+        on_issue:
+          - step: 2.1    # Deadlock distribution
+          - step: 2.2    # Hourly deadlock
+        on_normal: "No significant deadlocks"
+
+    - step: 2.1
+      name: "Deadlock Distribution (15-min intervals)"
+      condition: "step-2.IssueDetected == true"
+      kql_ref: "blocking/kql-livesite.yaml#LS-BLOCKING-04"
+      table: MonDeadlockReportsFiltered
+
+    - step: 2.2
+      name: "Hourly Deadlock Summary"
+      condition: "step-2.IssueDetected == true"
+      kql_ref: "blocking/kql-livesite.yaml#LS-BLOCKING-05"
+      table: MonDeadlockReportsFiltered
+
+    # ────────────────────────────────────────────────────
+    # Step 3: Lead Blocker Sessions (if blocking detected)
+    # ────────────────────────────────────────────────────
+    - step: 3
+      name: "Lead Blocker Sessions"
+      condition: "step-1.IssueDetected == true"
+      kql_ref: "blocking/kql-livesite.yaml#LS-BLOCKING-06"
+      description: "Find lead blocking header session IDs (root of blocking chain)"
+      table: MonBlockedProcessReportFiltered
+      parameters:
+        monitorLoop: "{from step-1 peak monitorLoop}"
+      output_fields:
+        - blockee_session_id
+        - blocker_session_id
+        - blockee_waittime_ms
+        - blockee_clientapp
+        - blocker_clientapp
+        - blockee_queryhash
+        - blocker_queryhash
+
+    # ────────────────────────────────────────────────────
+    # Step 4: Long Running Transactions (if blocking detected)
+    # ────────────────────────────────────────────────────
+    - step: 4
+      name: "Long Running Transactions"
+      condition: "step-1.IssueDetected == true"
+      kql_ref: "blocking/kql-livesite.yaml#LS-BLOCKING-07"
+      description: "Analyze long-running transactions that may cause blocking"
+      table: MonDmTranActiveTransactions
+      thresholds:
+        attention: "duration > 1 hour"
+      output_fields:
+        - totalCount
+        - max_duration_hour
+        - avg_duration_hour
+        - median_duration_hour
+
+    # ────────────────────────────────────────────────────
+    # Step 5: Top Deadlock Queries (user request only)
+    # ────────────────────────────────────────────────────
+    - step: 5
+      name: "Top Deadlock Queries"
+      condition: "user explicitly requests deadlock query analysis"
+      kql_ref: "blocking/kql-livesite.yaml#LS-BLOCKING-08"
+      description: "Display top N deadlock events with query hashes"
+      table: MonDeadlockReportsFiltered
+      parameters:
+        TopN: 10
+
+    - step: 5.1
+      name: "Aggregate Deadlock Query Hash Frequency"
+      condition: "user explicitly requests deadlock query analysis"
+      kql_ref: "blocking/kql-livesite.yaml#LS-BLOCKING-09"
+      description: "Top 10 query hashes by deadlock frequency"
+      table: MonDeadlockReportsFiltered
+
+  ExecutionOrder:
+    always_run: [1, 2]
+    conditional:
+      - steps: [1.1, 3, 4]
+        condition: "step-1.IssueDetected == true (blocking detected)"
+      - steps: [2.1, 2.2]
+        condition: "step-2.IssueDetected == true (deadlocks > 5)"
+      - steps: [5, 5.1]
+        condition: "user explicitly requests deadlock query analysis"

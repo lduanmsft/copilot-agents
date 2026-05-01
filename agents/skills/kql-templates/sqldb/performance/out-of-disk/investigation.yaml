@@ -1,0 +1,133 @@
+# ============================================================================
+# SQLLSinvest_perf_ood — Out-of-Disk Investigation Workflow
+# ============================================================================
+# Source: SQLLivesiteAgents / Performance / out-of-disk / SKILL.md + references/
+# Distilled: 2026-04-30
+# Purpose: Layer 1 — 定义 Out-of-Disk 调查的执行顺序、阈值判断、条件分支
+# KQL 模板引用: out-of-disk/kql-livesite.yaml (Layer 2)
+# ============================================================================
+
+Investigation:
+  id: perf-out-of-disk
+  name: "Out-of-Disk / Out-of-Space Investigation"
+  description: >
+    Investigates disk space issues from multiple angles: drive usage, directory quota,
+    data/log max size, space allocation failures, tempdb full, and XStore errors.
+    Only displays results if an issue is detected.
+  source: "SQLLivesiteAgents/Performance/out-of-disk"
+
+  RequiredParameters:
+    - LogicalServerName
+    - LogicalDatabaseName
+    - StartTime
+    - EndTime
+    - AppNamesNodeNamesWithOriginalEventTimeRange
+    - AppNamesOnly
+    - HistoricalTenantRingNames
+    - NodeNames
+
+  Steps:
+    # ────────────────────────────────────────────────────
+    # Step 1: Drive Out of Space
+    # ────────────────────────────────────────────────────
+    - step: 1
+      name: "Drive Out of Space"
+      kql_ref: "out-of-disk/kql-livesite.yaml#LS-OOD-01"
+      description: "Check if any data drive usage >= 96%"
+      table: MonRgLoad
+      thresholds:
+        issue: "drive_usage_percentage >= 96"
+      output_fields:
+        - drive_name
+        - drive_capacity_in_gb
+        - drive_usage_percentage
+        - drive_available_space_gb
+        - IssueDetected
+      display: "only if IssueDetected"
+
+    # ────────────────────────────────────────────────────
+    # Step 2: Directory Quota
+    # ────────────────────────────────────────────────────
+    - step: 2
+      name: "Directory Quota Hit Limit"
+      kql_ref: "out-of-disk/kql-livesite.yaml#LS-OOD-02"
+      description: "Check if directory quota usage has reached its limit"
+      table: MonRgLoad
+      output_fields:
+        - DirectoryQuotaLimitHit
+      display: "only if DirectoryQuotaLimitHit == true"
+
+    # ────────────────────────────────────────────────────
+    # Step 3: Data/Log Max Size Hit
+    # ────────────────────────────────────────────────────
+    - step: 3
+      name: "Data or Log Reached Max Size"
+      kql_ref: "out-of-disk/kql-livesite.yaml#LS-OOD-03"
+      description: "Check if user DB data/log or tempdb reached maximum configured size"
+      table: MonSqlRgHistory
+      output_fields:
+        - UserdbDataMaxSizeHit
+        - UserdbLogMaxSizeHit
+        - TempdbDataMaxSizeHit
+        - TempdbLogMaxSizeHit
+      branching:
+        on_any_hit:
+          - step: 3.1    # File Size Details
+        on_log_full:
+          - step: 3.2    # Log Truncation Holdup
+
+    - step: 3.1
+      name: "File Size Details"
+      condition: "step-3 any MaxSizeHit == true"
+      kql_ref: "out-of-disk/kql-livesite.yaml#LS-OOD-04"
+      table: MonSqlRgHistory
+
+    - step: 3.2
+      name: "Log Truncation Holdup"
+      condition: "step-3 UserdbLogMaxSizeHit == true"
+      kql_ref: "out-of-disk/kql-livesite.yaml#LS-OOD-05"
+      table: MonFabricThrottle
+
+    # ────────────────────────────────────────────────────
+    # Step 4: Space Allocation Failures (Errorlog)
+    # ────────────────────────────────────────────────────
+    - step: 4
+      name: "Space Allocation Failures in Errorlog"
+      kql_ref: "out-of-disk/kql-livesite.yaml#LS-OOD-06"
+      description: "Check for errors 3257, 9002, 5149, 1105, 1101 in errorlog"
+      table: MonSQLSystemHealth
+      error_codes: [3257, 9002, 5149, 1105, 1101]
+      display: "only if results found"
+
+    # ────────────────────────────────────────────────────
+    # Step 5: Tempdb Full
+    # ────────────────────────────────────────────────────
+    - step: 5
+      name: "Tempdb Full Detection"
+      kql_ref: "out-of-disk/kql-livesite.yaml#LS-OOD-07"
+      description: "Check if tempdb data files reached max size during allocation errors"
+      tables: [MonSQLSystemHealth, MonSqlRgHistory]
+      output_fields:
+        - countTempdbFileFull
+        - IssueDetected
+        - ResultMessage
+      display: "only if IssueDetected"
+
+    # ────────────────────────────────────────────────────
+    # Step 6: XStore Errors
+    # ────────────────────────────────────────────────────
+    - step: 6
+      name: "XStore Error Analysis"
+      kql_ref: "out-of-disk/kql-livesite.yaml#LS-OOD-08"
+      description: "Check for Azure storage (XStore) I/O errors on data/log files"
+      table: MonSQLXStore
+      display: "only if totalCount > 0"
+
+  ExecutionOrder:
+    always_run: [1, 2, 3, 4, 5, 6]
+    conditional:
+      - steps: [3.1]
+        condition: "step-3 any MaxSizeHit == true"
+      - steps: [3.2]
+        condition: "step-3 UserdbLogMaxSizeHit == true"
+    display_rule: "Only show results where issues are detected"

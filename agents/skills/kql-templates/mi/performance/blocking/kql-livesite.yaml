@@ -1,0 +1,234 @@
+# ============================================================================
+# Ported from SQLDB SQLLivesiteAgents, adapted for Managed Instance (MI)
+# kql-livesite.yaml — Blocking KQL Templates from SQLLivesiteAgents
+# ============================================================================
+# Priority: P1 (highest)
+# Source: SQLLivesiteAgents / Performance / Blocking / references/
+# Distilled: 2026-04-30
+# ============================================================================
+
+SqlSkills:
+- id: MI-LS-BLOCKING-01
+  name: Peak Blocking Detection
+  source: SQLLivesiteAgents/Performance/Blocking/references/blocking-detection.md
+  tables:
+  - MonBlockedProcessReportFiltered
+  - MonDmDbResourceGovernance
+  thresholds:
+    small: blockeeSessionPercent <= 1%
+    moderate: 1-2%
+    massive: 2-10%
+    severe: 10-30%
+    extremely_severe: '> 30%'
+  KustoQueries:
+  - TableName: MonBlockedProcessReportFiltered
+    ExecutedQuery: "let BlockingStatus = (blockeeSessionPercent: real) {\n    case(\n    blockeeSessionPercent <= 1, \"Small blocking detected, and You may run the skill 'Lead Blocker Sessions' to get more\
+      \ details if the blocking is a concern.\",\n    blockeeSessionPercent > 1 and blockeeSessionPercent <= 2, \"Moderate blocking detected.\",\n    blockeeSessionPercent > 2 and blockeeSessionPercent\
+      \ <= 10, \"Massive blocking detected. Please note that this condition may lead to noticeable performance issues, including but not limited to query slowness, timeouts, and deadlocks.\",\n    blockeeSessionPercent\
+      \ > 10 and blockeeSessionPercent <= 30, \"Severe blocking detected! Please note that this condition may result in significant performance degradation, including but not limited to query slowness,\
+      \ timeouts, deadlocks and CPU usage decreasing.\",\n    \"Extremely severe blocking detected! Please note that this condition may lead to worker thread exhaustion, potentially impacting system stability.\"\
+      \n    )\n    };\nlet WorkersLimitPerDB=(MonDmDbResourceGovernance\n| where PreciseTimeStamp>datetime_add('day',-2,datetime({StartTime})) and PreciseTimeStamp<datetime_add('day',2,datetime({EndTime}))\n\
+      | where LogicalServerName =~ '{ServerName}' and database_name =~ '{DatabaseName}'\n| extend WorkersLimitPerDB = primary_group_max_workers\n| extend WorkersLimitPerPool = primary_pool_max_workers\n\
+      | summarize  WorkersLimitPerPool = take_any(WorkersLimitPerPool), WorkersLimitPerDB = take_any(WorkersLimitPerDB) by AppName\n| project WorkersLimitPerDB  ,AppName);\nMonBlockedProcessReportFiltered\n\
+      | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))\n| where database_name =~ '{DatabaseName}'\n| extend monitorLoop = extract('monitorLoop=\\\
+      x22([0-9]+)\\x22',1,blocked_process_filtered, typeof(int))\n| parse blocked_process_filtered with anystr3:string '<blocked-process>' blockee '</blocked-process>' discard1\n| parse blocked_process_filtered\
+      \ with anystr4:string'<blocking-process>' blocker '</blocking-process>' discard2\n| extend blockee_session_id = extract('spid=\\x22([0-9]+)\\x22', 1, blockee, typeof(int))\n| extend blocker_session_id\
+      \ = extract('spid=\\x22([0-9]+)\\x22', 1, blocker, typeof(int))\n| project originalEventTimestamp,monitorLoop,blockee_session_id,blocker_session_id,AppName\n| summarize blockees = make_set(blockee_session_id),\
+      \ blockers = make_set(blocker_session_id),timestamp=format_datetime(min(originalEventTimestamp),'yyyy-MM-dd HH:mm:ss') by monitorLoop,AppName\n| extend MergedList = array_concat(blockees, blockers)\n\
+      | summarize blockingSessionArray=make_set(MergedList),arg_min(timestamp,blockees) by monitorLoop,AppName\n| extend  blockingChainSessionCount= array_length(blockingSessionArray)\n| extend  blockeeSessionCount=\
+      \ array_length(blockees)\n| where blockeeSessionCount>0\n| project-away blockingSessionArray\n| order by blockeeSessionCount desc\n| take 1\n| join kind=leftouter (WorkersLimitPerDB) on AppName\n\
+      | extend blockeeSessionPercent = iff(isnull(WorkersLimitPerDB) or WorkersLimitPerDB == 0, real(-1), round(100.0*blockeeSessionCount/WorkersLimitPerDB,1))\n| extend IssueDetected = iff(blockeeSessionPercent\
+      \ < 0, true, blockeeSessionPercent > 1)\n| extend blockingStatus = iff(blockeeSessionPercent < 0, \n    strcat(\"Blocking detected but worker thread capacity is unavailable. The peak BLOCKING occurred\
+      \ at \", timestamp, \", \", blockeeSessionCount, \" session(s) were blocked. Unable to calculate percentage due to missing resource governance data.\"),\n    strcat(BlockingStatus(blockeeSessionPercent),\
+      \ \" The peak BLOCKING occurred at \", timestamp, \", \", blockeeSessionCount, \" session(s) were blocked, accounting for \", blockeeSessionPercent, \"% of the total capacity(\", WorkersLimitPerDB,\
+      \ \").\"))\n"
+  OutputFields:
+  - blockeeSessionCount
+  - blockeeSessionPercent
+  - blockingStatus
+  - IssueDetected
+  IssueDetection:
+    issue: blockeeSessionPercent > 1 OR capacity unavailable
+- id: MI-LS-BLOCKING-02
+  name: Blocking Events Distribution (Hourly)
+  source: SQLLivesiteAgents/Performance/Blocking/references/blocking-detection.md
+  condition: MI-LS-BLOCKING-01.IssueDetected == true
+  table: MonBlockedProcessReportFiltered
+  KustoQueries:
+  - TableName: MonBlockedProcessReportFiltered
+    ExecutedQuery: |
+      MonBlockedProcessReportFiltered
+      | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+      | where database_name =~ '{DatabaseName}'
+      | summarize BlockingEventCount=count() by bin(originalEventTimestamp, 1h)
+      | order by originalEventTimestamp asc
+- id: MI-LS-BLOCKING-03
+  name: Deadlock Summary
+  source: SQLLivesiteAgents/Performance/Blocking/references/deadlock-detection.md
+  table: MonDeadlockReportsFiltered
+  thresholds:
+    issue: TotalDeadlocks > 5
+  KustoQueries:
+  - TableName: MonDeadlockReportsFiltered
+    ExecutedQuery: "let DeadlockData = MonDeadlockReportsFiltered\n| where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))\n| where database_name\
+      \ =~ '{DatabaseName}'\n| where event =~ 'xml_deadlock_report_filtered';\nlet HourlyAvg = toscalar(DeadlockData \n    | summarize count() by bin(originalEventTimestamp, 1h)\n    | summarize avg(count_));\n\
+      DeadlockData\n| summarize TotalDeadlocks = count(), \n            FirstDeadlock = min(originalEventTimestamp), \n            LastDeadlock = max(originalEventTimestamp)\n| extend HourlyAverage = round(HourlyAvg,\
+      \ 1)\n| extend IssueDetected = TotalDeadlocks > 5\n"
+  OutputFields:
+  - TotalDeadlocks
+  - FirstDeadlock
+  - LastDeadlock
+  - HourlyAverage
+  - IssueDetected
+- id: MI-LS-BLOCKING-04
+  name: Deadlock Distribution (15-min intervals)
+  source: SQLLivesiteAgents/Performance/Blocking/references/deadlock-detection.md
+  condition: MI-LS-BLOCKING-03.IssueDetected == true
+  table: MonDeadlockReportsFiltered
+  KustoQueries:
+  - TableName: MonDeadlockReportsFiltered
+    ExecutedQuery: |
+      let Interval = 15min;
+      MonDeadlockReportsFiltered
+      | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+      | where database_name =~ '{DatabaseName}'
+      | where event =~ 'xml_deadlock_report_filtered'
+      | summarize DeadlockCount = count() by bin(originalEventTimestamp, Interval)
+      | order by originalEventTimestamp asc
+- id: MI-LS-BLOCKING-05
+  name: Hourly Deadlock Summary
+  source: SQLLivesiteAgents/Performance/Blocking/references/deadlock-detection.md
+  condition: MI-LS-BLOCKING-03.IssueDetected == true
+  table: MonDeadlockReportsFiltered
+  KustoQueries:
+  - TableName: MonDeadlockReportsFiltered
+    ExecutedQuery: |
+      MonDeadlockReportsFiltered
+      | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+      | where database_name =~ '{DatabaseName}'
+      | where event =~ 'xml_deadlock_report_filtered'
+      | summarize DeadlockCount = count() by bin(originalEventTimestamp, 1h)
+      | order by originalEventTimestamp asc
+- id: MI-LS-BLOCKING-06
+  name: Lead Blocker Sessions
+  source: SQLLivesiteAgents/Performance/Blocking/references/lead-blocker-sessions.md
+  condition: MI-LS-BLOCKING-01.IssueDetected == true
+  table: MonBlockedProcessReportFiltered
+  parameters:
+    monitorLoop: '{from MI-LS-BLOCKING-01 peak monitorLoop}'
+  KustoQueries:
+  - TableName: MonBlockedProcessReportFiltered
+    ExecutedQuery: |
+      MonBlockedProcessReportFiltered
+      | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+      | where database_name =~ '{DatabaseName}'
+      | extend monitorLoop = extract('monitorLoop=\x22([0-9]+)\x22',1,blocked_process_filtered, typeof(int))
+      | parse blocked_process_filtered with anystr3:string '<blocked-process>' blockee '</blocked-process>' discard1
+      | parse blocked_process_filtered with anystr4:string'<blocking-process>' blocker '</blocking-process>' discard2
+      | extend blockee_session_id = extract('spid=\x22([0-9]+)\x22', 1, blockee, typeof(int))
+      | extend blockee_status = extract('status=\x22(.*?)\x22', 1, blockee, typeof(string))
+      | extend blockee_status = iff(isempty(blockee_status) or isnull(blockee_status), "NULL", blockee_status)
+      | extend blockee_transactionid = extract('xactid=\x22([0-9]+)\x22', 1, blockee, typeof(long))
+      | extend blockee_frames = extract(@'\s*<stackFrames>\s*(.*?)\s*</stackFrames>\s*', 1, blockee, typeof(string))
+      | extend blockee_waittime_ms = extract('waittime=\x22([0-9]+)\x22', 1, blockee, typeof(int))
+      | extend blockee_transactionname = extract('transactionname=\x22(.*?)\x22', 1, blockee, typeof(string))
+      | extend blockee_clientapp = extract('clientapp=\x22(.*?)\x22', 1, blockee, typeof(string))
+      | extend blockee_clientapp = iff(isempty(blockee_clientapp) or isnull(blockee_clientapp), "NULL", blockee_clientapp)
+      | extend blockee_trancount = extract('trancount=\x22([0-9]+)\x22', 1, blockee, typeof(int))
+      | extend blockee_lasttranstarted = extract('lasttranstarted=\x22(.*?)\x22', 1, blockee, typeof(datetime))
+      | extend blockee_queryhash = extract('queryhash=\x22(.*?)\x22', 1, blockee, typeof(string))
+      | extend blockee_isolationlevel = extract('isolationlevel=\x22(.*?)\x22', 1, blockee, typeof(string))
+      | extend blockee_lastbatchstarted = extract('lastbatchstarted=\x22(.*?)\x22', 1, blockee, typeof(datetime))
+      | extend blockee_lastbatchcompleted = extract('lastbatchcompleted=\x22(.*?)\x22', 1, blockee, typeof(datetime))
+      | extend blockee_waitresource = extract('waitresource=\x22(.*?)\x22', 1, blockee, typeof(string))
+      | extend blocker_session_id = extract('spid=\x22([0-9]+)\x22', 1, blocker, typeof(int))
+      | extend blocker_waitresource = extract('waitresource=\x22(.*?)\x22', 1, blocker, typeof(string))
+      | extend blocker_status = extract('status=\x22(.*?)\x22', 1, blocker, typeof(string))
+      | extend blocker_status = iff(isempty(blocker_status) or isnull(blocker_status), "NULL", blocker_status)
+      | extend blocker_clientapp = extract('clientapp=\x22(.*?)\x22', 1, blocker, typeof(string))
+      | extend blocker_clientapp = iff(isempty(blocker_clientapp) or isnull(blocker_clientapp), "NULL", blocker_clientapp)
+      | extend blocker_trancount = extract('trancount=\x22([0-9]+)\x22', 1, blocker, typeof(int))
+      | extend blocker_transactionid = extract('xactid=\x22([0-9]+)\x22', 1, blocker, typeof(long))
+      | extend blocker_frames = extract(@'\s*<stackFrames>\s*(.*?)\s*</stackFrames>\s*', 1, blocker, typeof(string))
+      | extend blocker_queryhash = extract('queryhash=\x22(.*?)\x22', 1, blocker, typeof(string))
+      | extend blocker_isolationlevel = extract('isolationlevel=\x22(.*?)\x22', 1, blocker, typeof(string))
+      | extend blocker_lastbatchstarted = extract('lastbatchstarted=\x22(.*?)\x22', 1, blocker, typeof(datetime))
+      | extend blocker_lastbatchcompleted = extract('lastbatchcompleted=\x22(.*?)\x22', 1, blocker, typeof(datetime))
+      | where isnotnull(blocker_session_id) and isnotnull(blockee_session_id)
+      | where monitorLoop=={monitorLoop}
+      | summarize arg_max(originalEventTimestamp, blockee_waittime_ms,blockee_transactionid,blockee_isolationlevel,blockee_clientapp,blockee_queryhash,blockee_waitresource,blockee_lastbatchstarted,
+      blockee_lastbatchcompleted,blocker_waitresource,blocker_transactionid,blocker_trancount, blocker_status,blocker_isolationlevel,blocker_clientapp,blocker_queryhash,blocker_waitresource,blocker_lastbatchstarted,blocker_lastbatchcompleted)
+      by monitorLoop,blockee_session_id,blocker_session_id
+- id: MI-LS-BLOCKING-07
+  name: Long Running Transactions
+  source: SQLLivesiteAgents/Performance/Blocking/references/long-running-transactions.md
+  condition: MI-LS-BLOCKING-01.IssueDetected == true
+  table: MonDmTranActiveTransactions
+  thresholds:
+    attention: duration > 1 hour
+  KustoQueries:
+  - TableName: MonDmTranActiveTransactions
+    ExecutedQuery: |
+      MonDmTranActiveTransactions
+      | where (LogicalServerName =~ '{ServerName}' or AppName =~ '{AppName}') and PreciseTimeStamp between (datetime({StartTime})..datetime({EndTime}))
+      | where (user_db_name =~ '{DatabaseName}' or 4>= database_id)
+      | extend category = iff(user_db_name == 'tempdb', 'tempdb', iff(accessed_tempdb == 0, 'user_db', 'user_db_with_accessed_tempdb'))
+      | extend duration_hour = round((end_utc_date - transaction_begin_time) / time(1h),1)
+      | extend negativeSessionCount=0>session_id
+      | extend IsSystemTask=program_name in ('DmvCollector', 'TdService', 'BackupService', 'MetricsDownloader')
+      | summarize max_duration_hour = arg_max(duration_hour,
+      session_id,
+      transaction_begin_time,
+      transaction_type,
+      transaction_state,
+      IsSystemTask,
+      status,
+      accessed_tempdb,category,
+      report_time = end_utc_date)
+      by transaction_id,negativeSessionCount
+      | summarize count(),max(max_duration_hour),avg(max_duration_hour),percentile(max_duration_hour,50) by IsSystemTask,accessed_tempdb,negativeSessionCount
+      | summarize totalCount=sum(count_), negativeSessionCount=sumif(count_,negativeSessionCount==true),systemTaskSessionCount=sumif(count_,IsSystemTask==true),max_duration_hour=max(max_max_duration_hour),avg_duration_hour=round(avg(avg_max_duration_hour),1),median_duration_hour=round(avg(percentile_max_duration_hour_50),1)
+      | where totalCount>0
+      | project totalCount, max_duration_hour, avg_duration_hour, median_duration_hour, systemTaskSessionCount, negativeSessionCount
+  OutputFields:
+  - totalCount
+  - max_duration_hour
+  - avg_duration_hour
+  - median_duration_hour
+- id: MI-LS-BLOCKING-08
+  name: Top Deadlock Queries (by event)
+  source: SQLLivesiteAgents/Performance/Blocking/references/top-deadlock-queries.md
+  condition: user request
+  table: MonDeadlockReportsFiltered
+  parameters:
+    TopN: 10
+  KustoQueries:
+  - TableName: MonDeadlockReportsFiltered
+    ExecutedQuery: |
+      MonDeadlockReportsFiltered
+      | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+      | where database_name =~ '{DatabaseName}'
+      | where event =~ 'xml_deadlock_report_filtered'
+      | extend Complete_Deadlock_Graph = trim_end(@'[ \t\r\n]+', xml_report_filtered) endswith '</deadlock>'
+      | order by Complete_Deadlock_Graph desc nulls last, originalEventTimestamp desc nulls last
+      | take {TopN}
+      | extend Complete_Deadlock_Graph = iff(Complete_Deadlock_Graph == 1, 'true', 'false')
+      | project originalEventTimestamp, xml_report_filtered, NodeName, Complete_Deadlock_Graph
+      | extend query_hashes = extract_all(@'queryhash=\x22([^\s]+)\x22', xml_report_filtered)
+      | extend query_plan_hashes = extract_all(@'queryplanhash=\x22([^\s]+)\x22', xml_report_filtered)
+      | extend query_hashes = set_difference(query_hashes, dynamic(['0x0000000000000000']))
+      | extend query_plan_hashes = set_difference(query_plan_hashes, dynamic(['0x0000000000000000']))
+      | extend query_hashes = iif(array_length(query_hashes) > 0, query_hashes, '')
+      | extend query_plan_hashes = iif(array_length(query_plan_hashes) > 0, query_plan_hashes, '')
+      | project originalEventTimestamp, NodeName, Complete_Deadlock_Graph, query_hashes, query_plan_hashes
+- id: MI-LS-BLOCKING-09
+  name: Aggregate Deadlock Query Hash Frequency
+  source: SQLLivesiteAgents/Performance/Blocking/references/top-deadlock-queries.md
+  condition: user request
+  table: MonDeadlockReportsFiltered
+  KustoQueries:
+  - TableName: MonDeadlockReportsFiltered
+    ExecutedQuery: "MonDeadlockReportsFiltered\n| where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))\n| where database_name =~ '{DatabaseName}'\n\
+      | where event =~ 'xml_deadlock_report_filtered'\n| extend query_hashes = extract_all(@'queryhash=\\x22([^\\s]+)\\x22', xml_report_filtered)\n| extend query_hashes = set_difference(query_hashes, dynamic(['0x0000000000000000']))\n\
+      | mv-expand query_hash = query_hashes to typeof(string)\n| where isnotempty(query_hash)\n| summarize DeadlockCount = count(), \n            FirstOccurrence = min(originalEventTimestamp), \n      \
+      \      LastOccurrence = max(originalEventTimestamp) \n    by query_hash\n| order by DeadlockCount desc\n| take 10\n"

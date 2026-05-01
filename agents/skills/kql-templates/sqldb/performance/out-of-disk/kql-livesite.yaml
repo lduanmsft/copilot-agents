@@ -1,0 +1,243 @@
+# ============================================================================
+# kql-livesite.yaml — Out-of-Disk KQL Templates from SQLLivesiteAgents
+# ============================================================================
+# Priority: P1 (highest)
+# Source: SQLLivesiteAgents / Performance / out-of-disk / references/
+# Distilled: 2026-04-30
+# ============================================================================
+
+SqlSkills:
+
+  # ──────────────────────────────────────────────────────
+  # 1. Drive Out of Space
+  # Source: Performance/out-of-disk/references/drive-out-of-space.md
+  # Threshold: drive_usage_percentage >= 96
+  # ──────────────────────────────────────────────────────
+  - id: LS-OOD-01
+    name: "Drive Out of Space"
+    source: "SQLLivesiteAgents/Performance/out-of-disk/references/drive-out-of-space.md"
+    table: MonRgLoad
+    thresholds:
+      issue: "drive_usage_percentage >= 96"
+    KustoQueries:
+      - TableName: MonRgLoad
+        ExecutedQuery: |
+          MonRgLoad
+          | extend originalEventTimestamp = originalEventTimestampFrom
+          | extend AppName = tostring(split(application_name, '/')[-1])
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where event == 'directory_quota_report_load' and target_directory endswith 'work\\data'
+          | extend drive_name = substring(target_directory, 4, 3)
+          | summarize by drive_name,ClusterName, application_name, NodeName, target_directory, event
+          | join kind = inner (
+                            MonRgLoad
+                            | extend originalEventTimestamp = originalEventTimestampFrom
+                            | where originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+                            | where event == 'drive_usage_report_load' and drive_name != '' and drive_capacity_in_bytes > 0
+                            | where ClusterName in ({HistoricalTenantRingNames}) and NodeName in ({NodeNames})
+                            | summarize arg_max(round(drive_usage_percentage, 1), originalEventTimestampFrom) by ClusterName, NodeName, drive_name, drive_capacity_in_gb = toint(drive_capacity_in_bytes / 1024.0 / 1024 / 1024), drive_usage_alert_threshold_percentage
+           ) on ClusterName, NodeName, drive_name
+          | project originalEventTimestampFrom, NodeName, drive_name, drive_capacity_in_gb, drive_usage_percentage, drive_available_space_gb = toint(drive_capacity_in_gb*(100-drive_usage_percentage)/100.0), drive_usage_alert_threshold_percentage, target_directory, application_name, ClusterName
+          | extend IssueDetected=drive_usage_percentage>=96
+    OutputFields: [drive_name, drive_capacity_in_gb, drive_usage_percentage, drive_available_space_gb, IssueDetected]
+
+  # ──────────────────────────────────────────────────────
+  # 2. Directory Quota Hit Limit
+  # Source: Performance/out-of-disk/references/directory-quota-hit-limit.md
+  # ──────────────────────────────────────────────────────
+  - id: LS-OOD-02
+    name: "Directory Quota Hit Limit"
+    source: "SQLLivesiteAgents/Performance/out-of-disk/references/directory-quota-hit-limit.md"
+    table: MonRgLoad
+    KustoQueries:
+      - TableName: MonRgLoad
+        ExecutedQuery: |
+          MonRgLoad
+          | extend originalEventTimestamp = originalEventTimestampFrom
+          | where originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | extend AppName = split(application_name, '/')[-1]
+          | where AppName in ({AppNamesOnly})
+          | where event =~ 'directory_quota_report_load'
+          | extend quota_limit_in_GB = quota_limit_in_bytes/1024.0/1024/1024, quota_usage_in_GB = quota_usage_in_bytes/1024.0/1024/1024
+          | summarize arg_max(quota_usage_in_GB, *) by NodeName
+          | extend QuotaLimitHit = iff(quota_usage_in_GB >= quota_limit_in_GB, 1, 0)
+          | summarize sum(QuotaLimitHit)
+          | extend DirectoryQuotaLimitHit = sum_QuotaLimitHit > 0
+          | project DirectoryQuotaLimitHit
+    OutputFields: [DirectoryQuotaLimitHit]
+
+  # ──────────────────────────────────────────────────────
+  # 3. Data or Log Reached Max Size
+  # Source: Performance/out-of-disk/references/data-or-log-reached-max-size.md
+  # ──────────────────────────────────────────────────────
+  - id: LS-OOD-03
+    name: "Max Size Hit Detection"
+    source: "SQLLivesiteAgents/Performance/out-of-disk/references/data-or-log-reached-max-size.md"
+    table: MonSqlRgHistory
+    KustoQueries:
+      - TableName: MonSqlRgHistory
+        ExecutedQuery: |
+          MonSqlRgHistory
+          | where originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where AppName in ({AppNamesOnly})
+          | where LogicalServerName =~'{LogicalServerName}' 
+          | where event =~ 'aggregated_virtual_files_io_history'
+          | where (type_desc =~ 'ROWS' or type_desc =~ 'LOG')
+          | where (database_id > 4 and database_id < 32700) or database_id == 2
+          | extend size_on_disk_GB = round(size_on_disk_bytes / 1024.0 / 1024 / 1024, 0),
+                   max_size_GB = round(max_size_mb / 1024.0, 0)
+          | summarize max(max_size_GB), max(size_on_disk_GB) by type_desc, file_id, database_id,db_name
+          | extend MaxSizeHit = iff(max_size_on_disk_GB >= max_max_size_GB, 1, 0)
+          | summarize MaxSizeHit = avg(MaxSizeHit) by database_id, type_desc
+          | summarize maxif(MaxSizeHit, database_id != 2 and type_desc =~ 'ROWS'),
+                      maxif(MaxSizeHit, database_id != 2 and type_desc =~ 'LOG'),
+                      maxif(MaxSizeHit, database_id == 2 and type_desc =~ 'ROWS'),
+                      maxif(MaxSizeHit, database_id == 2 and type_desc =~ 'LOG')
+          | extend UserdbDataMaxSizeHit = maxif_MaxSizeHit == 1,
+                   UserdbLogMaxSizeHit = maxif_MaxSizeHit1 == 1,
+                   TempdbDataMaxSizeHit = maxif_MaxSizeHit2 == 1,
+                   TempdbLogMaxSizeHit = maxif_MaxSizeHit3 == 1
+          | project UserdbDataMaxSizeHit, UserdbLogMaxSizeHit, TempdbDataMaxSizeHit, TempdbLogMaxSizeHit
+    OutputFields: [UserdbDataMaxSizeHit, UserdbLogMaxSizeHit, TempdbDataMaxSizeHit, TempdbLogMaxSizeHit]
+
+  # ──────────────────────────────────────────────────────
+  # 4. File Size Details (conditional on MaxSizeHit)
+  # ──────────────────────────────────────────────────────
+  - id: LS-OOD-04
+    name: "File Size Details"
+    source: "SQLLivesiteAgents/Performance/out-of-disk/references/data-or-log-reached-max-size.md"
+    condition: "LS-OOD-03 any MaxSizeHit == true"
+    table: MonSqlRgHistory
+    KustoQueries:
+      - TableName: MonSqlRgHistory
+        ExecutedQuery: |
+          let AggInterval_do_NOT_change = time(15m);
+          MonSqlRgHistory
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where event == 'aggregated_virtual_files_io_history'
+          | where LogicalServerName =~ '{LogicalServerName}' and db_name =~ '{LogicalDatabaseName}'
+          | summarize file_space_used_gb = round(sum(spaceused_mb / 1024.0), 1),
+                      file_space_reserved_gb = round(sum(size_on_disk_bytes / 1024.0 / 1024.0 / 1024.0), 1),
+                      maximum_gb = sum(max_size_mb / 1024.0)
+             by type_desc, bin(originalEventTimestamp, AggInterval_do_NOT_change)
+          | summarize max(file_space_used_gb), max(file_space_reserved_gb) by maximum_gb, type_desc
+          | where max_file_space_reserved_gb>=maximum_gb and max_file_space_used_gb>=maximum_gb
+          | project type_desc, maximum_gb, max_file_space_reserved_gb, max_file_space_used_gb
+
+  # ──────────────────────────────────────────────────────
+  # 5. Log Truncation Holdup (conditional on log full)
+  # ──────────────────────────────────────────────────────
+  - id: LS-OOD-05
+    name: "Log Truncation Holdup"
+    source: "SQLLivesiteAgents/Performance/out-of-disk/references/data-or-log-reached-max-size.md"
+    condition: "LS-OOD-03.UserdbLogMaxSizeHit == true"
+    table: MonFabricThrottle
+    KustoQueries:
+      - TableName: MonFabricThrottle
+        ExecutedQuery: |
+          MonFabricThrottle
+          | where AppName in ({AppNamesOnly})
+          | where LogicalServerName =~ '{LogicalServerName}' and database_name =~ '{LogicalDatabaseName}'
+          | where log_truncation_holdup !~ 'NoHoldup'
+          | summarize count(), min(TIMESTAMP), max(TIMESTAMP) by log_truncation_holdup, NodeName, ClusterName
+
+  # ──────────────────────────────────────────────────────
+  # 6. Space Allocation Failures in Errorlog
+  # Source: Performance/out-of-disk/references/has-out-of-space-issue.md
+  # Error Codes: 3257, 9002, 5149, 1105, 1101
+  # ──────────────────────────────────────────────────────
+  - id: LS-OOD-06
+    name: "Space Allocation Failures (Errorlog)"
+    source: "SQLLivesiteAgents/Performance/out-of-disk/references/has-out-of-space-issue.md"
+    table: MonSQLSystemHealth
+    error_codes: [3257, 9002, 5149, 1105, 1101]
+    KustoQueries:
+      - TableName: MonSQLSystemHealth
+        ExecutedQuery: |
+          MonSQLSystemHealth
+          | where PreciseTimeStamp between ((datetime({StartTime}) - 12h) .. datetime({EndTime}))
+          | where AppName in {AppNamesOnly}
+          | where event in ('errorlog_written', 'systemmetadata_written') and (message contains 'Error: 3257' or message contains 'Error: 9002' or message contains 'Error: 5149' or message contains 'Error: 1105' or message contains 'Error: 1101')
+          | extend required_space = extract('requires ([0-9]+)', 1, message, typeof(real)) / 1024 / 1024 / 1024
+          | extend available_space = extract('only ([0-9]+)', 1, message, typeof(real)) / 1024 / 1024 / 1024
+          | extend errorMessage=substring(message,124,strlen(message))
+          | summarize StartTime = min(PreciseTimeStamp),(LastSeenTime, RequiredSpaceGB, AvailableSpaceGB) = arg_max(PreciseTimeStamp, required_space, available_space, errorMessage, error_id) by AppName, ClusterName, NodeName
+          | project AppName, NodeName, AvailableSpaceGB, RequiredSpaceGB, LastSeenTime, errorMessage, ErrorId=error_id, ClusterName, StartTime, sourceName = 'MonSQLSystemHealth aka Errorlog'
+          | top 10 by LastSeenTime desc
+
+  # ──────────────────────────────────────────────────────
+  # 7. Tempdb Full Detection
+  # Source: Performance/out-of-disk/references/tempdb-full-analysis.md
+  # ──────────────────────────────────────────────────────
+  - id: LS-OOD-07
+    name: "Tempdb Full Detection"
+    source: "SQLLivesiteAgents/Performance/out-of-disk/references/tempdb-full-analysis.md"
+    tables: [MonSQLSystemHealth, MonSqlRgHistory]
+    KustoQueries:
+      - TableName: MonSQLSystemHealth
+        ExecutedQuery: |
+          let AllocationErrorCount=toscalar( MonSQLSystemHealth
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | where error_id in (1101,1104,1105,5149)
+          | count
+          );
+          let AggInterval_do_NOT_change = time(15m);
+          let TempdbFileFullResult = MonSqlRgHistory
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | where event=='aggregated_virtual_files_io_history'
+          | where database_id == 2
+          | where type_desc =~'ROWS'
+          | where AllocationErrorCount>0
+          | summarize
+          spaceused_gb = round(sum(spaceused_mb / 1024.0),1),
+          size_on_disk_gb = round(sum(size_on_disk_bytes / 1024.0 / 1024.0 / 1024.0),1),
+          max_size_gb=round(sum(max_size_mb/1024.0),1)
+          by  type_desc, bin(originalEventTimestamp, AggInterval_do_NOT_change)
+          | project originalEventTimestamp,file_type=type_desc,spaceused_gb,size_on_disk_gb,max_size_gb
+          | where size_on_disk_gb==max_size_gb
+          | extend Timestamp=originalEventTimestamp
+          | summarize Timestamp=max(Timestamp),countTempdbFileFull=count();
+          TempdbFileFullResult
+          | extend IssueDetected = countTempdbFileFull > 0
+          | extend ResultMessage = iff(countTempdbFileFull > 0, 
+              strcat("Tempdb database file was full, with first occurrence around ", format_datetime(Timestamp, 'yyyy-MM-dd HH:mm'), "."),
+              "Tempdb is not full.")
+          | project Timestamp, countTempdbFileFull, IssueDetected, ResultMessage
+    OutputFields: [countTempdbFileFull, IssueDetected, ResultMessage]
+
+  # ──────────────────────────────────────────────────────
+  # 8. XStore Error Analysis
+  # Source: Performance/out-of-disk/references/xstore-error-analysis.md
+  # ──────────────────────────────────────────────────────
+  - id: LS-OOD-08
+    name: "XStore Error Analysis"
+    source: "SQLLivesiteAgents/Performance/out-of-disk/references/xstore-error-analysis.md"
+    table: MonSQLXStore
+    KustoQueries:
+      - TableName: MonSQLXStore
+        ExecutedQuery: |
+          let ErrorMessage=(totalCount: int,errorcodeArray:string,
+          count_TopError: int,mapped_errorcode: int,dcount_errorcode: int
+          )
+          {
+          let noErrorMessage="We didn't detect any XStore related errors.";
+          let summary=strcat(
+          "The Azure DB Storage run into error ",totalCount, iif(totalCount == 1, " time", " times"),
+          " with ",dcount_errorcode, iif(dcount_errorcode == 1, " single error ", " different errors"),errorcodeArray,".");
+          let topError=iif(dcount_errorcode ==1,"",
+          strcat(" The top error was ",mapped_errorcode, ", happening ",count_TopError, iif(count_TopError == 1, " time", " times")));
+          iif(totalCount == 0, noErrorMessage, strcat(summary,topError))
+          };
+          MonSQLXStore
+          | where AppName in ({AppNamesOnly})
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | where TIMESTAMP between (datetime({StartTime})..datetime({EndTime}))
+          | where event =='xio_failed_request'
+          | where file_path contains '.mdf' or file_path contains '.ndf' or file_path contains '.ldf'
+          | summarize count_=count() by mapped_errorcode
+          | summarize totalCount=sum(count_),errorcodeArray=make_set(mapped_errorcode),count_TopError=arg_max(count_, mapped_errorcode),dcount_errorcode=dcount(mapped_errorcode)
+          | extend errorMessage=ErrorMessage(totalCount,errorcodeArray,count_TopError,mapped_errorcode,dcount_errorcode)
+          | project errorMessage
+    OutputFields: [errorMessage]

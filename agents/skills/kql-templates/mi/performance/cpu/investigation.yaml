@@ -1,0 +1,243 @@
+# ============================================================================
+# Ported from SQLDB SQLLivesiteAgents, adapted for Managed Instance (MI)
+# MI_SQLLSinvest_perf_cpu — CPU Investigation Workflow
+# ============================================================================
+# Source: SQLLivesiteAgents / Performance / CPU / SKILL.md + references/
+# Distilled: 2026-04-30
+# Purpose: Layer 1 — 定义 CPU 调查的执行顺序、阈值判断、条件分支
+# KQL 模板引用: mi/CPU.yaml (Layer 2)
+# ============================================================================
+
+Investigation:
+  id: perf-cpu
+  name: "High CPU Investigation"
+  description: >
+    Analyzes high CPU from 4 angles: User Pool, Kernel Mode, System Pool, Node Level.
+    If User Pool CPU is high, triggers sub-investigations for discrepancy, queries, compilation.
+  source: "SQLLivesiteAgents/Performance/CPU"
+  mi_note: "MI also has MonManagedInstanceResourceStats for instance-level CPU metrics (avg_cpu_percent, virtual_core_count)"
+  
+  # Required inputs (from execute-kusto-query + appnameandnodeinfo + get-db-info)
+  RequiredParameters:
+    - ServerName           # MI uses ServerName
+    - DatabaseName         # MI uses DatabaseName
+    - AppName              # MI fallback when LogicalServerName is empty
+    - StartTime        # UTC yyyy-MM-dd HH:mm
+    - EndTime          # UTC yyyy-MM-dd HH:mm
+    - isBusinessCritical    # from get-db-info
+    
+  # ────────────────────────────────────────────────────
+  # Step 1: User Pool CPU
+  # ────────────────────────────────────────────────────
+  Steps:
+    - step: 1
+      name: "User Pool CPU Analysis"
+      kql_ref: "CPU.yaml#1.1"
+      description: "Check user pool CPU utilization"
+      deployment_variants:
+        singleton:
+          table: MonDmRealTimeResourceStats
+          kql_ref: "CPU.yaml#1.1 (UserPoolCPUTable_Singleton)"
+        elastic_pool:
+          table: MonResourcePoolStats
+          condition: "isBusinessCritical == true"
+          kql_ref: "CPU.yaml#1.1 (UserPoolCPUTable_ElasticPool)"
+      thresholds:
+        high_cpu: 80          # max_cpu_percent >= 80% → issue detected
+        significant_change: 40 # max-min >= 40% → warn even if < 80%
+      severity:
+        high: "max_cpu_percent >= 80"
+        warning: "max_cpu_percent < 80 AND (max - min) >= 40"
+        normal: "max_cpu_percent < 80 AND (max - min) < 40"
+      output_fields:
+        - avg_cpu_percent
+        - max_cpu_percent
+        - min_cpu_percent
+        - high_cpu_duration_seconds    # countif(>=80) * 15s
+        - cpu_change_percent           # max - min
+        - significant_change_detected  # bool
+      branching:
+        on_high: 
+          - step: 1.1    # Hourly CPU Pattern
+          - step: 1.2    # CPU Discrepancy
+          - step: 1.3    # Query Execution CPU
+          - step: 1.4    # Compilation CPU (successful)
+          - step: 1.5    # Compilation CPU (failed)
+        on_warning: "Report significant change, terminate"
+        on_normal: "Report no issue, terminate"
+      notes:
+        - "If high CPU but duration < 15 min → note intermittent spikes"
+        - "High CPU Duration = countif(avg_cpu_percent >= 80) * 15 seconds"
+        
+    - step: 1.1
+      name: "Hourly CPU Pattern"
+      condition: "step-1.max_cpu_percent >= 80"
+      kql_ref: "CPU.yaml#1.1 (hourly breakdown — same table, bin 1h)"
+      description: "Hourly breakdown to identify when CPU spikes occurred"
+      output_format:
+        columns: ["Hour (UTC)", "Avg CPU", "Max CPU", "Status"]
+        status_logic:
+          critical: "max >= 95%"
+          high: "max >= 80%"
+          rising: "max >= 60%"
+          normal: "max < 60%"
+
+    - step: 1.2
+      name: "CPU Discrepancy Check"
+      condition: "step-1.max_cpu_percent >= 80"
+      kql_ref: "CPU_UserPoolCPUDiscrepancy.yaml#1.11"
+      description: "Compare User Pool CPU vs (QDS + Compile CPU). Ratio < 80% = discrepancy"
+      tables:
+        - MonDmRealTimeResourceStats
+        - MonWiQdsExecStats
+        - MonWiQueryParamData
+        - MonQueryProcessing
+      thresholds:
+        discrepancy_ratio: 80    # totalRecordedCPU / totalUserPoolCPU < 80% → issue
+      branching:
+        on_discrepancy:
+          - "Check SQL restart/failover (Misc)"
+          - "Check kill commands (Misc)"
+          - "Check QDS readonly (QDS skill)"
+          - "Check long-running transactions (Blocking skill)"
+          - "If all negative → Azure Profiler traces"
+        on_normal: "Terminate — QDS + Compile accounts for User Pool CPU"
+
+    - step: 1.3
+      name: "Query Execution CPU Analysis"
+      condition: "step-1.max_cpu_percent >= 80"
+      kql_ref: "queries_topQueries.yaml / queries_QueryDetails.yaml"
+      description: "Identify top CPU-consuming queries from QDS"
+      cross_ref: "→ See performance/queries/MI_SQLLSinvest_perf_queries.yaml"
+      
+    - step: 1.4
+      name: "Successful Compilation CPU"
+      condition: "step-1.max_cpu_percent >= 80"
+      kql_ref: "CPU_Compilation.yaml#4.5"
+      description: "Check if query compilation is consuming excessive CPU"
+      cross_ref: "→ See performance/compilation/MI_SQLLSinvest_perf_compilation.yaml"
+
+    - step: 1.5
+      name: "Failed Compilation CPU"
+      condition: "step-1.max_cpu_percent >= 80"
+      kql_ref: "CPU_Compilation.yaml#4.6"
+      description: "Check if failed compilations are contributing to CPU usage"
+      cross_ref: "→ See performance/compilation/MI_SQLLSinvest_perf_compilation.yaml"
+
+  # ────────────────────────────────────────────────────
+  # Step 2: Kernel Mode CPU
+  # ────────────────────────────────────────────────────
+    - step: 2
+      name: "Kernel Mode CPU Analysis"
+      kql_ref: "CPU.yaml#1.2"
+      description: "Check kernel-level CPU consumption"
+      table: MonRgLoad
+      filter: "event == 'instance_load' AND code_package_name contains 'Code'"
+      metric: "kernel_load_peak / cpu_load_cap → percentage"
+      thresholds:
+        normal: "< 10%"
+        moderate: ">= 10% and < 15%"
+        high: ">= 15%"
+      output_fields:
+        - avg_kernel_cpu_percent
+        - max_kernel_cpu_percent
+        - min_kernel_cpu_percent
+        - high_cpu_duration_minutes     # countif(>=15%) * 5min
+      branching:
+        on_high:
+          - step: 2.1    # Azure Profiler Trace
+        on_moderate: "Report moderate, monitor"
+        on_normal: "Report no issue"
+      recommendation_on_high: "Collect Azure Profiler Trace"
+      
+    - step: 2.1
+      name: "Azure Profiler Trace"
+      condition: "step-2.max_kernel_cpu >= 15%"
+      kql_ref: "CPU.yaml#20"
+      description: "Check if Azure Profiler traces are available for the time window"
+
+  # ────────────────────────────────────────────────────
+  # Step 3: System Pool CPU
+  # ────────────────────────────────────────────────────
+    - step: 3
+      name: "System Pool CPU Analysis"
+      kql_ref: "CPU.yaml#1.3"
+      description: "Check CPU in System Pools (excluding User Pool)"
+      tables:
+        - MonSqlRgHistory    # resource pool CPU
+        - MonDmRealTimeResourceStats  # CPU cap
+      logic: "Aggregate all non-UserPool resource pools → compare to CPU cap"
+      thresholds:
+        normal: "< 20%"
+        moderate: ">= 20% and < 30%"
+        high: ">= 30%"
+      output_fields:
+        - avg_cpu_percent
+        - max_cpu_percent
+        - min_cpu_percent
+        - high_cpu_duration_minutes   # countif(>=30%) * 15min
+      branching:
+        on_high:
+          - step: 3.1    # Top System Pool breakdown
+        on_moderate: "Report moderate, monitor trend"
+        on_normal: "Report no issue"
+
+    - step: 3.1
+      name: "Top System Pool CPU Breakdown"
+      condition: "step-3.max_cpu_percent >= 30%"
+      kql_ref: "CPU.yaml#1.31"
+      description: "Identify top N system resource pools by CPU consumption"
+      tables:
+        - MonSqlRgHistory
+        - MonDmRealTimeResourceStats
+      pool_reference:
+        internal: "Core SQL engine ops (geo-replication, redo, recovery)"
+        SloSecSharedPool: "Secondary/geo-replication workloads"
+        InMemDmvCollectorPool: "DMV data collection"
+        InMemQueryStorePool: "Query Store operations"
+        InMemBackupRestorePool: "Backup and restore"
+        PVSCleanerPool: "Persistent Version Store cleanup (ADR)"
+        PVSPreAllocPool: "PVS pre-allocation"
+
+  # ────────────────────────────────────────────────────
+  # Step 4: Node Level CPU (optional, less common for CSS)
+  # ────────────────────────────────────────────────────
+    - step: 4
+      name: "Node Level CPU Analysis"
+      kql_ref: "N/A — complex query from SQLLivesiteAgents, not yet in Layer 2"
+      description: "Total node CPU and pegged cores detection"
+      tables:
+        - MonCounterOneMinute    # perfmon counters
+        - MonRgLoad              # affinity mask
+        - MonDmRealTimeResourceStats  # cpu_cap
+      thresholds:
+        high_node_cpu: 90        # total node CPU > 90%
+        pegged_core: 95          # individual core > 95% for 5+ minutes
+        unbalanced_ratio: 60     # % of time CPU is unbalanced
+      analysis:
+        - "Check if instance is multicore (cpu_cap_in_sec > 1)"
+        - "Parse affinity mask → identify assigned cores"
+        - "Rolling 5min window for pegged core detection"
+        - "Balanced vs unbalanced: overall < 80% but individual core > 95%"
+      notes:
+        - "Rarely needed for CSS — only when node-level issues suspected"
+        - "Single-core instances: skip pegged cores analysis"
+
+  # ────────────────────────────────────────────────────
+  # Summary: Execution Order
+  # ────────────────────────────────────────────────────
+  ExecutionOrder:
+    always_run:
+      - step-1    # User Pool CPU (必查)
+      - step-2    # Kernel Mode CPU (必查)
+      - step-3    # System Pool CPU (必查)
+    conditional:
+      - step-1.1  # Hourly pattern (if step-1 high)
+      - step-1.2  # Discrepancy (if step-1 high)
+      - step-1.3  # Query CPU (if step-1 high)
+      - step-1.4  # Compilation CPU (if step-1 high)
+      - step-1.5  # Failed Compilation (if step-1 high)
+      - step-2.1  # Profiler (if step-2 high)
+      - step-3.1  # Top pools (if step-3 high)
+    optional:
+      - step-4    # Node level (rarely needed)

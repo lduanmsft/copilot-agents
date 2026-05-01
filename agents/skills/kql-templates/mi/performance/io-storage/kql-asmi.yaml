@@ -1,0 +1,195 @@
+SqlSkills:
+- id: MI-ASMI-IO-STORAGE-01
+  Topic: GP IO Throttling
+  Source: kusto-queries/GP IO Throttling.md
+  Prompts:
+  - MonSQLXStore by LogicalServerName, ServerName
+  - MonSQLXStore LogicalServerName ServerName file_path mdf
+  - Investigate GP IO Throttling
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLXStore
+    ExecutedQuery: 'MonSQLXStore
+
+      | where LogicalServerName =~ "{ServerName}" and file_path endswith ".mdf"'
+- id: MI-ASMI-IO-STORAGE-02
+  Topic: GP IO Throttling
+  Source: kusto-queries/GP IO Throttling.md
+  Prompts:
+  - MonSQLXStore by LogicalServerName, ServerName
+  - MonSQLXStore LogicalServerName ServerName file_path ldf
+  - Investigate GP IO Throttling
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLXStore
+    ExecutedQuery: 'MonSQLXStore
+
+      | where LogicalServerName =~ "{ServerName}" and file_path endswith ".ldf"'
+- id: MI-ASMI-IO-STORAGE-03
+  Topic: GP Storage - IOPS & throughput
+  Source: kusto-queries/GP Storage - IOPS & throughput.md
+  Prompts:
+  - MI XStore IO telemetry for xstore io stats
+  - MonSQLXStoreIOStats LogicalServerName event file_path mdf
+  - Investigate GP Storage IOPS & throughput
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLXStoreIOStats
+    ExecutedQuery: 'MonSQLXStoreIOStats
+
+      | where TIMESTAMP between(ago(1d)..now())
+
+      | where LogicalServerName =~ "{ServerName}" // managed instance name
+
+      | where file_path contains "https://wasdpwus1aprsmi8591.blob.core.windows.net/managedserver-0a8d89c3-c2af-446d-890a-ae3972932ca9/data/e08bc1d0-83b2-4bdb-b54c-c6deba2d728d_1.mdf"
+      // You can get this from the first query in the previous section
+
+      | where event == ''xstore_io_stats''
+
+      | where file_path endswith ''.ldf'' or file_path endswith''.mdf'' or file_path endswith ''.ndf'''
+- id: MI-ASMI-IO-STORAGE-04
+  Topic: GP Storage - IOPS & throughput
+  Source: kusto-queries/GP Storage - IOPS & throughput.md
+  Prompts:
+  - MI XStore IO telemetry for xstore io stats
+  - MonSQLXStoreIOStats event data xstore_io_stats file_path
+  - Investigate GP Storage IOPS & throughput
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLXStoreIOStats
+    ExecutedQuery: 'MonSQLXStoreIOStats
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where TIMESTAMP > ago(1d)
+
+      | where event == ''xstore_io_stats''
+
+      | where file_path == "https://wasd2prodeas1apdw4839.blob.core.windows.net/data-nafastudent360-8737f6d8-f407-41db-8dcd-18695cbd1db5/data/770d7f52-f249-4433-adc3-85492b32b10b_1.mdf"'
+- id: MI-ASMI-IO-STORAGE-05
+  Topic: GP Storage - IOPS & throughput
+  Source: kusto-queries/GP Storage - IOPS & throughput.md
+  Prompts:
+  - MI XStore IO telemetry for xstore io stats
+  - MonSQLXStoreIOStats event let binInterval use
+  - Investigate GP Storage IOPS & throughput
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLXStoreIOStats
+    ExecutedQuery: 'let binInterval = 5m; // use with caution!!
+
+      MonSQLXStoreIOStats
+
+      | where originalEventTimestamp between (startTime..endTime)
+
+      | where AppName =~ appName
+
+      | where file_path == "https://wasdpwus1aprsmi8591.blob.core.windows.net/managedserver-0a8d89c3-c2af-446d-890a-ae3972932ca9/data/e08bc1d0-83b2-4bdb-b54c-c6deba2d728d_1.mdf"
+
+      | where event == ''xstore_io_stats'''
+- id: MI-ASMI-IO-STORAGE-06
+  Topic: IO Latency
+  Source: kusto-queries/IO Latency.md
+  Prompts:
+  - MonSqlRgHistory for volume entity stats
+  - MonSqlRgHistory LogicalServerName event ServerName volume_entity_stats
+  - Investigate IO Latency
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: 'MonSqlRgHistory
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where TIMESTAMP between(ago(1d)..now())
+
+      | where event == ''volume_entity_stats''
+
+      | where is_agg_volume == 0 and is_categorized == 1
+
+      | where total_io_count > 0
+
+      | where volume_name == "https://wasdpwus1aprsmi8591.blob.core.windows.net/managedserver-0a8d89c3-c2af-446d-890a-ae3972932ca9/data/e08bc1d0-83b2-4bdb-b54c-c6deba2d728d_1.mdf"'
+- id: MI-ASMI-IO-STORAGE-07
+  Topic: Storage (MonSQLXStore
+  Source: kusto-queries/Storage (MonSQLXStore.md
+  Prompts:
+  - MonSQLXStore for xio failed request / sqlazure1
+  - MonSQLXStore LogicalServerName event error_code operation_parameters
+  - Investigate Storage (MonSQLXStore
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLXStore
+    ExecutedQuery: 'MonSQLXStore| where LogicalServerName =~ "{ServerName}"| where event == "xio_failed_request" | where TIMESTAMP > ago(1d)| project TIMESTAMP,LogicalServerName,event,file_path,
+      mapped_errorcode,request_type,http_errorcode,request_id, error_responselet SingleCluster=(clstr: string) {cluster(clstr).database(''sqlazure1'').MonManagementOperations|
+      where operation_type == "AlterFileManagedDatabase"| extend MaxFileSizeInKb = extract("<MaxFileSizesKb>([0-9]+)", 1, operation_parameters)| extend FileSizeInKb
+      = extract("<FileSizesKb>([0-9]+)", 1, operation_parameters)| extend MaxFileSizeInGb = toint(MaxFileSizeInKb) / (1024*1024)| extend FileSizeInGb = toint(FileSizeInKb)
+      / (1024*1024)| extend ManagedInstanceName = extract("<ManagedServerName>([a-zA-Z-0-9_]+)", 1, operation_parameters)//| where FileSizeInGb > 100 or MaxFileSizeInGb
+      > 100| where error_code == 0 or isempty( error_code)| where event != "management_operation_start"| where event == "management_operation_fatal_error"| project
+      TIMESTAMP, request_id, event,ManagedInstanceName, MaxFileSizeInGb, FileSizeInGb, toint( MaxFileSizeInKb) , toint( FileSizeInKb) , error_code, error_message,
+      operation_parameters};_ExecuteForProdClusters'
+- id: MI-ASMI-IO-STORAGE-08
+  Topic: Storage (MonSQLXStore
+  Source: kusto-queries/Storage (MonSQLXStore.md
+  Prompts:
+  - MonSQLXStore for xio failed request
+  - MonSQLXStore LogicalServerName event ServerName xio_failed_request
+  - Investigate Storage (MonSQLXStore
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLXStore
+    ExecutedQuery: 'MonSQLXStore
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where event == "xio_failed_request"'
+- id: MI-ASMI-IO-STORAGE-09
+  Topic: Storage (MonSQLXStore
+  Source: kusto-queries/Storage (MonSQLXStore.md
+  Prompts:
+  - MonSQLXStore by LogicalServerName, ServerName
+  - MonSQLXStore LogicalServerName ServerName managed instance
+  - Investigate Storage (MonSQLXStore
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLXStore
+    ExecutedQuery: 'MonSQLXStore
+
+      | where LogicalServerName =~ ''{ServerName}'' // managed instance name'
+- id: MI-ASMI-IO-STORAGE-10
+  Topic: Storage (MonSQLXStore
+  Source: kusto-queries/Storage (MonSQLXStore.md
+  Prompts:
+  - MonSQLXStore for xio failed request
+  - MonSQLXStore event dbfaac3fffa1 xio_failed_request mapped_errorcode
+  - Investigate Storage (MonSQLXStore
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLXStore
+    ExecutedQuery: 'MonSQLXStore
+
+      | where originalEventTimestamp > ago(7d)
+
+      | where AppName =~ "{AppName}"//"dbfaac3fffa1"
+
+      | where event == "xio_failed_request" and mapped_errorcode == 12002'

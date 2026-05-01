@@ -1,0 +1,210 @@
+SqlSkills:
+- id: MI-compilation-1
+  Topic: Memory-Grant-Feedback-Persistence-and-Percentile-grant
+  Source: Performance-and-Query-Execution/Reference/Memory-Grant-Feedback-Persistence-and-Percentile-grant.md
+  Prompts:
+  - MI Memory Grant Feedback Persistence and Percentile grant
+  - Managed Instance Memory Grant Feedback Persistence and Percentile grant
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonQueryProcessing
+    ExecutedQuery: |-
+      MonQueryProcessing
+      |   where   originalEventTimestamp  between(startTime..endTime)
+      |   where   AppName == aname
+      |   where   logical_database_name == dname
+      |   where   LogicalServerName == sname
+      |   where   query_plan_hash_signed == phash
+      |   where   event ==   "memory_grant_updated_by_feedback"
+      |   mv-expand   parse_json(memory_summary_by_operator_kb)
+      |   extend   ni = parse_json(memory_summary_by_operator_kb)
+      |   where   tolong(ni.Granted) == tolong(ni.Used)   and   tolong(ni.Granted) >   1024
+      |   project   TIMESTAMP, ideal_additional_memory_before_kb, ideal_additional_memory_after_kb, memory_summary_by_operator_kb
+- id: MI-compilation-2
+  Topic: Memory-Grant-Feedback-Persistence-and-Percentile-grant
+  Source: Performance-and-Query-Execution/Reference/Memory-Grant-Feedback-Persistence-and-Percentile-grant.md
+  Prompts:
+  - MI Memory Grant Feedback Persistence and Percentile grant
+  - Managed Instance Memory Grant Feedback Persistence and Percentile grant
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonQueryProcessing
+    ExecutedQuery: |-
+      MonQueryProcessing
+      |   where   originalEventTimestamp  between(startTime..endTime)
+      |   where   AppName == aname
+      |   where   logical_database_name == dname
+      |   where   LogicalServerName == sname
+      |   where   query_plan_hash_signed == phash
+      |   where   event ==   "memory_grant_updated_by_feedback"
+      |   extend   overestimate_kb = ideal_additional_memory_before_kb - ideal_additional_memory_after_kb
+      |   where   overestimate_kb >   0
+      |   project   TIMESTAMP, overestimate_kb, ideal_additional_memory_before_kb, ideal_additional_memory_after_kb
+- id: MI-compilation-3
+  Topic: Memory-Grant-Feedback-Persistence-and-Percentile-grant
+  Source: Performance-and-Query-Execution/Reference/Memory-Grant-Feedback-Persistence-and-Percentile-grant.md
+  Prompts:
+  - MI Memory Grant Feedback Persistence and Percentile grant
+  - Managed Instance Memory Grant Feedback Persistence and Percentile grant
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQueryParamData
+    ExecutedQuery: |-
+      MonWiQueryParamData
+      |   where   originalEventTimestamp between(startTime..endTime)
+      |   where   AppName == aname
+      |   where   logical_database_name == dname
+      |   where   LogicalServerName == sname
+      |   where   event ==   "query_parameterization_data"
+      |   where   query_plan_hash == phash
+      |   where   mgf_persistence_used_status ==   'FeedbackApplied'
+- id: MI-compilation-4
+  Topic: Memory-Grant-Feedback-Persistence-and-Percentile-grant
+  Source: Performance-and-Query-Execution/Reference/Memory-Grant-Feedback-Persistence-and-Percentile-grant.md
+  Prompts:
+  - MI Memory Grant Feedback Persistence and Percentile grant
+  - Managed Instance Memory Grant Feedback Persistence and Percentile grant
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonQueryProcessing
+    ExecutedQuery: |-
+      MonQueryProcessing
+      |   where   originalEventTimestamp  between(startTime..endTime)
+      |   where   AppName == aname
+      |   where   logical_database_name == dname
+      |   where   LogicalServerName == sname
+      |   where   query_plan_hash_signed == phash
+      |   where   event ==   "memory_grant_feedback_percentile_grant"
+      |   summarize   countExec = sum(current_interval), countSpill = sum(spill_count_pg), totalOverestimate_kb = sum(overestimate_error_pg_kb)
+- id: MI-compilation-5
+  Topic: Memory-Grant-Feedback-Persistence-and-Percentile-grant
+  Source: Performance-and-Query-Execution/Reference/Memory-Grant-Feedback-Persistence-and-Percentile-grant.md
+  Prompts:
+  - MI Memory Grant Feedback Persistence and Percentile grant
+  - Managed Instance Memory Grant Feedback Persistence and Percentile grant
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonQueryProcessing
+    ExecutedQuery: |-
+      MonQueryProcessing
+      |   where   originalEventTimestamp  between(startTime..endTime)
+      |   where   AppName == aname
+      |   where   logical_database_name == dname
+      |   where   LogicalServerName == sname
+      |   where   event ==   "memory_grant_feedback_percentile_grant"
+      |   summarize   countExec = sum(current_interval), countSpill = sum(spill_count_pg), totalOverestimate_kb= sum(overestimate_error_pg_kb)
+- id: MI-compilation-6
+  Topic: MonWiQueryParamData-_Compile-telemetry
+  Source: Performance-and-Query-Execution/Reference/MonWiQueryParamData-(Compile-telemetry).md
+  Prompts:
+  - MI MonWiQueryParamData (Compile telemetry)
+  - Managed Instance MonWiQueryParamData (Compile telemetry)
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQueryParamData
+    ExecutedQuery: |-
+      MonWiQueryParamData
+      | where TIMESTAMP > change_timestamp-analyzed_period and TIMESTAMP <= change_timestamp
+      | where NodeName == nodeName
+      | where  AppName =~  appName
+      | project TIMESTAMP, compile_cpu_time
+      | summarize compile_cpu_ms = sum(compile_cpu_time)/1000);
+- id: MI-compilation-7
+  Topic: MonWiQueryParamData-_Compile-telemetry
+  Source: Performance-and-Query-Execution/Reference/MonWiQueryParamData-(Compile-telemetry).md
+  Prompts:
+  - MI MonWiQueryParamData (Compile telemetry)
+  - Managed Instance MonWiQueryParamData (Compile telemetry)
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQueryParamData
+    ExecutedQuery: |-
+      MonWiQueryParamData
+      | where TIMESTAMP > change_timestamp and TIMESTAMP <= change_timestamp+analyzed_period
+      | where NodeName == nodeName
+      | where  AppName =~  appName
+      | project TIMESTAMP, compile_cpu_time
+      | summarize compile_cpu_ms = sum(compile_cpu_time)/1000);
+- id: MI-compilation-8
+  Topic: MonWiQueryParamData-_Compile-telemetry
+  Source: Performance-and-Query-Execution/Reference/MonWiQueryParamData-(Compile-telemetry).md
+  Prompts:
+  - MI MonWiQueryParamData (Compile telemetry)
+  - Managed Instance MonWiQueryParamData (Compile telemetry)
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: |-
+      MonSqlRgHistory
+      | where  TIMESTAMP > change_timestamp-analyzed_period
+      | where NodeName == nodeName
+      | where  AppName =~  appName
+      | where event == "aggregated_workload_groups_plus_history"
+      | project TIMESTAMP, delta_total_cpu_usage_ms, group_name
+      | summarize cpu_usage_before_forced_param = sumif(delta_total_cpu_usage_ms, TIMESTAMP > change_timestamp-analyzed_period and TIMESTAMP <= change_timestamp),
+- id: MI-compilation-9
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDatabaseMetadata
+    ExecutedQuery: |-
+      MonDatabaseMetadata
+      | where AppName !startswith 'b-' and AppName !startswith 'v-'
+      | where TIMESTAMP > ago(daysAgo)
+      | where LogicalServerName =~ ServerName
+      //| where table_name== 'sysdbreg'
+      | extend is_parameterization_forced = (binary_and(status2, 0x08000000) == 0x08000000)
+      | extend is_auto_create_stats_on = (binary_and(status2, 0x1000000) == 0x1000000)
+      | extend is_auto_create_stats_incremental_on = (binary_and(status2, 0x00400000) == 0x00400000)
+      | extend is_auto_update_stats_async_on = (binary_and(status2, 0x80000000) == 0x80000000)
+      | extend is_auto_update_stats_async_on = (binary_and(status2, 0x80000000) == 0x80000000)
+      | extend is_query_store_on= (binary_and(status2, 0x00000010) == 0x00000010) //DBR_QDSENABLED
+      | extend is_auto_update_stats_on= iif((status2/1073741824) % 2 == 0, false, true)
+      | project TIMESTAMP, LogicalServerName, logical_db_name, cmptlevel, is_query_store_on, is_auto_create_stats_on, is_auto_update_stats_on, is_parameterization_forced, is_auto_update_stats_async_on, is_auto_create_stats_incremental_on
+      | top 1 by TIMESTAMP desc
+      | project Packed = pack(
+- id: MI-compilation-10
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDatabaseMetadata
+    ExecutedQuery: |-
+      MonDatabaseMetadata
+      | where PreciseTimeStamp > ago(7d)
+      | where AppName !startswith 'b-' and AppName !startswith 'v-'
+      | where LogicalServerName =~ "{ServerName}"
+      | where table_name =~ 'sysdbreg'
+      | extend is_parameterization_forced = (binary_and(status2, 0x08000000) == 0x08000000)
+      | extend is_auto_create_stats_on = (binary_and(status2, 0x1000000) == 0x1000000)
+      | extend is_auto_create_stats_incremental_on = (binary_and(status2, 0x00400000) == 0x00400000)
+      | extend is_auto_update_stats_async_on = (binary_and(status2, 0x80000000) == 0x80000000)
+      | extend is_auto_update_stats_on = (binary_and(status2, 0x40000000) == 0x40000000)
+      | join kind=inner

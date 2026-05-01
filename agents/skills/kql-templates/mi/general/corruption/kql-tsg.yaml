@@ -1,0 +1,58 @@
+SqlSkills:
+- id: MI-corruption-1
+  Topic: Database-corruption-on-Azure-SQL-Managed-Instance
+  Source: Performance-and-Query-Execution/Other-errors-and-exceptions/Database-corruption-on-Azure-SQL-Managed-Instance.md
+  Prompts:
+  - MI Database corruption on Azure SQL Managed Instance
+  - Managed Instance Database corruption on Azure SQL Managed Instance
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: |-
+      MonSQLSystemHealth
+      //| where TIMESTAMP > timeRange
+      | where  TIMESTAMP >= startTime
+      | where  TIMESTAMP <= endTime
+      | where AppName in~ ( AppNames )
+      | where
+- id: MI-corruption-2
+  Topic: Database-corruption-on-Azure-SQL-Managed-Instance
+  Source: Performance-and-Query-Execution/Other-errors-and-exceptions/Database-corruption-on-Azure-SQL-Managed-Instance.md
+  Prompts:
+  - MI Database corruption on Azure SQL Managed Instance
+  - Managed Instance Database corruption on Azure SQL Managed Instance
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDatabaseMetadata
+    ExecutedQuery: |-
+      MonDatabaseMetadata
+      | where LogicalServerName =~ srv
+      | where logical_db_name =~ db
+      | project TIMESTAMP, NodeName, AppName, LogicalServerName, logical_db_name, table_name, name, id
+      | where table_name == 'sysschobjs'
+      | where id == 50099219 // object_id
+      | limit 100
+      | distinct LogicalServerName, logical_db_name, id, name
+- id: MI-corruption-3
+  Topic: Database-corruption-on-Azure-SQL-Managed-Instance
+  Source: Performance-and-Query-Execution/Other-errors-and-exceptions/Database-corruption-on-Azure-SQL-Managed-Instance.md
+  Prompts:
+  - MI Database corruption on Azure SQL Managed Instance
+  - Managed Instance Database corruption on Azure SQL Managed Instance
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiSysIndexes
+    ExecutedQuery: |-
+      MonWiSysIndexes
+      | where LogicalServerName =~ srv
+      | where logical_database_name =~ db
+      | where object_id == 50099219  // object_id
+      //| where index_id == long(0)
+      | project TIMESTAMP, NodeName, AppName, LogicalServerName, logical_database_name, object_id, index_name, index_id, type_desc, is_unique, is_primary_key
+      | distinct LogicalServerName, logical_database_name, object_id, index_name, index_id, type_desc;

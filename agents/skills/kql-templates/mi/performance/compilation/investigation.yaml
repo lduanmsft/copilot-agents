@@ -1,0 +1,129 @@
+# ============================================================================
+# Ported from SQLDB SQLLivesiteAgents, adapted for Managed Instance (MI)
+# MI_SQLLSinvest_perf_compilation — Compilation Investigation Workflow
+# ============================================================================
+# Source: SQLLivesiteAgents / Performance / Compilation / SKILL.md + references/
+# Distilled: 2026-04-30
+# Purpose: Layer 1 — 定义 Compilation 调查的执行顺序、阈值判断、条件分支
+# KQL 模板引用: compilation/kql-livesite.yaml (Layer 2)
+# ============================================================================
+
+Investigation:
+  id: perf-compilation
+  name: "Query Compilation Investigation"
+  description: >
+    Analyzes CPU consumed by query compilation (both failed and successful).
+    Detects compile gateway waits and identifies top compilation consumers.
+  source: "SQLLivesiteAgents/Performance/Compilation"
+
+  RequiredParameters:
+    - ServerName           # MI uses ServerName
+    - DatabaseName         # MI uses DatabaseName
+    - AppName              # MI fallback when LogicalServerName is empty
+    - StartTime
+    - EndTime
+
+  Steps:
+    # ────────────────────────────────────────────────────
+    # Step 1: Failed Compilation CPU
+    # ────────────────────────────────────────────────────
+    - step: 1
+      name: "Failed Compilation CPU Analysis"
+      kql_ref: "compilation/kql-livesite.yaml#MI-LS-COMPILE-01"
+      description: "Check CPU percentage consumed by failed compilations"
+      table: MonQueryProcessing
+      thresholds:
+        issue: "CPU_Percent >= 10"
+      output_fields:
+        - CPU_Percent
+        - IssueDetected
+        - ResultMessage
+      branching:
+        on_issue:
+          - step: 3    # Failed Compilation Summary
+          - step: 5    # Top Failed by CPU
+        on_normal: "Failed compilation CPU is insignificant"
+
+    # ────────────────────────────────────────────────────
+    # Step 2: Successful Compilation CPU
+    # ────────────────────────────────────────────────────
+    - step: 2
+      name: "Successful Compilation CPU Analysis"
+      kql_ref: "compilation/kql-livesite.yaml#MI-LS-COMPILE-02"
+      description: "Check CPU percentage consumed by successful compilations"
+      table: MonWiQueryParamData
+      thresholds:
+        issue: "CPU_Percent >= 10"
+      output_fields:
+        - CPU_Percent
+        - IssueDetected
+        - ResultMessage
+      branching:
+        on_issue:
+          - step: 6    # Top Successful by CPU
+        on_normal: "Successful compilation CPU is insignificant"
+
+    # ────────────────────────────────────────────────────
+    # Step 3: Failed Compilation Summary
+    # ────────────────────────────────────────────────────
+    - step: 3
+      name: "Failed Compilation Summary"
+      condition: "step-1.IssueDetected == true"
+      kql_ref: "compilation/kql-livesite.yaml#MI-LS-COMPILE-03"
+      description: "Total failed compilation count and breakdown by error code"
+      table: MonQueryProcessing
+
+    - step: 3.1
+      name: "Failed Compilation by Query Hash"
+      condition: "step-1.IssueDetected == true"
+      kql_ref: "compilation/kql-livesite.yaml#MI-LS-COMPILE-04"
+      description: "Failed compilations grouped by query_hash with CPU/duration"
+      table: MonQueryProcessing
+
+    # ────────────────────────────────────────────────────
+    # Step 4: Compile Gateway Detection
+    # ────────────────────────────────────────────────────
+    - step: 4
+      name: "Compile Gateway Detection"
+      kql_ref: "compilation/kql-livesite.yaml#MI-LS-COMPILE-05"
+      description: "Detect compilation gateway waits (queries waiting for compilation resources)"
+      table: MonSQLSystemHealth
+      severity:
+        minor: "max_waiter_count 1-5"
+        moderate: "max_waiter_count 6-20"
+        significant: "max_waiter_count 21-50"
+        severe: "max_waiter_count > 50"
+      output_fields:
+        - CompileGatewayName
+        - max_waiter_count
+        - max_active_count
+
+    # ────────────────────────────────────────────────────
+    # Step 5: Top Failed Compilations by CPU
+    # ────────────────────────────────────────────────────
+    - step: 5
+      name: "Top Failed Compilations by CPU"
+      condition: "step-1.IssueDetected == true"
+      kql_ref: "compilation/kql-livesite.yaml#MI-LS-COMPILE-06"
+      description: "Top N failed compilation query hashes ranked by compile CPU"
+      table: MonQueryProcessing
+      parameters:
+        TopN: 10
+
+    # ────────────────────────────────────────────────────
+    # Step 6: Top Successful Compilations by CPU
+    # ────────────────────────────────────────────────────
+    - step: 6
+      name: "Top Successful Compilations by CPU"
+      condition: "step-2.IssueDetected == true"
+      kql_ref: "compilation/kql-livesite.yaml#MI-LS-COMPILE-07"
+      description: "Top N successful compilation query hashes ranked by compile CPU"
+      table: MonWiQueryParamData
+
+  ExecutionOrder:
+    always_run: [1, 2, 4]
+    conditional:
+      - steps: [3, 3.1, 5]
+        condition: "step-1.IssueDetected == true (failed compilation CPU >= 10%)"
+      - steps: [6]
+        condition: "step-2.IssueDetected == true (successful compilation CPU >= 10%)"

@@ -1,0 +1,1240 @@
+
+# ── Merged from queries1.yaml ──
+SqlSkills:
+  - id: "4.1"
+    # Description: 
+    #   This skill analyzes T-SQL execution CPU usage recorded in QDS. If high CPU consumption is detected, it displays the query hash with the highest CPU usage.
+    #   If no high CPU consumption is detected, it will also check for query hashes with high CPU usage at 15-minute intervals.
+    Prompts:
+      - "Query Execution CPU Analysis"
+      - "Did SQL query execution consume lots of cpu resouce"
+      - "Did SQL query execution cause high cpu"
+      - "Did SQL execution cause high cpu"
+    KustoQueries:
+      - TableName: "SqlQueryCPUPercentageTable1"
+        ExecutedQuery: |
+          let CPUMessage=(cpu_percent_OverAllUserPoolCPU:real,cpu_percent_ConsumedUserPoolCPU:real)
+          {
+          let cpu_percent_OverAllUserPoolCPUMessage=strcat("Query execution consumed ", iff(cpu_percent_OverAllUserPoolCPU>=30, "a significant amount of ",""),"CPU resource:",cpu_percent_OverAllUserPoolCPU,"% of total User Pool CPU Capacity, and ",
+          cpu_percent_ConsumedUserPoolCPU,"% of utilized User Pool CPU.");
+          cpu_percent_OverAllUserPoolCPUMessage
+          };
+          MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | summarize totalCPUMillisecond = sum(cpu_time) / 1000.0
+          | project cpu_percent_OverAllUserPoolCPU=round(100*totalCPUMillisecond/{SumCpuMillisecondOfAllApp},1),
+          cpu_percent_ConsumedUserPoolCPU=round(100*totalCPUMillisecond/{ActualSumCpuMillisecondOfAllApp},1)
+          | extend cpuMessage=CPUMessage(cpu_percent_OverAllUserPoolCPU,cpu_percent_ConsumedUserPoolCPU)
+          | extend IssueDetected=iff(cpu_percent_OverAllUserPoolCPU>=30 or cpu_percent_ConsumedUserPoolCPU>=50,'true','false')
+          | project cpuMessage,IssueDetected
+        DisplayedQuery: |
+          MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | summarize totalCPUMillisecond = sum(cpu_time) / 1000.0
+          | project cpu_percent_OverAllUserPoolCPU=round(100*totalCPUMillisecond/{SumCpuMillisecondOfAllApp},1),
+          cpu_percent_utilizedUserPoolCPU=round(100*totalCPUMillisecond/{ActualSumCpuMillisecondOfAllApp},1)
+    MessageForEmptyKustoResult: "We don't have CPU data for this query, as it appears it hasn't been executed within the specified time period."
+    QuestionToAI: |-
+      -  {{cpuMessage}}, the data type is String.
+
+      ### Rules
+      1. Store the value of cpuMessage column in {{cpuMessage}}.
+      3. Store the value of IssueDetected column in {{IssueDetected}}.
+      3. Set {{ResultMessage}} to {{cpuMessage}}.
+    SubSqlSkills:
+      - id: "4.11"
+        ExecutedWhenParentIssueDetected: true
+        IsKusto: true
+        Prompts:
+          - "Top CPU Queries Analysis"
+      - id: "4.12"
+        ExecutedWhenParentIssueDetected: true
+        IsKusto: true
+        Prompts:
+          - "Query CPU over time Analysis"
+
+  - id: "4.11"
+    # Description: 
+    #   This skill identifies the top CPU-consuming query hashes, with a maximum of 50. The number of query hashes retrieved depends on the CPU usage of each query.
+    #   Also display the detail of first query hash if QDS CPU is high
+    Prompts:
+      - "Top CPU Queries Analysis"
+      - "Top CPU Queries"
+      - "Top Queries by CPU Consumption"
+      - "CPU usage of Top query_hash"
+      - "What is the CPU usage of Top query_hash?"
+      - "Get Top high CPU query_hash"
+    KustoQueries:
+      - TableName: "MonWiQdsExecStats_TopCpuQueryOverTime"
+        ExecutedQuery: |
+          let TopQueryHashMessage=(queryHash:string,TotalQueryCPU_Percent_UserPoolCPUCapacity:real,TotalQueryCPU_Percent_UsedUserPoolCPU:real)
+          {
+          strcat("The top CPU-consuming query hash was ",queryHash,", accounting for ",TotalQueryCPU_Percent_UserPoolCPUCapacity,"% of the User Pool CPU capacity and ",TotalQueryCPU_Percent_UsedUserPoolCPU,"% of the utilized User Pool CPU. Please click the Kusto Query Link to check more details.")
+          };
+          MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | summarize TotalQueryCPU_ms = sum(cpu_time) / 1000.0 by query_hash
+          | order by TotalQueryCPU_ms desc
+          | take 1
+          | project TotalQueryCPU_Percent_UserPoolCPUCapacity=round(100*TotalQueryCPU_ms/{SumCpuMillisecondOfAllApp},1),
+          TotalQueryCPU_Percent_UsedUserPoolCPU=round(100*TotalQueryCPU_ms/{ActualSumCpuMillisecondOfAllApp},1),query_hash
+          | extend topQueryHashMessage=TopQueryHashMessage(query_hash,TotalQueryCPU_Percent_UserPoolCPUCapacity,TotalQueryCPU_Percent_UsedUserPoolCPU)
+          | project topQueryHashMessage
+        DisplayedQuery: |
+          //Top 5 CPU consuming query hash
+          let TopQueryHashMessage=(queryHash:string,TotalQueryCPU_Percent_UserPoolCPUCapacity:real,TotalQueryCPU_Percent_UsedUserPoolCPU:real)
+          {
+          strcat("The top CPU-consuming query hash was ",queryHash,", accounting for ",TotalQueryCPU_Percent_UserPoolCPUCapacity,"% of the User Pool CPU capacity and ",TotalQueryCPU_Percent_UsedUserPoolCPU,"% of the utilized User Pool CPU. Please click the Kusto Query Link to check more details.")
+          };
+          MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | summarize TotalQueryCPU_ms = sum(cpu_time) / 1000.0,total_ExecutionCount=sum(execution_count) by query_hash
+          | order by TotalQueryCPU_ms desc
+          | take 5
+          | project TotalQueryCPU_ms,total_ExecutionCount,TotalQueryCPU_Percent_UserPoolCPUCapacity=round(100*TotalQueryCPU_ms/{SumCpuMillisecondOfAllApp},1),
+          TotalQueryCPU_Percent_UsedUserPoolCPU=round(100*TotalQueryCPU_ms/{ActualSumCpuMillisecondOfAllApp},1),query_hash;
+
+          //Top 1 Query Hash CPU over time
+          let QDSAggIntervalInMin = time(15m);
+          let cap_interval = materialize(MonDmRealTimeResourceStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | summarize min(cpu_cap_in_sec) by bin(originalEventTimestamp, QDSAggIntervalInMin));
+          let top1QueryHash=(MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | summarize TotalQueryCPU_ms = sum(cpu_time) / 1000.0 by query_hash
+          | order by TotalQueryCPU_ms desc
+          | take 1
+          | project query_hash);
+          let cpuUsageOfAllQueries=materialize(MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | summarize cores_per_sec = sum(cpu_time) / (QDSAggIntervalInMin / time(1microsecond)) by bin(originalEventTimestamp, QDSAggIntervalInMin)
+          | extend Category='cpuUsageOfAllQueries'
+          );
+          let cpuUsageOfTop1Query=materialize(MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | join kind = inner (top1QueryHash) on query_hash
+          | summarize cores_per_sec = sum(cpu_time) / (QDSAggIntervalInMin / time(1microsecond)) by bin(originalEventTimestamp, QDSAggIntervalInMin)
+          | extend Category='top1QueryCpuUsage'
+          );
+          union kind=outer cpuUsageOfAllQueries,cpuUsageOfTop1Query
+          | lookup kind = inner ( cap_interval ) on originalEventTimestamp
+          | extend cpu_percent = round(100.0 * cores_per_sec / min_cpu_cap_in_sec, 1)
+          | project originalEventTimestamp,Category,cpu_percent
+          | order by originalEventTimestamp asc
+          | render timechart
+    QuestionToAI: |-
+      -  {{topQueryHashMessage}}, the data type is String.
+
+      ### Rules
+      1. Store the value of topQueryHashMessage column in {{topQueryHashMessage}}.
+      3. Set {{IssueDetected}} to True.
+      3. Set {{ResultMessage}} to {{topQueryHashMessage}}.
+    SubSqlSkills:
+      - id: "4.9"
+        ExecutedWhenParentIssueDetected: true
+        IsKusto: true
+        Prompts:
+          - "The detail of query PLACEHOLDER"
+
+  - id: "4.12"
+    # Description: "This skill check the T-SQL execution CPU usage over time, at 15-minute interval"
+    Prompts:
+      - "Query CPU over time Analysis"
+      - "CPU usage of T-SQL execution over time"
+      - "What's CPU usage of SQL execution over time"
+      - "Did SQL query consume lots of cpu resouce over time"
+      - "Did SQL query execution cause high cpu over time"
+      - "Did SQL execution cause high cpu over time"
+    MessageForEmptyKustoResult: "We don't have data for this query, as it appears it hasn't been executed within the specified time period."
+    KustoQueries:
+      - TableName: "sqlqueryCPUOverTimeTable"
+        ExecutedQuery: |
+          let HighcpuWarningThreshold=70;
+          let QDSAggIntervalInMin = time(15m);
+          let cap_interval = materialize(MonDmRealTimeResourceStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | summarize min(cpu_cap_in_sec) by bin(originalEventTimestamp, QDSAggIntervalInMin));
+          MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | summarize cores_per_sec = sum(cpu_time) / (QDSAggIntervalInMin / time(1microsecond)) by bin(originalEventTimestamp, QDSAggIntervalInMin)
+          | lookup kind = inner ( cap_interval ) on originalEventTimestamp
+          | extend cpu_percent = round(100.0 * cores_per_sec / min_cpu_cap_in_sec, 1)
+          | extend IsCPUHigh =iff(cpu_percent >=HighcpuWarningThreshold,true,false)
+          | extend originalEventTimestamp = format_datetime(originalEventTimestamp, "yyyy-MM-dd HH:mm:ss")
+          | summarize max_cpu_percent=arg_max(cpu_percent,originalEventTimestamp),Timestamp_array=make_list(originalEventTimestamp) by IsCPUHigh
+          | extend Timestamp_array=iff(IsCPUHigh==false,tostring(originalEventTimestamp),Timestamp_array)
+          | extend Timestamp_array=replace(@"""", @"'", Timestamp_array)
+          | project max_cpu_percent, IsCPUHigh,Timestamp_array
+        DisplayedQuery: |
+          let QDSAggIntervalInMin = time(15m);
+          let cap_interval = materialize(MonDmRealTimeResourceStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | summarize min(cpu_cap_in_sec) by bin(originalEventTimestamp, QDSAggIntervalInMin));
+          MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | summarize cores_per_sec = sum(cpu_time) / (QDSAggIntervalInMin / time(1microsecond)) by bin(originalEventTimestamp, QDSAggIntervalInMin)
+          | lookup kind = inner ( cap_interval ) on originalEventTimestamp
+          | extend cpu_percent = round(100.0 * cores_per_sec / min_cpu_cap_in_sec, 1)
+          | project originalEventTimestamp,cpu_percent
+          | render timechart
+    QuestionToAI: |-
+      Read the 'sqlqueryCPUOverTimeTable' table, which contains between 1 and 2 rows, and assign values to the variables below based on its data and the following rules
+      Besides of previous three variables, there are another 4 variables:
+      1.{{HadHighCPU}}, the data type is Boolean, and the default value of {{HadHighCPU}} is 'false'
+      2.{{Timestamp_arrayPlaceholder}}, the data type is Datetime.
+      3.{{max_cpu_percentPlaceholder}}, the data type is Float.
+      4.{{cpu_percentPlaceholder}}, the data type is Float.
+
+      Rules:
+      1. If there is a row where the value of IsCPUHigh column is 'true', {{HadHighCPU}} is 'true'.
+
+      2. If {{HadHighCPU}} is 'true', get the values of row where IsCPUHigh column is 'true' and perform following two actions
+      2.1). Store the value of Timestamp_array column in {{Timestamp_arrayPlaceholder}}.
+      2.2). Store the value of max_cpu_percent column in {{max_cpu_percentPlaceholder}}.
+
+      3. If {{HadHighCPU}} is 'false', get the values of row where IsCPUHigh column is 'false' and perform following two actions
+      3.1). Store the value of Timestamp_array column in {{Timestamp_arrayPlaceholder}}.
+      3.2). Store the value of max_cpu_percent column in {{max_cpu_percentPlaceholder}}.
+
+      4.If {{HadHighCPU}} is true, then {{IssueDetected}} is 'true' and {{ResultMessage}} will be set to "
+      T-SQL execution consumed a significant amount of CPU resources(more than 70%) at the following timestamps:{{Timestamp_arrayPlaceholder}}. The maximum cpu usage is {{cpu_percentPlaceholder}}".
+
+      5.If {{HadHighCPU}} is false, then {{IssueDetected}} is 'false' and {{ResultMessage}} will be set to "
+      T-SQL execution didn't consume a significant amount of CPU resources(more than 70%), the maximum CPU usage is {{max_cpu_percentPlaceholder}}% at {{Timestamp_arrayPlaceholder}}. If you'd like to find top cpu queries over time, please type 'CPU usage of top 5 T-SQL execution over time'
+      "
+    SubSqlSkills:
+      - id: "4.121"
+        ExecutedWhenParentIssueDetected: true
+        IsKusto: true
+        Prompts:
+          - "Top 5 CPU usage of T-SQL execution over time"
+
+  - id: "4.121"
+    Prompts:
+      - "Top 5 CPU usage of T-SQL execution over time"
+      - "What's CPU usage of top 5 T-SQL execution over time"
+    MessageForEmptyKustoResult: "We don't have data for this query, as it appears it hasn't been executed within the specified time period."
+    KustoQueries:
+      - TableName: "sqlquerytop5CPUOverTimeTable"
+        ExecutedQuery: |
+          let QDSAggIntervalInMin = time(15m);
+          let top_N = materialize(MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | top-nested 5 of query_hash by sum(cpu_time) desc
+          | project-away  aggregated_query_hash
+          );
+          let cap_interval = materialize(MonDmRealTimeResourceStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | summarize min(cpu_cap_in_sec) by bin(originalEventTimestamp, QDSAggIntervalInMin));
+          let All_cpu_utilization = materialize(MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | summarize cores_per_sec = sum(cpu_time) / (QDSAggIntervalInMin / time(1microsecond)) by bin(originalEventTimestamp, QDSAggIntervalInMin), query_hash
+          | lookup kind = inner ( cap_interval ) on originalEventTimestamp
+          | extend TotalQueryCPU_Pct = round(100.0 * cores_per_sec / min_cpu_cap_in_sec, 1)
+          | project originalEventTimestamp, query_hash, TotalQueryCPU_Pct);
+          let top_N_cpu_utilization = materialize(MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | lookup kind = inner ( top_N ) on query_hash
+          | summarize cores_per_sec = sum(cpu_time) / (QDSAggIntervalInMin / time(1microsecond)) by bin(originalEventTimestamp, QDSAggIntervalInMin), query_hash
+          | lookup kind = inner ( cap_interval ) on originalEventTimestamp
+          | extend TotalQueryCPU_Pct = round(100.0 * cores_per_sec / min_cpu_cap_in_sec, 1)
+          | project originalEventTimestamp, query_hash, TotalQueryCPU_Pct
+          | union All_cpu_utilization);
+          let timestamps = range
+          originalEventTimestamp
+          from bin(toscalar(top_N_cpu_utilization | summarize min(originalEventTimestamp)), QDSAggIntervalInMin)
+          to bin(toscalar(top_N_cpu_utilization | summarize max(originalEventTimestamp)), QDSAggIntervalInMin)
+          step QDSAggIntervalInMin;
+          let top_N_with_timestamps = timestamps
+          | extend tmp_join_col = 1
+          | join kind = inner (
+          top_N
+          | project query_hash
+          | extend tmp_join_col = 1
+          ) on tmp_join_col
+          | project query_hash, originalEventTimestamp;
+          top_N_cpu_utilization
+          | join kind = rightouter(top_N_with_timestamps) on query_hash, originalEventTimestamp
+          | project originalEventTimestamp=originalEventTimestamp1, query_hash=query_hash1, TotalQueryCPU_Pct
+          | extend TotalQueryCPU_Pct = case(isnull(TotalQueryCPU_Pct), 0.0, TotalQueryCPU_Pct)
+          | sort by originalEventTimestamp asc
+        DisplayedQuery: |
+          let QDSAggIntervalInMin = time(15m);
+          let top_N = materialize(MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | top-nested 5 of query_hash by sum(cpu_time) desc
+          | project-away  aggregated_query_hash
+          );
+          let cap_interval = materialize(MonDmRealTimeResourceStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | summarize min(cpu_cap_in_sec) by bin(originalEventTimestamp, QDSAggIntervalInMin));
+          let All_cpu_utilization = materialize(MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | summarize cores_per_sec = sum(cpu_time) / (QDSAggIntervalInMin / time(1microsecond)) by bin(originalEventTimestamp, QDSAggIntervalInMin), query_hash
+          | lookup kind = inner ( cap_interval ) on originalEventTimestamp
+          | extend TotalQueryCPU_Pct = round(100.0 * cores_per_sec / min_cpu_cap_in_sec, 1)
+          | project originalEventTimestamp, query_hash, TotalQueryCPU_Pct);
+          let top_N_cpu_utilization = materialize(MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | lookup kind = inner ( top_N ) on query_hash
+          | summarize cores_per_sec = sum(cpu_time) / (QDSAggIntervalInMin / time(1microsecond)) by bin(originalEventTimestamp, QDSAggIntervalInMin), query_hash
+          | lookup kind = inner ( cap_interval ) on originalEventTimestamp
+          | extend TotalQueryCPU_Pct = round(100.0 * cores_per_sec / min_cpu_cap_in_sec, 1)
+          | project originalEventTimestamp, query_hash, TotalQueryCPU_Pct
+          | union All_cpu_utilization);
+          let timestamps = range
+          originalEventTimestamp
+          from bin(toscalar(top_N_cpu_utilization | summarize min(originalEventTimestamp)), QDSAggIntervalInMin)
+          to bin(toscalar(top_N_cpu_utilization | summarize max(originalEventTimestamp)), QDSAggIntervalInMin)
+          step QDSAggIntervalInMin;
+          let top_N_with_timestamps = timestamps
+          | extend tmp_join_col = 1
+          | join kind = inner (
+          top_N
+          | project query_hash
+          | extend tmp_join_col = 1
+          ) on tmp_join_col
+          | project query_hash, originalEventTimestamp;
+          top_N_cpu_utilization
+          | join kind = rightouter(top_N_with_timestamps) on query_hash, originalEventTimestamp
+          | project originalEventTimestamp=originalEventTimestamp1, query_hash=query_hash1, TotalQueryCPU_Pct
+          | extend TotalQueryCPU_Pct = case(isnull(TotalQueryCPU_Pct), 0.0, TotalQueryCPU_Pct)
+          | sort by originalEventTimestamp asc
+          | render timechart
+
+# ── Merged from queries_topQueries.yaml ──
+SqlSkills:
+  - id: "4.8"
+    #isLeadSkill: true
+    # Description: |
+    #   This skill will display the top queries, including wait, cpu, logical read,logical write,memory grant, tempdb usage,log usage,
+    #   compilation CPU of successful compilation,Compilation Time of successful compilation,
+    #   compilation CPU of failed compilation,Compilation Time of failed compilation
+    Prompts:
+      - "Query analysis"
+    SubSqlSkills:
+      - id: "4.81"
+        Prompts:
+          - "Top wait queries"
+      - id: "4.82"
+        Prompts:
+          - "Top CPU queries"
+      - id: "4.83"
+        Prompts:
+          - "Top logical reads queries"
+      - id: "4.84"
+        Prompts:
+          - "Top logical writes queries"
+      - id: "4.85"
+        Prompts:
+          - "Top memory grant queries"
+      - id: "4.86"
+        Prompts:
+          - "Top tempdb usage queries"
+      - id: "4.87"
+        Prompts:
+          - "Top Log queries"
+      - id: "4.52"
+        Prompts:
+          - "Top Queries by compilation CPU"
+      - id: "4.53"
+        Prompts:
+          - "Top Queries by Compilation Time"
+      - id: "4.62"
+        Prompts:
+          - "Top Failed Compilations by CPU"
+      - id: "4.63"
+        Prompts:
+          - "Top Failed Compilations by Compilation Time"
+
+  - id: "4.81"
+    IsDisplayKustoQueryResult: true
+    # Description: "This skill display top 5 queries ranked by waiTime"
+    Prompts:
+      - "Top Wait queries"
+      - "Top Wait staticistsc"
+    KustoQueries:
+      - TableName: "MonWiQdsWaitStatsAllQueries"
+        ExecutedQuery: |
+          let TopN=5;
+          MonWiQdsWaitStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | summarize sum(total_query_wait_time_ms) by query_hash
+          | order by sum_total_query_wait_time_ms desc
+          | take TopN
+        DisplayedQuery: |
+          let TopN=5;
+          MonWiQdsWaitStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | summarize sum(total_query_wait_time_ms) by query_hash
+          | order by sum_total_query_wait_time_ms desc
+          | take TopN
+
+  - id: "4.83"
+    # Description: "This skill display top 5 queries ranked by logical reads"
+    Prompts:
+      - "Top Reads queries"
+      - "Top Logical reads queries"
+    KustoQueries:
+      - TableName: "MonWiQdsExecStats_logicalReads_AllQueries"
+        ExecutedQuery: |
+          let TopN=5;
+          MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | summarize TotalLogical_reads = sum(logical_reads),totalPhysical_reads=sum(physical_reads),totalPhysical_io_reads=sum(physical_io_reads)  by query_hash
+          | order by TotalLogical_reads desc nulls first
+          | take TopN
+        DisplayedQuery: |
+          let TopN=5;
+          MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | summarize TotalLogical_reads = sum(logical_reads),totalPhysical_reads=sum(physical_reads),totalPhysical_io_reads=sum(physical_io_reads)  by query_hash
+          | order by TotalLogical_reads desc nulls first
+          | take TopN
+
+  - id: "4.84"
+    # Description: "This skill display top 5 queries ranked by logical writes"
+    Prompts:
+      - "Top writes queries"
+      - "Top logical writes queries"
+    KustoQueries:
+      - TableName: "MonWiQdsExecStats_logical_writes_AllQueries"
+        ExecutedQuery: |
+          let TopN=5;
+          MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | summarize TotalLogical_writes = sum(logical_writes) by query_hash
+          | order by TotalLogical_writes desc nulls first
+          | take TopN
+        DisplayedQuery: |
+          let TopN=5;
+          MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | summarize TotalLogical_writes = sum(logical_writes) by query_hash
+          | order by TotalLogical_writes desc nulls first
+          | take TopN
+
+  - id: "4.85"
+    IsDisplayKustoQueryResult: true
+    # Description: "This skill display top 5 queries ranked by memory grant"
+    Prompts:
+      - "Top memory queries"
+      - "Top memory grant queries"
+    KustoQueries:
+      - TableName: "MonWiQdsExecStats_MemoryGrant_AllQueries"
+        ExecutedQuery: |
+          let TopN=5;
+          MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName=~'{LogicalServerName}'
+          | summarize maxMemoryGrantOfSingleExecution_mb=max(max_max_query_memory_pages)*8/1024,TotalMemoryGrant_mb= sum(max_query_memory_pages)*8/1024,executionCount=sum(execution_count) by query_hash
+          | order by maxMemoryGrantOfSingleExecution_mb desc nulls first
+          | take TopN
+        DisplayedQuery: |
+          let TopN=5;
+          MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName=~'{LogicalServerName}'
+          | summarize maxMemoryGrantOfSingleExecution_mb=max(max_max_query_memory_pages)*8/1024,TotalMemoryGrant_mb= sum(max_query_memory_pages)*8/1024,executionCount=sum(execution_count) by query_hash
+          | order by maxMemoryGrantOfSingleExecution_mb desc nulls first
+          | take TopN
+
+  - id: "4.86"
+    # Description: "This skill display top 5 queries ranked by tempdb usage"
+    Prompts:
+      - "Top tempdb usage queries"
+    KustoQueries:
+      - TableName: "MonWiQdsExecStats_tempdbUsage_AllQueries"
+        ExecutedQuery: |
+          let TopN=5;
+          MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName=~'{LogicalServerName}'
+          | summarize TotalTempdb_space_used_mb=round(sum(tempdb_space_used)*8/1024,1) by query_hash
+          | order by TotalTempdb_space_used_mb desc nulls first
+          | take TopN
+        DisplayedQuery: |
+          let TopN=5;
+          MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName=~'{LogicalServerName}'
+          | summarize TotalTempdb_space_used_mb=round(sum(tempdb_space_used)*8/1024,1) by query_hash
+          | order by TotalTempdb_space_used_mb desc nulls first
+          | take TopN
+
+  - id: "4.87"
+    # Description: "This skill display top 5 queries ranked by log usage"
+    Prompts:
+      - "Top log queries"
+      - "Top log_bytes_used queries"
+    KustoQueries:
+      - TableName: "MonWiQdsExecStats_log_bytes_used_AllQueries"
+        ExecutedQuery: |
+          let TopN=5;
+          MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName=~'{LogicalServerName}'
+          | summarize TotalLogUsed_mb=round(sum(log_bytes_used)/1024.0/1024,1) by query_hash
+          | order by TotalLogUsed_mb desc nulls first
+          | take TopN
+        DisplayedQuery: |
+          let TopN=5;
+          MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName=~'{LogicalServerName}'
+          | summarize TotalLogUsed_mb=round(sum(log_bytes_used)/1024.0/1024,1) by query_hash
+          | order by TotalLogUsed_mb desc nulls first
+          | take TopN
+# ── Merged from queries_QueryDetails.yaml ──
+SqlSkills:
+  - id: "81.2"
+    # Description: This skill will check the following metrics of the specified query, including CPU usage, anti-patterns, WaitStats, and perform a performance comparison between current data and historical data.
+    Prompts:
+      - "The Detail of query PLACEHOLDER"
+      - "Show me the detail of query PLACEHOLDER"
+      - "What's the bottleck of query PLACEHOLDER"
+      - "Show me the detail of first query"
+      - "Show me the detail of first query hash"
+      - "The detail of first query"
+      - "Did query PLACEHOLDER have performane issue"
+      - "Did query PLACEHOLDER have performane bottleneck"
+      - "Did query PLACEHOLDER have run slowly"
+      - "Did query PLACEHOLDER have disk bottleneck"
+      - "Did query PLACEHOLDER have memory bottleneck"
+      - "Did query PLACEHOLDER have cpu bottleneck"
+    CustomizedParameters:
+      - "query_hash"
+      - "query_id"
+    SubSqlSkills:
+      - id: "80.7"
+        Prompts:
+          - "APRC query PLACEHOLDER Plan Regression"
+      - id: "4.3"
+        AlwaysDisplayResult: true
+        Prompts:
+          - "Query PLACEHOLDER antipattern Analysis"
+      - id: "81.16"
+        Prompts:
+          - "Query PLACEHOLDER Execution Summary"
+      - id: "4.10"
+        Prompts:
+          - "CPU Usage of Query PLACEHOLDER Analysis"
+      - id: "4.10"
+        Prompts:
+          - "Query Placeholder Wait Type Summary"
+      - id: "4.51"
+        Prompts:
+          - "Compile Statistics of Query PLACEHOLDER"
+      - id: "4.51"
+        Prompts:
+          - "Failed Compile Statistics of Query PLACEHOLDER"
+
+  - id: "4.10"
+    # Description:This skill will check the CPU usage of the specified query and display the total CPU time and the percentage of its usage in the User Pool CPU.
+    Prompts:
+      - "CPU Usage of Query PLACEHOLDER"
+      - "CPU Usage of Query PLACEHOLDER Analysis"
+      - "CPU Usage of Query analysis"
+      - "CPU usage of first query analysis"
+      - "What is the CPU Usage of Query PLACEHOLDER"
+      - "What is the CPU Usage of Query "
+    CustomizedParameters:
+      - "query_hash"
+      - "query_id"
+    MessageForEmptyKustoResult: "We don't have data for this query, as it appears it hasn't been executed within the specified time period."
+    KustoQueries:
+      - TableName: "CpuUsageofQueryHashTable"
+        ExecutedQuery: |
+          MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | where {CustomizedParametersPlaceholder}
+          | summarize totalCPU_ms = sum(cpu_time)/1000,max_cpuTime_ms=max(max_cpu_time)/1000,total_ExecutionCount=sum(execution_count) by query_hash
+          | project query_hash,total_ExecutionCount,totalCPU_ms,max_cpuTime_ms,cpu_percent=round(100*totalCPU_ms/{SumCpuMillisecondOfAllApp},3)
+          | extend executionStatus=strcat("The query was executed ",total_ExecutionCount," times, accounting for ",cpu_percent,"% of total User Pool CPU Capacity, with a maximum CPU time of ",max_cpuTime_ms,"ms for a single execution.")
+          | project executionStatus
+        DisplayedQuery: |
+          MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | where {CustomizedParametersPlaceholder}
+          | summarize totalCPU_ms = sum(cpu_time)/1000,max_cpuTime_ms=max(max_cpu_time)/1000,total_ExecutionCount=sum(execution_count) by query_hash
+          | project query_hash,total_ExecutionCount,totalCPU_ms,max_cpuTime_ms,cpu_percent_UserPoolCapacity=round(100.0*totalCPU_ms/{SumCpuMillisecondOfAllApp},1),
+          cpu_percent_UsedUserPoolCPU=round(100.0*totalCPU_ms/{ActualSumCpuMillisecondOfAllApp},1)
+    QuestionToAI: |-
+      -  {{executionStatus}}, the data type is String.
+
+      ### Rules
+      1.  Store the value of executionStatus column in {{executionStatus}}.
+      2.  Set {{IssueDetected}} to 'true'.
+      3.  Set {{ResultMessage}} to {{executionStatus}}.
+
+  - id: "4.18"
+    # Description: This skill will check the Memory usage of the specified query
+    Prompts:
+      - "Memory Usage of Query analysis"
+      - "Memory Usage of Query placeholder analysis"
+      - "Memory usage of first query analysis"
+      - "Memory Usage of Query PLACEHOLDER"
+      - "What is the Memory Usage of Query placeholder "
+    CustomizedParameters:
+      - "query_hash"
+      - "query_id"
+    MessageForEmptyKustoResult: "We don't have data for this query, as it appears it hasn't been executed within the specified time period."
+    KustoQueries:
+      - TableName: "MonWiQdsExecStats_MemoryUsage"
+        ExecutedQuery: |
+          MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | where {CustomizedParametersPlaceholder}
+          | summarize maxMemoryGrantOfSingleExecution_mb=max(max_max_query_memory_pages)*8/1024,totalMemoryGrant_mb = sum(max_query_memory_pages)*8/1024,executionCount=sum(execution_count) by query_hash
+        DisplayedQuery: |
+          MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | where {CustomizedParametersPlaceholder}
+          | summarize maxMemoryGrantOfSingleExecution_mb=max(max_max_query_memory_pages)*8/1024,totalMemoryGrant_mb = sum(max_query_memory_pages)*8/1024,executionCount=sum(execution_count) by query_hash
+# ── Merged from queries_AntiPattern.yaml ──
+SqlSkills:
+  - id: "4.3"
+    IsDisplayKustoQueryResult: true
+    # Description: This skill will check if the specified query has any AntiPatterns and display the type of AntiPattern detected.
+    Prompts:
+      - "Query Placeholder AntiPattern Analysis"
+      - "Query AntiPattern Analysis"
+      - "Query Placeholder AntiPattern"
+      - "Query AntiPattern"
+      - "Did Query Placeholder have AntiPattern"
+      - "Did query have AntiPattern"
+    CustomizedParameters:
+      - "query_hash"
+      - "query_id"
+    MessageForEmptyKustoResult: >
+      AntiPattern was not detected. Please note that we only search MonQueryProcessing from the date one day before and one day after the specified time. To search the entire time range, please type 'Query [QueryHashPlaceholder] AntiPattern Analysis all Time'. Be aware that an 'All Time search' may take a significant amount of time and PerfCopilot may fail due to a timeout.
+    KustoQueries:
+      - TableName: "antiPatternTable"
+        ExecutedQuery: |
+          MonQueryProcessing
+          | where {LogicalServerAndLogicalDatabaseName}
+          | where originalEventTimestamp between (datetime_add('day',-1,datetime({StartTime})) .. datetime_add('day',1,datetime({EndTime})))
+          | where event =~ 'query_antipattern'
+          | extend query_hash = strcat('0x', toupper(tohex(query_hash_signed)))
+          | extend query_plan_hash = strcat('0x', toupper(tohex(query_plan_hash_signed)))
+          | where {CustomizedParametersPlaceholder}
+          | distinct antipattern_type,query_plan_hash,query_hash
+        DisplayedQuery: |
+          MonQueryProcessing
+          | where {LogicalServerAndLogicalDatabaseName}
+          | where originalEventTimestamp between (datetime_add('day',-1,datetime({StartTime})) .. datetime_add('day',1,datetime({EndTime})))
+          | where event =~ 'query_antipattern'
+          | extend query_hash = strcat('0x', toupper(tohex(query_hash_signed)))
+          | extend query_plan_hash = strcat('0x', toupper(tohex(query_plan_hash_signed)))
+          | where {CustomizedParametersPlaceholder}
+          | distinct antipattern_type,query_plan_hash,query_hash
+    QuestionToAI: |-
+      Read the 'antiPatternTable' table, which contains only one row, and assign values to the variables below based on its data and the following rules
+      Besides of previous three variables, there is another variable:
+      1.{{CPU_Percent}}, the data type is Float.
+      The {{ResultMessage}} depends on following conditions, When assigning the value to {{ResultMessage}}, please strictly adhere to these conditions and rules and you must replace the variables with actual values:
+
+      {{ResultMessage}} will be set to "AntiPatterns in T-SQL have been detected, which can degrade performance and lead to increased consumption of CPU, memory, and I/O resources. Please optimize the T-SQL query to address these issues."
+
+  - id: "4.31"
+    # Description: This skill will check if the specified query has any AntiPatterns from MonQueryProcessing throughout the entire time retention period and display the type of AntiPattern detected. Please note that this Troubleshooting Agent may fail due to a Kusto timeout.
+    Prompts:
+      - "Query AntiPattern Analysis all Time"
+    CustomizedParameters:
+      - "query_hash"
+      - "plan_id"
+    KustoQueries:
+      - TableName: "antiPatternTableAllTime"
+        ExecutedQuery: |
+          MonQueryProcessing
+          | where {LogicalServerAndLogicalDatabaseName}
+          | where event =~ 'query_antipattern'
+          | extend query_hash = strcat('0x', toupper(tohex(query_hash_signed)))
+          | extend query_plan_hash = strcat('0x', toupper(tohex(query_plan_hash_signed)))
+          | where {CustomizedParametersPlaceholder}
+          | distinct antipattern_type,query_plan_hash,query_hash
+        DisplayedQuery: |
+          MonQueryProcessing
+          | where {LogicalServerAndLogicalDatabaseName}
+          | where event =~ 'query_antipattern'
+          | extend query_hash = strcat('0x', toupper(tohex(query_hash_signed)))
+          | extend query_plan_hash = strcat('0x', toupper(tohex(query_plan_hash_signed)))
+          | where {CustomizedParametersPlaceholder}
+          | distinct antipattern_type,query_plan_hash,query_hash
+    MessageForEmptyKustoResult: >
+      AntiPattern was not detected within the time range allowed in Kusto telemetry
+    QuestionToAI: |-
+      1. {{IssueDetected}} is 'true'
+      The {{ResultMessage}} depends on following conditions, When assigning the value to {{ResultMessage}}, please strictly adhere to these conditions and rules and you must replace the variables with actual values:
+
+      {{ResultMessage}} will be set to "AntiPatterns in T-SQL have been detected, which can degrade performance and lead to increased consumption of CPU, memory, and I/O resources. Please optimize the T-SQL query to address these issues."
+
+# ── Merged from queries_Wait.yaml ──
+SqlSkills:
+  - id: "81.16"
+    Prompts:
+      - "Query placeholder execution summary"
+    CustomizedParameters:
+      - "query_hash"
+      - "query_id"
+    MessageForEmptyKustoResult: "It appears this query has not been executed yet."
+    KustoQueries:
+      - TableName: "MonWiQdsExecStats"
+        ExecutedQuery: |
+          let ExecSummary=(totalExecCount:long, errorCount:long, failedRatio:real)
+          {
+          case(errorCount==0,strcat("The query has been executed ",PluralOrSingular(totalExecCount,"time")," without any error."),
+          strcat("Please note, ",failedRatio,"% of query execution failed, here is the detail: ",errorCount," of ",totalExecCount," executions failed.")
+          )
+          //Sample output1:Please note, 0.1% of query execution failed, here is the detail: 94 of 65533 executions failed.
+          //Sample output2:The query has been executed 1000 times without any error.
+          };
+          MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | where {CustomizedParametersPlaceholder}
+          | summarize totalExecCount = sum(execution_count), errorCount = sumif(execution_count, exec_type != 0)
+          | where totalExecCount > 0
+          | extend failedRatio=round(errorCount*100.0/totalExecCount,1)
+          | extend execSummary=ExecSummary( totalExecCount, errorCount, failedRatio)
+          | extend IssueDetected=iff(errorCount >0,'true','false')
+          | project execSummary,IssueDetected
+        DisplayedQuery: |
+          MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | where {CustomizedParametersPlaceholder}
+          | summarize totalExecCount = sum(execution_count), abortCount = sumif(execution_count, exec_type == 3), errorCount = sumif(execution_count, exec_type == 4)
+    QuestionToAI: |-
+      - {{execSummary}}, the data type is string.
+
+      ### Rules
+      1. Store the value of execSummary column in {{execSummary}}.
+      2. Store the value of IssueDetected column in {{IssueDetected}}.
+      3. Set {{ResultMessage}} to {{execSummary}}
+
+  - id: "81.161"
+    # Description: "This skill compares the ratio of elapsed time to execution time and check top waitype if needed. A higher ratio indicates that the query is waiting on resources or being blocked rather than actively running."
+    Prompts:
+      - "Query Placeholder Wait Type summary"
+      - "Query Placeholder Wait Type analysis"
+      - "Elapsed time and CPU time analysis of query analysis"
+      - "Display the Wait Type of query PLACEHOLDER"
+      - "Show me the Wait Type of query PLACEHOLDER"
+    MessageForEmptyKustoResult: "It appears this query has not been executed yet."
+    CustomizedParameters:
+      - "query_hash"
+      - "query_id"
+    KustoQueries:
+      - TableName: "RatioOfElapsedtimeToCPUTime"
+        ExecutedQuery: |
+          let WaitSummary=(sum_ExecutionTime_ms:long,sum_CpuTime_ms:long,total_wait_time_ms:long,ratio:real)
+          {
+          let waitSummary=strcat("The query experienced",
+          case(ratio>=0.3," significant",ratio>=0.2," moderate"," minimal"),
+          " waits, with a wait time to CPU time ratio of ",ratio,", indicating that it spent ",round(ratio*100,1),"% of its execution time either waiting for resources or being blocked.");
+          let actionPlan=strcat(case(ratio>=0.3," That significantly impact the performance,",ratio>=0.2," If this is a concern,",""),   " please review and apply the suggested action plans outlined in the sub-items below to address this wait issue.");
+          let parallelMessage=case(sum_CpuTime_ms>sum_ExecutionTime_ms and total_wait_time_ms>sum_CpuTime_ms," (You may notice that execution time is less than the CPU time, this is because this query used parallel execution plan)","");
+          strcat(waitSummary,iff(0.1>=ratio,"",actionPlan),parallelMessage);
+          //Sample output1:The query experienced significant waits, with a wait time to CPU time ratio of 2.25, indicating that it spent 225.0% of its execution time either waiting for resources or being blocked. That significantly impact the performance, please review and apply the suggested action plans outlined in the sub-items below to address this wait issue. (You may notice that execution time is less than the CPU time, this is because this query used parallel execution plan)
+          //Sample output2:The query experienced moderate waits, with a wait time to CPU time ratio of 0.25, indicating that it spent 25.0% of its execution time either waiting for resources or being blocked. If this is a concern, please review and apply the suggested action plans outlined in the sub-items below to address this wait issue
+          //Sample output3:The query experienced minimal waits, with a wait time to CPU time ratio of 0.1, indicating that it spent 10.0% of its execution time either waiting for resources or being blocked.
+          };
+          let total_wait_time_ms=toscalar(MonWiQdsWaitStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | where {CustomizedParametersPlaceholder}
+          | summarize sum(total_query_wait_time_ms)
+          );
+          MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | where {CustomizedParametersPlaceholder}
+          | summarize sum_CpuTime_ms=sum(cpu_time)/1000,sum_ExecutionTime_ms=sum(elapsed_time)/1000,count=count()
+          | where count>0
+          | extend ratio=round(total_wait_time_ms*1.0/sum_CpuTime_ms,2)
+          | extend waitSummary=WaitSummary(sum_ExecutionTime_ms,sum_CpuTime_ms,total_wait_time_ms,ratio)
+          | extend IssueDetected=iff(ratio>0.1,'true','false')
+          | project IssueDetected,waitSummary
+        DisplayedQuery: |
+          let total_wait_time_ms=toscalar(MonWiQdsWaitStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | where {CustomizedParametersPlaceholder}
+          | summarize sum(total_query_wait_time_ms)
+          );
+          MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | where {CustomizedParametersPlaceholder}
+          | summarize sum_CpuTime_ms=round(sum(cpu_time)/1000,1),executionTime_ms=round(sum(elapsed_time)/1000,1)
+          | extend total_wait_time_ms
+    QuestionToAI: |-
+      - {{waitSummary}}, the data type is String.
+
+      ### Rules
+      1. Store the value of waitSummary column in {{waitSummary}}.
+      2. Store the value of IssueDetected column in {{IssueDetected}}.
+      3. Set {{ResultMessage}} to {{waitSummary}}.
+    SubSqlSkills:
+      - id: "81.162"
+        ExecutedWhenParentIssueDetected: true
+        Prompts:
+          - "Wait type of query PLACEHOLDER"
+
+  - id: "81.162"
+    Prompts:
+      - "Wait type of query PLACEHOLDER"
+      - "Wait type of query "
+      - "Query placeholder waittype"
+      - "Query waittype"
+      - "Top wait type of query PLACEHOLDER"
+      - "Top wait type of query "
+      - "Top Query Placeholder Wait Type"
+      - "Top query wait type"
+    CustomizedParameters:
+      - "query_hash"
+      - "query_id"
+    MessageForEmptyKustoResult: "Oops, telemetry data from the MonWiQdsWaitStats table does not exist. It appears the query executed extremely quickly, without being blocked or waiting on any resources."
+    KustoQueries:
+      - TableName: "MonWiQdsWaitStats"
+        ExecutedQuery: |
+          let WaitTypeSummary=(dcount_wait_category:int,Top2WaitTypeNames:string,top1WaitTypeName:string,top2WaitTypeName:string,total_wait_time_ms:long,top1WaitType_wait_time_ms:long,top2WaitType_wait_time_ms:long)
+          {
+          let WaitTypeSummary_onlyOneWaitType=case(dcount_wait_category==1,strcat("The Top 1 Waitype of this query was ",top1WaitTypeName,", and this was the only waitType detected. The total wait time of ",total_wait_time_ms," milliseconds."),"");
+          let WaitTypeSummary_twoWaitType=case(dcount_wait_category==1,"",strcat("The top 2 wait types were:",Top2WaitTypeNames,". The [",top1WaitTypeName,"] accounted ",top1WaitType_wait_time_ms, " milliseconds of wait time, representing ",round(top1WaitType_wait_time_ms*100.0/total_wait_time_ms,1),
+          "% of total; The second one [",top2WaitTypeName,"] account for ",round(top2WaitType_wait_time_ms*100.0/total_wait_time_ms,1),"% of the total wait time."));
+          strcat(WaitTypeSummary_onlyOneWaitType,WaitTypeSummary_twoWaitType)
+          //Sample output1:The top 2 wait types were:["PARALLELISM","CPU"]. The [PARALLELISM] accounted 1315363883 milliseconds of wait time, representing 70.1% of total; The second one [CPU] account for 13.6% of the total wait time.
+          };
+          let total_wait_time_ms=toscalar(MonWiQdsWaitStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | where {CustomizedParametersPlaceholder}
+          | summarize sum(total_query_wait_time_ms)
+          );
+          MonWiQdsWaitStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | where {CustomizedParametersPlaceholder}
+          | summarize individual_query_wait_time_ms=sum(total_query_wait_time_ms) by wait_category
+          | order by individual_query_wait_time_ms desc nulls first
+          | take 2
+          | summarize dcount_wait_category=dcount(wait_category),Top2WaitTypeNames=make_set(wait_category) ,(top1WaitType_wait_time_ms,top1WaitTypeName)=arg_max(individual_query_wait_time_ms,wait_category),(top2WaitType_wait_time_ms,top2WaitTypeName)=arg_min(individual_query_wait_time_ms,wait_category)
+          | extend waitTypeSummary=WaitTypeSummary(dcount_wait_category,Top2WaitTypeNames,top1WaitTypeName,top2WaitTypeName,total_wait_time_ms,top1WaitType_wait_time_ms,top2WaitType_wait_time_ms)
+          | extend Keywords=FilterMakeSetResult(Top2WaitTypeNames)
+          | project waitTypeSummary,Keywords
+        DisplayedQuery: |
+          MonWiQdsWaitStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | where {CustomizedParametersPlaceholder}
+          | summarize sum(total_query_wait_time_ms) by wait_category,query_hash,query_id
+          | order by sum_total_query_wait_time_ms desc nulls first
+          | project-reorder query_hash,query_id
+          | take 5
+    SubSqlSkills:
+      - ExecutedWhenParentIssueDetected: true
+        Keywords: "PARALLELISM"
+        IsKusto: false
+        Prompts:
+          - "Wait Category:PARALLELISM"
+      - ExecutedWhenParentIssueDetected: true
+        Keywords: "cpu"
+        IsKusto: false
+        Prompts:
+          - "Wait Category:CPU"
+      - ExecutedWhenParentIssueDetected: true
+        Keywords: "BUFFERLATCH"
+        IsKusto: true
+        Prompts:
+          - "Wait Category:BUFFERLATCH"
+      - ExecutedWhenParentIssueDetected: true
+        Keywords: "NETWORKIO"
+        IsKusto: true
+        Prompts:
+          - "Wait Category:NETWORKIO"
+    QuestionToAI: |-
+      - {{waitTypeSummary}}, the data type is String.
+
+      ### Rules
+      1. Store the value of waitTypeSummary column in {{waitTypeSummary}}.
+      2. Store the value of Keywords column in {{Keywords}}.
+      3. Set {{IssueDetected}} to true.
+      4. Set {{ResultMessage}} to {{waitTypeSummary}}.
+    TSGs:
+      - Title: "sys.query_store_wait_stats"
+        Link: "https://learn.microsoft.com/en-us/sql/relational-databases/system-catalog-views/sys-query-store-wait-stats-transact-sql?view=sql-server-ver16"
+        Description: "Please check section 'Wait categories mapping table'"
+# ── Merged from Queries_FailedQuerySummary.yaml ──
+SqlSkills:
+  - id: "81.16"
+    Prompts:
+      - "Failed query summary"
+    EvaluationTrueMessage: "Failed query detected"
+    EvaluationFalseMessage: "We checked for failed query executions and compilation errors but did not find any failures."
+    SubSqlSkills:
+      - id: "67.64"
+        IsKusto: true
+        Prompts:
+          - "Failed Compilation Summary"
+      - id: "81.161"
+        Prompts:
+          - "Failed query execution summary"
+
+  - id: "4.17"
+    Prompts:
+      - "Failed query execution summary"
+      - "Failed execution summary"
+      - "Timeout query summary"
+      - "Aborted query summary"
+      - "Internal execution failure summary"
+    KustoQueries:
+      - TableName: "MonWiQdsExecStatsTimeOutTable"
+        ExecutedQuery: |
+          let FailureStatus = (failedPercentage: real,failedCount:long,totalExecCount:long)
+          {
+          case(
+          failedCount==0, strcat(totalExecCount," queries were executed and no failed query execution detected."),
+          0.>failedPercentage , strcat(failedCount, " of ",totalExecCount," queries failed, representing a failure rate of ",failedPercentage,"%."),
+          strcat("Please note that the failure rate exceeded ",failedPercentage,"%: ", failedCount," of ", totalExecCount, " queries failed.")
+          )
+          };
+          MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | summarize totalExecCount = sum(execution_count), failedCount = sumif(execution_count, exec_type !=0)
+          | where totalExecCount > 0
+          | extend failedPercentage=round(100.0*failedCount/totalExecCount,3)
+          | extend IssueDetected=case(failedCount>=1, 'true','false')
+          | extend failureStatus=FailureStatus(failedPercentage,failedCount,totalExecCount)
+          | project IssueDetected,failureStatus
+        DisplayedQuery: |
+          MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | summarize totalExecCount = sum(execution_count), abortCount = sumif(execution_count, exec_type == 3), errorCount = sumif(execution_count, exec_type == 4)
+    MessageForEmptyKustoResult: "We don't find any failure as No query was executed."
+    QuestionToAI: |-
+      -  {{failureStatus}}, the data type is String.
+
+      ### Rules
+      1. Store the value of failedExecMessage column in {{failureStatus}}.
+      2. Store the value of IssueDetected column in {{IssueDetected}}.
+      3. Set then {{ResultMessage}} to "{{failureStatus}}.
+    SubSqlSkills:
+      - id: "4.18"
+        ExecutedWhenParentIssueDetected: true
+        IsKusto: true
+        Reasoning: " Since failure is detected, we are going to check the Top WaitType and failed queries"
+        Prompts:
+          - "Overall Top Wait Types of Query Execution"
+      - id: "4.18"
+        ExecutedWhenParentIssueDetected: true
+        IsKusto: true
+        Prompts:
+          - "Top queries with the highest number of failures"
+
+  - id: "4.18"
+    Prompts:
+      - "Overall Top Wait Types of Query Execution"
+      - "Overall Wait Types of Query Execution"
+    MessageForEmptyKustoResult: "MonWiQdsWaitStats didn't have record."
+    KustoQueries:
+      - TableName: "TopWaitTypesWithHighestTotalWaitTime_MonWiQdsWaitStatsTimeOutTable"
+        ExecutedQuery: |
+          let totalWaitTime_ms=toscalar(MonWiQdsWaitStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | summarize sum(total_query_wait_time_ms));
+          MonWiQdsWaitStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | summarize sumWaitTime_ms=sum(total_query_wait_time_ms) by wait_category
+          | project wait_category,sumWaitTime_ms, percentage=round(sumWaitTime_ms*100.0/totalWaitTime_ms,1)
+          | order by sumWaitTime_ms
+          | take 1
+        DisplayedQuery: |
+          MonWiQdsWaitStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          //| where exec_type != 0  //uncomment this line to filter out successful queries
+          | summarize sumWaitTime_ms=sum(total_query_wait_time_ms) by wait_category
+          | order by sumWaitTime_ms
+          | take 5
+    QuestionToAI: |-
+      -  {{wait_category}},  the data type is String.
+      -  {{sumWaitTime_ms}}, the data type is Big Integer.
+      -  {{percentage}}, the data type is Float.
+
+      ### Rules
+      1. Store the value of wait_category column in {{wait_category}}.
+      2. Store the value of wait_category column in {{Keywords}}.
+      3. Store the value of sumWaitTime_ms column in {{sumWaitTime_ms}}.
+      4. Store the value of percentage column in {{percentage}}.
+      5. If the {{percentage}} is greater than or equal to 20, then {{IssueDetected}} is 'true', else {{IssueDetected}} is 'false'.
+      6. Set {{ResultMessage}} to "The top wait type is {{wait_category}}, with a total duration of {{sumWaitTime_ms}}ms, accounting for {{percentage}}% of the total wait time."
+    SubSqlSkills:
+      - id: "66.0"
+        ExecutedWhenParentIssueDetected: true
+        Keywords: "LOCK"
+        IsKusto: true
+        Reasoning: " Since the LOCK wait type accounts for a significant portion of the total wait time, we will investigate blocking issue."
+        Prompts:
+          - "Blocking summary"
+
+  - id: "4.18"
+    IsDisplayKustoQueryResult: true
+    Prompts:
+      - "Top queries with the highest number of failures"
+    KustoQueries:
+      - TableName: "TopQueriesWithHighestFailures_MonWiQdsWaitStats"
+        ExecutedQuery: |
+          MonWiQdsWaitStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | where exec_type !=0
+          | top-nested 3 of query_hash by failedCount=count(),
+          top-nested 2 of  wait_category by total_query_wait_time_ms=sum(total_query_wait_time_ms) desc
+        DisplayedQuery: |
+          MonWiQdsWaitStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | where exec_type !=0
+          | top-nested 3 of query_hash by failedCount=count(),
+          top-nested 2 of  wait_category by total_query_wait_time_ms=sum(total_query_wait_time_ms) desc
+    MessageForEmptyKustoResult: "No query failure detected in MonWiQdsWaitStats."
+    QuestionToAI: |-
+      -  {{query_hash}},  the data type is String.
+
+      ### Rules
+      1. Store the value from the query_hash column of the first row into {{query_hash}}.
+      2. Set {{IssueDetected}} to 'true'.
+      3. Set {{ResultMessage}} to "Please type 'The detail of query query_hash' if you'd like to dig into. For example:'The detail of query {{query_hash}}'".
+
+# ── Merged from queries_ComparisonOfHistoricalData.yaml ──
+SqlSkills:
+  - id: "4.13"
+    Prompts:
+      - "Query Historical Data Comparison"
+      - "Query placeholder Historical Data Comparison"
+      - "Query placeholder history Data"
+      - "Query placeholder history"
+    CustomizedParameters:
+      - "query_hash"
+      - "query_id"
+    MessageForEmptyKustoResult: "Telemetry data from table MonWiQdsExecStats does not exist for the specified time range."
+    KustoQueries:
+      - TableName: "ComparisonOfHistoricalData_CurrentRange"
+        ExecutedQuery: |
+          let currentRange0=materialize (MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | where {CustomizedParametersPlaceholder}
+          | summarize sumExecCount=sum(execution_count),avgExecCount= round(avg(execution_count),1),sumCpu=sum(cpu_time),max_cpu_time=max(max_cpu_time),avgCpuTime= round(sum(cpu_time)/sum(execution_count),1),avgElapsedTime=round(sum(elapsed_time)/sum(execution_count),1),
+          avgLogicalReads= round(sum(logical_reads)/sum(execution_count),1),avgPhysicalReads= round(sum(physical_reads)/sum(execution_count),1), avgMemoryGrantPages= round(sum(max_query_memory_pages)/sum(execution_count),1),
+          minTime=min(originalEventTimestamp),maxTime=max(originalEventTimestamp)
+          | extend TimeRange= strcat(format_datetime(minTime,'yyyy-MM-dd HH:mm'),'~',format_datetime(maxTime,'yyyy-MM-dd HH:mm'))
+          | extend ID=1
+          | project-away ID,minTime,maxTime
+          | project-reorder TimeRange
+          );
+          currentRange0;
+      - TableName: "ComparisonOfHistoricalData"
+        ExecutedQuery: |
+          //Metrics for the time range specified by the user: StartTime to EndTime
+          let currentRange=materialize (MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | where {CustomizedParametersPlaceholder}
+          | summarize sumExecCount=sum(execution_count),avgExecCount= round(avg(execution_count),1),sumCpu=sum(cpu_time),max_cpu_time=max(max_cpu_time),avgCpuTime= round(sum(cpu_time)/sum(execution_count),1),avgElapsedTime=round(sum(elapsed_time)/sum(execution_count),1),
+          avgLogicalReads= round(sum(logical_reads)/sum(execution_count),1),avgPhysicalReads= round(sum(physical_reads)/sum(execution_count),1), avgMemoryGrantPages= round(sum(max_query_memory_pages)/sum(execution_count),1),avgLogBytes=round(sum(log_bytes_used)/sum(execution_count),1),
+          minTime=min(originalEventTimestamp),maxTime=max(originalEventTimestamp)
+          | extend TimeRange= strcat(format_datetime(minTime,'yyyy-MM-dd HH:mm'),'~',format_datetime(maxTime,'yyyy-MM-dd HH:mm'))
+          | extend ID=1
+          | project-away minTime,maxTime
+          | project-reorder ID,TimeRange
+          );
+          //Metrics for the time range: [StartTime - 2h] ~ [StartTime]
+          let  ["-2hTostartTime"]=materialize ( MonWiQdsExecStats
+          | where {AppNamesNodeNamesWith2HsBeforeStartTimeOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | where {CustomizedParametersPlaceholder}
+          | summarize sumExecCount=sum(execution_count),avgExecCount= round(avg(execution_count),1),sumCpu=sum(cpu_time),max_cpu_time=max(max_cpu_time),avgCpuTime= round(sum(cpu_time)/sum(execution_count),1),avgElapsedTime=round(sum(elapsed_time)/sum(execution_count),1),
+          avgLogicalReads= round(sum(logical_reads)/sum(execution_count),1),avgPhysicalReads= round(sum(physical_reads)/sum(execution_count),1), avgMemoryGrantPages= round(sum(max_query_memory_pages)/sum(execution_count),1),avgLogBytes=round(sum(log_bytes_used)/sum(execution_count),1),
+          minTime=min(originalEventTimestamp),maxTime=max(originalEventTimestamp)
+          | extend TimeRange= strcat(format_datetime(minTime,'yyyy-MM-dd HH:mm'),'~',format_datetime(maxTime,'yyyy-MM-dd HH:mm'))
+          | extend ID=2
+          | project-away minTime,maxTime
+          | project-reorder ID,TimeRange);
+          //Metrics for the time range: [StartTime - 4h] ~ [StartTime - 2h]
+          let  ["-4hTo-2hBeforeStartTime"]=materialize ( MonWiQdsExecStats
+          | where {AppNamesNodeNamesWith4Hs2HsBeforeStartTimeOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | where {CustomizedParametersPlaceholder}
+          | summarize sumExecCount=sum(execution_count),avgExecCount= round(avg(execution_count),1),sumCpu=sum(cpu_time),max_cpu_time=max(max_cpu_time),avgCpuTime= round(sum(cpu_time)/sum(execution_count),1),avgElapsedTime=round(sum(elapsed_time)/sum(execution_count),1),
+          avgLogicalReads= round(sum(logical_reads)/sum(execution_count),1),avgPhysicalReads= round(sum(physical_reads)/sum(execution_count),1), avgMemoryGrantPages= round(sum(max_query_memory_pages)/sum(execution_count),1),avgLogBytes=round(sum(log_bytes_used)/sum(execution_count),1),
+          minTime=min(originalEventTimestamp),maxTime=max(originalEventTimestamp)
+          | extend TimeRange= strcat(format_datetime(minTime,'yyyy-MM-dd HH:mm'),'~',format_datetime(maxTime,'yyyy-MM-dd HH:mm'))
+          | extend ID=3
+          | project-away minTime,maxTime
+          | project-reorder ID,TimeRange);
+          //Metrics for the time range: [StartTime - 1d] ~ [EndTime - 1d]
+          let OneDayBefore=materialize (MonWiQdsExecStats
+          | where {AppNamesNodeNamesWith1DayBeforeStartTimeOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | where {CustomizedParametersPlaceholder}
+          | summarize sumExecCount=sum(execution_count),avgExecCount= round(avg(execution_count),1),sumCpu=sum(cpu_time),max_cpu_time=max(max_cpu_time),avgCpuTime= round(sum(cpu_time)/sum(execution_count),1),avgElapsedTime=round(sum(elapsed_time)/sum(execution_count),1),
+          avgLogicalReads= round(sum(logical_reads)/sum(execution_count),1),avgPhysicalReads= round(sum(physical_reads)/sum(execution_count),1), avgMemoryGrantPages= round(sum(max_query_memory_pages)/sum(execution_count),1),avgLogBytes=round(sum(log_bytes_used)/sum(execution_count),1),
+          minTime=min(originalEventTimestamp),maxTime=max(originalEventTimestamp)
+          | extend TimeRange= strcat(format_datetime(minTime,'yyyy-MM-dd HH:mm'),'~',format_datetime(maxTime,'yyyy-MM-dd HH:mm'))
+          | extend ID=4
+          | project-away minTime,maxTime
+          | project-reorder ID,TimeRange);
+          let base=currentRange
+          | project baseSumExecCount=sumExecCount,baseavgExecCount=avgExecCount,baseSumCpu=sumCpu,baseMaxCpuTime=max_cpu_time,baseAvgCpuTime=avgCpuTime,baseavgElapsedTime=avgElapsedTime,baseAvgLogicalReads=avgLogicalReads,baseAvgPhysicalReads=avgPhysicalReads, baseAvgMemoryGrantPages=avgMemoryGrantPages,baseAvgLogBytes=avgLogBytes
+          | extend joinColumn=1;
+          let  ["-2hTostartTimeComparison"] = ["-2hTostartTime"]
+          | extend joinColumn=1
+          | join kind=inner (base) on $left.joinColumn==$right.joinColumn
+          | project ID,TimeRange, sumExecCount,avgExecCount, sumExecCountChange=sumExecCount-baseSumExecCount,avgExecCountChange=avgExecCount-baseavgExecCount,sumCpuChange=sumCpu-baseSumCpu,maxCpuTimeChange=max_cpu_time-baseMaxCpuTime,avgCpuTimeChange=avgCpuTime-baseAvgCpuTime,avgElapsedTimeChange=avgElapsedTime-baseavgElapsedTime,avgLogicalReadsChange=avgLogicalReads-baseAvgLogicalReads,avgPhysicalReadsChange=avgPhysicalReads-baseAvgPhysicalReads, avgMemoryGrantPagesChange=avgMemoryGrantPages-baseAvgMemoryGrantPages,avgLogBytesChange=avgLogBytes-baseAvgLogBytes;
+          let  ["-4hTo-2hBeforeStartTimeComparison"] = ["-4hTo-2hBeforeStartTime"]
+          | extend joinColumn=1
+          | join kind=inner (base) on $left.joinColumn==$right.joinColumn
+          | project ID,TimeRange, sumExecCount,avgExecCount, sumExecCountChange=sumExecCount-baseSumExecCount,avgExecCountChange=avgExecCount-baseavgExecCount,sumCpuChange=sumCpu-baseSumCpu,maxCpuTimeChange=max_cpu_time-baseMaxCpuTime,avgCpuTimeChange=avgCpuTime-baseAvgCpuTime,avgElapsedTimeChange=avgElapsedTime-baseavgElapsedTime,avgLogicalReadsChange=avgLogicalReads-baseAvgLogicalReads,avgPhysicalReadsChange=avgPhysicalReads-baseAvgPhysicalReads, avgMemoryGrantPagesChange=avgMemoryGrantPages-baseAvgMemoryGrantPages,avgLogBytesChange=avgLogBytes-baseAvgLogBytes;
+          let  OneDayBeforeComparison = OneDayBefore
+          | extend joinColumn=1
+          | join kind=inner (base) on $left.joinColumn==$right.joinColumn
+          | project ID,TimeRange, sumExecCount,avgExecCount, sumExecCountChange=sumExecCount-baseSumExecCount,avgExecCountChange=avgExecCount-baseavgExecCount,sumCpuChange=sumCpu-baseSumCpu,maxCpuTimeChange=max_cpu_time-baseMaxCpuTime,avgCpuTimeChange=avgCpuTime-baseAvgCpuTime,avgElapsedTimeChange=avgElapsedTime-baseavgElapsedTime,avgLogicalReadsChange=avgLogicalReads-baseAvgLogicalReads,avgPhysicalReadsChange=avgPhysicalReads-baseAvgPhysicalReads, avgMemoryGrantPagesChange=avgMemoryGrantPages-baseAvgMemoryGrantPages,avgLogBytesChange=avgLogBytes-baseAvgLogBytes;
+          ["-2hTostartTimeComparison"]
+          |union ["-4hTo-2hBeforeStartTimeComparison"],OneDayBeforeComparison
+          | order by ID asc
+          | project-away ID
+
+  - id: "4.131"
+    Prompts:
+      - "Query Historical Data Comparison 7 days"
+      - "Query placeholder Historical Data Comparison 7 days"
+    CustomizedParameters:
+      - "query_hash"
+      - "query_id"
+    MessageForEmptyKustoResult: "Telemetry data from table MonWiQdsExecStats does not exist for the specified time range."
+    KustoQueries:
+      - TableName: "ComparisonOfHistoricalData7Days"
+        ExecutedQuery: |
+          MonWiQdsExecStats
+          | where {AppNamesNodeNamesWith7DayOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | where {CustomizedParametersPlaceholder}
+          | summarize sum_ExecCount=sum(execution_count),avg_ExecCount= round(avg(execution_count),1),['avg_cpuTime']= round(sum(cpu_time)/sum(execution_count),1),
+          ['avg_elapsedTime']=round(sum(elapsed_time)/sum(execution_count),1),       avg_logicalReads= round(sum(logical_reads)/sum(execution_count),1),avg_physicalReads= round(sum(physical_reads)/sum(execution_count),1),
+          ['avg_memoryGrant(Pages)']= round(sum(max_query_memory_pages)/sum(execution_count),1),       distinctPLans=dcount(query_plan_hash), AllQueryPlans=make_set(query_plan_hash),
+          minTime=min(originalEventTimestamp),maxTime=max(originalEventTimestamp),
+          avgRowCount=round(sum(rowcount)/sum(execution_count),1),TotalRowCount=sum(rowcount)
+          by bin(originalEventTimestamp, 1h),exec_type
+          | extend TimeFrame= strcat(format_datetime(minTime,'yyyy-MM-dd HH:mm'),'~',format_datetime(maxTime,'yyyy-MM-dd HH:mm'))
+          | project-away minTime,maxTime
+          | project-reorder originalEventTimestamp asc,exec_type asc ,TimeFrame
+
+# ── Merged from queries_MonDmTranActiveTransactions.yaml ──
+SqlSkills:
+  - id: "4.91"
+    Prompts:
+      - "Long Running Transactions Analysis"
+      - "Long Running Transactions"
+      - "Long Running Query Analysis"
+      - "Long Running Query"
+    MessageForEmptyKustoResult: "Long running queries were not detected when MonDmTranActiveTransactions collection starts"
+    KustoQueries:
+      - TableName: "MonDmTranActiveTransactions"
+        ExecutedQuery: |
+          let LongRunningMessage = (totalCount: int,negativeSessionCount:int,systemTaskSessionCount: int,max_duration_hour:real)
+          {
+          strcat(
+          PluralOrSingular(totalCount,"long runng transaction")," was detected, with max duration ",max_duration_hour, " hours.",
+          iff(negativeSessionCount==0,"",
+          strcat(
+          " ",  PluralOrSingular(systemTaskSessionCount,"transaction")," were Azure DB System Tasks, please engage Experts; ",PluralOrSingular(negativeSessionCount,"transaction"), " had negative session IDs"
+          )
+          )
+          )
+          };
+          MonDmTranActiveTransactions
+          | where {AppNamesNodeNamesWithPreciseTimeRange}
+          | where LogicalServerName =~ '{LogicalServerName}' and (user_db_name =~ '{LogicalDatabaseName}' or 4>= database_id)
+          | extend category = iff(user_db_name == 'tempdb', 'tempdb', iff(accessed_tempdb == 0, 'user_db', 'user_db_with_accessed_tempdb'))
+          | extend duration_hour = round((end_utc_date - transaction_begin_time) / time(1h),1)
+          | extend negativeSessionCount=0>session_id
+          | extend IsSystemTask=program_name in ('DmvCollector', 'TdService', 'BackupService', 'MetricsDownloader')
+          | summarize max_duration_hour = arg_max(duration_hour,
+          session_id,
+          transaction_begin_time,
+          transaction_type,
+          transaction_state,
+          IsSystemTask,
+          status,
+          accessed_tempdb,category,
+          report_time = end_utc_date)
+          by transaction_id,negativeSessionCount
+          | summarize count(),max(max_duration_hour) by IsSystemTask,accessed_tempdb,negativeSessionCount
+          | summarize totalCount=sum(count_), negativeSessionCount=sumif(count_,negativeSessionCount==true),systemTaskSessionCount=sumif(count_,IsSystemTask==true),max_duration_hour=max(max_max_duration_hour)
+          | where totalCount>0
+          | extend longRunningMessage=LongRunningMessage(totalCount,negativeSessionCount,systemTaskSessionCount,max_duration_hour)
+          | project longRunningMessage
+        DisplayedQuery: |
+          MonDmTranActiveTransactions
+          | where {AppNamesNodeNamesWithPreciseTimeRange}
+          | where LogicalServerName =~ '{LogicalServerName}' and (user_db_name =~ '{LogicalDatabaseName}' or 4>= database_id)
+          | extend category = iff(user_db_name == 'tempdb', 'tempdb', iff(accessed_tempdb == 0, 'user_db', 'user_db_with_accessed_tempdb'))
+          | extend duration_hour = round((end_utc_date - transaction_begin_time) / time(1h),1)
+          | extend negativeSessionCount=0>session_id
+          | extend IsSystemTask=program_name in ('DmvCollector', 'TdService', 'BackupService', 'MetricsDownloader')
+          | summarize max_duration_hour = arg_max(duration_hour,
+          session_id,
+          transaction_begin_time,
+          transaction_type,
+          transaction_state,
+          status,
+          accessed_tempdb,category,IsSystemTask,program_name,
+          report_time = end_utc_date)
+          by transaction_id,negativeSessionCount
+          | order by transaction_begin_time asc
+          | take 5
+    QuestionToAI: |-
+      -  {{longRunningMessage}},  the data type is String.
+
+      ### Rules
+      1. Store the value of longRunningMessage column in {{longRunningMessage}}.
+      2. Set {{IssueDetected}} to 'true'.
+      3. Set {{ResultMessage}} to {{longRunningMessage}}.
+

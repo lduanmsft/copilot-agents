@@ -1,0 +1,299 @@
+SqlSkills:
+- id: MI-ASMI-OUT-OF-DISK-01
+  Topic: Disk space usage
+  Source: kusto-queries/Disk space usage.md
+  Prompts:
+  - MonSqlRgHistory by LogicalServerName, database_name
+  - MonSqlRgHistory LogicalServerName database_name only ServerName
+  - Investigate Disk space usage
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: 'MonSqlRgHistory
+
+      | where TIMESTAMP > ago(1d)
+
+      | where LogicalServerName =~ ''{ServerName}'' //server name
+
+      | where db_name =~ "{DatabaseName}" // database_name
+
+      | where type_desc == "ROWS" //looking only for data only
+
+      | where is_primary_replica == 1'
+- id: MI-ASMI-OUT-OF-DISK-02
+  Topic: Disk space usage
+  Source: kusto-queries/Disk space usage.md
+  Prompts:
+  - MonSqlRgHistory by LogicalServerName, database_name
+  - MonSqlRgHistory LogicalServerName database_name ServerName server
+  - Investigate Disk space usage
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: 'MonSqlRgHistory
+
+      | where TIMESTAMP > ago(1d)
+
+      | where LogicalServerName =~ "{ServerName}" //server name
+
+      | where db_name =~ "{DatabaseName}" // database_name
+
+      | where type_desc == "ROWS" //looking only for data'
+- id: MI-ASMI-OUT-OF-DISK-03
+  Topic: File Size & Table size
+  Source: kusto-queries/File Size & Table size.md
+  Prompts:
+  - MI IO virtual file stats by db_name, DatabaseName
+  - MonDmIoVirtualFileStats db_name DatabaseName
+  - Investigate File Size & Table size
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmIoVirtualFileStats
+    ExecutedQuery: 'MonDmIoVirtualFileStats//| where PreciseTimeStamp > ago(1h)
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where db_name =~ "{DatabaseName}"'
+- id: MI-ASMI-OUT-OF-DISK-04
+  Topic: File Size & Table size
+  Source: kusto-queries/File Size & Table size.md
+  Prompts:
+  - MI IO virtual file stats by db_name, DatabaseName
+  - MonDmIoVirtualFileStats db_name DatabaseName file_id
+  - Investigate File Size & Table size
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmIoVirtualFileStats
+    ExecutedQuery: 'MonDmIoVirtualFileStats
+
+      | where AppName =~ "{AppName}"
+
+      | where db_name =~ "{DatabaseName}"
+
+      | where file_id== 3'
+- id: MI-ASMI-OUT-OF-DISK-05
+  Topic: File Size & Table size
+  Source: kusto-queries/File Size & Table size.md
+  Prompts:
+  - MI IO virtual file stats by LogicalServerName, type_desc
+  - MonDmIoVirtualFileStats LogicalServerName type_desc ServerName ROWS
+  - Investigate File Size & Table size
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmIoVirtualFileStats
+    ExecutedQuery: 'MonDmIoVirtualFileStats
+
+      | where TIMESTAMP > ago(1d)
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where (type_desc == ''ROWS'' or type_desc == ''LOG'')'
+- id: MI-ASMI-OUT-OF-DISK-06
+  Topic: File Size & Table size
+  Source: kusto-queries/File Size & Table size.md
+  Prompts:
+  - MonAnalyticsDBSnapshot by logical_server_name, logical_database_name
+  - MonAnalyticsDBSnapshot logical_server_name logical_database_name ServerName DatabaseName
+  - Investigate File Size & Table size
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: 'MonAnalyticsDBSnapshot
+
+      | where logical_server_name =~ ''{ServerName}''
+
+      | where logical_database_name =~ "{DatabaseName}"'
+- id: MI-ASMI-OUT-OF-DISK-07
+  Topic: Governance, Quota
+  Source: kusto-queries/Governance, Quota.md
+  Prompts:
+  - MI IO virtual file stats by logical_server_name, type_desc
+  - MonDmIoVirtualFileStats logical_server_name type_desc ServerName LOG
+  - Investigate Governance, Quota
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmIoVirtualFileStats
+    ExecutedQuery: 'MonDmIoVirtualFileStats//| where PreciseTimeStamp > ago(4h)
+
+      | where logical_server_name =~ "{ServerName}"orLogicalServerName =~ "{ServerName}"//| where db_name =~ "{DatabaseName}"
+
+      | where NodeName== ''DB.37'' and AppName =~ ''{AppName}''
+
+      | where(type_desc== ''ROWS'')//or type_desc == ''LOG''//| where type_desc == ''LOG'''
+- id: MI-ASMI-OUT-OF-DISK-08
+  Topic: GP IO Throttling
+  Source: kusto-queries/GP IO Throttling.md
+  Prompts:
+  - MonAnalyticsDBSnapshot by logical_server_name, ServerName
+  - MonAnalyticsDBSnapshot logical_server_name ServerName
+  - Investigate GP IO Throttling
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: 'MonAnalyticsDBSnapshot
+
+      | where TIMESTAMP>= ago(1d)
+
+      | where logical_server_name =~ "{ServerName}"'
+- id: MI-ASMI-OUT-OF-DISK-09
+  Topic: GP Storage - IOPS & throughput
+  Source: kusto-queries/GP Storage - IOPS & throughput.md
+  Prompts:
+  - MonAnalyticsDBSnapshot by LogicalServerName, logical_server_name
+  - MonAnalyticsDBSnapshot LogicalServerName logical_server_name ServerName
+  - Investigate GP Storage IOPS & throughput
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: 'MonAnalyticsDBSnapshot
+
+      | where TIMESTAMP>= ago(1d)
+
+      | where LogicalServerName =~ "{ServerName}" or logical_server_name =~ "{ServerName}"'
+- id: MI-ASMI-OUT-OF-DISK-10
+  Topic: Log size
+  Source: kusto-queries/Log size.md
+  Prompts:
+  - MI IO virtual file stats by let, daysAgo
+  - MonDmIoVirtualFileStats let daysAgo ServerName DatabaseName
+  - Investigate Log size
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmIoVirtualFileStats
+    ExecutedQuery: 'let ServerName = '''';
+
+      let DatabaseName = '''';
+
+      let daysAgo=1d;
+
+      MonDmIoVirtualFileStats
+
+      | where TIMESTAMP > ago(daysAgo)'
+- id: MI-ASMI-OUT-OF-DISK-11
+  Topic: Log size
+  Source: kusto-queries/Log size.md
+  Prompts:
+  - MI cluster load telemetry by cluster_name
+  - MonClusterLoad cluster_name
+  - Investigate Log size
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonClusterLoad
+    ExecutedQuery: 'MonClusterLoad
+
+      | where AppName =~ "{AppName}"
+
+      | where ClusterName contains "{cluster_name}"'
+- id: MI-ASMI-OUT-OF-DISK-12
+  Topic: Log size
+  Source: kusto-queries/Log size.md
+  Prompts:
+  - MI SQL system health telemetry by LogicalServerName, let
+  - MonSQLSystemHealth LogicalServerName let ServerName DatabaseName
+  - Investigate Log size
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'let ServerName = '''';
+
+      let DatabaseName = '''';
+
+      let daysAgo=7d;
+
+      MonSQLSystemHealth
+
+      | where LogicalServerName =~ ServerName'
+- id: MI-ASMI-OUT-OF-DISK-13
+  Topic: Log size
+  Source: kusto-queries/Log size.md
+  Prompts:
+  - MI IO virtual file stats by let, daysAgo
+  - MonDmIoVirtualFileStats let daysAgo ServerName DatabaseName
+  - Investigate Log size
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmIoVirtualFileStats
+    ExecutedQuery: 'let ServerName = '''';
+
+      let DatabaseName = '''';
+
+      let daysAgo=7d;
+
+      MonDmIoVirtualFileStats
+
+      | where originalEventTimestamp >= ago(daysAgo)'
+- id: MI-ASMI-OUT-OF-DISK-14
+  Topic: Resource Status
+  Source: kusto-queries/Resource Status.md
+  Prompts:
+  - MI managed instance resource stats by LogicalServerName, ServerName
+  - MonManagedInstanceResourceStats LogicalServerName ServerName
+  - Investigate Resource Status
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedInstanceResourceStats
+    ExecutedQuery: 'MonManagedInstanceResourceStats
+
+      | where LogicalServerName =~ "{ServerName}"'
+- id: MI-ASMI-OUT-OF-DISK-15
+  Topic: TempDb
+  Source: kusto-queries/TempDb.md
+  Prompts:
+  - MonDmTempDbFileSpaceUsage
+  - Investigate TempDb
+  - MI performance MonDmTempDbFileSpaceUsage
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmTempDbFileSpaceUsage
+    ExecutedQuery: 'MonDmTempDbFileSpaceUsage
+
+      | where TIMESTAMP >= ago(3d)
+
+      | where AppName =~ "{AppName}"'
+- id: MI-ASMI-OUT-OF-DISK-16
+  Topic: TempDb
+  Source: kusto-queries/TempDb.md
+  Prompts:
+  - MI IO virtual file stats by whereAppName, projectAppName
+  - MonDmIoVirtualFileStats whereAppName projectAppName db_name type_desc
+  - Investigate TempDb
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmIoVirtualFileStats
+    ExecutedQuery: 'MonDmIoVirtualFileStats
+
+      | where AppName =~ "{AppName}"
+
+      | projectAppName,db_name,type_desc,spaceused_mb'

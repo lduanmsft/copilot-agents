@@ -1,0 +1,66 @@
+SqlSkills:
+- id: MI-ASMI-NODE-HEALTH-01
+  Topic: Code Package Version & Primary Node history
+  Source: kusto-queries/Code Package Version & Primary Node history.md
+  Prompts:
+  - MI managed instance metadata
+  - MonManagedInstanceInfo
+  - Investigate Code Package Version & Primary Node history
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedInstanceInfo
+    ExecutedQuery: 'MonManagedInstanceInfo
+
+      | where AppName =~ "{AppName}"'
+- id: MI-ASMI-NODE-HEALTH-02
+  Topic: Distributed Transaction _ DTC
+  Source: kusto-queries/Distributed Transaction _ DTC.md
+  Prompts:
+  - MI management operations telemetry by let, startTime
+  - MonManagementOperations let startTime endTime serverName
+  - Investigate Distributed Transaction DTC
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagementOperations
+    ExecutedQuery: 'let startTime = ago(20d);
+
+      let endTime = now();
+
+      let serverName = ''{ServerName}'';
+
+      MonManagementOperations
+
+      | where originalEventTimestamp >= startTime and originalEventTimestamp <= endTime
+
+      | where operation_parameters has serverName'
+- id: MI-ASMI-NODE-HEALTH-03
+  Topic: Performance Counter + Alias ODBC failure
+  Source: kusto-queries/Performance Counter + Alias ODBC failure.md
+  Prompts:
+  - MI redirector telemetry counts for sql alias odbc failure / sql alias cache refresh
+  - MonRedirector event error_code SqlAliasErrorCount sql_alias_odbc_failure
+  - Investigate Performance Counter + Alias ODBC failure
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRedirector
+    ExecutedQuery: 'MonRedirector
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where TIMESTAMP > ago(6d)
+
+      | where ClusterName contains clusterName
+
+      | where event == ''sql_alias_odbc_failure'' or event == ''sql_alias_cache_refresh''
+
+      | where error_code != ''FABRIC_E_SERVICE_DOES_NOT_EXIST''
+
+      | make-series SqlAliasErrorCount = count() on originalEventTimestamp from bin(startTime, 1m) to bin(endTime, 1m) step 1m
+
+      | mv-expand originalEventTimestamp, SqlAliasErrorCount'

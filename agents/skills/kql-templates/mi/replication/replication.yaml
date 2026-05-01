@@ -5,7 +5,7 @@ SqlSkills:
   Prompts:
   - MI transactional replication telemetry for repl distribution status
   - MonTranReplTraces LogicalServerName event ServerName repl_distribution_status
-  - Troubleshoot transactional replication failures
+  - Investigate Introduction to TranRepl investigation
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -71,7 +71,7 @@ SqlSkills:
   Source: TSG-SQL-MI-TransactionalReplication/TransactionalReplication/TSGTRCL00022-LogNearFull-LogFull-due-to-REPLICATION-on-MI.md
   Prompts:
   - MI CDC capture telemetry trend by LogicalServerName, logical_database_name
-  - MonCDCTraces LogicalServerName logical_database_name latency file_path
+  - MonCDCTraces LogicalServerName logical_database_name file_path total_write_bytes
   - Troubleshoot replication latency
   CustomizedParameters:
   - ServerName
@@ -96,7 +96,7 @@ SqlSkills:
 
       | where originalEventTimestamp > ago(3d)
 
-      | where file_path contains ""{DatabaseGuid}"" and file_path contains ".ldf"
+      | where file_path contains "<logical_database_id>" and file_path contains ".ldf"
 
       | project originalEventTimestamp, total_write_bytes
 
@@ -136,8 +136,8 @@ SqlSkills:
   Topic: TSGTRCL00024-ReplDispatcher-All-pipe-instances-are-busy
   Source: TSG-SQL-MI-TransactionalReplication/TransactionalReplication/TSGTRCL00024-ReplDispatcher-All-pipe-instances-are-busy.md
   Prompts:
-  - MI SQL Agent job telemetry by LogicalServerName, Worker
-  - MonSqlAgent LogicalServerName Worker CL message
+  - MI SQL Agent job telemetry by LogicalServerName, message
+  - MonSqlAgent LogicalServerName message Worker CL
   - Troubleshoot replication lag
   CustomizedParameters:
   - ServerName
@@ -158,7 +158,7 @@ SqlSkills:
   Source: TSG-SQL-MI-TransactionalReplication/TransactionalReplication/TSGTRCL00025-Errors-occured-during-Replication-Dispatcher-execution.md
   Prompts:
   - MI transactional replication telemetry for repl dispatcher troubleshoot / ERROR
-  - MonTranReplTraces LogicalServerName event message_type exception_message
+  - MonTranReplTraces LogicalServerName event exception_message closed
   - Troubleshoot transactional replication issues
   CustomizedParameters:
   - ServerName
@@ -247,7 +247,7 @@ SqlSkills:
   Prompts:
   - MI transactional replication telemetry for error 21100
   - MonTranReplTraces LogicalServerName error_code ServerName
-  - Troubleshoot transactional replication failures
+  - Investigate MSSQL REPL21100 errors during execution of distribution agent
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -306,7 +306,7 @@ SqlSkills:
   Topic: TSGTRCL00029-ReplAgentUser
   Source: TSG-SQL-MI-TransactionalReplication/TransactionalReplication/TSGTRCL00029-ReplAgentUser.md
   Prompts:
-  - MI HADR replica state telemetry by LogicalServerName, command
+  - MI HADR database replica states by LogicalServerName, command
   - MonDmDbHadrReplicaStates LogicalServerName command managed_server_1 managed_server_2
   - Troubleshoot replication lag
   CustomizedParameters:
@@ -318,7 +318,7 @@ SqlSkills:
 
       | where TIMESTAMP > ago(30min)
 
-      | where LogicalServerName in (""{ServerName}"", ""{PartnerServerName}"")
+      | where LogicalServerName in ("<managed_server_1>", "<managed_server_2>")
 
       | where is_local == 1
 
@@ -333,7 +333,7 @@ SqlSkills:
   Source: TSG-SQL-MI-TransactionalReplication/TransactionalReplication/TSGTRCL00030-The-target-principal-name-is-incorrect-error.md
   Prompts:
   - MI transactional replication telemetry counts for error -2146893022
-  - MonTranReplTraces LogicalServerName error_code code_package_version clstr
+  - MonTranReplTraces LogicalServerName error_code clstr let
   - Troubleshoot target principal name errors
   CustomizedParameters:
   - ServerName
@@ -358,7 +358,7 @@ SqlSkills:
   Source: TSG-SQL-MI-TransactionalReplication/TransactionalReplication/TSGTRCL00032-Syscommittab-cleanup-is-slow-or-blocked.md
   Prompts:
   - MI change tracking cleanup telemetry trend for syscommittab cleanup alert
-  - MonCTTraces LogicalServerName logical_database_name event rows_in_delay
+  - MonCTTraces LogicalServerName logical_database_name event ServerName
   - Troubleshoot cleanup backlog
   CustomizedParameters:
   - ServerName
@@ -405,8 +405,8 @@ SqlSkills:
   Topic: TSGTRCL00041-The-login-is-from-an-untrusted-domain
   Source: TSG-SQL-MI-TransactionalReplication/TransactionalReplication/TSGTRCL00041-The-login-is-from-an-untrusted-domain.md
   Prompts:
-  - MI SQL system health telemetry by LogicalServerName, ServerName
-  - MonSQLSystemHealth LogicalServerName ServerName message The
+  - MI SQL system health telemetry by LogicalServerName, message
+  - MonSQLSystemHealth LogicalServerName message ServerName The
   - Troubleshoot replAgentUser authentication failures
   CustomizedParameters:
   - ServerName
@@ -424,8 +424,8 @@ SqlSkills:
   Topic: TSGTRCL00043-Snapshot_Distribution-agent-Failed-to-decrypt-Azure-storage-key
   Source: TSG-SQL-MI-TransactionalReplication/TransactionalReplication/TSGTRCL00043-Snapshot_Distribution-agent-Failed-to-decrypt-Azure-storage-key.md
   Prompts:
-  - MI managed database metadata by LogicalServerName, collation_name
-  - MonManagedDatabaseInfo LogicalServerName collation_name Worker CL
+  - MI managed database metadata by LogicalServerName, Worker
+  - MonManagedDatabaseInfo LogicalServerName Worker CL ServerName
   - Troubleshoot Azure storage key decryption failures
   CustomizedParameters:
   - ServerName
@@ -447,8 +447,8 @@ SqlSkills:
   Topic: TSGTRCL00043-Snapshot_Distribution-agent-Failed-to-decrypt-Azure-storage-key
   Source: TSG-SQL-MI-TransactionalReplication/TransactionalReplication/TSGTRCL00043-Snapshot_Distribution-agent-Failed-to-decrypt-Azure-storage-key.md
   Prompts:
-  - MI transactional replication telemetry by LogicalServerName, code_package_version
-  - MonTranReplTraces LogicalServerName code_package_version ServerName
+  - MI transactional replication telemetry by LogicalServerName, ServerName
+  - MonTranReplTraces LogicalServerName ServerName code_package_version
   - Troubleshoot Azure storage key decryption failures
   CustomizedParameters:
   - ServerName
@@ -489,7 +489,7 @@ SqlSkills:
   Topic: TSGTRCL00043-Snapshot_Distribution-agent-Failed-to-decrypt-Azure-storage-key
   Source: TSG-SQL-MI-TransactionalReplication/TransactionalReplication/TSGTRCL00043-Snapshot_Distribution-agent-Failed-to-decrypt-Azure-storage-key.md
   Prompts:
-  - MI real-time database resource telemetry by LogicalServerName, ServerName
+  - MI real-time resource telemetry by LogicalServerName, ServerName
   - MonDmRealTimeResourceStats LogicalServerName ServerName
   - Troubleshoot Azure storage key decryption failures
   CustomizedParameters:
@@ -529,7 +529,7 @@ SqlSkills:
   Topic: TSGTRCL00044-CDC-Capture-Job-Not-Running-After-Geo-Failover-on-SQL-Managed-Instance
   Source: TSG-SQL-MI-TransactionalReplication/TransactionalReplication/TSGTRCL00044-CDC-Capture-Job-Not-Running-After-Geo-Failover-on-SQL-Managed-Instance.md
   Prompts:
-  - MI real-time database resource telemetry by LogicalServerName, logical_database_name
+  - MI real-time resource telemetry by LogicalServerName, logical_database_name
   - MonDmRealTimeResourceStats LogicalServerName logical_database_name replica_role block
   - Troubleshoot CDC capture issues
   CustomizedParameters:
@@ -585,8 +585,8 @@ SqlSkills:
   Topic: TSGTRCL00044-CDC-Capture-Job-Not-Running-After-Geo-Failover-on-SQL-Managed-Instance
   Source: TSG-SQL-MI-TransactionalReplication/TransactionalReplication/TSGTRCL00044-CDC-Capture-Job-Not-Running-After-Geo-Failover-on-SQL-Managed-Instance.md
   Prompts:
-  - MI SQL Agent job telemetry by LogicalServerName, message_type
-  - MonSqlAgent LogicalServerName message_type message ServerName
+  - MI SQL Agent job telemetry by LogicalServerName, message
+  - MonSqlAgent LogicalServerName message ServerName hex_job_id
   - Troubleshoot replication lag
   CustomizedParameters:
   - ServerName
@@ -599,7 +599,7 @@ SqlSkills:
 
       | where LogicalServerName =~ "{ServerName}"
 
-      | where message contains ""{JobId}""
+      | where message contains "<hex_job_id>"
 
       | project TIMESTAMP, message_type, message
 
@@ -627,830 +627,259 @@ SqlSkills:
       | where event == "cdc_session"
 
       | summarize count() by bin(TIMESTAMP, 10m)'
-<<<<<<< Updated upstream
-=======
-- id: MI-replication-21
+- id: MI-replication-28
   Topic: CDC-14-Insights-from-Kusto
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-14-Insights-from-Kusto.md
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-14-Insights-from-Kusto.md
   Prompts:
-  - MI CDC-14-Insights-from-Kusto
-  - Managed Instance CDC-14-Insights-from-Kusto
+  - MonAnalyticsDBSnapshot by let, startTime
+  - MonAnalyticsDBSnapshot let startTime endTime srv
+  - Troubleshoot CDC capture issues
   CustomizedParameters:
   - ServerName
   - DatabaseName
   KustoQueries:
   - TableName: MonAnalyticsDBSnapshot
-    ExecutedQuery: 'let db = "{DatabaseName}"; let endTime = now();
-let startTime = ago({TimeRange});
-MonAnalyticsDBSnapshot
+    ExecutedQuery: 'let srv = "hlimifrance";
 
-      | where TIMESTAMP >= startTime
+      let db = "CDC_Publisher";
 
-      | where TIMESTAMP <= endTime
-
-      //| where  TIMESTAMP >= timeRange
-
-      | where logical_server_name =~ "{ServerName}"
-
-      | where logical_database_name =~ db
-
-      --| where sql_instance_name =~ app
-
-      | distinct sql_instance_name, logical_database_name, logical_database_id
-
-      //logical_database_id = 5FE6B098-50A8-46D5-BCDE-B4D3C1C238CF'
-- id: MI-replication-22
-  Topic: CDC-14-Insights-from-Kusto
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-14-Insights-from-Kusto.md
-  Prompts:
-  - MI CDC-14-Insights-from-Kusto
-  - Managed Instance CDC-14-Insights-from-Kusto
-  CustomizedParameters:
-  - ServerName
-  - DatabaseName
-  KustoQueries:
-  - TableName: MonCDCTraces
-    ExecutedQuery: 'let db = "{DatabaseName}"; let endTime = now();
-let startTime = ago({TimeRange});
-MonCDCTraces
-
-      | where TIMESTAMP >= startTime
-
-      | where TIMESTAMP <= endTime
-
-      //| where  TIMESTAMP >= timeRange
-
-      | where LogicalServerName =~ "{ServerName}"
-
-      | where logical_database_name == db
-
-      //| where logical_database_guid =~ logdb
-
-      | where event =~ "cdc_cleanup_job_status"
-
-      | project originalEventTimestamp, change_table_id, retention, threshold, change_table_delete_count, lsn_time_mapping_delete_count, cleanup_error, low_water_mark, collect_current_thread_id
-
-      | summarize min(originalEventTimestamp), max(originalEventTimestamp), any(threshold), sum(change_table_delete_count), sum(lsn_time_mapping_delete_count) by collect_current_thread_id, cleanup_error
-
-      | extend duration = max_originalEventTimestamp - min_originalEventTimestamp
-
-      | project startTime = min_originalEventTimestamp, endTime = max_originalEventTimestamp, duration, batch_size = any_threshold, Deletes_ChangeTables = sum_change_table_delete_count, Deletes_LsnTimeMapping
-      = sum_lsn_time_mapping_delete_count, cleanup_error
-
-      | order by startTime asc'
-- id: MI-replication-23
-  Topic: CDC-14-Insights-from-Kusto
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-14-Insights-from-Kusto.md
-  Prompts:
-  - MI CDC-14-Insights-from-Kusto
-  - Managed Instance CDC-14-Insights-from-Kusto
-  CustomizedParameters:
-  - ServerName
-  - DatabaseName
-  KustoQueries:
-  - TableName: MonCDCTraces
-    ExecutedQuery: 'let db = "{DatabaseName}"; let endTime = now();
-let startTime = ago({TimeRange});
-MonCDCTraces
-
-      | where TIMESTAMP >= startTime
-
-      | where TIMESTAMP <= endTime
-
-      //| where  TIMESTAMP >= timeRange
-
-      | where LogicalServerName =~ "{ServerName}"
-
-      | where logical_database_name == db
-
-      //| where logical_database_guid =~ logdb
-
-      | where event == "cdc_session"
-
-      | summarize originalEventTimestamp = min(originalEventTimestamp), start_time = min(start_time), end_time = max(end_time), cdc_latency = max(latency), duration = max(duration), logrecord_count = sum(log_record_count)
-      tran_count = sum(tran_count), cmd_count = sum(command_count), empty_scan_count = sum(empty_scan_count) by collect_current_thread_id
-
-      | project start_time, end_time, cdc_latency, duration, logrecord_count, tran_count, cmd_count, empty_scan_count
-
-      | order by start_time asc'
-- id: MI-replication-24
-  Topic: CDC-14-Insights-from-Kusto
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-14-Insights-from-Kusto.md
-  Prompts:
-  - MI CDC-14-Insights-from-Kusto
-  - Managed Instance CDC-14-Insights-from-Kusto
-  CustomizedParameters:
-  - DatabaseName
-  - ServerName
-  - TimeRange
-  KustoQueries:
-  - TableName: MonCDCTraces
-    ExecutedQuery: 'let srv = "{ServerName}";
-
-      let db = "{DatabaseName}";
-
-      let logdb = "5FE6B098-50A8-46D5-BCDE-B4D3C1C238CF";
-
-      let startTime = ago({TimeRange});
+      let startTime = ago(1d);
 
       let endTime = now();
 
       let timeRange = ago(1d);
 
-      let GroupedResults = materialize(MonCDCTraces
+      MonAnalyticsDBSnapshot
 
       | where TIMESTAMP >= startTime
 
-      | where TIMESTAMP <= endTime
-
-      //| where  TIMESTAMP >= timeRange
-
-      | where LogicalServerName =~ "{ServerName}"
-
-      | where logical_database_name == db
-
-      //| where logical_database_guid =~ logdb
-
-      | where event == "cdc_session"
-
-      | summarize originalEventTimestamp = min(originalEventTimestamp), cdc_latency = max(latency), duration = max(duration), log_record_count = max(log_record_count)
-
-      tran_count = max(tran_count), command_count = max(command_count), //empty_scan_count = max(empty_scan_count)
-
-      error_count = max(error_count), failed_sessions_count = max(failed_sessions_count) by start_time, empty_scan_count );'
-- id: MI-replication-25
+      | where TIMESTAMP <= endTime'
+- id: MI-replication-29
   Topic: CDC-14-Insights-from-Kusto
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-14-Insights-from-Kusto.md
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-14-Insights-from-Kusto.md
   Prompts:
-  - MI CDC-14-Insights-from-Kusto
-  - Managed Instance CDC-14-Insights-from-Kusto
+  - MI CDC capture telemetry by let, startTime
+  - MonCDCTraces let startTime endTime srv
+  - Troubleshoot CDC capture issues
   CustomizedParameters:
-  - DatabaseName
   - ServerName
-  - TimeRange
+  - DatabaseName
   KustoQueries:
-  - TableName: MonLogReaderTraces
-    ExecutedQuery: 'let srv = "{ServerName}";
+  - TableName: MonCDCTraces
+    ExecutedQuery: 'let srv = "hlimifrance";
 
-      let db = "{DatabaseName}";
+      let db = "CDC_Publisher";
 
       let logdb = "5FE6B098-50A8-46D5-BCDE-B4D3C1C238CF";
 
-      let startTime = ago({TimeRange});
+      let startTime = ago(1d);
 
       let endTime = now();
 
       let timeRange = ago(1d);
 
-      let GroupedResults = materialize(MonLogReaderTraces
+      MonCDCTraces
 
       | where TIMESTAMP >= startTime
 
-      | where TIMESTAMP <= endTime
-
-      //| where  TIMESTAMP >= timeRange
-
-      | where LogicalServerName =~ "{ServerName}"
-
-      | where logical_database_name == db
-
-      //| where logical_database_guid =~ logdb
-
-      | where event == "repl_logscan_session" and phase_number in (2, 7) and phase_state_name == "phase_end"
-
-      | extend vlfs = toint(strcat("0x", substring(end_lsn, 0, 8)))-toint(strcat("0x", substring(start_lsn, 0, 8)))
-
-      | extend duration = todatetime(originalEventTimestamp)-todatetime(start_time)
-
-      | summarize originalEventTimestamp = min(originalEventTimestamp), duration = max(duration), phase_number = max(phase_number), max_trans = max(max_trans)
-
-      tran_count = max(tran_count), log_record_count = max(log_record_count), command_count = max(command_count), schema_change_count = max(schema_change_count), tran_completed = max(tran_completed), vlfs
-      = max(vlfs) by start_time
-
-      );'
-- id: MI-replication-26
+      | where TIMESTAMP <= endTime'
+- id: MI-replication-30
   Topic: CDC-14-Insights-from-Kusto
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-14-Insights-from-Kusto.md
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-14-Insights-from-Kusto.md
   Prompts:
-  - MI CDC-14-Insights-from-Kusto
-  - Managed Instance CDC-14-Insights-from-Kusto
+  - MonSqlRgHistory by let, startTime
+  - MonSqlRgHistory let startTime endTime srv
+  - Troubleshoot CDC capture issues
   CustomizedParameters:
   - ServerName
   - DatabaseName
   KustoQueries:
   - TableName: MonSqlRgHistory
-    ExecutedQuery: 'let endTime = now();
-let startTime = ago({TimeRange});
-MonSqlRgHistory
+    ExecutedQuery: 'let srv = "hlimifrance";
+
+      let startTime = ago(1d);
+
+      let endTime = now();
+
+      let timeRange = ago(1d);
+
+      MonSqlRgHistory
 
       | where TIMESTAMP >= startTime
 
-      | where TIMESTAMP <= endTime
-
-      //| where  TIMESTAMP >= timeRange
-
-      | where LogicalServerName =~ "{ServerName}"
-
-      | where event == "aggregated_workload_groups_plus_history"
-
-      | where group_name in ("default")
-
-      | project end_utc_date = end_aggregated_sample, name = group_name, start_utc_date = start_aggregated_sample, delta_total_cpu_usage_ms, delta_total_request_count, active_request_count = active_request_count_max
-      active_session_count = active_session_count_max, delta_writes_completed_total, delta_reads_completed_total, delta_log_bytes_used_total, delta_log_temp_db_bytes_used_total, used_databasepages_kb =
-      used_data_space_kb_avg
-
-      | extend duration =  (end_utc_date - start_utc_date)/time(1s)
-
-      | extend CpuCoreUsage = (delta_total_cpu_usage_ms/1000.0)/ duration
-
-      | extend TotalRequests = (delta_total_request_count * 1.0) /1.0
-
-      | extend ActiveRequests = (active_request_count *1.0)  /1.0
-
-      | extend ActiveSessions = (active_session_count *1.0) /1.0
-
-      | extend TotalIOPS = ((delta_reads_completed_total + delta_writes_completed_total)*1.0)/duration
-
-      | extend ReadIOPS = (delta_reads_completed_total*1.0)/duration
-
-      | extend WriteIOPS = (delta_writes_completed_total*1.0)/duration
-
-      | extend LogKbps = (delta_log_bytes_used_total)/(1024.0*duration)
-
-      | extend LogMbps = (delta_log_bytes_used_total)/(1024.0*1024.0*duration)
-
-      | extend TempDbLogKbps = (delta_log_temp_db_bytes_used_total)/(1024.0*duration)
-
-      | extend TempDbLogMbps = (delta_log_temp_db_bytes_used_total)/(1024.0*1024.0*duration)
-
-      //| extend UsedDatabasePagesMb = used_databasepages_kb*1.0/(1024) // SQL DB
-
-      | project end_utc_date, name, CpuCoreUsage, TotalIOPS, ReadIOPS, WriteIOPS, LogMbps, TempDbLogMbps, TotalRequests, ActiveRequests, ActiveSessions
-
-      | project TimeStamp = end_utc_date, CpuCoreUsage, ReadIOPS, WriteIOPS, LogMbps, TempDbLogMbps, ActiveRequests, ActiveSessions
-
-      | summarize CpuUsage = max(CpuCoreUsage), ReadIOPS = max(ReadIOPS), WriteIOPS = max(WriteIOPS), LogMbps = max(LogMbps), TempDbLogMbps = max(TempDbLogMbps), ActiveRequests = max(ActiveRequests), ActiveSessions
-      = max(ActiveSessions) by bin(TimeStamp, 1h)
-
-      | render timechart'
-- id: MI-replication-27
+      | where TIMESTAMP <= endTime'
+- id: MI-replication-31
   Topic: CDC-14-Insights-from-Kusto
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-14-Insights-from-Kusto.md
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-14-Insights-from-Kusto.md
   Prompts:
-  - MI CDC-14-Insights-from-Kusto
-  - Managed Instance CDC-14-Insights-from-Kusto
+  - MI managed instance resource stats by let, startTime
+  - MonManagedInstanceResourceStats let startTime endTime srv
+  - Troubleshoot CDC capture issues
   CustomizedParameters:
   - ServerName
   - DatabaseName
   KustoQueries:
   - TableName: MonManagedInstanceResourceStats
-    ExecutedQuery: 'let endTime = now();
-let startTime = ago({TimeRange});
-MonManagedInstanceResourceStats
+    ExecutedQuery: 'let srv = "hlimifrance";
+
+      let db = "CDC_Publisher";
+
+      let logdb = "5FE6B098-50A8-46D5-BCDE-B4D3C1C238CF";
+
+      let startTime = ago(1d);
+
+      let endTime = now();
+
+      let timeRange = ago(1d);
+
+      MonManagedInstanceResourceStats
 
       | where TIMESTAMP >= startTime
 
-      | where TIMESTAMP <= endTime
-
-      //| where  TIMESTAMP >= timeRange
-
-      | where LogicalServerName =~ "{ServerName}"
-
-      | extend storage_space_used_percent = storage_space_used_mb / reserved_storage_mb * 100
-
-      | extend io_MB_read = io_bytes_read/(1024*1024)
-
-      | extend io_MB_written = io_bytes_written/(1024*1024)
-
-      | extend io_throughput_MB = io_MB_read + io_MB_written
-
-      | extend iops = io_requests / datetime_diff("second", end_time, start_time)
-
-      | project start_time, avg_cpu_percent, reserved_storage_mb, storage_space_used_mb, storage_space_used_percent, node_memory_percent, scheduler_count, io_requests, io_MB_read, io_MB_written, io_throughput_MB
-      iops, avg_log_write_percent, active_workers_percent, active_sessions_percent
-
-      | project start_time, avg_cpu_percent, reserved_storage_mb, storage_space_used_mb, storage_space_used_percent, node_memory_percent, io_requests, io_MB_read, io_MB_written, io_throughput_MB, iops
-      avg_log_write_percent, active_workers_percent, active_sessions_percent
-
-      //| project start_time, io_requests, io_MB_read, io_MB_written, io_throughput_MB, iops
-
-      | project start_time, avg_cpu_percent, storage_space_used_percent, node_memory_percent, avg_log_write_percent, active_workers_percent, active_sessions_percent
-
-      | render timechart'
-- id: MI-replication-28
+      | where TIMESTAMP <= endTime'
+- id: MI-replication-32
   Topic: CDC-14-Insights-from-Kusto
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-14-Insights-from-Kusto.md
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-14-Insights-from-Kusto.md
   Prompts:
-  - MI CDC-14-Insights-from-Kusto
-  - Managed Instance CDC-14-Insights-from-Kusto
-  CustomizedParameters:
-  - ServerName
-  - DatabaseName
-  KustoQueries:
-  - TableName: MonCDCTraces
-    ExecutedQuery: 'let db = "{DatabaseName}"; let endTime = now();
-let startTime = ago({TimeRange});
-MonCDCTraces
-
-      | where TIMESTAMP >= startTime
-
-      | where TIMESTAMP <= endTime
-
-      //| where  TIMESTAMP >= timeRange
-
-      | where LogicalServerName =~ "{ServerName}"
-
-      | where logical_database_name == db
-
-      //| where logical_database_guid =~ logdb
-
-      | where event == "cdc_session"
-
-      | summarize cdc_latency = max(latency), max(duration) by bin(originalEventTimestamp, 1h)
-
-      | join kind=fullouter ('
-- id: MI-replication-29
-  Topic: CDC-14-Insights-from-Kusto
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-14-Insights-from-Kusto.md
-  Prompts:
-  - MI CDC-14-Insights-from-Kusto
-  - Managed Instance CDC-14-Insights-from-Kusto
+  - MI XStore IO telemetry by startTime, endTime
+  - MonSQLXStoreIOStats startTime endTime
+  - Troubleshoot CDC capture issues
   CustomizedParameters:
   - ServerName
   - DatabaseName
   KustoQueries:
   - TableName: MonSQLXStoreIOStats
-    ExecutedQuery: 'let db = "{DatabaseName}"; let endTime = now();
-let startTime = ago({TimeRange});
-MonSQLXStoreIOStats
+    ExecutedQuery: 'MonSQLXStoreIOStats
 
       | where TIMESTAMP >= startTime
 
-      | where TIMESTAMP <= endTime
-
-      //| where  TIMESTAMP >= timeRange
-
-      | where LogicalServerName =~ "{ServerName}"
-
-      | where file_path endswith strcat(logdb, "_2.ldf")
-
-      //| project originalEventTimestamp, file_path, event, is_success, is_lock_error, blob_count, total_requests, total_xio_requests, total_bytes, total_read_bytes, total_write_bytes
-
-      | summarize total_log_writes_MB = sum(total_write_bytes / 1024.0 / 1024.0  ) by bin(originalEventTimestamp, 1h)
-
-      ) on originalEventTimestamp | project-away originalEventTimestamp1
-
-      | render timechart'
-- id: MI-replication-30
-  Topic: CDC-14-Insights-from-Kusto
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-14-Insights-from-Kusto.md
-  Prompts:
-  - MI CDC-14-Insights-from-Kusto
-  - Managed Instance CDC-14-Insights-from-Kusto
-  CustomizedParameters:
-  - DatabaseName
-  - ServerName
-  - TimeRange
-  KustoQueries:
-  - TableName: MonWiDmDbPartitionStats
-    ExecutedQuery: 'let srv = "{ServerName}";
-
-      let logdb = "5FE6B098-50A8-46D5-BCDE-B4D3C1C238CF";
-
-      let startTime = ago({TimeRange});
-
-      let endTime = now();
-
-      let timeRange = ago(1d);
-
-      let PartitionStats=materialize(MonWiDmDbPartitionStats
-
-      | where TIMESTAMP >= startTime
-
-      | where TIMESTAMP <= endTime
-
-      | where LogicalServerName =~ "{ServerName}"
-
-      | where logical_database_name =~ logdb
-
-      | where index_id in (0,1)
-
-      | summarize used_page_count = max(used_page_count) by database_id, object_id, index_id, data_date = bin(TIMESTAMP, 1h));
-
-      let FilteredResults = materialize(MonDatabaseMetadata
-
-      | where LogicalServerName =~ "{ServerName}"
-
-      | where logical_db_name =~ logdb
-
-      | where (table_name==''sysclsobjs'' and class == 50) or (table_name==''sysschobjs'' and [''type''] == ''U '') or (table_name == ''sysidxstats'' and indid in (0,1))
-
-      | project TIMESTAMP, table_name, class, [''type''], id, name, nsid, indid);
-
-      let schemas=FilteredResults
-
-      | where (table_name == ''sysclsobjs'' and class == 50)
-
-      | summarize by schema_id = id, schema_name = tolower(name);
-
-      let tables=FilteredResults
-
-      | where (table_name == ''sysschobjs'' and [''type''] == ''U '')
-
-      | summarize by schema_id = nsid, object_id = id, table_name=name;
-
-      let indexes=FilteredResults
-
-      | where (table_name == ''sysidxstats'' and indid in (0,1))
-
-      | extend index_type_desc=iff([''type''] == 0, ''HEAP'', iff([''type'']==1, ''CLUSTERED'', iff([''type'']==5, ''CCI'', tostring([''type'']))))
-
-      | summarize by object_id = id, index_id = indid, index_type = type, index_type_desc;'
-- id: MI-replication-31
-  Topic: CDC-14-Insights-from-Kusto
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-14-Insights-from-Kusto.md
-  Prompts:
-  - MI CDC-14-Insights-from-Kusto
-  - Managed Instance CDC-14-Insights-from-Kusto
-  CustomizedParameters:
-  - ServerName
-  - DatabaseName
-  KustoQueries:
-  - TableName: MonCDCTraces
-    ExecutedQuery: 'let db = "{DatabaseName}"; let endTime = now();
-let startTime = ago({TimeRange});
-MonCDCTraces
-
-      | where TIMESTAMP >= startTime
-
-      | where TIMESTAMP <= endTime
-
-      //| where  TIMESTAMP >= timeRange
-
-      | where LogicalServerName =~ "{ServerName}"
-
-      | where logical_database_name == db
-
-      //| where logical_database_guid =~ logdb
-
-      | where (error_count > 0 or cleanup_error > 0 or error_number > 0) or event == "cdc_error" or event_type contains "Fail"
-
-      | extend job_type = case(
-
-      event == "cdc_cleanup_job_status", "Cleanup"
-
-      event == "cdc_error", "Capture"
-
-      "other")
-
-      | extend error_type = case(
-
-      error_number in (18805, 22859), "(secondary - see Primary error for root cause)"
-
-      "Primary error")
-
-      | project  originalEventTimestamp, job_type, error_number, error_severity, error_state, cleanup_error, error_type
-
-      | order by originalEventTimestamp asc
-
-      | limit 500'
-- id: MI-replication-32
-  Topic: CDC-14-Insights-from-Kusto
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-14-Insights-from-Kusto.md
-  Prompts:
-  - MI CDC-14-Insights-from-Kusto
-  - Managed Instance CDC-14-Insights-from-Kusto
-  CustomizedParameters:
-  - AppName
-  - DatabaseName
-  - ServerName
-  - TimeRange
-  KustoQueries:
-  - TableName: MonCDCTraces
-    ExecutedQuery: 'let srv = "{ServerName}";
-
-      let db = "{DatabaseName}";
-
-      let app = "{AppName}";
-
-      let logdb = "5FE6B098-50A8-46D5-BCDE-B4D3C1C238CF";
-
-      let startTime = ago({TimeRange});
-
-      let endTime = now();
-
-      let timeRange = ago(1d);
-
-      let SessionErrors = materialize(MonCDCTraces
-
-      | where TIMESTAMP >= startTime
-
-      | where TIMESTAMP <= endTime
-
-      //| where  TIMESTAMP >= timeRange
-
-      | where LogicalServerName =~ "{ServerName}"
-
-      | where logical_database_name == db
-
-      //| where logical_database_guid =~ logdb
-
-      | where event =~ "cdc_error"
-
-      | where error_number !in (18805, 22859) // exclude secondary errors
-
-      | distinct TIMESTAMP, source = "CDC capture job", session_id, phase_number, error_number);
-
-      let SessionIDs = materialize(SessionErrors
-
-      | distinct session_id, phase_number);'
+      | where TIMESTAMP <= endTime'
 - id: MI-replication-33
   Topic: CDC-14-Insights-from-Kusto
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-14-Insights-from-Kusto.md
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-14-Insights-from-Kusto.md
   Prompts:
-  - MI CDC-14-Insights-from-Kusto
-  - Managed Instance CDC-14-Insights-from-Kusto
+  - MI log reader phase telemetry by startTime, endTime
+  - MonLogReaderTraces startTime endTime
+  - Troubleshoot CDC capture issues
   CustomizedParameters:
   - ServerName
   - DatabaseName
   KustoQueries:
   - TableName: MonLogReaderTraces
-    ExecutedQuery: 'let db = "{DatabaseName}"; let endTime = now();
-let startTime = ago({TimeRange});
-MonLogReaderTraces
+    ExecutedQuery: 'MonLogReaderTraces
 
       | where TIMESTAMP >= startTime
 
-      | where TIMESTAMP <= endTime
-
-      //| where  TIMESTAMP >= timeRange
-
-      | where LogicalServerName =~ "{ServerName}"
-
-      | where logical_database_name == db
-
-      //| where logical_database_guid =~ logdb
-
-      | join kind=inner ('
+      | where TIMESTAMP <= endTime'
 - id: MI-replication-34
   Topic: CDC-14-Insights-from-Kusto
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-14-Insights-from-Kusto.md
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-14-Insights-from-Kusto.md
   Prompts:
-  - MI CDC-14-Insights-from-Kusto
-  - Managed Instance CDC-14-Insights-from-Kusto
+  - MI SQL system health telemetry by let, startTime
+  - MonSQLSystemHealth let startTime endTime srv
+  - Troubleshoot CDC capture issues
   CustomizedParameters:
   - ServerName
   - DatabaseName
   KustoQueries:
   - TableName: MonSQLSystemHealth
-    ExecutedQuery: 'let endTime = now();
-let startTime = ago({TimeRange});
-MonSQLSystemHealth
+    ExecutedQuery: 'let srv = "hlimifrance";
 
-      | where TIMESTAMP >= startTime
-
-      | where TIMESTAMP <= endTime
-
-      //| where  TIMESTAMP >= timeRange
-
-      | where LogicalServerName =~ "{ServerName}"
-
-      | where error_id in (1133, 1105, 1101, 3911, 3619, 5901, 9002, 22001) // space-related errors
-
-      | summarize count() by error_id
-
-      | extend message = case(
-
-      error_id == 1101,  "Could not allocate a new page for database because of insufficient disk space in filegroup."
-
-      error_id == 1105,  "Could not allocate space for object in database because the filegroup is full. Add storage or free up existing space."
-
-      error_id == 1133,  "The managed instance has reached its storage limit."
-
-      error_id == 3619,  "Could not write a checkpoint record in database because the log is out of space."
-
-      error_id == 3911,  "Persistent version store is full. New version(s) could not be added. A transaction that needs to access the version store may be rolled back."
-
-      error_id == 5901,  "One or more recovery units belonging to database failed to generate a checkpoint. This is typically caused by lack of system resources such as disk or memory."
-
-      error_id == 9002,  "The transaction log for database is full."
-
-      error_id == 22001, "FreeStaleVersionSpace failed for page for database. It will be retired in the next iteration of the version cleaner."
-
-      "other")
-
-      | order by count_ desc'
-- id: MI-replication-35
-  Topic: CDC-14-Insights-from-Kusto
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-14-Insights-from-Kusto.md
-  Prompts:
-  - MI CDC-14-Insights-from-Kusto
-  - Managed Instance CDC-14-Insights-from-Kusto
-  CustomizedParameters:
-  - ServerName
-  - DatabaseName
-  KustoQueries:
-  - TableName: MonSQLSystemHealth
-    ExecutedQuery: 'let endTime = now();
-let startTime = ago({TimeRange});
-MonSQLSystemHealth
-
-      | where TIMESTAMP >= startTime
-
-      | where TIMESTAMP <= endTime
-
-      //| where  TIMESTAMP >= timeRange
-
-      | where LogicalServerName =~ "{ServerName}"
-
-      | where error_id in (1133, 1105, 1101, 3911, 3619, 5901, 9002, 22001) // space-related errors
-
-      | project originalEventTimestamp, error_id, message
-
-      | project originalEventTimestamp, error_id
-
-      | summarize count() by error_id, bin(originalEventTimestamp, 1h)
-
-      | order by count_ desc
-
-      | render timechart'
-- id: MI-replication-36
-  Topic: CDC-14-Insights-from-Kusto
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-14-Insights-from-Kusto.md
-  Prompts:
-  - MI CDC-14-Insights-from-Kusto
-  - Managed Instance CDC-14-Insights-from-Kusto
-  CustomizedParameters:
-  - DatabaseName
-  - ServerName
-  - TimeRange
-  KustoQueries:
-  - TableName: MonManagedInstanceResourceStats
-    ExecutedQuery: 'let srv = "{ServerName}";
-
-      let db = "{DatabaseName}";
-
-      let logdb = "5FE6B098-50A8-46D5-BCDE-B4D3C1C238CF";
-
-      let startTime = ago({TimeRange});
+      let startTime = ago(1d);
 
       let endTime = now();
 
       let timeRange = ago(1d);
 
-      let InstanceStorage = materialize(MonManagedInstanceResourceStats
+      MonSQLSystemHealth
 
       | where TIMESTAMP >= startTime
 
-      | where TIMESTAMP <= endTime
+      | where TIMESTAMP <= endTime'
+- id: MI-replication-35
+  Topic: CDC-14-Insights-from-Kusto
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-14-Insights-from-Kusto.md
+  Prompts:
+  - MI IO virtual file stats by let, startTime
+  - MonDmIoVirtualFileStats let startTime endTime srv
+  - Troubleshoot CDC capture issues
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmIoVirtualFileStats
+    ExecutedQuery: 'let srv = "hlimifrance";
 
-      //| where  TIMESTAMP >= timeRange
+      let db = "CDC_Publisher";
 
-      | where LogicalServerName =~ "{ServerName}"
+      let logdb = "5FE6B098-50A8-46D5-BCDE-B4D3C1C238CF";
 
-      | extend 90PercentFull = (storage_space_used_mb >= reserved_storage_mb * 0.9)
+      let startTime = ago(1d);
 
-      | summarize inst_reserved_storage_mb = max(reserved_storage_mb), inst_storage_space_used_mb = max(storage_space_used_mb), inst_90PercentFull = max(90PercentFull)  by timeStamp = bin(originalEventTimestamp
-      60min)
+      let endTime = now();
 
-      | project timeStamp, inst_reserved_storage_mb, inst_storage_space_used_mb, inst_90PercentFull
+      let timeRange = ago(1d);
 
-      );
-
-      let AllDbStorage = materialize(MonDmIoVirtualFileStats
-
-      | where TIMESTAMP >= startTime
-
-      | where TIMESTAMP <= endTime
-
-      //| where  TIMESTAMP >= timeRange
-
-      | where LogicalServerName =~ "{ServerName}"
-
-      | extend sizeondisk_mb = size_on_disk_bytes * 1.0 / (1024 * 1024)
-
-      | summarize spaceused_mb = sum(spaceused_mb), sizeondisk_mb = sum(sizeondisk_mb) by timeStamp = bin(start_utc_date, 60min)
-
-      | extend shrinkPotential_mb = sizeondisk_mb - spaceused_mb
-
-      | project timeStamp, alldb_spaceused_mb = spaceused_mb, alldb_sizeondisk_mb = sizeondisk_mb, alldb_shrinkPotential_mb = shrinkPotential_mb
-
-      );
-
-      let DbStorage = materialize(MonDmIoVirtualFileStats
+      MonDmIoVirtualFileStats
 
       | where TIMESTAMP >= startTime
 
-      | where TIMESTAMP <= endTime
+      | where TIMESTAMP <= endTime'
+- id: MI-replication-36
+  Topic: CDC-14-Insights-from-Kusto
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-14-Insights-from-Kusto.md
+  Prompts:
+  - MI IO virtual file stats by let, startTime
+  - MonDmIoVirtualFileStats let startTime endTime srv
+  - Troubleshoot CDC capture issues
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmIoVirtualFileStats
+    ExecutedQuery: 'let srv = "hlimifrance";
 
-      //| where  TIMESTAMP >= timeRange
+      let db = "CDC_Publisher";
 
-      | where LogicalServerName =~ "{ServerName}"
+      let app = "fa5a06d4983a";
 
-      | where db_name =~ logdb
+      let logdb = "5FE6B098-50A8-46D5-BCDE-B4D3C1C238CF";
 
-      | project max_size_mb, size_on_disk_bytes, type_desc, db_name , spaceused_mb , TIMESTAMP, PreciseTimeStamp, start_utc_date, end_utc_date, file_id, database_id
+      let startTime = ago(1d);
 
-      | sort by start_utc_date asc, file_id asc
+      let endTime = now();
 
-      | extend sizeondisk_mb = size_on_disk_bytes * 1.0 / (1024 * 1024)
+      let timeRange = ago(1d);
 
-      | extend shrinkPotential_mb = sizeondisk_mb - spaceused_mb
+      MonDmIoVirtualFileStats
 
-      | extend 90PercentFull = (spaceused_mb >= sizeondisk_mb * 0.9)
+      | where TIMESTAMP >= startTime
 
-      | extend 100PercentFull = (spaceused_mb >= sizeondisk_mb)
-
-      | project start_utc_date, end_utc_date, database_id, db_name, type_desc, spaceused_mb, sizeondisk_mb, max_size_mb, shrinkPotential_mb, 90PercentFull, 100PercentFull
-
-      | summarize db_spaceused_mb = sum(spaceused_mb), db_sizeondisk_mb = sum(sizeondisk_mb), db_90PercentFull = max(90PercentFull), db_100PercentFull = max(100PercentFull) by timeStamp = bin(start_utc_date
-      60min)
-
-      | project timeStamp, db_spaceused_mb, db_sizeondisk_mb, db_90PercentFull, db_100PercentFull
-
-      );'
+      | where TIMESTAMP <= endTime'
 - id: MI-replication-37
-  Topic: CDC-14-Insights-from-Kusto
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-14-Insights-from-Kusto.md
+  Topic: CDC-cannot-be-enabled-due-to-DDL-trigger
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-cannot-be-enabled-due-to-DDL-trigger.md
   Prompts:
-  - MI CDC-14-Insights-from-Kusto
-  - Managed Instance CDC-14-Insights-from-Kusto
+  - MI SQL error alert telemetry by LogicalServerName, ServerName
+  - AlrSQLErrorsReported LogicalServerName ServerName
+  - Troubleshoot CDC capture issues
   CustomizedParameters:
   - ServerName
   - DatabaseName
   KustoQueries:
-  - TableName: MonDmIoVirtualFileStats
-    ExecutedQuery: 'let endTime = now();
-let startTime = ago({TimeRange});
-MonDmIoVirtualFileStats
-
-      | where TIMESTAMP >= startTime
-
-      | where TIMESTAMP <= endTime
-
-      //| where  TIMESTAMP >= timeRange
+  - TableName: AlrSQLErrorsReported
+    ExecutedQuery: 'AlrSQLErrorsReported
 
       | where LogicalServerName =~ "{ServerName}"
 
-      | where db_name =~ logdb
-
-      //| where file_id == 1 // only data
-
-      //| where file_id == 2 // only log
-
-      | sort by start_utc_date asc, file_id asc
-
-      | extend sizeondisk_mb = size_on_disk_bytes * 1.0 / (1024 * 1024)
-
-      | extend shrinkPotential_mb = sizeondisk_mb - spaceused_mb
-
-      | extend 90PercentFull = (spaceused_mb >= sizeondisk_mb * 0.9)
-
-      | extend 100PercentFull = (spaceused_mb >= sizeondisk_mb)
-
-      | project start_utc_date, end_utc_date, database_id, file_id, type_desc, spaceused_mb, sizeondisk_mb, max_size_mb, shrinkPotential_mb, 90PercentFull, 100PercentFull
-
-      | project start_utc_date, file_id, type_desc, spaceused_mb, sizeondisk_mb, max_size_mb, shrinkPotential_mb, 90PercentFull, 100PercentFull
-
-      | order by start_utc_date, file_id asc'
+      | where TIMESTAMP > ago(3h)'
 - id: MI-replication-38
-  Topic: CDC-14-Insights-from-Kusto
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-14-Insights-from-Kusto.md
-  Prompts:
-  - MI CDC-14-Insights-from-Kusto
-  - Managed Instance CDC-14-Insights-from-Kusto
-  CustomizedParameters:
-  - ServerName
-  - DatabaseName
-  KustoQueries:
-  - TableName: MonDmIoVirtualFileStats
-    ExecutedQuery: 'let endTime = now();
-let startTime = ago({TimeRange});
-MonDmIoVirtualFileStats
-
-      | where TIMESTAMP >= startTime
-
-      | where TIMESTAMP <= endTime
-
-      //| where  TIMESTAMP >= timeRange
-
-      | where LogicalServerName =~ "{ServerName}"
-
-      //| extend 90PercentFull = (spaceused_mb >= sizeondisk_mb * 0.9)
-
-      | extend 100PercentFull = (spaceused_mb >= sizeondisk_mb)
-
-      | where 100PercentFull == true
-
-      | distinct database_id, db_name, file_id, type_desc, 100PercentFull
-
-      | order by database_id asc, file_id asc'
-- id: MI-replication-39
   Topic: CDC-Duplicate-key-in-lsn_time_mapping-system-table
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-Duplicate-key-in-lsn_time_mapping-system-table.md
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-Duplicate-key-in-lsn_time_mapping-system-table.md
   Prompts:
-  - MI CDC-Duplicate-key-in-lsn_time_mapping-system-table
-  - Managed Instance CDC-Duplicate-key-in-lsn_time_mapping-system-table
+  - MI CDC capture telemetry for cdc error
+  - MonCDCTraces LogicalServerName logical_database_name event error_number
+  - Troubleshoot CDC capture issues
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1466,13 +895,16 @@ MonDmIoVirtualFileStats
 
       | where error_number in ("22858", "22859")
 
-      | limit 1000'
-- id: MI-replication-40
+      | limit 1000
+
+      Sample output: shows details about individual errors (message is PII-filtered though)'
+- id: MI-replication-39
   Topic: CDC-Duplicate-key-in-lsn_time_mapping-system-table
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-Duplicate-key-in-lsn_time_mapping-system-table.md
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-Duplicate-key-in-lsn_time_mapping-system-table.md
   Prompts:
-  - MI CDC-Duplicate-key-in-lsn_time_mapping-system-table
-  - Managed Instance CDC-Duplicate-key-in-lsn_time_mapping-system-table
+  - MI CDC capture telemetry by LogicalServerName, logical_database_name
+  - MonCDCTraces LogicalServerName logical_database_name ServerName DatabaseName
+  - Troubleshoot CDC capture issues
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1482,23 +914,39 @@ MonDmIoVirtualFileStats
 
       | where LogicalServerName =~ "{ServerName}"
 
+      | where logical_database_name =~ "{DatabaseName}"'
+- id: MI-replication-40
+  Topic: CDC-job-started-but-capture-job-has-no-details
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-job-started-but-capture-job-has-no-details.md
+  Prompts:
+  - MI CDC capture telemetry for cdc session
+  - MonCDCTraces LogicalServerName logical_database_name event mins
+  - Troubleshoot CDC capture issues
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCDCTraces
+    ExecutedQuery: 'MonCDCTraces
+
+      | where TIMESTAMP > ago(1d)
+
+      | where event == "cdc_session"
+
+      | where LogicalServerName =~ "{ServerName}"
+
       | where logical_database_name =~ "{DatabaseName}"
 
-      //| where physical_database_guid =~ "{PhysicalDatabaseGUID}"
+      | extend mins = bin(TIMESTAMP, 5min)
 
-      | where event =~ "cdc_error"
-
-      | summarize min(originalEventTimestamp), max(originalEventTimestamp), count() by error_number
-
-      | project-reorder min_originalEventTimestamp, max_originalEventTimestamp, error_number, count_
-
-      | order by error_number asc, min_originalEventTimestamp'
+      | summarize empty_count = max(empty_scan_count), st = min(start_time), et = max(end_time) by mins, session_id, logical_database_name'
 - id: MI-replication-41
   Topic: CDC-Kusto-Queries-for-troubleshooting
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-Kusto-Queries-for-troubleshooting.md
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-Kusto-Queries-for-troubleshooting.md
   Prompts:
-  - MI CDC-Kusto-Queries-for-troubleshooting
-  - Managed Instance CDC-Kusto-Queries-for-troubleshooting
+  - MI CDC capture telemetry for cdc cleanup job status
+  - MonCDCTraces LogicalServerName logical_database_name event ServerName
+  - Troubleshoot cleanup backlog
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1514,18 +962,19 @@ MonDmIoVirtualFileStats
 
       | where event == "cdc_cleanup_job_status"
 
-      | project TIMESTAMP, NodeName, AppName, LogicalServerName, logical_database_name, event, change_table_id, retention, threshold, change_table_delete_count, lsn_time_mapping_delete_count, cleanup_error
-      low_water_mark
+      | project TIMESTAMP, NodeName, AppName, LogicalServerName, logical_database_name, event, change_table_id, retention, threshold, change_table_delete_count, lsn_time_mapping_delete_count,
+      cleanup_error, low_water_mark
 
       | order by TIMESTAMP asc
 
       | limit 5000'
 - id: MI-replication-42
   Topic: CDC-Kusto-Queries-for-troubleshooting
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-Kusto-Queries-for-troubleshooting.md
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-Kusto-Queries-for-troubleshooting.md
   Prompts:
-  - MI CDC-Kusto-Queries-for-troubleshooting
-  - Managed Instance CDC-Kusto-Queries-for-troubleshooting
+  - MI CDC capture telemetry for cdc session
+  - MonCDCTraces LogicalServerName logical_database_name event error_number
+  - Troubleshoot replication latency
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1541,18 +990,47 @@ MonDmIoVirtualFileStats
 
       | where event == "cdc_session"
 
-      | project TIMESTAMP, NodeName, AppName, LogicalServerName, logical_database_name, event, session_id, duration, phase_number, error_count, error_number, error_message, tran_count, log_record_count
-      schema_change_count, command_count, latency, empty_scan_count, failed_sessions_count, start_lsn, current_lsn, end_lsn, last_commit_lsn, first_begin_cdc_lsn, last_commit_cdc_lsn
+      | project TIMESTAMP, NodeName, AppName, LogicalServerName, logical_database_name, event, session_id, duration, phase_number, error_count, error_number, error_message,
+      tran_count, log_record_count, schema_change_count, command_count, latency, empty_scan_count, failed_sessions_count, start_lsn, current_lsn, end_lsn, last_commit_lsn,
+      first_begin_cdc_lsn, last_commit_cdc_lsn
 
       | order by TIMESTAMP asc
 
       | limit 5000'
 - id: MI-replication-43
   Topic: CDC-Kusto-Queries-for-troubleshooting
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-Kusto-Queries-for-troubleshooting.md
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-Kusto-Queries-for-troubleshooting.md
   Prompts:
-  - MI CDC-Kusto-Queries-for-troubleshooting
-  - Managed Instance CDC-Kusto-Queries-for-troubleshooting
+  - MI log reader phase telemetry by LogicalServerName, logical_database_name
+  - MonLogReaderTraces LogicalServerName logical_database_name event ServerName
+  - Troubleshoot CDC capture issues
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogReaderTraces
+    ExecutedQuery: 'MonLogReaderTraces
+
+      | where TIMESTAMP > ago(1d)
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where logical_database_name =~ "{DatabaseName}"
+
+      | project TIMESTAMP, NodeName, AppName, LogicalServerName, logical_database_name, event, phase_number, phase_state_name, max_trans, tran_count, numtrans, command_count,
+      schema_change_count, log_record_count, start_time, start_lsn, end_lsn, last_commit_lsn, tran_completed, articles_completed, xact_id, xact_seqno, repl_begin_lsn,
+      repl_next_lsn
+
+      | order by TIMESTAMP asc
+
+      | limit 5000'
+- id: MI-replication-44
+  Topic: CDC-not-working-due-to-FOG-issues-after-maintenance
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-not-working-due-to-FOG-issues-after-maintenance.md
+  Prompts:
+  - MI CDC capture telemetry for cdc session
+  - MonCDCTraces LogicalServerName logical_database_name event ServerName
+  - Troubleshoot replication latency
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1560,54 +1038,22 @@ MonDmIoVirtualFileStats
   - TableName: MonCDCTraces
     ExecutedQuery: 'MonCDCTraces
 
-      //| where TIMESTAMP > ago(1h)
+      | where TIMESTAMP > ago(1d)
 
       | where LogicalServerName =~ "{ServerName}"
 
       | where logical_database_name =~ "{DatabaseName}"
 
-      | where (error_count > 0 or cleanup_error > 0 or error_number > 0) or event == "cdc_error" or event_type contains "Fail"
+      | where event == "cdc_session"
 
-      | project TIMESTAMP, NodeName, AppName, LogicalServerName, logical_database_name, event, event_type, event_details, session_id, duration, phase_number, error_count, error_number, error_severity, error_state
-      error_message, cleanup_error, tran_count, failed_sessions_count, empty_scan_count, start_lsn, current_lsn, end_lsn, last_commit_lsn, first_begin_cdc_lsn, last_commit_cdc_lsn
-
-      | order by TIMESTAMP asc
-
-      | limit 5000'
-- id: MI-replication-44
-  Topic: CDC-Kusto-Queries-for-troubleshooting
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-Kusto-Queries-for-troubleshooting.md
-  Prompts:
-  - MI CDC-Kusto-Queries-for-troubleshooting
-  - Managed Instance CDC-Kusto-Queries-for-troubleshooting
-  CustomizedParameters:
-  - DatabaseName
-  - ServerName
-  - TimeRange
-  KustoQueries:
-  - TableName: MonLogReaderTraces
-    ExecutedQuery: 'MonLogReaderTraces
-
-      | where TIMESTAMP >= ago({TimeRange})
-
-      | where TIMESTAMP <= now()
-
-      | where LogicalServerName =~ "{ServerName}"
-
-      | where logical_database_name =~ "{DatabaseName}"
-
-      | project TIMESTAMP, NodeName, AppName, LogicalServerName, logical_database_name, event, phase_number, phase_state_name, max_trans, tran_count, numtrans, command_count, schema_change_count, log_record_count
-      start_time, start_lsn, end_lsn, last_commit_lsn, tran_completed, articles_completed, xact_id, xact_seqno, repl_begin_lsn, repl_next_lsn
-
-      | order by TIMESTAMP asc
-
-      | limit 5000'
+      | summarize max(duration), max(latency), max(tran_count), max(empty_scan_count), min(TIMESTAMP), max(TIMESTAMP) by session_id'
 - id: MI-replication-45
   Topic: CDC-Transaction-log-growing-or-full
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-Transaction-log-growing-or-full.md
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-Transaction-log-growing-or-full.md
   Prompts:
-  - MI CDC-Transaction-log-growing-or-full
-  - Managed Instance CDC-Transaction-log-growing-or-full
+  - MonWiQdsExecStats by LogicalServerName, database_name
+  - MonWiQdsExecStats LogicalServerName database_name log_bytes_used ServerName
+  - Troubleshoot CDC capture issues
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1615,7 +1061,7 @@ MonDmIoVirtualFileStats
   - TableName: MonWiQdsExecStats
     ExecutedQuery: 'MonWiQdsExecStats
 
-      | where TIMESTAMP between (datetime(2023-09-11 18:00:00) .. datetime(2023-09-13 11:52:55))
+      | where TIMESTAMP between(ago(1d)..now())
 
       | where LogicalServerName =~ "{ServerName}"
 
@@ -1623,13 +1069,14 @@ MonDmIoVirtualFileStats
 
       | summarize sum(log_bytes_used), avg(log_bytes_used), max(max_log_bytes_used), max(max_logical_writes) by query_hash
 
-      | top 10 by sum_log_bytes_used  desc'
+      | top 10 by sum_log_bytes_used desc'
 - id: MI-replication-46
   Topic: CDC-Transaction-log-growing-or-full
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-Transaction-log-growing-or-full.md
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-Transaction-log-growing-or-full.md
   Prompts:
-  - MI CDC-Transaction-log-growing-or-full
-  - Managed Instance CDC-Transaction-log-growing-or-full
+  - MonWiQdsExecStats trend by LogicalServerName, database_name
+  - MonWiQdsExecStats LogicalServerName database_name query_hash ServerName
+  - Troubleshoot CDC capture issues
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1637,7 +1084,7 @@ MonDmIoVirtualFileStats
   - TableName: MonWiQdsExecStats
     ExecutedQuery: 'MonWiQdsExecStats
 
-      | where TIMESTAMP between (datetime(2023-09-01 00:00:00) .. now())
+      | where TIMESTAMP between(ago(1d)..now())
 
       | where LogicalServerName =~ "{ServerName}"
 
@@ -1648,23 +1095,46 @@ MonDmIoVirtualFileStats
       | summarize avg(log_bytes_used) by bin(TIMESTAMP, 15min)
 
       | render timechart'
+- id: MI-replication-47
+  Topic: CDC-Transaction-log-growing-or-full
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-Transaction-log-growing-or-full.md
+  Prompts:
+  - MonWiQdsExecStats trend by LogicalServerName, database_name
+  - MonWiQdsExecStats LogicalServerName database_name query_hash ServerName
+  - Troubleshoot CDC capture issues
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: 'MonWiQdsExecStats
+
+      | where TIMESTAMP between(ago(1d)..now())
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where database_name =~ "{DatabaseName}"
+
+      | where query_hash == ''query_hash''
+
+      | summarize sum(execution_count) by bin(TIMESTAMP, 15min)
+
+      | render timechart'
 - id: MI-replication-48
   Topic: CDC-Transaction-log-growing-or-full
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-Transaction-log-growing-or-full.md
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-Transaction-log-growing-or-full.md
   Prompts:
-  - MI CDC-Transaction-log-growing-or-full
-  - Managed Instance CDC-Transaction-log-growing-or-full
+  - MI CDC capture telemetry for cdc error
+  - MonCDCTraces LogicalServerName logical_database_name event error_number
+  - Troubleshoot CDC capture issues
   CustomizedParameters:
-  - DatabaseName
   - ServerName
-  - TimeRange
+  - DatabaseName
   KustoQueries:
   - TableName: MonCDCTraces
     ExecutedQuery: 'MonCDCTraces
 
-      | where TIMESTAMP >= ago({TimeRange})
-
-      | where TIMESTAMP <= now()
+      | where TIMESTAMP > ago(1d)
 
       | where LogicalServerName =~ "{ServerName}"
 
@@ -1675,19 +1145,19 @@ MonDmIoVirtualFileStats
       | project TIMESTAMP, session_id, error_number, error_severity, error_state, error_message, begin_lsn, start_lsn'
 - id: MI-replication-49
   Topic: CDC-Transaction-log-growing-or-full
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-Transaction-log-growing-or-full.md
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-Transaction-log-growing-or-full.md
   Prompts:
-  - MI CDC-Transaction-log-growing-or-full
-  - Managed Instance CDC-Transaction-log-growing-or-full
+  - MI CDC capture telemetry
+  - MonCDCTraces LogicalServerName logical_database_name event error_number
+  - Troubleshoot replication latency
   CustomizedParameters:
-  - DatabaseName
   - ServerName
-  - TimeRange
+  - DatabaseName
   KustoQueries:
   - TableName: MonCDCTraces
     ExecutedQuery: 'MonCDCTraces
 
-      | where TIMESTAMP >= ago({TimeRange}) and TIMESTAMP <= now()
+      | where TIMESTAMP > ago(1d)
 
       | where logical_database_name =~ "{DatabaseName}" and LogicalServerName =~ "{ServerName}"
 
@@ -1695,52 +1165,25 @@ MonDmIoVirtualFileStats
 
       | where session_id == 675332
 
-      | project originalEventTimestamp, NodeName, AppName, session_id, event, tran_count, latency, error_number, duration, change_table_id, retention, threshold, cleanup_error, change_table_delete_count
-      lsn_time_mapping_delete_count,low_water_mark
+      | project originalEventTimestamp, NodeName, AppName, session_id, event, tran_count, latency, error_number, duration, change_table_id, retention, threshold,
+      cleanup_error, change_table_delete_count, lsn_time_mapping_delete_count,low_water_mark
 
-      | union
-
-      ('
+      | union'
 - id: MI-replication-50
   Topic: CDC-Transaction-log-growing-or-full
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-Transaction-log-growing-or-full.md
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-Transaction-log-growing-or-full.md
   Prompts:
-  - MI CDC-Transaction-log-growing-or-full
-  - Managed Instance CDC-Transaction-log-growing-or-full
+  - MI log reader phase telemetry for repl logscan session / phase end
+  - MonLogReaderTraces LogicalServerName logical_database_name event phase_number
+  - Troubleshoot CDC capture issues
   CustomizedParameters:
-  - DatabaseName
   - ServerName
-  - TimeRange
+  - DatabaseName
   KustoQueries:
   - TableName: MonLogReaderTraces
     ExecutedQuery: 'MonLogReaderTraces
 
-      | where TIMESTAMP >= ago({TimeRange}) and TIMESTAMP <= now()
-
-      | where logical_database_name =~ "{DatabaseName}" and LogicalServerName =~ "{ServerName}"
-
-      | where session_id == 675332
-
-      | project todatetime(originalEventTimestamp), session_id, phase_number, phase_state_name, repldone_phase, repldone_phase_name, wait_stats
-
-      )'
-- id: MI-replication-51
-  Topic: CDC-Transaction-log-growing-or-full
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-Transaction-log-growing-or-full.md
-  Prompts:
-  - MI CDC-Transaction-log-growing-or-full
-  - Managed Instance CDC-Transaction-log-growing-or-full
-  CustomizedParameters:
-  - DatabaseName
-  - ServerName
-  - TimeRange
-  KustoQueries:
-  - TableName: MonLogReaderTraces
-    ExecutedQuery: 'MonLogReaderTraces
-
-      | where TIMESTAMP > ago({TimeRange})
-
-      | where TIMESTAMP < now()
+      | where TIMESTAMP > ago(1d)
 
       | where LogicalServerName =~ "{ServerName}"
 
@@ -1748,96 +1191,15 @@ MonDmIoVirtualFileStats
 
       | where event == "repl_logscan_session" and phase_number in (2, 7) and phase_state_name == "phase_end"
 
-      | project originalEventTimestamp, session_id, NodeName,phase_number, phase_state_name, max_trans, tran_count, log_record_count, start_lsn, end_lsn, start_time, command_count
-
-      vlfs = toint(strcat("0x", substring(end_lsn, 0, 8)))-toint(strcat("0x", substring(start_lsn, 0, 8)))
-
-      duration = todatetime(originalEventTimestamp)-todatetime(start_time), wait_stats
-
-      | order by originalEventTimestamp asc'
-- id: MI-replication-52
-  Topic: CDC-job-started-but-capture-job-has-no-details
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-job-started-but-capture-job-has-no-details.md
-  Prompts:
-  - MI CDC-job-started-but-capture-job-has-no-details
-  - Managed Instance CDC-job-started-but-capture-job-has-no-details
-  CustomizedParameters:
-  - DatabaseName
-  - ServerName
-  - TimeRange
-  KustoQueries:
-  - TableName: MonCDCTraces
-    ExecutedQuery: 'MonCDCTraces
-
-      | where TIMESTAMP >= ago({TimeRange}) and TIMESTAMP <= now()
-
-      | where event == "cdc_session"
-
-      | where LogicalServerName =~ "{ServerName}"
-
-      | where logical_database_name =~ "{DatabaseName}"
-
-      | extend mins = bin(TIMESTAMP, 5min)
-
-      | summarize empty_count = max(empty_scan_count), st = min(start_time), et = max(end_time) by mins, session_id, logical_database_name'
-- id: MI-replication-53
-  Topic: CDC-not-working-due-to-FOG-issues-after-maintenance
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CDC-not-working-due-to-FOG-issues-after-maintenance.md
-  Prompts:
-  - MI CDC-not-working-due-to-FOG-issues-after-maintenance
-  - Managed Instance CDC-not-working-due-to-FOG-issues-after-maintenance
-  CustomizedParameters:
-  - DatabaseName
-  - ServerName
-  - TimeRange
-  KustoQueries:
-  - TableName: MonCDCTraces
-    ExecutedQuery: 'MonCDCTraces
-
-      | where TIMESTAMP > ago({TimeRange})
-
-      | where LogicalServerName =~ "{ServerName}"
-
-      | where logical_database_name =~ "{DatabaseName}"
-
-      | where event == "cdc_session"
-
-      | summarize max(duration), max(latency), max(tran_count), max(empty_scan_count), min(TIMESTAMP), max(TIMESTAMP) by session_id'
-- id: MI-replication-54
-  Topic: CT-Kusto-Queries-for-troubleshooting
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CT-Kusto-Queries-for-troubleshooting.md
-  Prompts:
-  - MI CT-Kusto-Queries-for-troubleshooting
-  - Managed Instance CT-Kusto-Queries-for-troubleshooting
-  CustomizedParameters:
-  - ServerName
-  - DatabaseName
-  KustoQueries:
-  - TableName: MonCTTraces
-    ExecutedQuery: 'let db = "{DatabaseName}"; let endTime = now();
-let startTime = ago({TimeRange});
-MonCTTraces
-
-      | where originalEventTimestamp  >= startTime
-
-      | where originalEventTimestamp <= endTime
-
-      | where LogicalServerName =~ "{ServerName}"
-
-      | where logical_database_name in~ (db, "master")
-
-      | where logical_database_name in~ (db)
-
-      | project TIMESTAMP, NodeName, AppName, LogicalServerName, logical_database_name, database_id, event, object_id, status, cleanup_id, value, cleaned_upto_date, rows_deleted, cleanup_ts, current_ts
-      row_count, persist_new, bootpage_old_commit_ts, bootpage_new_commit_ts, commit_ts, message
-
-      | limit 1000'
-- id: MI-replication-55
+      | project originalEventTimestamp, session_id, NodeName,phase_number, phase_state_name, max_trans, tran_count, log_record_count, start_lsn, end_lsn, start_time,
+      command_count,'
+- id: MI-replication-51
   Topic: Changes-are-not-getting-reflected-in-the-CDC-table
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/Changes-are-not-getting-reflected-in-the-CDC-table.md
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/Changes-are-not-getting-reflected-in-the-CDC-table.md
   Prompts:
-  - MI Changes-are-not-getting-reflected-in-the-CDC-table
-  - Managed Instance Changes-are-not-getting-reflected-in-the-CDC-table
+  - MI CDC capture telemetry trend by LogicalServerName, logical_database_name
+  - MonCDCTraces LogicalServerName logical_database_name total_write_bytes ServerName
+  - Troubleshoot replication latency
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1845,33 +1207,23 @@ MonCTTraces
   - TableName: MonCDCTraces
     ExecutedQuery: 'MonCDCTraces
 
-      | where LogicalServerName =~ ""{ServerName}""
+      | where LogicalServerName =~ "{ServerName}"
 
-      | where logical_database_name =~ ""{DatabaseName}""
+      | where logical_database_name =~ "{DatabaseName}"
 
-      | where originalEventTimestamp > datetime(2022-08-19 5:46AM) - 1d
+      | where TIMESTAMP > ago(1d) - 1d
 
       | summarize cdc_latency = max(latency)//, max(duration), sum(log_record_count)
 
       by bin(originalEventTimestamp, 1h)
 
-      | join kind=fullouter ('
-- id: MI-replication-56
-  Topic: Changes-are-not-getting-reflected-in-the-CDC-table
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/Changes-are-not-getting-reflected-in-the-CDC-table.md
-  Prompts:
-  - MI Changes-are-not-getting-reflected-in-the-CDC-table
-  - Managed Instance Changes-are-not-getting-reflected-in-the-CDC-table
-  CustomizedParameters:
-  - ServerName
-  - DatabaseName
-  KustoQueries:
-  - TableName: MonSQLXStoreIOStats
-    ExecutedQuery: 'MonSQLXStoreIOStats
+      | join kind=fullouter (
 
-      | where originalEventTimestamp > datetime(2022-08-19 5:46AM) - 1d
+      MonSQLXStoreIOStats
 
-      | where file_path endswith ""{LogFileName}".ldf"
+      | where TIMESTAMP > ago(1d) - 1d
+
+      | where file_path endswith "<log_file_name>.ldf"
 
       | project originalEventTimestamp, total_write_bytes
 
@@ -1882,12 +1234,51 @@ MonCTTraces
       ) on originalEventTimestamp | project-away originalEventTimestamp1
 
       | render timechart'
-- id: MI-replication-57
-  Topic: Change-Event-Streaming-error-list
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Event-Streaming/Change-Event-Streaming-error-list.md
+- id: MI-replication-52
+  Topic: CT-Kusto-Queries-for-troubleshooting
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Data-Capture-and-Change-Tracking/CT-Kusto-Queries-for-troubleshooting.md
   Prompts:
-  - MI Change-Event-Streaming-error-list
-  - Managed Instance Change-Event-Streaming-error-list
+  - MI change tracking cleanup telemetry by LogicalServerName, logical_database_name
+  - MonCTTraces LogicalServerName logical_database_name event message
+  - Troubleshoot cleanup backlog
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCTTraces
+    ExecutedQuery: 'let startTime = ago(1d);
+
+      let endTime = now();
+
+      let srv = "servername";
+
+      let db = "databasename";
+
+      MonCTTraces
+
+      | where originalEventTimestamp >= startTime
+
+      | where originalEventTimestamp <= endTime
+
+      | where LogicalServerName =~ srv
+
+      | where logical_database_name in~ (db, "master")
+
+      | where logical_database_name in~ (db)
+
+      | project TIMESTAMP, NodeName, AppName, LogicalServerName, logical_database_name, database_id, event, object_id, status, cleanup_id, value, cleaned_upto_date,
+      rows_deleted, cleanup_ts, current_ts, row_count, persist_new, bootpage_old_commit_ts, bootpage_new_commit_ts, commit_ts, message
+
+      | limit 1000
+
+      Sample output:'
+- id: MI-replication-53
+  Topic: Change-Event-Streaming-error-list
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Event-Streaming/Change-Event-Streaming-error-list.md
+  Prompts:
+  - MonSynapseLinkTraces for synapse link error
+  - MonSynapseLinkTraces LogicalServerName logical_database_name event event_details
+  - Investigate Change Event Streaming error list
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1895,44 +1286,50 @@ MonCTTraces
   - TableName: MonSynapseLinkTraces
     ExecutedQuery: 'MonSynapseLinkTraces
 
-      | where  TIMESTAMP >= ago(2h)
+      | where TIMESTAMP >= ago(2h)
 
-      | where  event_details !startswith "SynapseLinkTimerTask : Synapse link is not enabled"
+      | where event_details !startswith "SynapseLinkTimerTask : Synapse link is not enabled"
 
-      |  where  event ==  "synapse_link_error"
+      | where event == "synapse_link_error"
 
-      | where  AppName =~ "{AppName}" 
-      | project  originalEventTimestamp, ClusterName, NodeName, AppName, LogicalServerName, logical_database_name, job_id, event, event_details, error, state_str, component, table_version, topic_id'
-- id: MI-replication-58
+      | where AppName =~ <AppName>
+
+      | project originalEventTimestamp, ClusterName, NodeName, AppName, LogicalServerName, logical_database_name, job_id, event, event_details, error, state_str,
+      component, table_version, topic_id'
+- id: MI-replication-54
   Topic: Change-Event-Streaming-error-list
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Event-Streaming/Change-Event-Streaming-error-list.md
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Event-Streaming/Change-Event-Streaming-error-list.md
   Prompts:
-  - MI Change-Event-Streaming-error-list
-  - Managed Instance Change-Event-Streaming-error-list
+  - MonSynapseLinkTraces for synapse link error / synapse link db enable
+  - MonSynapseLinkTraces LogicalServerName logical_database_name event event_details
+  - Investigate Change Event Streaming error list
   CustomizedParameters:
   - ServerName
   - DatabaseName
   KustoQueries:
   - TableName: MonSynapseLinkTraces
-    ExecutedQuery: 'let db = "{DatabaseName}"; MonSynapseLinkTraces
+    ExecutedQuery: 'MonSynapseLinkTraces
 
       | where TIMESTAMP > now(-4h)
 
-      | where LogicalServerName =~ ""{ServerName}""
+      | where LogicalServerName =~ ""
 
-      | where logical_database_name =~ ""{DatabaseName}""
+      | where logical_database_name =~ ""
 
-      | where event in ("synapse_link_error", "synapse_link_db_enable") or (event_details contains "WorkCompleted for partition" and event_details contains "SOS_RESULT  0") or (event_details contains "sp_synapse_link_scan
-      complete") or (event_details contains ''SYNAPSE_CHANGE_TABLE_ACTIVE'' and event_details contains "UpdateTableStatus ")
+      | where event in ("synapse_link_error", "synapse_link_db_enable") or (event_details contains "WorkCompleted for partition" and event_details contains "SOS_RESULT
+      0") or (event_details contains "sp_synapse_link_scan complete") or (event_details contains ''SYNAPSE_CHANGE_TABLE_ACTIVE'' and event_details contains "UpdateTableStatus
+      ")
 
-      | summarize MaxErrorTimeStamp = maxif(originalEventTimestamp, event == ''synapse_link_error''), MaxSuccessfulCaptureTimeStamp = maxif(originalEventTimestamp, event_details contains "sp_synapse_link_scan
-      complete"), MaxSuccessfulPublishTimeStamp = maxif(originalEventTimestamp, (event_details contains "WorkCompleted for partition" and event_details contains "SOS_RESULT  0"))'
-- id: MI-replication-59
+      | summarize MaxErrorTimeStamp = maxif(originalEventTimestamp, event == ''synapse_link_error''), MaxSuccessfulCaptureTimeStamp = maxif(originalEventTimestamp,
+      event_details contains "sp_synapse_link_scan complete"), MaxSuccessfulPublishTimeStamp = maxif(originalEventTimestamp, (event_details contains "WorkCompleted
+      for partition" and event_details contains "SOS_RESULT 0"))'
+- id: MI-replication-55
   Topic: Checking-Synapse-Link-scans
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Event-Streaming/Checking-Synapse-Link-scans.md
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Event-Streaming/Checking-Synapse-Link-scans.md
   Prompts:
-  - MI Checking-Synapse-Link-scans
-  - Managed Instance Checking-Synapse-Link-scans
+  - MonSynapseLinkTraces by LogicalServerName, logical_database_name
+  - MonSynapseLinkTraces LogicalServerName logical_database_name event event_details
+  - Investigate Checking Synapse Link scans
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1940,19 +1337,21 @@ MonCTTraces
   - TableName: MonSynapseLinkTraces
     ExecutedQuery: 'MonSynapseLinkTraces
 
-      |  where  TIMESTAMP >= ago(2h)
+      | where TIMESTAMP >= ago(2h)
 
-      |  where  event_details contains "CAPTURE_AND_PUBLISH ( READY_FOR_ENQUEUE )"
+      | where event_details contains "CAPTURE_AND_PUBLISH ( READY_FOR_ENQUEUE )"
 
-      | where AppName contains ""{AppName}""
+      | where AppName contains "<AppName>"
 
-      |  project  originalEventTimestamp, AppName, LogicalServerName, logical_database_name, job_id, event, event_details, component, table_version, topic_id  | take 10'
-- id: MI-replication-60
+      | project originalEventTimestamp, AppName, LogicalServerName, logical_database_name, job_id, event, event_details, component, table_version, topic_id | take
+      10'
+- id: MI-replication-56
   Topic: Checking-Synapse-Link-scans
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Event-Streaming/Checking-Synapse-Link-scans.md
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Event-Streaming/Checking-Synapse-Link-scans.md
   Prompts:
-  - MI Checking-Synapse-Link-scans
-  - Managed Instance Checking-Synapse-Link-scans
+  - MI log reader phase telemetry by logical_database_name, tran_count
+  - MonLogReaderTraces logical_database_name tran_count
+  - Investigate Checking Synapse Link scans
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1962,17 +1361,18 @@ MonCTTraces
 
       | where TIMESTAMP >= ago(1d)
 
-      | where logical_database_name startswith ""{DatabaseName}""
+      | where logical_database_name startswith "<logical_database_name>"
 
       | where tran_count > 0
 
       | order by originalEventTimestamp asc'
-- id: MI-replication-61
+- id: MI-replication-57
   Topic: Checking-Synapse-Link-scans
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Event-Streaming/Checking-Synapse-Link-scans.md
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Event-Streaming/Checking-Synapse-Link-scans.md
   Prompts:
-  - MI Checking-Synapse-Link-scans
-  - Managed Instance Checking-Synapse-Link-scans
+  - MonSynapseLinkTraces by LogicalServerName, logical_database_name
+  - MonSynapseLinkTraces LogicalServerName logical_database_name event event_details
+  - Investigate Checking Synapse Link scans
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -1980,15 +1380,81 @@ MonCTTraces
   - TableName: MonSynapseLinkTraces
     ExecutedQuery: 'MonSynapseLinkTraces
 
-      |  where  TIMESTAMP >= ago(1d)
+      | where TIMESTAMP >= ago(1d)
 
-      |  where  event_details startswith "LandingZone::FinalizeChangeBatch'
-- id: MI-replication-62
-  Topic: Error-8510-Enlist-operation-failed
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Distributed-Transactions/Error-8510-Enlist-operation-failed.md
+      | where event_details startswith "SynapseLinkCaptureWorkItem : sp_synapse_link_scan complete with result SeqNo"
+
+      | where AppName contains "<AppName>"
+
+      | project originalEventTimestamp, AppName, LogicalServerName, logical_database_name, job_id, event, event_details, component, table_version, topic_id'
+- id: MI-replication-58
+  Topic: Checking-Synapse-Link-scans
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Event-Streaming/Checking-Synapse-Link-scans.md
   Prompts:
-  - MI Error-8510-Enlist-operation-failed
-  - Managed Instance Error-8510-Enlist-operation-failed
+  - MonSynapseLinkTraces by LogicalServerName, logical_database_name
+  - MonSynapseLinkTraces LogicalServerName logical_database_name event event_details
+  - Investigate Checking Synapse Link scans
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSynapseLinkTraces
+    ExecutedQuery: 'MonSynapseLinkTraces
+
+      | where TIMESTAMP >= ago(1d)
+
+      | where event_details contains "PENDING_FOR_COMMIT"
+
+      | where AppName contains "<AppName>"
+
+      | project originalEventTimestamp, AppName, LogicalServerName, logical_database_name, job_id, event, event_details, component, table_version, topic_id
+
+      | order by originalEventTimestamp desc'
+- id: MI-replication-59
+  Topic: Checking-Synapse-Link-scans
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Event-Streaming/Checking-Synapse-Link-scans.md
+  Prompts:
+  - MonSynapseLinkTraces by event_details, LandingZone
+  - MonSynapseLinkTraces event_details LandingZone FinalizeChangeBatch
+  - Investigate Checking Synapse Link scans
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSynapseLinkTraces
+    ExecutedQuery: 'MonSynapseLinkTraces
+
+      | where TIMESTAMP >= ago(1d)
+
+      | where event_details startswith "LandingZone::FinalizeChangeBatch'
+- id: MI-replication-60
+  Topic: Checking-Synapse-Link-scans
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Change-Event-Streaming/Checking-Synapse-Link-scans.md
+  Prompts:
+  - MonSynapseLinkTraces by LogicalServerName, logical_database_name
+  - MonSynapseLinkTraces LogicalServerName logical_database_name event event_details
+  - Investigate Checking Synapse Link scans
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSynapseLinkTraces
+    ExecutedQuery: 'MonSynapseLinkTraces
+
+      | where TIMESTAMP > ago(1d)
+
+      | where event_details startswith "SynapseLinkDatabase: Performance timing on database"
+
+      | where AppName =~ <AppName>
+
+      | project originalEventTimestamp, AppName,LogicalServerName, logical_database_name, job_id, event, event_details,component, table_version, topic_id'
+- id: MI-replication-61
+  Topic: Error-8510-Enlist-operation-failed
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Distributed-Transactions/Error-8510-Enlist-operation-failed.md
+  Prompts:
+  - MonGlobalTransactions for dtc transaction
+  - MonGlobalTransactions LogicalServerName event message transaction_id
+  - Investigate Error 8510 Enlist operation failed
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2010,19 +1476,9 @@ MonCTTraces
 
       | summarize cnt() by transaction_id, SourceNodeName, SourceAppName
 
-      | join ('
-- id: MI-replication-63
-  Topic: Error-8510-Enlist-operation-failed
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Distributed-Transactions/Error-8510-Enlist-operation-failed.md
-  Prompts:
-  - MI Error-8510-Enlist-operation-failed
-  - Managed Instance Error-8510-Enlist-operation-failed
-  CustomizedParameters:
-  - ServerName
-  - DatabaseName
-  KustoQueries:
-  - TableName: MonGlobalTransactions
-    ExecutedQuery: 'MonGlobalTransactions
+      | join (
+
+      MonGlobalTransactions
 
       | where LogicalServerName =~ "{ServerName}"
 
@@ -2038,15 +1494,16 @@ MonCTTraces
 
       | extend transaction_id = unit_of_work_id
 
-      | summarize cnt() by transaction_id  , TargetNodeName , TargetAppName
+      | summarize cnt() by transaction_id , TargetNodeName , TargetAppName
 
       ) on transaction_id'
-- id: MI-replication-64
+- id: MI-replication-62
   Topic: Error-8510-Enlist-operation-failed
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Distributed-Transactions/Error-8510-Enlist-operation-failed.md
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Distributed-Transactions/Error-8510-Enlist-operation-failed.md
   Prompts:
-  - MI Error-8510-Enlist-operation-failed
-  - Managed Instance Error-8510-Enlist-operation-failed
+  - MonGlobalTransactions by LogicalServerName, message
+  - MonGlobalTransactions LogicalServerName message ServerName InitForEnlist
+  - Investigate Error 8510 Enlist operation failed
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2054,17 +1511,18 @@ MonCTTraces
   - TableName: MonGlobalTransactions
     ExecutedQuery: 'MonGlobalTransactions
 
-      | where LogicalServerName == ""{ServerName}""
+      | where LogicalServerName =~ "{ServerName}"
 
       | where message contains "InitForEnlist failed"
 
       | summarize cnt() by NodeName, AppName'
-- id: MI-replication-65
+- id: MI-replication-63
   Topic: Error-8510-Enlist-operation-failed
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Distributed-Transactions/Error-8510-Enlist-operation-failed.md
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Distributed-Transactions/Error-8510-Enlist-operation-failed.md
   Prompts:
-  - MI Error-8510-Enlist-operation-failed
-  - Managed Instance Error-8510-Enlist-operation-failed
+  - MonGlobalTransactions by LogicalServerName, message
+  - MonGlobalTransactions LogicalServerName message ServerName InitForEnlist
+  - Investigate Error 8510 Enlist operation failed
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2072,58 +1530,41 @@ MonCTTraces
   - TableName: MonGlobalTransactions
     ExecutedQuery: 'MonGlobalTransactions
 
-      | where LogicalServerName == ""{ServerName}""
+      | where LogicalServerName =~ "{ServerName}"
 
       | where message contains "InitForEnlist failed"'
-- id: MI-replication-66
-  Topic: General-MSDTC-settings-investigation
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Distributed-Transactions/General-MSDTC-settings-investigation.md
+- id: MI-replication-64
+  Topic: Failed-to-start-XA-transaction
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Distributed-Transactions/Failed-to-start-XA-transaction.md
   Prompts:
-  - MI General-MSDTC-settings-investigation
-  - Managed Instance General-MSDTC-settings-investigation
+  - MI management operations telemetry by let, startTime
+  - MonManagementOperations let startTime endTime serverName
+  - Investigate Failed to start XA transaction
   CustomizedParameters:
   - ServerName
   - DatabaseName
   KustoQueries:
   - TableName: MonManagementOperations
-    ExecutedQuery: 'let serverName = "{ServerName}"; let endTime = now();
-let startTime = ago({TimeRange});
-MonManagementOperations
+    ExecutedQuery: 'let startTime = ago(20d);
+
+      let endTime = now();
+
+      let serverName = ''{ServerName}'';
+
+      MonManagementOperations
 
       | where originalEventTimestamp >= startTime and originalEventTimestamp <= endTime
 
       | where operation_parameters has serverName
 
-      | where operation_parameters has "Dtcenabled"
-
-      // | where operation_type == ''UpdateManagedServerDTC''
-
-      | extend result = parse_xml(operation_parameters).InputParameters.Settings
-
-      | extend DtcEnabled = parse_xml(operation_parameters).InputParameters.Settings.DtcEnabled
-
-      | extend Authentication = parse_xml(operation_parameters).InputParameters.Settings.Authentication
-
-      | extend InboundEnabled = parse_xml(operation_parameters).InputParameters.Settings.AllowInboundEnabled
-
-      | extend OutboundEnabled = parse_xml(operation_parameters).InputParameters.Settings.AllowOutboundEnabled
-
-      | extend RemoteClientAccessEnabled = parse_xml(operation_parameters).InputParameters.Settings.RemoteClientAccessEnabled
-
-      | extend RemoteAdministrationAccessEnabled = parse_xml(operation_parameters).InputParameters.Settings.RemoteAdministrationAccessEnabled
-
-      | extend XaTransactionsEnabled = parse_xml(operation_parameters).InputParameters.Settings.XaTransactionsEnabled
-
-      | extend LuTransactionsEnabled = parse_xml(operation_parameters).InputParameters.Settings.SnaLu6point2TransactionsEnabled
-
-      | project TIMESTAMP, operation_type , PreciseTimeStamp , event, request_id, DtcEnabled, Authentication, InboundEnabled, OutboundEnabled, RemoteClientAccessEnabled, RemoteAdministrationAccessEnabled,
-      XaTransactionsEnabled, LuTransactionsEnabled , message, error_code, operation_parameters, error_message, operation_result'
-- id: MI-replication-67
+      | where operation_parameters has "Dtcenabled"'
+- id: MI-replication-65
   Topic: Manually-resolve-in-doubt-elastic-transactions
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Distributed-Transactions/Manually-resolve-in-doubt-elastic-transactions.md
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Distributed-Transactions/Manually-resolve-in-doubt-elastic-transactions.md
   Prompts:
-  - MI Manually-resolve-in-doubt-elastic-transactions
-  - Managed Instance Manually-resolve-in-doubt-elastic-transactions
+  - MI SQL system health telemetry by message, SQL
+  - MonSQLSystemHealth message SQL Server DB
+  - Investigate Manually resolve in doubt elastic transactions
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2133,15 +1574,14 @@ MonManagementOperations
 
       | where message contains "SQL Server DB needs to upgrade and detected a GT in-doubt transaction with UOW"
 
-      | where TIMESTAMP > ago(30m)
-
-      It is continuous loop, so 30 minute should tell us any ongoing recovery transactions.'
-- id: MI-replication-68
-  Topic: Create-External-Table-As-Select-(CETAS)
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Polybase/Create-External-Table-As-Select-(CETAS).md
+      | where TIMESTAMP > ago(30m)'
+- id: MI-replication-66
+  Topic: '[Onepager]-Create-External-Table-As-Select-(CETAS)'
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Polybase/[Onepager]-Create-External-Table-As-Select-(CETAS).md
   Prompts:
-  - MI Create-External-Table-As-Select-(CETAS)
-  - Managed Instance Create-External-Table-As-Select-(CETAS)
+  - MI SQL error alert telemetry
+  - AlrSQLErrorsReported LogicalServerName database_name error_number StartDateTime
+  - Investigate [Onepager] Create External Table As Select (CETAS)
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2151,17 +1591,76 @@ MonManagementOperations
 
       | where PreciseTimeStamp between ({StartDateTime}..{EndDateTime})
 
-      | where AppTypeName startswith ''Worker.CL'' and LogicalServerName == ''{MIName}'' //Input customer MI server name
+      | where AppTypeName startswith ''Worker.CL'' and LogicalServerName =~ ''{ServerName}''
 
-      | where error_number in (15842, 16549, 46504, 46505, 15883, 15856, 15886, 16576, 16577, 16578, 16579, 11569, 11570, 11571, 46552) //specify exact error_number, instead of this range
+      | where error_number in (15842, 16549, 46504, 46505, 15883, 15856, 15886, 16576, 16577, 16578, 16579, 11569, 11570, 11571, 46552)
+
+      | project PreciseTimeStamp, LogicalServerName, error_number, database_name'
+- id: MI-replication-67
+  Topic: '[OnePager]-Msg-4860-%2D-The-file-does-not-exist-or-you-don''t-have-file-access-rights'
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Polybase/[OnePager]-Msg-4860-%2D-The-file-does-not-exist-or-you-don't-have-file-access-rights.md
+  Prompts:
+  - MI SQL error alert telemetry counts
+  - AlrSQLErrorsReported LogicalServerName error_number ServerName state
+  - Investigate [OnePager] Msg 4860 %2D The file does not exist or you don't have file access rights
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: AlrSQLErrorsReported
+    ExecutedQuery: 'AlrSQLErrorsReported
+
+      | where TIMESTAMP > ago(3h) and LogicalServerName =~ ''{ServerName}''
+
+      | summarize count() by NodeName, error_number, state
+
+      | where error_number in (4860, 13822, 16561, 16562)'
+- id: MI-replication-68
+  Topic: CETA-Kusto-query
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Polybase/Create-External-Table-As-Select-(CETAS)/CETA-Kusto-query.md
+  Prompts:
+  - MI SQL error alert telemetry
+  - AlrSQLErrorsReported LogicalServerName error_number Worker CL
+  - Investigate CETA Kusto query
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: AlrSQLErrorsReported
+    ExecutedQuery: 'AlrSQLErrorsReported
+
+      | where AppTypeName == "Worker.CL" and LogicalServerName == "<logical server name>
+
+      | where error_number in'
+- id: MI-replication-69
+  Topic: Create-External-Table-As-Select-(CETAS)
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Polybase/Create-External-Table-As-Select-(CETAS).md
+  Prompts:
+  - MI SQL error alert telemetry
+  - AlrSQLErrorsReported LogicalServerName database_name error_number StartDateTime
+  - Investigate Create External Table As Select (CETAS)
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: AlrSQLErrorsReported
+    ExecutedQuery: 'AlrSQLErrorsReported
+
+      | where PreciseTimeStamp between ({StartDateTime}..{EndDateTime})
+
+      | where AppTypeName startswith ''Worker.CL'' and LogicalServerName =~ ''{ServerName}'' //Input customer MI server name
+
+      | where error_number in (15842, 16549, 46504, 46505, 15883, 15856, 15886, 16576, 16577, 16578, 16579, 11569, 11570, 11571, 46552) //specify exact error_number,
+      instead of this range
 
       | project PreciseTimeStamp, ClusterName, AppTypeName, AppName, LogicalServerName, error_number, severity, state, database_id, database_name'
-- id: MI-replication-69
+- id: MI-replication-70
   Topic: Identifying-external-queries-for-Query-Store-analysis
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Polybase/Identifying-external-queries-for-Query-Store-analysis.md
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Polybase/Identifying-external-queries-for-Query-Store-analysis.md
   Prompts:
-  - MI Identifying-external-queries-for-Query-Store-analysis
-  - Managed Instance Identifying-external-queries-for-Query-Store-analysis
+  - MonWiQueryParamData by LogicalServerName, logical_database_name
+  - MonWiQueryParamData LogicalServerName logical_database_name ServerName has_external_extraction
+  - Investigate Identifying external queries for Query Store analysis
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2169,17 +1668,18 @@ MonManagementOperations
   - TableName: MonWiQueryParamData
     ExecutedQuery: 'MonWiQueryParamData
 
-      | where TIMESTAMP > ago(3h) and LogicalServerName == ""{ServerName}""
+      | where TIMESTAMP > ago(3h) and LogicalServerName =~ "{ServerName}"
 
       | where has_external_extraction==1
 
       | project NodeName, TIMESTAMP, query_hash, query_plan_hash, statement_sql_hash, compile_cpu_time, compile_duration, database_id, logical_database_name'
-- id: MI-replication-70
+- id: MI-replication-71
   Topic: Msg-13822-%2D-File-cannot-be-opened-because-it-does-not-exist-or-it-is-used-by-another-process
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Polybase/Msg-13822-%2D-File-cannot-be-opened-because-it-does-not-exist-or-it-is-used-by-another-process.md
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Polybase/Msg-13822-%2D-File-cannot-be-opened-because-it-does-not-exist-or-it-is-used-by-another-process.md
   Prompts:
-  - MI MI Msg 13822   File cannot be opened because it does not exist or it is used by another process
-  - Managed Instance Msg-13822---File-cannot-be-opened-because-it-does-not-exist-or-it-is-used-by-another-process
+  - MI SQL error alert telemetry counts
+  - AlrSQLErrorsReported LogicalServerName error_number ServerName state
+  - Investigate Msg 13822 %2D File cannot be opened because it does not exist or it is used by another process
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2187,36 +1687,18 @@ MonManagementOperations
   - TableName: AlrSQLErrorsReported
     ExecutedQuery: 'AlrSQLErrorsReported
 
-      | where TIMESTAMP > ago(3h) and LogicalServerName == ""{ServerName}""
+      | where TIMESTAMP > ago(3h) and LogicalServerName =~ "{ServerName}"
 
       | summarize count() by NodeName, error_number, state
 
       | where error_number in (4860, 13822, 16561, 16562)'
 - id: MI-replication-72
-  Topic: CETA-Kusto-query
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Polybase/Create-External-Table-As-Select-(CETAS)/CETA-Kusto-query.md
-  Prompts:
-  - MI CETA-Kusto-query
-  - Managed Instance CETA-Kusto-query
-  CustomizedParameters:
-  - ServerName
-  - DatabaseName
-  KustoQueries:
-  - TableName: AlrSQLErrorsReported
-    ExecutedQuery: 'AlrSQLErrorsReported
-
-      | where AppTypeName == "Worker.CL" and LogicalServerName == ""{ServerName}" 
-      | where error_number in
-
-      (15842, 16549, 46504, 46505, 15883, 15856, 15886, 16576, 16577, 16578, 16579, 11569, 11570,11571, 46552)
-
-      | project PreciseTimeStamp, ClusterName, AppName, LogicalServerName, error_number, severity, state, database_id, database_name'
-- id: MI-replication-73
   Topic: Finding-errors-on-Fabric-mirrored-databases
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Reference/Finding-errors-on-Fabric-mirrored-databases.md
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Reference/Finding-errors-on-Fabric-mirrored-databases.md
   Prompts:
-  - MI Finding-errors-on-Fabric-mirrored-databases
-  - Managed Instance Finding-errors-on-Fabric-mirrored-databases
+  - MonSynapseLinkTraces for synapse link error
+  - MonSynapseLinkTraces LogicalServerName logical_database_name event change
+  - Investigate Finding errors on Fabric mirrored databases
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2224,21 +1706,23 @@ MonManagementOperations
   - TableName: MonSynapseLinkTraces
     ExecutedQuery: 'MonSynapseLinkTraces
 
-      |  where  TIMESTAMP >= ago(8d) // change as appropriate
+      | where TIMESTAMP >= ago(8d) // change as appropriate
 
-      |  where  event_details !startswith "SynapseLinkTimerTask : Synapse link is not enabled"
+      | where event_details !startswith "SynapseLinkTimerTask : Synapse link is not enabled"
 
-      |  where  event ==  "synapse_link_error"
+      | where event == "synapse_link_error"
 
-      | where  AppName =~ ""{AppName}"" and logical_database_name =~ ""{DatabaseName}"" // change as appropriate
+      | where AppName =~ "" and logical_database_name =~ "{DatabaseName}" // change as appropriate
 
-      |  project  originalEventTimestamp, ClusterName, NodeName, AppName, LogicalServerName, logical_database_name, job_id, event, event_details, error, state_str, component, table_version, topic_id'
-- id: MI-replication-74
+      | project originalEventTimestamp, ClusterName, NodeName, AppName, LogicalServerName, logical_database_name, job_id, event, event_details, error, state_str,
+      component, table_version, topic_id'
+- id: MI-replication-73
   Topic: Finding-errors-on-Fabric-mirrored-databases
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Reference/Finding-errors-on-Fabric-mirrored-databases.md
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Reference/Finding-errors-on-Fabric-mirrored-databases.md
   Prompts:
-  - MI Finding-errors-on-Fabric-mirrored-databases
-  - Managed Instance Finding-errors-on-Fabric-mirrored-databases
+  - MonSQLXStore by LogicalServerName, change
+  - MonSQLXStore LogicalServerName change as appropriate
+  - Investigate Finding errors on Fabric mirrored databases
   CustomizedParameters:
   - ServerName
   - DatabaseName
@@ -2246,27 +1730,21 @@ MonManagementOperations
   - TableName: MonSQLXStore
     ExecutedQuery: 'MonSQLXStore
 
-      | where LogicalServerName =~ "{ServerName}" // change as appropriate
+      | where LogicalServerName =~ ''{ServerName}'' // change as appropriate
 
-      | where originalEventTimestamp >=  ago(8d) // change as appropriate
+      | where originalEventTimestamp >= ago(8d) // change as appropriate
 
-      | where AppName  == ""{AppName}"" // change as appropriate
-
-      //| where http_errorcode == long(401)
-
-      | project originalEventTimestamp, event, mapped_errorcode, errorcode,http_errorcode, blob_size,request_type, retry_count, retry_reason,file_path, lease_action, error_response
-
-      |order by originalEventTimestamp desc'
-- id: MI-replication-75
+      | where AppName == "" // change as appropriate'
+- id: MI-replication-74
   Topic: Finding-errors-on-Fabric-mirrored-databases
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Reference/Finding-errors-on-Fabric-mirrored-databases.md
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Reference/Finding-errors-on-Fabric-mirrored-databases.md
   Prompts:
-  - MI Finding-errors-on-Fabric-mirrored-databases
-  - Managed Instance Finding-errors-on-Fabric-mirrored-databases
+  - MonSynapseLinkTraces by LogicalServerName, logical_database_name
+  - MonSynapseLinkTraces LogicalServerName logical_database_name change as
+  - Investigate Finding errors on Fabric mirrored databases
   CustomizedParameters:
-  - AppName
-  - DatabaseName
   - ServerName
+  - DatabaseName
   KustoQueries:
   - TableName: MonSynapseLinkTraces
     ExecutedQuery: 'MonSynapseLinkTraces
@@ -2275,293 +1753,214 @@ MonManagementOperations
 
       | where LogicalServerName =~ "{ServerName}"
 
-      | where logical_database_name =~ "{DatabaseName}"
-
-      //| where AppName == "{AppName}"
-
-      | where error == 22736
-
-      | join kind=inner
-
-      ('
-- id: MI-replication-76
+      | where logical_database_name =~ "{DatabaseName}"'
+- id: MI-replication-75
   Topic: Finding-errors-on-Fabric-mirrored-databases
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Reference/Finding-errors-on-Fabric-mirrored-databases.md
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Reference/Finding-errors-on-Fabric-mirrored-databases.md
   Prompts:
-  - MI Finding-errors-on-Fabric-mirrored-databases
-  - Managed Instance Finding-errors-on-Fabric-mirrored-databases
+  - MonSynapseLinkTraces by event_details, startTime
+  - MonSynapseLinkTraces event_details startTime endTime sp_change_feed_enable_db
+  - Investigate Finding errors on Fabric mirrored databases
   CustomizedParameters:
   - ServerName
   - DatabaseName
   KustoQueries:
   - TableName: MonSynapseLinkTraces
-    ExecutedQuery: 'let endTime = now();
-let startTime = ago({TimeRange});
-MonSynapseLinkTraces
+    ExecutedQuery: 'MonSynapseLinkTraces
 
       | where TIMESTAMP > {startTime} and TIMESTAMP < {endTime} and AppName == "{appName}"
 
       | project TIMESTAMP, event_details| where event_details has "sp_change_feed_enable_db" or event_details has "sp_synapse_link_enable_db_internal"'
-- id: MI-replication-77
-  Topic: Distribution-cleanup-Deadlocks-with-replication-agents
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Transactional-Replication/Distribution-cleanup-Deadlocks-with-replication-agents.md
+- id: MI-replication-76
+  Topic: Finding-errors-on-Fabric-mirrored-databases
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Reference/Finding-errors-on-Fabric-mirrored-databases.md
   Prompts:
-  - MI Distribution-cleanup-Deadlocks-with-replication-agents
-  - Managed Instance Distribution-cleanup-Deadlocks-with-replication-agents
+  - MonSynapseLinkTraces by event_details, startTime
+  - MonSynapseLinkTraces event_details startTime endTime sp_change_feed_enable_table
+  - Investigate Finding errors on Fabric mirrored databases
   CustomizedParameters:
-  - AppName
-  - DatabaseName
   - ServerName
-  - TimeRange
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSynapseLinkTraces
+    ExecutedQuery: 'MonSynapseLinkTraces
+
+      | where TIMESTAMP > {startTime} and TIMESTAMP < {endTime} and AppName == "{appName}"
+
+      | project TIMESTAMP, event_details| where event_details has "sp_change_feed_enable_table" or event_details has "sp_synapse_link_enable_table_internal"'
+- id: MI-replication-77
+  Topic: Finding-errors-on-Fabric-mirrored-databases
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Reference/Finding-errors-on-Fabric-mirrored-databases.md
+  Prompts:
+  - MonSynapseLinkTraces by event_details, startTime
+  - MonSynapseLinkTraces event_details startTime endTime xp_one_lake_client_control
+  - Investigate Finding errors on Fabric mirrored databases
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSynapseLinkTraces
+    ExecutedQuery: 'MonSynapseLinkTraces
+
+      | where TIMESTAMP > {startTime} and TIMESTAMP < {endTime} and AppName == "{appName}"
+
+      | project TIMESTAMP, event_details| where event_details has "xp_one_lake_client_control"'
+- id: MI-replication-78
+  Topic: Finding-errors-on-Fabric-mirrored-databases
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Reference/Finding-errors-on-Fabric-mirrored-databases.md
+  Prompts:
+  - MonSynapseLinkTraces by event_details, startTime
+  - MonSynapseLinkTraces event_details startTime endTime UpdatedTableSnapshot
+  - Investigate Finding errors on Fabric mirrored databases
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSynapseLinkTraces
+    ExecutedQuery: 'MonSynapseLinkTraces
+
+      | where TIMESTAMP > {startTime} and TIMESTAMP < {endTime} and AppName == "{appName}"
+
+      | project TIMESTAMP, event_details| where event_details has "UpdatedTableSnapshot" or event_details has "SynapseLinkSnapshotWorkItem"'
+- id: MI-replication-79
+  Topic: Finding-errors-on-Fabric-mirrored-databases
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Reference/Finding-errors-on-Fabric-mirrored-databases.md
+  Prompts:
+  - MonSynapseLinkTraces by event_details, startTime
+  - MonSynapseLinkTraces event_details startTime endTime SYNAPSE_CHANGE_TABLE_ACTIVE
+  - Investigate Finding errors on Fabric mirrored databases
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSynapseLinkTraces
+    ExecutedQuery: 'MonSynapseLinkTraces
+
+      | where TIMESTAMP > {startTime} and TIMESTAMP < {endTime} and AppName == "{appName}"
+
+      | project TIMESTAMP, event_details| where event_details has "SYNAPSE_CHANGE_TABLE_ACTIVE" or event_details has "ExportSnapshotOnTable"'
+- id: MI-replication-80
+  Topic: Finding-errors-on-Fabric-mirrored-databases
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Reference/Finding-errors-on-Fabric-mirrored-databases.md
+  Prompts:
+  - MonSynapseLinkTraces by event_details, startTime
+  - MonSynapseLinkTraces event_details startTime endTime CommitEntry
+  - Investigate Finding errors on Fabric mirrored databases
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSynapseLinkTraces
+    ExecutedQuery: 'MonSynapseLinkTraces
+
+      | where TIMESTAMP > {startTime} and TIMESTAMP < {endTime} and AppName == "{appName}"
+
+      | project TIMESTAMP, event_details| where event_details has "CommitEntry"'
+- id: MI-replication-81
+  Topic: Finding-errors-on-Fabric-mirrored-databases
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Reference/Finding-errors-on-Fabric-mirrored-databases.md
+  Prompts:
+  - MonSynapseLinkTraces by event_details, startTime
+  - MonSynapseLinkTraces event_details startTime endTime SynapseLinkDatabase
+  - Investigate Finding errors on Fabric mirrored databases
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSynapseLinkTraces
+    ExecutedQuery: 'MonSynapseLinkTraces
+
+      | where TIMESTAMP > {startTime} and TIMESTAMP < {endTime} and AppName == "{appName}"
+
+      | project TIMESTAMP, event_details| where event_details has "SynapseLinkDatabase"
+
+      | where event_details !has "READY_FOR_ENQUEUE" and event_details !has "Finalizing change batch"
+
+      | where event_details !has "Performance timing" and event_details !has "sp_change_feed_enable_tables_after_reseed"'
+- id: MI-replication-82
+  Topic: '[OnePager]-Distribution-cleanup-Deadlocks-with-replication-agents'
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Transactional-Replication/[OnePager]-Distribution-cleanup-Deadlocks-with-replication-agents.md
+  Prompts:
+  - MonDeadlockReportsFiltered for xml deadlock report filtered
+  - MonDeadlockReportsFiltered LogicalServerName event ServerName xml_deadlock_report_filtered
+  - Troubleshoot cleanup backlog
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
   KustoQueries:
   - TableName: MonDeadlockReportsFiltered
     ExecutedQuery: 'MonDeadlockReportsFiltered
 
-      | where originalEventTimestamp >= ago({TimeRange})
+      | where TIMESTAMP between(ago(1d)..now())
 
-      | where originalEventTimestamp <= now()
-
-      | where LogicalServerName =~ "{ServerName}" //and database_name =~ "{DatabaseName}"
-
-      //| where AppName =~  "{AppName}"
+      | where LogicalServerName =~ ''{ServerName}''
 
       | where event =~ ''xml_deadlock_report_filtered''
 
-      | extend Complete_Deadlock_Graph = trim_end(@''[ \t\r\n]+'', xml_report_filtered) endswith ''</deadlock>''
-
-      | order by Complete_Deadlock_Graph nulls last, originalEventTimestamp nulls last
-
-      | extend Complete_Deadlock_Graph = iff(Complete_Deadlock_Graph == 1, ''true'', ''false'')
-
-      | project originalEventTimestamp, xml_report_filtered, NodeName, Complete_Deadlock_Graph
-
-      | extend query_hashes = extract_all(@''queryhash=\x22([^\s]+)\x22'', xml_report_filtered)
-
-      | extend query_plan_hashes = extract_all(@''queryplanhash=\x22([^\s]+)\x22'', xml_report_filtered)
-
-      // Remove 0x0 hashes and empty sets.
-
-      // 0x0 hashes represent frames that don''t have a query or execution plan, e.g. exec proc frames inside triggers.
-
-      //
-
-      | extend query_hashes = set_difference(query_hashes, dynamic([''0x0000000000000000'']))
-
-      | extend query_plan_hashes = set_difference(query_plan_hashes, dynamic([''0x0000000000000000'']))
-
-      | extend query_hashes = iif(array_length(query_hashes) > 0, query_hashes, '''')
-
-      | extend query_plan_hashes = iif(array_length(query_plan_hashes) > 0, query_plan_hashes, '''')'
-- id: MI-replication-78
-  Topic: Replication-connection-failed-%2D%2D-loop-back-issue
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Transactional-Replication/Replication-connection-failed-%2D%2D-loop-back-issue.md
+      | project originalEventTimestamp, xml_report_filtered, NodeName'
+- id: MI-replication-83
+  Topic: Distribution-cleanup-Deadlocks-with-replication-agents
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Transactional-Replication/Distribution-cleanup-Deadlocks-with-replication-agents.md
   Prompts:
-  - MI MI Replication connection failed    loop back issue
-  - Managed Instance Replication-connection-failed----loop-back-issue
+  - MonDeadlockReportsFiltered by LogicalServerName, database_name
+  - MonDeadlockReportsFiltered LogicalServerName database_name ServerName DatabaseName
+  - Troubleshoot cleanup backlog
   CustomizedParameters:
-  - DatabaseName
   - ServerName
-  - TimeRange
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDeadlockReportsFiltered
+    ExecutedQuery: 'MonDeadlockReportsFiltered
+
+      | where TIMESTAMP > ago(1d)
+
+      | where LogicalServerName =~ ''{ServerName}'' //and database_name =~ ''{DatabaseName}'''
+- id: MI-replication-84
+  Topic: Replication-connection-failed-%2D%2D-loop-back-issue
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Transactional-Replication/Replication-connection-failed-%2D%2D-loop-back-issue.md
+  Prompts:
+  - MI login event telemetry by LogicalServerName, logical_server_name
+  - MonLogin LogicalServerName logical_server_name ServerName authentication
+  - Troubleshoot transactional replication issues
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
   KustoQueries:
   - TableName: MonLogin
     ExecutedQuery: 'MonLogin
 
-      | where TIMESTAMP >= ago({TimeRange})
-
-      | where TIMESTAMP < now()
+      | where TIMESTAMP > ago(1d)
 
       | where LogicalServerName =~ "{ServerName}" or logical_server_name =~ "{ServerName}"
 
-      | extend authentication = case
-
-      (
-
-      fedauth_library_type == 0 and fedauth_adal_workflow == 0, "SQL Server Authentication"
-
-      fedauth_library_type == 2 and fedauth_adal_workflow == 0, "Token Base Authentication"
-
-      fedauth_library_type == 3 and fedauth_adal_workflow == 1, "Active Directory Password Authentication"
-
-      fedauth_library_type == 3 and fedauth_adal_workflow == 2, "Active Directory Integrated Authentication"'
-- id: MI-replication-79
-  Topic: SQL-Replication-Kusto-Queries
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Transactional-Replication/SQL-Replication-Kusto-Queries.md
-  Prompts:
-  - MI SQL-Replication-Kusto-Queries
-  - Managed Instance SQL-Replication-Kusto-Queries
-  CustomizedParameters:
-  - DatabaseName
-  - ServerName
-  - TimeRange
-  KustoQueries:
-  - TableName: MonTranReplTraces
-    ExecutedQuery: 'MonTranReplTraces
-
-      | where TIMESTAMP >= ago({TimeRange})
-
-      | where TIMESTAMP <= now()
-
-      //| where SubscriptionId =~ ""{SubscriptionId}""
-
-      | where LogicalServerName =~ ""{ServerName}""
-
-      //| where runstatus in (6) or sync_status in (6) // runstatus=6 means: agent failed
-
-      | project TIMESTAMP, originalEventTimestamp, NodeName, AppName, LogicalServerName, db_id, logical_database_name, event, sync_status, publication_id, sync_summary, start_time, duration, agent_id, runstatus
-      error_id, total_run_time, total_work_time, total_num_trans, total_num_cmds, num_trans_per_sec, num_cmds_per_sec, total_skipped_cmds, delivered_transactions, delivered_commands, total_delivered_commands
-      delivery_rate, delivery_latency
-
-      | limit 3000'
-- id: MI-replication-80
-  Topic: SQL-Replication-Kusto-Queries
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Transactional-Replication/SQL-Replication-Kusto-Queries.md
-  Prompts:
-  - MI SQL-Replication-Kusto-Queries
-  - Managed Instance SQL-Replication-Kusto-Queries
-  CustomizedParameters:
-  - DatabaseName
-  - ServerName
-  - TimeRange
-  KustoQueries:
-  - TableName: MonLogReaderTraces
-    ExecutedQuery: 'MonLogReaderTraces
-
-      | where TIMESTAMP >= ago({TimeRange})
-
-      | where TIMESTAMP <= now()
-
-      //| where SubscriptionId =~ ""{SubscriptionId}""
-
-      | where LogicalServerName =~ ""{ServerName}""
-
-      //| where logical_database_name =~ ""{DatabaseName}""
-
-      | project TIMESTAMP, NodeName, AppName, LogicalServerName, logical_database_name, phase_number, phase_state_name, max_trans, tran_count, numtrans, command_count, schema_change_count, log_record_count
-      start_time, start_lsn, end_lsn, last_commit_lsn, tran_completed, articles_completed, xact_id, xact_seqno, repl_begin_lsn, repl_next_lsn
-
-      | limit 5000'
-- id: MI-replication-81
-  Topic: SQL-Replication-Kusto-Queries
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Transactional-Replication/SQL-Replication-Kusto-Queries.md
-  Prompts:
-  - MI SQL-Replication-Kusto-Queries
-  - Managed Instance SQL-Replication-Kusto-Queries
-  CustomizedParameters:
-  - DatabaseName
-  - ServerName
-  - TimeRange
-  KustoQueries:
-  - TableName: MonSQLSystemHealth
-    ExecutedQuery: 'MonSQLSystemHealth
-
-      | where TIMESTAMP >= ago({TimeRange})
-
-      | where TIMESTAMP <= now()
-
-      //| where SubscriptionId =~ ""{SubscriptionId}""
-
-      | where LogicalServerName =~ ""{ServerName}""
-
-      | where error_id > 0
-
-      | where error_id in (14151, 14152, 18856, 21411, 2601, 2627, 20598) //typical replication messages
-
-      | project TIMESTAMP, NodeName, AppName, instance_rg_size, error_id, message
-
-      | limit 1000'
-- id: MI-replication-82
-  Topic: SQL-Replication-Kusto-Queries
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Transactional-Replication/SQL-Replication-Kusto-Queries.md
-  Prompts:
-  - MI SQL-Replication-Kusto-Queries
-  - Managed Instance SQL-Replication-Kusto-Queries
-  CustomizedParameters:
-  - ServerName
-  - DatabaseName
-  KustoQueries:
-  - TableName: MonWiQdsExecStats
-    ExecutedQuery: 'let db = "{DatabaseName}"; let endTime = now();
-let startTime = ago({TimeRange});
-MonWiQdsExecStats
-
-      | where TIMESTAMP >= startTime
-
-      | where TIMESTAMP <= endTime
-
-      // | where TIMESTAMP >= timeRange
-
-      | where LogicalServerName =~ "{ServerName}"
-
-      | where database_name =~ db
-
-      | where statement_type in ("x_estypInsertBulk")
-
-      //| where statement_type in ("x_estypInsertBulk", "x_estypInsert")
-
-      | extend interval_start_time_date = interval_start_time / 4294967296
-
-      | extend interval_start_time_time = interval_start_time - 4294967296 * interval_start_time_date
-
-      | extend interval_start = datetime(1900-1-1) + time(1d) * interval_start_time_date + time(1s) * (interval_start_time_time / 300.0)
-
-      | extend interval_start_time_date = interval_start_time / 4294967296
-
-      | extend interval_start_time_time = interval_start_time - 4294967296 * interval_start_time_date
-
-      | extend interval_start = datetime(1900-1-1) + time(1d) * interval_start_time_date + time(1s) * (interval_start_time_time / 300.0)
-
-      | extend interval_end_time_date = interval_end_time / 4294967296
-
-      | extend interval_end_time_time = interval_end_time - 4294967296 * interval_end_time_date
-
-      | extend interval_end = datetime(1900-1-1) + time(1d) * interval_end_time_date + time(1s) * (interval_end_time_time / 300.0)
-
-      | extend Average_cpu_time = cpu_time / execution_count
-
-      Average_logical_reads = logical_reads / execution_count
-
-      Average_logical_writes = logical_writes / execution_count
-
-      Average_physical_reads = physical_reads / execution_count
-
-      Average_elapsed_time = elapsed_time / execution_count
-
-      Average_log_bytes_used = log_bytes_used / execution_count
-
-      Average_rowcount = rowcount / execution_count
-
-      //| where query_id == "5139412"
-
-      //| where query_id in ("5138681","5138688","5138691","5138692")
-
-      //| where query_hash =~ "0x6519B34634C2ABE6"
-
-      //| where query_hash in ("0x6519B34634C2ABE6", "0x81A344CE3CACB706", "0x45BB4D864FDD5E06", "0x9E56C411B1E1A0DD", "0xEA7113F24F1CF62D")
-
-      | project originalEventTimestamp, TIMESTAMP,LogicalServerName,database_name,query_id,query_hash,query_plan_hash,exec_type,Average_cpu_time,Average_logical_reads,Average_logical_writes,Average_physical_reads
-
-      Average_elapsed_time,Average_log_bytes_used,Average_rowcount ,logical_writes,logical_reads,min_logical_reads,max_logical_reads,physical_reads,min_physical_reads,max_physical_reads,execution_count,cpu_time,rowcount,elapsed_time
-      log_bytes_used,plan_id,tempdb_space_used,statement_type,AppName ,NodeName'
-- id: MI-replication-83
+      | extend authentication = case'
+- id: MI-replication-85
   Topic: Snapshot-Agent-failing-Connection-is-broken
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Transactional-Replication/Snapshot-Agent-failing-Connection-is-broken.md
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Transactional-Replication/Snapshot-Agent-failing-Connection-is-broken.md
   Prompts:
-  - MI Snapshot-Agent-failing-Connection-is-broken
-  - Managed Instance Snapshot-Agent-failing-Connection-is-broken
+  - MI login event telemetry by logical_server_name, database_name
+  - MonLogin logical_server_name database_name event let
+  - Investigate Snapshot Agent failing Connection is broken
   CustomizedParameters:
   - ServerName
   - DatabaseName
   KustoQueries:
   - TableName: MonLogin
-    ExecutedQuery: 'let db = "{DatabaseName}"; let endTime = now();
-let startTime = ago({TimeRange});
-MonLogin
+    ExecutedQuery: 'let startTime = ago(1d);
+
+      let endTime = now();
+
+      let srv = "instancename";
+
+      let db = "publisherdatabasename";
+
+      MonLogin
 
       | where TIMESTAMP >= startTime
 
       | where TIMESTAMP <= endTime
 
-      | where logical_server_name =~ "{ServerName}"
+      | where logical_server_name =~ srv
 
       | where database_name =~ db
 
@@ -2570,20 +1969,23 @@ MonLogin
       | project TIMESTAMP, logical_server_name, database_name, application_name, event, connection_peer_id, peer_activity_id, extra_info
 
       | order by TIMESTAMP asc'
-- id: MI-replication-84
+- id: MI-replication-86
   Topic: Snapshot-Agent-failing-Connection-is-broken
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Transactional-Replication/Snapshot-Agent-failing-Connection-is-broken.md
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Transactional-Replication/Snapshot-Agent-failing-Connection-is-broken.md
   Prompts:
-  - MI Snapshot-Agent-failing-Connection-is-broken
-  - Managed Instance Snapshot-Agent-failing-Connection-is-broken
+  - MI login event telemetry by logical_server_name, database_name
+  - MonLogin logical_server_name database_name event let
+  - Investigate Snapshot Agent failing Connection is broken
   CustomizedParameters:
   - ServerName
   - DatabaseName
   KustoQueries:
   - TableName: MonLogin
-    ExecutedQuery: 'let endTime = now();
-let startTime = ago({TimeRange});
-MonLogin
+    ExecutedQuery: 'let startTime = ago(1d);
+
+      let endTime = now();
+
+      MonLogin
 
       | where TIMESTAMP >= startTime
 
@@ -2593,28 +1995,324 @@ MonLogin
 
       | project TIMESTAMP, logical_server_name, database_name, application_name, event, connection_peer_id, peer_activity_id, extra_info
 
-      | order by TIMESTAMP asc
-
-      In this resultset, take a look at the `process_close_connection` and `proxy_close_connection` events and the details in the `extra_info` column:'
-- id: MI-replication-85
-  Topic: '[OnePager]-Distribution-cleanup-Deadlocks-with-replication-agents'
-  Source: AzureSQLMI/SQL-Managed-Instance/Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Transactional-Replication/[OnePager]-Distribution-cleanup-Deadlocks-with-replication-agents.md
+      | order by TIMESTAMP asc'
+- id: MI-replication-87
+  Topic: SQL-Replication-Kusto-Queries
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Transactional-Replication/SQL-Replication-Kusto-Queries.md
   Prompts:
-  - MI [OnePager]-Distribution-cleanup-Deadlocks-with-replication-agents
-  - Managed Instance [OnePager]-Distribution-cleanup-Deadlocks-with-replication-agents
+  - MI transactional replication telemetry
+  - MonTranReplTraces
+  - Troubleshoot transactional replication issues
   CustomizedParameters:
   - ServerName
   - DatabaseName
   KustoQueries:
-  - TableName: MonDeadlockReportsFiltered
-    ExecutedQuery: 'MonDeadlockReportsFiltered
+  - TableName: MonTranReplTraces
+    ExecutedQuery: 'MonTranReplTraces
 
-      | where originalEventTimestamp between (datetime(YYYY-MM-DD HH:MM:SS) .. datetime(YYYY-MM-DD HH:MM:SS))
+      | where TIMESTAMP > ago(1d)
+
+      '
+- id: MI-replication-88
+  Topic: SQL-Replication-Kusto-Queries
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Transactional-Replication/SQL-Replication-Kusto-Queries.md
+  Prompts:
+  - MI log reader phase telemetry
+  - MonLogReaderTraces
+  - Troubleshoot transactional replication issues
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogReaderTraces
+    ExecutedQuery: 'MonLogReaderTraces
+
+      | where TIMESTAMP > ago(1d)
+
+      '
+- id: MI-replication-89
+  Topic: SQL-Replication-Kusto-Queries
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Transactional-Replication/SQL-Replication-Kusto-Queries.md
+  Prompts:
+  - MI SQL Agent job telemetry by let, startTime
+  - MonSqlAgent let startTime endTime srv
+  - Troubleshoot replication lag
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlAgent
+    ExecutedQuery: 'let srv = "servername"; // Distributor instance name
+
+      let startTime = ago(1d);
+
+      let endTime = now();
+
+      let timeRange = ago(7d);
+
+      MonSqlAgent
+
+      | where TIMESTAMP >= startTime
+
+      | where TIMESTAMP <= endTime'
+- id: MI-replication-90
+  Topic: SQL-Replication-Kusto-Queries
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Transactional-Replication/SQL-Replication-Kusto-Queries.md
+  Prompts:
+  - MI SQL system health telemetry
+  - MonSQLSystemHealth
+  - Troubleshoot transactional replication issues
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where TIMESTAMP > ago(1d)
+
+      '
+- id: MI-replication-91
+  Topic: SQL-Replication-Kusto-Queries
+  Source: Troubleshooting-Guides/Data-Import,-Export,-Replication-and-Transactions/Transactional-Replication/SQL-Replication-Kusto-Queries.md
+  Prompts:
+  - MonWiQdsExecStats by let, Subscriber
+  - MonWiQdsExecStats let Subscriber startTime endTime
+  - Troubleshoot transactional replication issues
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: 'let srv = "servername"; // Subscriber server
+
+      let db = "databasename"; // Subscriber database
+
+      let startTime = ago(1d);
+
+      let endTime = now();
+
+      let timeRange = ago(7d);
+
+      MonWiQdsExecStats
+
+      | where TIMESTAMP >= startTime
+
+      | where TIMESTAMP <= endTime'
+- id: MI-replication-92
+  Topic: CDC & CT
+  Source: kusto-queries/CDC & CT.md
+  Prompts:
+  - MI CDC capture telemetry for cdc session
+  - MonCDCTraces LogicalServerName logical_database_name event ServerName
+  - Troubleshoot CDC capture issues
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCDCTraces
+    ExecutedQuery: 'MonCDCTraces
+
+      | where TIMESTAMP > ago(2d)
 
       | where LogicalServerName =~ "{ServerName}"
 
-      | where event =~ ''xml_deadlock_report_filtered''
+      | where logical_database_name =~ "{DatabaseName}"
 
-      | project originalEventTimestamp, xml_report_filtered, NodeName'
+      | where event == "cdc_session"'
+- id: MI-replication-93
+  Topic: CDC & CT
+  Source: kusto-queries/CDC & CT.md
+  Prompts:
+  - MI CDC capture telemetry by c3c4, b53b
+  - MonCDCTraces c3c4 b53b
+  - Troubleshoot CDC capture issues
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCDCTraces
+    ExecutedQuery: 'MonCDCTraces
 
->>>>>>> Stashed changes
+      | where SubscriptionId =~ "38f6f519-c3c4-4e55-b53b-4a7a28cdaf34"'
+- id: MI-replication-94
+  Topic: CDC & CT
+  Source: kusto-queries/CDC & CT.md
+  Prompts:
+  - MI CDC capture telemetry
+  - MonCDCTraces
+  - Troubleshoot CDC capture issues
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCDCTraces
+    ExecutedQuery: 'MonCDCTraces
+
+      | summarize min(TIMESTAMP)'
+- id: MI-replication-95
+  Topic: CDC & CT
+  Source: kusto-queries/CDC & CT.md
+  Prompts:
+  - MI change tracking cleanup telemetry by LogicalServerName, ServerName
+  - MonCTTraces LogicalServerName ServerName thazepmdb0034
+  - Troubleshoot CDC capture issues
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCTTraces
+    ExecutedQuery: 'MonCTTraces
+
+      | where LogicalServerName =~ "{ServerName}"//"thazepmdb0034"'
+- id: MI-replication-96
+  Topic: CDC & CT
+  Source: kusto-queries/CDC & CT.md
+  Prompts:
+  - MI SQL system health telemetry by LogicalServerName, message
+  - MonSQLSystemHealth LogicalServerName message ServerName change_tracking
+  - Troubleshoot CDC capture issues
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where message has "change_tracking"'
+- id: MI-replication-97
+  Topic: CDC & CT
+  Source: kusto-queries/CDC & CT.md
+  Prompts:
+  - MI change tracking cleanup telemetry by LogicalServerName, ServerName
+  - MonCTTraces LogicalServerName ServerName
+  - Troubleshoot CDC capture issues
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCTTraces
+    ExecutedQuery: 'MonCTTraces
+
+      | where LogicalServerName =~ "{ServerName}"'
+- id: MI-replication-98
+  Topic: CDC & CT
+  Source: kusto-queries/CDC & CT.md
+  Prompts:
+  - MI CDC capture telemetry by LogicalServerName, logical_database_name
+  - MonCDCTraces LogicalServerName logical_database_name ServerName COASTBECP
+  - Troubleshoot CDC capture issues
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCDCTraces
+    ExecutedQuery: 'MonCDCTraces
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where logical_database_name != "COASTBECP"'
+- id: MI-replication-99
+  Topic: CDC & CT
+  Source: kusto-queries/CDC & CT.md
+  Prompts:
+  - MI CDC capture telemetry by LogicalServerName, logical_database_name
+  - MonCDCTraces LogicalServerName logical_database_name ServerName DatabaseName
+  - Troubleshoot CDC capture issues
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCDCTraces
+    ExecutedQuery: 'MonCDCTraces
+
+      | where LogicalServerName =~ "{ServerName}" //and logical_database_name =~ "{DatabaseName}"'
+- id: MI-replication-100
+  Topic: CDC & CT
+  Source: kusto-queries/CDC & CT.md
+  Prompts:
+  - MI SQL system health telemetry
+  - MonSQLSystemHealth
+  - Troubleshoot CDC capture issues
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where AppName =~ "{AppName}"'
+- id: MI-replication-101
+  Topic: CDC & CT
+  Source: kusto-queries/CDC & CT.md
+  Prompts:
+  - MI CDC capture telemetry by event, event_details
+  - MonCDCTraces event event_details job started
+  - Troubleshoot CDC capture issues
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCDCTraces
+    ExecutedQuery: 'MonCDCTraces
+
+      | where event contains "scheduler"
+
+      | where event_details contains "Capture job started." or event_details contains "Cdc capture started." or event_details contains "Finished capture job."
+
+      | where AppName =~ "{AppName}"//"b8fcdf9810a1"'
+- id: MI-replication-102
+  Topic: CDC & CT
+  Source: kusto-queries/CDC & CT.md
+  Prompts:
+  - MI CDC capture telemetry by event, b8fcdf9810a1
+  - MonCDCTraces event b8fcdf9810a1 cdc_session
+  - Troubleshoot CDC capture issues
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCDCTraces
+    ExecutedQuery: 'MonCDCTraces
+
+      | where AppName =~ "{AppName}"//"b8fcdf9810a1"
+
+      | where originalEventTimestamp >= ago(5h)
+
+      | where event contains ("cdc_session")'
+- id: MI-replication-103
+  Topic: CDC & CT
+  Source: kusto-queries/CDC & CT.md
+  Prompts:
+  - MI CDC capture telemetry by event, b8fcdf9810a1
+  - MonCDCTraces event b8fcdf9810a1 cdc_error
+  - Troubleshoot CDC capture issues
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCDCTraces
+    ExecutedQuery: 'MonCDCTraces
+
+      | where AppName =~ "{AppName}"//"b8fcdf9810a1"
+
+      | where originalEventTimestamp >= ago(5h)
+
+      | where event contains ("cdc_error")'
+- id: MI-replication-104
+  Topic: CDC & CT
+  Source: kusto-queries/CDC & CT.md
+  Prompts:
+  - MI CDC capture telemetry by LogicalServerName, ServerName
+  - MonCDCTraces LogicalServerName ServerName
+  - Troubleshoot CDC capture issues
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCDCTraces
+    ExecutedQuery: 'MonCDCTraces
+
+      | where LogicalServerName =~ "{ServerName}"'

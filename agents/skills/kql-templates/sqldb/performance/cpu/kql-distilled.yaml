@@ -1,0 +1,485 @@
+SqlSkills:
+  - id: "79.0"
+    Prompts:
+      - "High CPU Issue Detection"
+    EvaluationTrueMessage: "High CPU Issue is detected, please type 'High CPU Issue Analysis' to get more details."
+    EvaluationFalseMessage: "High CPU Issue is not detected."
+    SuppressOutputOfDescendants: true
+    SubSqlSkills:
+      - Prompts:
+          - "High CPU Issue Analysis"
+
+  - id: "1"
+    # Description: This skill will check CPU usage in the User Pool, Kernel Mode, and System Pool, and identify the root cause if bottleneck are detected.
+    Prompts:
+      - "High CPU Issue Analysis"
+      - "CPU Analysis"
+      - "High CPU Issue"
+      - "Does database have cpu issue"
+      - "Is CPU high"
+      - "Did server have cpu bottleneck"
+      - "Did database suffer from high cpu?"
+      - "What's the CPU of database?"
+      - "CPU usage of database"
+    EvaluationTrueMessage: "CPU bottleneck is detected."
+    EvaluationFalseMessage: "We conducted checks on Kernel Mode CPU, System resource pool CPU and user pool CPU, but did not identify any significant CPU bottleneck"
+    SubSqlSkills:
+      - id: "1.1"
+        Prompts:
+          - "User Pool CPU Analysis"
+      - id: "1.2"
+        Prompts:
+          - "Kernel Mode CPU Analysis"
+      - id: "1.3"
+        Prompts:
+          - "System Pool CPU Analysis"
+
+  - id: "1.1"
+    # Description: This skill will check CPU usage in the User Pool, and identify the root cause if bottlenecks are detected
+    Prompts:
+      - "User Pool CPU Analysis"
+      - "Did User Pool have high CPU issue?"
+      - "What's the CPU usage of User Pool?"
+    KustoQueries:
+      - TableName: "UserPoolCPUTable_Singleton"
+        DeploymentOptions: "Singleton"  
+        ExecutedQuery: |
+          let HighCpuThreshold=80;
+          let highCpuCount_15MinInterval=toscalar(MonDmRealTimeResourceStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | project timestamp=originalEventTimestamp,avg_cpu_percent
+          | summarize avg_cpu_percent=avg(avg_cpu_percent) by bin(timestamp,15m)
+          | summarize highCpuCount_15MinInterval=countif(avg_cpu_percent>=HighCpuThreshold)
+          );
+          let CPUMessage=(avg_cpu_percent:real,max_cpu_percent:real,min_MaxCpuPercent:real,min_cpu_percent:real,highCpuCount_15secondsInterval:int,highCpuCount_15MinInterval:int)
+          {
+          //The User Pool of the Azure DB did not encounter a high CPU issue, as we define the high CPU threshold as 80%
+          let cpuSummary=iff(highCpuCount_15secondsInterval==0,strcat("The User Pool of the Azure DB did not encounter a high CPU issue, as we define the high CPU threshold as ",HighCpuThreshold,"%."), strcat("The User Pool of the Azure DB ran into CPU issue, with CPU utilization exceeding ",min_MaxCpuPercent,"% for ",highCpuCount_15secondsInterval*15," seconds(",highCpuCount_15secondsInterval*15/60.0," minutes) in total. The average CPU usage was ",avg_cpu_percent,"%, the maximum CPU usage was ",max_cpu_percent,"%, and minimum CPU usage was ",min_cpu_percent,"%."));
+          let highCpuCount_15MinIntervalMessage=case(max_cpu_percent>=HighCpuThreshold and highCpuCount_15MinInterval==0," Please note that although the Azure DB experienced high CPU usage, there was no observation of a continuous high CPU condition lasting 15 minutes.","");
+          let gapMessage=case(highCpuCount_15secondsInterval>0,"", 40>max_cpu_percent-min_cpu_percent,"", strcat(" Although the high cpu symptom was not detected, we notice that the CPU usage had a significant change:",max_cpu_percent-min_cpu_percent,"%."));
+          strcat(cpuSummary,highCpuCount_15MinIntervalMessage,gapMessage)
+          //Sample output1:The User Pool of the Azure Db ran into a high CPU issue, with CPU utilization exceeding 80.03% for 7110 seconds(118.5 minutes) in total. The average CPU usage was 13.9%, the maximum CPU usage was 99.82%, and minimum CPU usage was 0.0%
+          //Sample output2:The User Pool of the Azure DB did not encounter a high CPU issue, as we define the high CPU threshold as 80%. Although the high cpu symptom was not detected, we notice that the CPU usage had a significant change:70.7%.
+          };
+          MonDmRealTimeResourceStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | summarize avg_cpu_percent=round(avg(avg_cpu_percent),2), max_cpu_percent=round(max(avg_cpu_percent),2),min_MaxCpuPercent=round(minif(avg_cpu_percent,avg_cpu_percent>=HighCpuThreshold),2), min_cpu_percent=round(min(avg_cpu_percent),2) ,highCpuCount=countif(avg_cpu_percent>=HighCpuThreshold)
+          | extend IssueDetected=iff(highCpuCount>0 or max_cpu_percent-min_cpu_percent>40,'true','false')
+          | extend cpuMessage=CPUMessage(avg_cpu_percent,max_cpu_percent,min_MaxCpuPercent,min_cpu_percent,highCpuCount,highCpuCount_15MinInterval)
+          | project cpuMessage,IssueDetected
+        DisplayedQuery: |
+          MonDmRealTimeResourceStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | project originalEventTimestamp,avg_cpu_percent
+          | render timechart
+      - TableName: "UserPoolCPUTable_ElasticPool"
+        DeploymentOptions: "ElasticPool"
+        ExecutedQuery: |
+          let HighCpuThreshold=80;
+          let highCpuCount_15MinInterval=toscalar(MonResourcePoolStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName =~'{LogicalServerName}'
+          | project timestamp=originalEventTimestamp,avg_cpu_percent
+          | summarize avg_cpu_percent=avg(avg_cpu_percent) by bin(timestamp,15m)
+          | summarize highCpuCount_15MinInterval=countif(avg_cpu_percent>=HighCpuThreshold)
+          );
+          let CPUMessage=(avg_cpu_percent:real,max_cpu_percent:real,min_MaxCpuPercent:real,min_cpu_percent:real,highCpuCount_15secondsInterval:int,highCpuCount_15MinInterval:int)
+          {
+          //The User Pool of the Elastic Pool did not encounter a high CPU issue, as we define the high CPU threshold as 80%
+          let cpuSummary=iff(highCpuCount_15secondsInterval==0,strcat("The User Pool of the Elastic Pool did not encounter a high CPU issue, as we define the high CPU threshold as ",HighCpuThreshold,"%."), strcat("The User Pool of the Elastic Pool ran into CPU issue, with CPU utilization exceeding ",min_MaxCpuPercent,"% for ",highCpuCount_15secondsInterval*15," seconds(",highCpuCount_15secondsInterval*15/60.0," minutes) in total. The average CPU usage was ",avg_cpu_percent,"%, the maximum CPU usage was ",max_cpu_percent,"%, and minimum CPU usage was ",min_cpu_percent,"%."));
+          let highCpuCount_15MinIntervalMessage=iff(max_cpu_percent>=HighCpuThreshold and highCpuCount_15MinInterval==0," Please note that although the Elastic Pool experienced high CPU usage, there was no observation of a continuous high CPU condition lasting 15 minutes.","");
+          let gapMessage=case(highCpuCount_15secondsInterval>0,"", 40>max_cpu_percent-min_cpu_percent,"", strcat(" Although the high cpu symptom was not detected, we notice that the CPU usage had a significant change:",max_cpu_percent-min_cpu_percent,"%."));
+          strcat(cpuSummary,highCpuCount_15MinIntervalMessage,gapMessage)
+          //Sample output1:The User Pool of the Elastic Pool ran into CPU issue, with CPU utilization exceeding 80.03% for 1935 seconds(32.25 minutes) in total. The average CPU usage was 23.72%, the maximum CPU usage was 99.91%, and minimum CPU usage was 0.02%. Please note that although the Elastic Pool experienced high CPU usage, there was no observation of a continuous high CPU condition lasting 15 minutes.
+          //Sample output2:The User Pool of the Elastic Pool did not encounter a high CPU issue, as we define the high CPU threshold as 80%. Although the high cpu symptom was not detected, we notice that the CPU usage had a significant change:70.7%.
+          };
+          MonResourcePoolStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName =~'{LogicalServerName}'
+          | summarize avg_cpu_percent=round(avg(avg_cpu_percent),2), max_cpu_percent=round(max(avg_cpu_percent),2),min_MaxCpuPercent=round(minif(avg_cpu_percent,avg_cpu_percent>=HighCpuThreshold),2), min_cpu_percent=round(min(avg_cpu_percent),2) ,highCpuCount=countif(avg_cpu_percent>=HighCpuThreshold)
+          | extend IssueDetected=iff(highCpuCount>0 or max_cpu_percent-min_cpu_percent>40,'true','false')
+          | extend cpuMessage=CPUMessage(avg_cpu_percent,max_cpu_percent,min_MaxCpuPercent,min_cpu_percent,highCpuCount,highCpuCount_15MinInterval)
+          | project cpuMessage,IssueDetected
+        DisplayedQuery: |
+          MonResourcePoolStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName =~'{LogicalServerName}'
+          | project originalEventTimestamp,avg_cpu_percent
+          | render timechart
+    QuestionToAI: |-
+      -  {{cpuMessage}}, the data type is String.
+
+      ### Rules
+      1.  Store the value of cpuMessage column in {{cpuMessage}}.
+      2.  Store the value of IssueDetected column in {{IssueDetected}}.
+      3.  Set ResultMessage to {{cpuSummary}}.
+    SubSqlSkills:
+      - id: "1.11"
+        ExecutedWhenParentIssueDetected: true
+        IsKusto: true
+        Prompts:
+          - "User Pool CPU Discrepancy Analysis"
+      - id: "4.1"
+        ExecutedWhenParentIssueDetected: true
+        IsKusto: true
+        Prompts:
+          - "Query Execution CPU Analysis"
+      - id: "4.5"
+        ExecutedWhenParentIssueDetected: true
+        IsKusto: true
+        Prompts:
+          - "Successful compilation CPU Analysis"
+      - id: "4.6"
+        ExecutedWhenParentIssueDetected: true
+        IsKusto: true
+        Prompts:
+          - "Failed compilation CPU Analysis"
+
+  - id: "1.2"
+    # Description:  skill will check CPU usage in the Kernel Mode, and deliver suggestions if bottlenecks are detected
+    Prompts:
+      - "Kernel Mode CPU Analysis"
+      - "CPU usage of Kernel mode"
+      - "What's the CPU usage of Kernel mode"
+      - "What's the Kernel CPU usage"
+      - "Did Azure db have high Kernel CPU issue"
+      - "Get Kernel CPU usage"
+    KustoQueries:
+      - TableName: "KernelCPUTable"
+        ExecutedQuery: |
+          let HighCpuThreshold=15;
+          let cpuResource=materialize(MonRgLoad
+          | extend originalEventTimestamp = originalEventTimestampFrom
+          | where {ApplicationNamesNodeNamesWithOriginalEventTimeRange}
+          | where (event =~ 'instance_load' and code_package_name contains 'Code')
+          | extend KernelCpuUsagePeakPercent = round((kernel_load_peak*1.0 / cpu_load_cap) * 100,1)
+          | summarize  peak_process_kernel_cpu_percent=max(KernelCpuUsagePeakPercent) by bin(originalEventTimestamp, 5min)
+          | project timestamp=originalEventTimestamp,peak_process_kernel_cpu_percent
+          );
+          let highCpuDuration=toscalar (cpuResource
+          | where  peak_process_kernel_cpu_percent>=HighCpuThreshold
+          | count);
+          cpuResource
+          | summarize avg_kernel_cpu_percent=round(avg(peak_process_kernel_cpu_percent),1),peak_kernel_cpu_percent=arg_max(peak_process_kernel_cpu_percent,timestamp),min_kernel_cpu_percent=arg_min(peak_process_kernel_cpu_percent,timestamp)
+          | extend max_cpu_time=timestamp
+          | extend min_cpu_time=timestamp1
+          | extend highCpuDuration_min=highCpuDuration*5 //multipling 5 because the interval is 5 minute.
+          | project avg_kernel_cpu_percent,peak_kernel_cpu_percent,highCpuDuration_min,max_cpu_time,min_cpu_time,min_kernel_cpu_percent
+        DisplayedQuery: |
+          MonRgLoad
+          | extend originalEventTimestamp = originalEventTimestampFrom
+          | where {ApplicationNamesNodeNamesWithOriginalEventTimeRange}
+          | where (event =~ 'instance_load' and code_package_name contains 'Code')
+          | extend KernelCpuUsagePeakPercent = round((kernel_load_peak*1.0 / cpu_load_cap) * 100,1)
+          | summarize  peak_process_kernel_cpu_percent=max(KernelCpuUsagePeakPercent) by bin(originalEventTimestamp, 5min)
+          | project timestamp=originalEventTimestamp,peak_process_kernel_cpu_percent
+    QuestionToAI: |-
+      -  {{avg_kernel_cpu_percent}}, the data type is Float.
+      -  {{peak_kernel_cpu_percent}}, the data type is Float.
+      -  {{highCpuDuration_min}}, the data type is Integer.
+      -  {{max_cpu_time}}, the data type is DateTime.
+      -  {{min_cpu_time}}, the data type is DateTime.
+      -  {{min_kernel_cpu_percent}}, the data type is Float.
+      -  {{cpuStatusMessage}}, the data type is String.
+      -  {{AzureProfilerMessage}}, the data type is String.
+
+      ### Rules
+      1.  Store the value of avg_kernel_cpu_percent column in {{avg_kernel_cpu_percent}}.
+      2.  Store the value of peak_kernel_cpu_percent column in {{peak_kernel_cpu_percent}}.
+      3.  Store the value of highCpuDuration_min column in {{highCpuDuration_min}}.
+      4.  Store the value of max_cpu_time column in {{max_cpu_time}}.
+      5.  Store the value of min_cpu_time column in {{min_cpu_time}}.
+      6.  Store the value of min_kernel_cpu_percent column in {{min_kernel_cpu_percent}}.
+      7.  Set {{cpuStatusMessage}} to "The average Kernel CPU usage is {{avg_kernel_cpu_percent}}%, the maximum value is {{peak_kernel_cpu_percent}}% at {{max_cpu_time}}, the minimum value is {{min_kernel_cpu_percent}}% at {{min_cpu_time}}.".
+      8.  Set {{AzureProfilerMessage}} to "Suggest collecting Azure Profiler while the issue is happening".
+      9.  If {{highCpuDuration_min}} is greater than 0, then {{IssueDetected}} is 'true', else {{IssueDetected}} is 'false'.
+      10. If {{IssueDetected}} is 'false', then {{ResultMessage}} is "Azure Db didn't encounter Kernel level high CPU issue. " + {{cpuStatusMessage}}.
+      11. If {{IssueDetected}} is 'true', then {{ResultMessage}} is "Azure Db encounter Kernel level high CPU issue, with CPU utilization exceeding 20% for at least {{highCpuDuration_min}} minutes." + {{cpuStatusMessage}} + {{AzureProfilerMessage}}.
+    SubSqlSkills:
+      - id: "20"
+        ExecutedWhenParentIssueDetected: true
+        IsKusto: true
+        Prompts:
+          - "Azure Profiler Trace"
+
+  - id: "1.3"
+    # Description: This skill will check CPU usage in the System Pool(excluding the User Pool is excluded), and deliver suggestions if bottlenecks are detected
+    Prompts:
+      - "System Pool CPU Analysis"
+      - "System Pool CPU Usage"
+      - "Resource Pool CPU Usage"
+      - "What's CPU usage of System resource pool?"
+      - "What's CPU usage of resource pool?"
+      - "Did System Pool have high CPU issue?"
+    KustoQueries:
+      - TableName: "SystemResoucePoolsCPU"
+        ExecutedQuery: |
+          let aggInterval_doNOTchange = time(15m) ;
+          let HighCpuThreshold=30;
+          let cap_interval = materialize(MonDmRealTimeResourceStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | summarize min(cpu_cap_in_sec) by bin (originalEventTimestamp, aggInterval_doNOTchange));
+          let systemPoolCpuResource=materialize(MonSqlRgHistory
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | where event =~ 'aggregated_resource_pools_plus_history'
+          | extend originalEventTimestamp = end_aggregated_sample
+          | extend pool_name= iff(pool_name =~ 'SloSharedPool1' or pool_name  startswith 'UserPool.DBid','User Pool',pool_name)
+          | extend pool_name= iff(pool_name!='User Pool','System Pools', pool_name)
+          | where pool_name =='System Pools'
+          | summarize delta_total_cpu_usage_ms = sum(delta_total_cpu_usage_ms), start_aggregated_sample = min(start_aggregated_sample), end_aggregated_sample = max(end_aggregated_sample) by originalEventTimestamp = bin(end_aggregated_sample, aggInterval_doNOTchange), pool_name
+          | extend avg_cores_sec = delta_total_cpu_usage_ms/((end_aggregated_sample-start_aggregated_sample)/1ms)
+          | project-away delta_total_cpu_usage_ms
+          | lookup kind=leftouter (cap_interval) on originalEventTimestamp
+          | extend PercentCPU = round(100.0*avg_cores_sec/min_cpu_cap_in_sec,1)
+          | extend Timestamp=originalEventTimestamp
+          | project Timestamp, PercentCPU);
+          let highCpuDuration=toscalar (systemPoolCpuResource
+          | where  PercentCPU>=HighCpuThreshold
+          | count);
+          systemPoolCpuResource
+          | summarize avg_cpu_percent=round(avg(PercentCPU),1),max_cpu_percent=arg_max(PercentCPU,Timestamp),
+          min_cpu_percent=arg_min(PercentCPU,Timestamp)
+          | extend highCpuDuration_min=highCpuDuration*15//multipling 15 because the interval is 15 minute
+          | extend max_cpu_time=Timestamp
+          | extend min_cpu_time=Timestamp1
+          | project avg_cpu_percent,highCpuDuration_min, max_cpu_percent,max_cpu_time,min_cpu_percent,min_cpu_time
+        DisplayedQuery: |
+          let aggInterval_doNOTchange = time(15m) ;
+          let HighCpuThreshold=30;
+          let cap_interval = materialize(MonDmRealTimeResourceStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | summarize min(cpu_cap_in_sec) by bin (originalEventTimestamp, aggInterval_doNOTchange));
+          MonSqlRgHistory
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | where event =~ 'aggregated_resource_pools_plus_history'
+          | extend originalEventTimestamp = end_aggregated_sample
+          | extend pool_name= iff(pool_name =~ 'SloSharedPool1' or pool_name  startswith 'UserPool.DBid','User Pool',pool_name)
+          | extend pool_name= iff(pool_name!='User Pool','System Pools', pool_name)
+          | where pool_name =='System Pools'
+          | summarize delta_total_cpu_usage_ms = sum(delta_total_cpu_usage_ms), start_aggregated_sample = min(start_aggregated_sample), end_aggregated_sample = max(end_aggregated_sample) by originalEventTimestamp = bin(end_aggregated_sample, aggInterval_doNOTchange), pool_name
+          | extend avg_cores_sec = delta_total_cpu_usage_ms/((end_aggregated_sample-start_aggregated_sample)/1ms)
+          | project-away delta_total_cpu_usage_ms
+          | lookup kind=leftouter (cap_interval) on originalEventTimestamp
+          | extend PercentCPU = round(100.0*avg_cores_sec/min_cpu_cap_in_sec,1)
+          | project originalEventTimestamp, PercentCPU,pool_name
+          | render timechart;
+    QuestionToAI: |-
+      -  {{avg_cpu_percent}}, the data type is Float.
+      -  {{highCpuDuration_min}}, the data type is Integer.
+      -  {{max_cpu_percent}}, the data type is Float.
+      -  {{max_cpu_time}}, the data type is DateTime.
+      -  {{min_cpu_percent}}, the data type is Float.
+      -  {{min_cpu_time}}, the data type is DateTime.
+      -  {{cpuStatusMessage}}, the data type is String.
+      -  {{highCpuMessage}}, the data type is String.
+      -  {{lowCpuMessage}}, the data type is String.
+      -  {{actionMessage}}, the data type is String.
+
+      ### Rules
+      1.  Store the value of avg_cpu_percent column in {{avg_cpu_percent}}.
+      2.  Store the value of highCpuDuration_min column in {{highCpuDuration_min}}.
+      3.  Store the value of max_cpu_percent column in {{max_cpu_percent}}.
+      4.  Store the value of max_cpu_time column in {{max_cpu_time}}.
+      5.  Store the value of min_cpu_percent column in {{min_cpu_percent}}.
+      6.  Store the value of min_cpu_time column in {{min_cpu_time}}.
+      7.  Set {{cpuStatusMessage}} to " The average system Pools CPU usage is {{avg_cpu_percent}}%, with a peak of {{max_cpu_percent}}% at {{max_cpu_time}} and a low of {{min_cpu_percent}}% at {{min_cpu_time}}."
+      8.  Set {{highCpuMessage}} to "System pools(excluding the User Pool) consumed a significant amount of CPU resources(exceeding 30% usage) for at least {{highCpuDuration_min}} minutes.".
+      9.  Set {{lowCpuMessage}} to "System pools(excluding the User Pool) didn't consume a significant amount of CPU resources."
+      10. Set {{actionMessage}} to " Please review the individual pool usage for more details. Here are the top 2 system pools with the highest CPU consumption."
+      11. If {{highCpuDuration_min}} is greater than 0, then {{IssueDetected}} is 'true', else {{IssueDetected}} is 'false'.
+      12. If {{IssueDetected}} is 'true',  set {{ResultMessage}} to {{highCpuMessage}} + {{cpuStatusMessage}} + {{actionMessage}}.
+      13. If {{IssueDetected}} is 'false', set {{ResultMessage}} to {{lowCpuMessage}} + {{cpuStatusMessage}}.
+    SubSqlSkills:
+      - id: "1.31"
+        ExecutedWhenParentIssueDetected: true
+        IsKusto: true
+        Prompts:
+          - "Top 2 System Pool CPU Analysis"
+
+  - id: "1.31"
+    Prompts:
+      - "Top 2 System Pool CPU Analysis"
+      - "Top 2 System Pool CPU Usage"
+      - "Top 2 Resource Pool CPU Usage"
+      - "What's top 2 CPU usage of System resource pool?"
+      - "What's top 2 CPU usage of resource pool?"
+    KustoQueries:
+      - TableName: "Top2SystemResoucePoolsCPU"
+        ExecutedQuery: |
+          let aggInterval_doNOTchange = time(15m) ;
+          let cap_interval = materialize(MonDmRealTimeResourceStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | summarize min(cpu_cap_in_sec) by bin (originalEventTimestamp, aggInterval_doNOTchange));
+          MonSqlRgHistory
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where event =~ 'aggregated_resource_pools_plus_history'
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | extend originalEventTimestamp = end_aggregated_sample
+          | extend pool_name !~ 'SloSharedPool1' and pool_name !startswith 'UserPool.DBid'
+          | lookup kind = inner(
+          MonSqlRgHistory
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where event =~ 'aggregated_resource_pools_plus_history'
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | where pool_name !~ 'SloSharedPool1' and pool_name !startswith 'UserPool.DBid'
+          | top-nested 2 of pool_name by max(delta_total_cpu_usage_ms) desc
+          ) on pool_name
+          | summarize delta_total_cpu_usage_ms = sum(delta_total_cpu_usage_ms), start_aggregated_sample = min(start_aggregated_sample), end_aggregated_sample = max(end_aggregated_sample) by originalEventTimestamp = bin(end_aggregated_sample, aggInterval_doNOTchange), pool_name
+          | extend avg_cores_sec = delta_total_cpu_usage_ms/((end_aggregated_sample-start_aggregated_sample)/1ms)
+          | project-away delta_total_cpu_usage_ms
+          | lookup kind=leftouter (cap_interval) on originalEventTimestamp
+          | extend PercentCPU = round(100.0*avg_cores_sec/min_cpu_cap_in_sec,3)
+          | extend Timestamp=originalEventTimestamp
+          | project Timestamp, pool_name, PercentCPU
+        DisplayedQuery: |
+          let aggInterval_doNOTchange = time(15m) ;
+          let cap_interval = materialize(MonDmRealTimeResourceStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | summarize min(cpu_cap_in_sec) by bin (originalEventTimestamp, aggInterval_doNOTchange));
+          MonSqlRgHistory
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where event =~ 'aggregated_resource_pools_plus_history'
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | extend originalEventTimestamp = end_aggregated_sample
+          | extend pool_name !~ 'SloSharedPool1' and pool_name !startswith 'UserPool.DBid'
+          | lookup kind = inner(
+          MonSqlRgHistory
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where event =~ 'aggregated_resource_pools_plus_history'
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | where pool_name !~ 'SloSharedPool1' and pool_name !startswith 'UserPool.DBid'
+          | top-nested 2 of pool_name by max(delta_total_cpu_usage_ms) desc
+          ) on pool_name
+          | summarize delta_total_cpu_usage_ms = sum(delta_total_cpu_usage_ms), start_aggregated_sample = min(start_aggregated_sample), end_aggregated_sample = max(end_aggregated_sample) by originalEventTimestamp = bin(end_aggregated_sample, aggInterval_doNOTchange), pool_name
+          | extend avg_cores_sec = delta_total_cpu_usage_ms/((end_aggregated_sample-start_aggregated_sample)/1ms)
+          | project-away delta_total_cpu_usage_ms
+          | lookup kind=leftouter (cap_interval) on originalEventTimestamp
+          | extend PercentCPU = round(100.0*avg_cores_sec/min_cpu_cap_in_sec,3)
+          | extend Timestamp=originalEventTimestamp
+          | project Timestamp, pool_name, PercentCPU
+
+# ── CPU Discrepancy (merged from CPU_UserPoolCPUDiscrepancy.yaml) ──
+SqlSkills:
+  - id: "1.11"
+    # Description: 
+    #   This skill will check if there are significant discrepancy between User Pool CPU and the combined total of QDS CPU, Successful Compile CPU and Failed Compile CPU.
+    #   If significant discrepancy is detected, will try to identify the cause of the discrepancy.
+    Prompts:
+      - "User Pool CPU Discrepancy Analysis"
+    KustoQueries:
+      - TableName: "UserPoolCPUDiscrepancy"
+        ExecutedQuery: |
+          //Sample output:
+          //1.We've found significant CPU discrepancy. Here are the details: The User Pool CPU time returned by MonDmRealTimeResourceStats is 328355903ms, accounting for approximately 21.1%. While the recorded CPU time is 234246826ms, accounting for approximately 15.0%. The breakdown is as follows: QDS CPU--222885371ms(14.0%), Successful Compile CPU--11325266ms(0.0%), and Failed Compile CPU--36189ms(0.0%). The User Pool CPU is supposed to be close to the combined total of QDS CPU, Successful Compile CPU and Failed Compile CPU.
+          //2.We don't found significant CPU discrepancy. Here are the details: The User Pool CPU time returned by MonDmRealTimeResourceStats is 328355903ms, accounting for approximately 21.1%. While the recorded CPU time is 304246826ms, accounting for approximately 19.4%. The breakdown is as follows: QDS CPU--222885371ms(14.0%), Successful Compile CPU--11325266ms(0.0%), and Failed Compile CPU--36189ms(0.0%). The User Pool CPU is expected to be close to the combined total of QDS CPU, Successful Compile CPU and Failed Compile CPU.
+          let DiscrepancyStatus = (IssueDetected: string,totalUserPoolCpu_ms:long,avgCPUPercentage:real,totalRecordedCPU_ms:long,totalRecordedCPUPercentage:real,qdscpu_ms:long,qdsPercentage:real,successful_compilecpu_ms:long,
+          successful_CompileCpuPercentage:real,failed_compilecpu_ms:long,failed_CompileCpuPercentage:real) {
+          let CpuUsageMessage=strcat("The User Pool CPU time returned by MonDmRealTimeResourceStats is ",totalUserPoolCpu_ms,"ms, accounting for approximately ",avgCPUPercentage,"%. While the recorded CPU time is ",totalRecordedCPU_ms,"ms, accounting for approximately ",totalRecordedCPUPercentage,"%. The breakdown is as follows: QDS CPU--",qdscpu_ms,"ms(",qdsPercentage,"%), Successful Compile CPU--",successful_compilecpu_ms,"ms(",successful_CompileCpuPercentage,"%), and Failed Compile CPU--",failed_compilecpu_ms,"ms(",failed_CompileCpuPercentage,"%). The User Pool CPU is ",iff(IssueDetected =='true',"supposed","expected"), " to be close to the combined total of QDS CPU, Successful Compile CPU and Failed Compile CPU.");
+          case(
+          IssueDetected == 'true', strcat("We've found significant CPU discrepancy. Here are the details: ",CpuUsageMessage),
+          strcat("We don't found significant CPU discrepancy. Here are the details: ",CpuUsageMessage)
+          )
+          };
+          let MonDmRealTimeResourceStats_Sample_sec=15;
+          let totalUserPoolCpu_ms=toscalar(MonDmRealTimeResourceStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | summarize  tolong(sum(avg_cpu_percent*cpu_cap_in_sec *MonDmRealTimeResourceStats_Sample_sec*1000/100)));
+          let qdscpu_ms=toscalar(MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | summarize tolong(sum(cpu_time)/1000));
+          let successful_compilecpu_ms=toscalar(MonWiQueryParamData
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | summarize tolong(sum(compile_cpu_time)/1000));
+          let failed_compilecpu_ms=toscalar(MonQueryProcessing
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | where event =~'failed_compilation'
+          | summarize tolong(sum(compile_cpu)));
+          let totalRecordedCPU_ms=qdscpu_ms+successful_compilecpu_ms+failed_compilecpu_ms;//QDS CPU + Successful Compile CPU + Failed Compile CPU
+          let  totalRecordedCPU_totalUserPoolCpu_ratio=round(totalRecordedCPU_ms*100/totalUserPoolCpu_ms,1);
+          let IssueDetected=case(totalRecordedCPU_totalUserPoolCpu_ratio >= 80, 'false','true');//If the ratio is closed to 80%, we think the gap can be ignored, and IssueDetected is false.
+          let avgCPUPercentage=round(totalUserPoolCpu_ms*100.0/{SumCpuMillisecondOfAllApp},1);
+          let  totalRecordedCPUPercentage=round(totalRecordedCPU_ms*100.0/{SumCpuMillisecondOfAllApp},1);
+          let  qdsPercentage=round(qdscpu_ms*100/{SumCpuMillisecondOfAllApp},1);
+          let  successful_CompileCpuPercentage=round(successful_compilecpu_ms*100/{SumCpuMillisecondOfAllApp},1);
+          let  failed_CompileCpuPercentage=round(failed_compilecpu_ms*100/{SumCpuMillisecondOfAllApp},1);
+          let discrepancyStatus=DiscrepancyStatus(IssueDetected,totalUserPoolCpu_ms,avgCPUPercentage,totalRecordedCPU_ms,totalRecordedCPUPercentage,qdscpu_ms,qdsPercentage,successful_compilecpu_ms,
+          successful_CompileCpuPercentage,failed_compilecpu_ms,failed_CompileCpuPercentage);
+          print IssueDetected=IssueDetected,discrepancyStatus=discrepancyStatus
+        DisplayedQuery: |
+          let MonDmRealTimeResourceStats_Sample_sec=15;
+          let totalUserPoolCpu_ms=toscalar(MonDmRealTimeResourceStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | summarize  tolong(sum(avg_cpu_percent*cpu_cap_in_sec *MonDmRealTimeResourceStats_Sample_sec*1000/100)));
+          let qdscpu_ms=toscalar(MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | summarize tolong(sum(cpu_time)/1000));
+          let successful_compilecpu_ms=toscalar(MonWiQueryParamData
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | summarize tolong(sum(compile_cpu_time)/1000));
+          let failed_compilecpu_ms=toscalar(MonQueryProcessing
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | where event =~'failed_compilation'
+          | summarize tolong(sum(compile_cpu)));
+          let totalRecordedCPU_ms=round(qdscpu_ms+successful_compilecpu_ms+failed_compilecpu_ms,1);//QDS CPU + Successful Compile CPU + Failed Compile CPU
+          print totalUserPoolCpu_ms=totalUserPoolCpu_ms,
+          totalRecordedCPU_ms=totalRecordedCPU_ms,
+          qdscpu_ms=qdscpu_ms,
+          successful_compilecpu_ms=successful_compilecpu_ms,
+          failed_compilecpu_ms=failed_compilecpu_ms
+    QuestionToAI: |-
+      -  {{discrepancyStatus}}, the data type is String.
+
+      ### Rules
+      1. Store the value of discrepancyStatus column in {{discrepancyStatus}}.
+      2. Store the value of IssueDetected column in {{IssueDetected}}.
+      3. Set {{ResultMessage}} to {{discrepancyStatus}}.
+    SubSqlSkills:
+      - id: "1.111"
+        ExecutedWhenParentIssueDetected: true
+        IsKusto: true
+        AlwaysDisplayResult: true
+        Reasoning: "The discrepancy may be due to QDS Readonly, Restart/Failovers, killed queries or queries that are still in running. Now, we will try to investigate the mentioned possible causes."
+        Prompts:
+          - "Root cause of User Pool CPU discrepancy"
+
+  - id: "1.111"
+    # Description:  This skill will check the Root cause of User Pool CPU discrepancy, by checking QDS Readonly,Restart/Failover, Kill command.
+    Prompts:
+      - "Root cause of User Pool CPU discrepancy"
+      - "Why significant gap happened"
+    EvaluationTrueMessage: "We may find the cause of significant gap:"
+    EvaluationFalseMessage: "We conducted checks on QDS Readonly, Restart/Failover, Kill command,ongoing queires. however, didn't find such issues, suggest extending the end time and searching again"
+    SubSqlSkills:
+      - id: "20.1"
+        IsKusto: true
+        Prompts:
+          - "SQL Restart and Failover analysis"
+      - id: "20.2"
+        IsKusto: true
+        Prompts:
+          - "Kill command analysis"
+      - id: "5"
+        IsKusto: true
+        Prompts:
+          - "QDS Readonly detection"
+      - id: "4.91"
+        IsKusto: true
+        Prompts:
+          - "Long Running queries"

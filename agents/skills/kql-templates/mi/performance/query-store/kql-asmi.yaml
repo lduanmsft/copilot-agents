@@ -1,0 +1,115 @@
+SqlSkills:
+- id: MI-ASMI-QUERY-STORE-01
+  Topic: Query Store (QDS) - set as ReadOnly
+  Source: kusto-queries/Query Store (QDS) - set as ReadOnly.md
+  Prompts:
+  - MonQueryStoreInfo
+  - Investigate Query Store (QDS) set as ReadOnly
+  - MI performance MonQueryStoreInfo
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonQueryStoreInfo
+    ExecutedQuery: 'MonQueryStoreInfo
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where TIMESTAMP > ago (1d)'
+- id: MI-ASMI-QUERY-STORE-02
+  Topic: Query Store (QDS) - set as ReadOnly
+  Source: kusto-queries/Query Store (QDS) - set as ReadOnly.md
+  Prompts:
+  - MonQueryStoreInfo by LogicalServerName, event
+  - MonQueryStoreInfo LogicalServerName event query_store_size_retention_cleanup ServerName
+  - Investigate Query Store (QDS) set as ReadOnly
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonQueryStoreInfo
+    ExecutedQuery: 'MonQueryStoreInfo
+
+      | where TIMESTAMP > ago(2d)
+
+      | where event startswith ''query_store_size_retention_cleanup''
+
+      | where LogicalServerName =~ ''{ServerName}''
+
+      | where AppName =~ ''{AppName}'''
+- id: MI-ASMI-QUERY-STORE-03
+  Topic: Query Store
+  Source: kusto-queries/Query Store.md
+  Prompts:
+  - MonQueryStoreInfo for query store disk size info / query store db diagnostics
+  - MonQueryStoreInfo logical_database_name event DatabaseName query_store_disk_size_info
+  - Investigate Query Store
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonQueryStoreInfo
+    ExecutedQuery: 'MonQueryStoreInfo
+
+      | where AppName =~ "{AppName}"
+
+      | where logical_database_name =~ "{DatabaseName}"
+
+      | where event in( "query_store_disk_size_info" , "query_store_db_diagnostics")
+
+      | where TIMESTAMP >= ago(6h)'
+- id: MI-ASMI-QUERY-STORE-04
+  Topic: Query Store
+  Source: kusto-queries/Query Store.md
+  Prompts:
+  - MonQueryStoreFailures
+  - Investigate Query Store
+  - MI performance MonQueryStoreFailures
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonQueryStoreFailures
+    ExecutedQuery: 'MonQueryStoreFailures
+
+      | where AppName =~ "{AppName}"'
+- id: MI-ASMI-QUERY-STORE-05
+  Topic: Query Store
+  Source: kusto-queries/Query Store.md
+  Prompts:
+  - MonQueryStoreFailures for query store plan forcing failed core
+  - MonQueryStoreFailures LogicalServerName logical_database_name event error_number
+  - Investigate Query Store
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonQueryStoreFailures
+    ExecutedQuery: 'MonQueryStoreFailures
+
+      | where AppName =~ ''{AppName}''
+
+      | where LogicalServerName =~ ''{ServerName}'' and logical_database_name =~ ''{DatabaseName}''
+
+      | where event =~ ''query_store_plan_forcing_failed_core'' and error_number == 8684'
+- id: MI-ASMI-QUERY-STORE-06
+  Topic: Query Store
+  Source: kusto-queries/Query Store.md
+  Prompts:
+  - MonAutomaticTuning for automatic tuning plan regression detection check completed / automatic tuning recommendation expired
+  - MonAutomaticTuning LogicalServerName logical_database_name event ServerName
+  - Investigate Query Store
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAutomaticTuning
+    ExecutedQuery: 'MonAutomaticTuning
+
+      | where TIMESTAMP between(ago(1d)..now())
+
+      | where LogicalServerName =~ ''{ServerName}'' and logical_database_name =~ ''{DatabaseName}''
+
+      | where query_id == xxxxx
+
+      | where event in ("automatic_tuning_plan_regression_detection_check_completed","automatic_tuning_recommendation_expired")'

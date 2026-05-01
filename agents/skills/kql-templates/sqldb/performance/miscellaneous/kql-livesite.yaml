@@ -1,0 +1,257 @@
+# ============================================================================
+# kql-livesite.yaml — Miscellaneous KQL Templates from SQLLivesiteAgents
+# ============================================================================
+# Priority: P1 (highest)
+# Source: SQLLivesiteAgents / Performance / miscellaneous / references/
+# Distilled: 2026-04-30
+# ============================================================================
+
+SqlSkills:
+
+  # ──────────────────────────────────────────────────────
+  # 1. Worker Thread Exhaustion
+  # Source: Performance/miscellaneous/references/worker-thread-exhaustion-analysis.md
+  # ──────────────────────────────────────────────────────
+  - id: LS-MISC-01
+    name: "Worker Thread Exhaustion"
+    source: "SQLLivesiteAgents/Performance/miscellaneous/references/worker-thread-exhaustion-analysis.md"
+    table: MonSQLSystemHealth
+    KustoQueries:
+      - TableName: MonSQLSystemHealth
+        ExecutedQuery: |
+          MonSQLSystemHealth
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | where message contains 'The request limit for the database' or message contains 'The request limit for the elastic pool'
+          | summarize count=count() by bin(originalEventTimestamp,1h)
+          | order by originalEventTimestamp asc
+
+  # ──────────────────────────────────────────────────────
+  # 2. Worker-Session Cosine Similarity
+  # Source: Performance/miscellaneous/references/worker-session-similarity-analysis.md
+  # Threshold: similarity > 0.9
+  # ──────────────────────────────────────────────────────
+  - id: LS-MISC-02
+    name: "Worker-Session Cosine Similarity"
+    source: "SQLLivesiteAgents/Performance/miscellaneous/references/worker-session-similarity-analysis.md"
+    table: MonDmRealTimeResourceStats
+    thresholds:
+      high_similarity: 0.9
+    KustoQueries:
+      - TableName: MonDmRealTimeResourceStats
+        ExecutedQuery: |
+          let SimilarityMessage=(similarity: real)
+          {
+          let highSimilarityMessage="The pattern of worker threads and sessions is very similar. The increased number of worker threads may be caused by sessions spawned by user applications. Please review the ASC Report 'Database Resource Consumption Statistics' to confirm.";
+          let noCorrelationMessage="No correlation between worker threads and session spike has been detected.";
+          iif(similarity > 0.9, highSimilarityMessage, noCorrelationMessage)
+          };
+          MonDmRealTimeResourceStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName =~ '{LogicalServerName}' and database_name =~ '{LogicalDatabaseName}'
+          | summarize Max_Worker = max(max_worker_percent), Max_Session = max(max_session_percent) by bin(originalEventTimestamp, 15s)
+          | sort by originalEventTimestamp asc nulls last
+          | summarize workers=make_list(Max_Worker),sessions=make_list(Max_Session)
+          | extend similarity = series_cosine_similarity(workers, sessions)
+          | extend resultMessage=SimilarityMessage(similarity)
+          | project resultMessage, similarity, IssueDetected=similarity > 0.9
+    OutputFields: [similarity, resultMessage, IssueDetected]
+
+  # ──────────────────────────────────────────────────────
+  # 3. Database Corruption Detection (Non-Hyperscale)
+  # Source: Performance/miscellaneous/references/database-corruption-detection.md
+  # ──────────────────────────────────────────────────────
+  - id: LS-MISC-03
+    name: "Database Corruption Detection (Non-Hyperscale)"
+    source: "SQLLivesiteAgents/Performance/miscellaneous/references/database-corruption-detection.md"
+    table: MonSQLSystemHealth
+    error_ids: [211, 823, 824, 825, 829, 2533, 2570, 2576, 3203, 7985, 7989, 8909, 8914, 8916, 8928, 8939, 8942, 8948, 8964, 8965, 8978, 8992, 8998, 8999]
+    KustoQueries:
+      - TableName: MonSQLSystemHealth
+        ExecutedQuery: |
+          MonSQLSystemHealth
+          | where AppName in ({AppNamesOnly})
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | where error_id in (211,823,824,825,829,2533,2570,2576,3203,7985,7989,8909,8914,8916,8928,8939,8942,8948,8964,8965,8978,8992,8998,8999) 
+          | summarize totalCount=count(),dcount=dcount(error_id),StartTime=min(originalEventTimestamp), EndTime=max(originalEventTimestamp)
+          | summarize count(),take_any(message),StartTime=min(originalEventTimestamp), EndTime=max(originalEventTimestamp) by error_id,NodeName
+
+  # ──────────────────────────────────────────────────────
+  # 4. Database Corruption Detection (Hyperscale)
+  # ──────────────────────────────────────────────────────
+  - id: LS-MISC-04
+    name: "Database Corruption Detection (Hyperscale)"
+    source: "SQLLivesiteAgents/Performance/miscellaneous/references/database-corruption-detection.md"
+    condition: "database is Hyperscale"
+    tables: [MonSQLSystemHealth, MonSocrates]
+    KustoQueries:
+      - TableName: MonSQLSystemHealth
+        ExecutedQuery: |
+          let appNames=materialize (
+          MonSocrates
+          | where  (originalEventTimestamp between (datetime({StartTime})..datetime({EndTime})))
+          | where LogicalServerName =~ '{LogicalServerName}' and logical_database_name =~ '{LogicalDatabaseName}'
+          | where isnotempty(foreign_file_id)
+          | summarize by AppName,AppTypeName
+          );
+          MonSQLSystemHealth
+          | where  (originalEventTimestamp between (datetime({StartTime})..datetime({EndTime})))
+          | where LogicalServerName =~ '{LogicalServerName}' 
+          | join kind=inner(appNames) on AppName
+          | where error_id in (211,823,824,825,829,2533,2570,2576,3203,7985,7989,8909,8914,8916,8928,8939,8942,8948,8964,8965,8978,8992,8998,8999) 
+          | summarize count(),take_any(message),StartTime=min(originalEventTimestamp), EndTime=max(originalEventTimestamp) by error_id,NodeName
+
+  # ──────────────────────────────────────────────────────
+  # 5. AKV Error Detection (Non-Hyperscale)
+  # Source: Performance/miscellaneous/references/akv-error-detection.md
+  # ──────────────────────────────────────────────────────
+  - id: LS-MISC-05
+    name: "Azure Key Vault Error Detection (Non-Hyperscale)"
+    source: "SQLLivesiteAgents/Performance/miscellaneous/references/akv-error-detection.md"
+    table: MonSQLSystemHealth
+    KustoQueries:
+      - TableName: MonSQLSystemHealth
+        ExecutedQuery: |
+          MonSQLSystemHealth
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName =~ '{LogicalServerName}' and AppName in ({AppNamesOnly})
+          | where error_id in (33183 , 37412,33184,37542,37566,37567,37568,37569,37570,37571,37572,37573,37574,37576,40981,45320,45321,45322,45324,45325,45326,45327,45329,45330,45362,45415,45463,45472,45494,45532,45538,45539,45654,45656,45720,45731,45746,45747,49981)
+          | summarize count=count(), message=take_any(message), StartTime=min(originalEventTimestamp), EndTime=max(originalEventTimestamp) by error_id,NodeName
+          | order by count desc
+
+  # ──────────────────────────────────────────────────────
+  # 6. AKV Error Detection (Hyperscale)
+  # ──────────────────────────────────────────────────────
+  - id: LS-MISC-06
+    name: "Azure Key Vault Error Detection (Hyperscale)"
+    source: "SQLLivesiteAgents/Performance/miscellaneous/references/akv-error-detection.md"
+    condition: "database is Hyperscale"
+    tables: [MonSQLSystemHealth, MonSocrates]
+    KustoQueries:
+      - TableName: MonSQLSystemHealth
+        ExecutedQuery: |
+          let appNames=materialize (
+          MonSocrates
+          | where  (originalEventTimestamp between (datetime({StartTime})..datetime({EndTime})))
+          | where LogicalServerName =~ '{LogicalServerName}' and logical_database_name =~ '{LogicalDatabaseName}'
+          | where isnotempty(foreign_file_id)
+          | summarize by AppName,AppTypeName
+          );
+          MonSQLSystemHealth
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | join kind=inner(appNames) on AppName
+          | where error_id in (33183 , 37412,33184,37542,37566,37567,37568,37569,37570,37571,37572,37573,37574,37576,40981,45320,45321,45322,45324,45325,45326,45327,45329,45330,45362,45415,45463,45472,45494,45532,45538,45539,45654,45656,45720,45731,45746,45747,49981)
+          | summarize count=count(), message=take_any(message), StartTime=min(originalEventTimestamp), EndTime=max(originalEventTimestamp) by error_id,NodeName
+          | order by count desc
+
+  # ──────────────────────────────────────────────────────
+  # 7. SQL Restart and Failover Detection
+  # Source: Performance/miscellaneous/references/sql-restart-and-failover-detection.md
+  # ──────────────────────────────────────────────────────
+  - id: LS-MISC-07
+    name: "SQL Restart and Failover Detection"
+    source: "SQLLivesiteAgents/Performance/miscellaneous/references/sql-restart-and-failover-detection.md"
+    table: MonSQLSystemHealth
+    KustoQueries:
+      - TableName: MonSQLSystemHealth
+        ExecutedQuery: |
+          MonSQLSystemHealth
+          | where {AppNamesNodeNamesWithPreciseTimeRange}
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | summarize StartTime=min(PreciseTimeStamp), EndTime=max(PreciseTimeStamp) by process_id, NodeName
+          | order by StartTime asc
+
+  # ──────────────────────────────────────────────────────
+  # 8. Kill Command Detection
+  # Source: Performance/miscellaneous/references/kill-command.md
+  # ──────────────────────────────────────────────────────
+  - id: LS-MISC-08
+    name: "Kill Command Detection"
+    source: "SQLLivesiteAgents/Performance/miscellaneous/references/kill-command.md"
+    table: MonSQLSystemHealth
+    KustoQueries:
+      - TableName: MonSQLSystemHealth
+        ExecutedQuery: |
+          MonSQLSystemHealth
+          | where {AppNamesNodeNamesWithPreciseTimeRange}
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | where message contains "Kill"
+          | summarize KillEventCount=count() by bin(PreciseTimeStamp, 1h)
+          | order by PreciseTimeStamp asc
+
+  # ──────────────────────────────────────────────────────
+  # 9. Azure Profiler Traces
+  # Source: Performance/miscellaneous/references/azure-profiler-trace.md
+  # ──────────────────────────────────────────────────────
+  - id: LS-MISC-09
+    name: "Azure Profiler Trace Detection"
+    source: "SQLLivesiteAgents/Performance/miscellaneous/references/azure-profiler-trace.md"
+    tables: [MonRgManager, MonManagement]
+    KustoQueries:
+      - TableName: MonRgManager
+        ExecutedQuery: |
+          let rg_server_traces =(MonRgManager
+          | where {ApplicationNamesNodeNamesWithOriginalEventTimeRange}
+          | where event =='rg_process_azure_profiler_request'
+          | where is_success==1
+          | extend trace_name = tostring(split(message, ':', 1)[0])
+          | extend trace_name = replace_regex(trace_name, @'\s+', '')
+          | extend trace_name = trim('"', trace_name)
+          | project TIMESTAMP,application_name, trace_name,NodeName,ClusterName);
+          let casCommand_traces=(MonManagement
+          | extend ClusterName = ring_name
+          | extend NodeName = node_name
+          | extend application_name
+          | where {NodeNamesWithOriginalEventTimeRange}
+          | where event =~ 'cas_workflow_take_azure_profiler_trace_complete'
+          | extend trace_name = strcat(NodeName,'_',ClusterName)
+          | project TIMESTAMP, application_name, trace_name,NodeName,ClusterName);
+          union rg_server_traces,casCommand_traces
+          | project-away ClusterName
+          | order by TIMESTAMP asc
+
+  # ──────────────────────────────────────────────────────
+  # 10. XEvent Sessions
+  # Source: Performance/miscellaneous/references/xevent-session-detection.md
+  # ──────────────────────────────────────────────────────
+  - id: LS-MISC-10
+    name: "XEvent Session Detection"
+    source: "SQLLivesiteAgents/Performance/miscellaneous/references/xevent-session-detection.md"
+    table: MonXeventsTelemetry
+    KustoQueries:
+      - TableName: MonXeventsTelemetry
+        ExecutedQuery: |
+          let mapping=datatable(buffer_flush_policy:long, EVENT_RETENTION_MODE:string, buffer_flush_policyName:string) 
+          [ 
+              0, 'ALLOW_SINGLE_EVENT_LOSS', 'XESBP_DROP_EVENT', 
+              1, 'NO_EVENT_LOSS', 'XESBP_BLOCK', 
+              2, 'Unknown', 'XESBP_ALLOC', 
+              3, 'ALLOW_MULTIPLE_EVENT_LOSS', 'XESBP_DROP_BUFFER',      
+          ]; 
+          MonXeventsTelemetry
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where event != 'xio_failed_request'
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | join kind=leftouter (mapping) on buffer_flush_policy 
+          | project TIMESTAMP, AppName, database_name, event, session_name, EVENT_RETENTION_MODE, NodeName, ClusterName
+          | order by TIMESTAMP
+          | take 100
+
+  # ──────────────────────────────────────────────────────
+  # 11. Process ID Display
+  # Source: Performance/miscellaneous/references/process-id-display.md
+  # ──────────────────────────────────────────────────────
+  - id: LS-MISC-11
+    name: "Process ID Display"
+    source: "SQLLivesiteAgents/Performance/miscellaneous/references/process-id-display.md"
+    table: MonSQLSystemHealth
+    KustoQueries:
+      - TableName: MonSQLSystemHealth
+        ExecutedQuery: |
+          MonSQLSystemHealth
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | summarize startTime=min(PreciseTimeStamp), endTime=max(PreciseTimeStamp) by NodeName, process_id,AppName
+          | project-reorder startTime, endTime, NodeName, process_id,AppName
+          | order by startTime asc

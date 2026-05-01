@@ -1,0 +1,710 @@
+SqlSkills:
+- id: MI-memory-1
+  Topic: TSGCL0258-High-disk-usage-due-to-stale-tempdb-file
+  Source: content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/TSGCL0258-High-disk-usage-due-to-stale-tempdb-file.ipynb
+  Prompts:
+  - MI TSGCL0258 High disk usage due to stale tempdb file
+  - Managed Instance TSGCL0258 High disk usage due to stale tempdb file
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRgManager
+    ExecutedQuery: |-
+      MonRgManager
+      | where TIMESTAMP > ago(6h)
+      | where ClusterName == "{ClusterName}" //ex. tr7310.eastus1-a.worker.database.windows.net
+      | where NodeName == "{NodeName}" //ex. DB4C.2
+      | where event == "directory_cleanup_file_delete" or event == "directory_cleanup_done"
+      | where file_path contains "Worker.CL" or (target_directory contains "Worker.CL")
+      | where file_path contains '[workdata](file://work/data/)'
+      | where application_name == "StaleDirectory"
+      | project TIMESTAMP, file_path, file_size_mb = file_size/1024./1024., file_spared
+- id: MI-memory-2
+  Topic: TSGCL0258-High-disk-usage-due-to-stale-tempdb-file
+  Source: content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/TSGCL0258-High-disk-usage-due-to-stale-tempdb-file.ipynb
+  Prompts:
+  - MI TSGCL0258 High disk usage due to stale tempdb file
+  - Managed Instance TSGCL0258 High disk usage due to stale tempdb file
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRgManager
+    ExecutedQuery: |-
+      MonRgManager
+      | where TIMESTAMP > ago(3h)
+      | where ClusterName == "{ClusterName}" //ex. tr7310.eastus1-a.worker.database.windows.net
+      | where NodeName == "{NodeName}" //ex. DB4C.2
+      | where event == "directory_cleanup_file_delete" or event == "directory_cleanup_done"
+      | where file_path contains "Worker.CL" or (target_directory contains "Worker.CL")
+      | where file_path contains '[workdata](file://work/data/)'
+      | where application_name == "StaleDirectory"
+      | parse file_path with * '?' path 'data' *
+      | extend dirPath = strcat(path, 'data')
+      | summarize num_files = count(), dirSizeMb = sumif(file_size/1024./1024., file_spared == 1) by dirPath, bin(TIMESTAMP, 1m)
+- id: MI-memory-3
+  Topic: TSGCL0258-High-disk-usage-due-to-stale-tempdb-file
+  Source: content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/TSGCL0258-High-disk-usage-due-to-stale-tempdb-file.ipynb
+  Prompts:
+  - MI TSGCL0258 High disk usage due to stale tempdb file
+  - Managed Instance TSGCL0258 High disk usage due to stale tempdb file
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCounterFiveMinute
+    ExecutedQuery: |-
+      let queryCluster = (clusterName: string, databaseName: string)
+      {
+      let clusterNodes =
+      (
+      cluster(clusterName).database(databaseName).
+      MonCounterFiveMinute
+      | where TIMESTAMP > ago(1h)
+      | where NodeName startswith "DB"
+      | summarize nodes_in_role = dcount(NodeName) by ClusterName, NodeRole
+      );
+      let miRgStaleData =
+      (
+      cluster(clusterName).database(databaseName).
+      MonRgManager
+      | where TIMESTAMP > ago(3h)
+      | where event == 'directory_cleanup_file_delete' or event == 'directory_cleanup_done'
+      | where file_path contains 'Worker.CL' or (target_directory contains 'Worker.CL')
+      | where file_path contains '\\work\\data\\'
+      | where application_name == 'StaleDirectory'
+      | where file_spared == 1
+      | summarize arg_max(TIMESTAMP, file_size) by file_path, ClusterName, NodeName, NodeRole
+      );
+      let miNodesWithHdrStaleFiles = (
+      miRgStaleData
+      | where file_path endswith '.hdr'
+      | summarize hdrMaxTimestamp = max(TIMESTAMP) by ClusterName, NodeName, NodeRole
+      );
+      let miRingsSloInfo =
+      (
+      cluster(clusterName).database(databaseName).
+      MonManagedInstanceResourceStats
+      | where TIMESTAMP > ago(1h)
+      | summarize by ClusterName, cpu_cap_per_second, sku, NodeRole, server_name
+      | summarize has_bc = dcountif(sku, sku == 'BusinessCritical') by ClusterName, NodeRole
+      );
+      let nodesWithReplica =
+      (
+      cluster(clusterName).database(databaseName).
+      MonDmDbHadrReplicaStates
+      | where TIMESTAMP > ago(1h)
+      | where AppTypeName == 'Worker.CL'
+      | summarize by ClusterName, NodeName
+      );
+      miRgStaleData
+      | join kind = inner (
+      miNodesWithHdrStaleFiles
+      ) on ClusterName, NodeName
+      | where abs(datetime_diff("minute", TIMESTAMP, hdrMaxTimestamp)) < 5
+      // Calculate usage percentage, num of app folders and estimate node size
+      | extend file_size_gb = file_size*1.0/1024/1024/1024
+      | parse NodeName with 'DB' node_size:int 'C.' rest
+      | extend node_size = iif(isnull( node_size), 80, node_size)
+      | extend disk_size_gb = iif(node_size >= 80 , 5200, node_size * 40)
+      | parse file_path with * '\\Worker.CL_App' AppId '\\' *
+      | summarize overhead_gbsum=sum(file_size_gb), appFolderCount = dcount(AppId) by NodeName, ClusterName, disk_size_gb, NodeRole
+      | extend usage_pct = round(overhead_gbsum/disk_size_gb * 100, 2)
+      // BC instances are higher risk
+      | join kind=inner (
+      miRingsSloInfo
+      ) on ClusterName, NodeRole
+      | extend usage_treshold = iff (has_bc == 1, 5, 30)
+      | where usage_pct > usage_treshold
+      // Nodes with active replica are not actionable
+      | join kind=leftanti (
+      nodesWithReplica
+      ) on ClusterName, NodeName
+      | join kind = inner (
+      clusterNodes
+      ) on ClusterName, NodeRole
+      };
+      (queryCluster("https://sqlazureau2.kustomfa.windows.net", "sqlazure1"))
+      | union (queryCluster ("https://sqlazurebr2.kustomfa.windows.net", "sqlazure1"))
+      | union (queryCluster ("https://sqlazureca2.kustomfa.windows.net", "sqlazure1"))
+      | union (queryCluster ("https://sqlazureince2.kustomfa.windows.net", "sqlazure1"))
+      | union (queryCluster ("https://sqlazurecus2.kustomfa.windows.net", "sqlazure1"))
+      | union (queryCluster ("https://sqlazureeas2.kustomfa.windows.net", "sqlazure1"))
+      | union (queryCluster ("https://sqlazureeus12.kustomfa.windows.net", "sqlazure1"))
+      | union (queryCluster ("https://sqlazureeus22.kustomfa.windows.net", "sqlazure1"))
+      | union (queryCluster ("https://sqlazurefra.kustomfa.windows.net", "sqlazure1"))
+      | union (queryCluster ("https://sqlazureinso2.kustomfa.windows.net", "sqlazure1"))
+      | union (queryCluster ("https://sqlazureinwe2.kustomfa.windows.net", "sqlazure1"))
+      | union (queryCluster ("https://sqlazureja2.kustomfa.windows.net", "sqlazure1"))
+      | union (queryCluster ("https://sqlazurencus3.kustomfa.windows.net", "sqlazure1"))
+      | union (queryCluster ("https://sqlazureneu2.kustomfa.windows.net", "sqlazure1"))
+      | union (queryCluster ("https://sqlazurescus2.kustomfa.windows.net", "sqlazure1"))
+      | union (queryCluster ("https://sqlazureseas2.kustomfa.windows.net", "sqlazure1"))
+      | union (queryCluster ("https://sqlazrwcus.kustomfa.windows.net", "sqlazure1"))
+      | union (queryCluster ("https://sqlazureweu2.kustomfa.windows.net", "sqlazure1"))
+      | union (queryCluster ("https://sqlazurewus2.kustomfa.windows.net", "sqlazure1"))
+      | union (queryCluster ("https://sqlazurekor.kustomfa.windows.net", "sqlazure1"))
+      | union (queryCluster ("https://sqlazurewus1.kustomfa.windows.net", "sqlazure1"))
+      | union (queryCluster ("https://sqlazureuae.kustomfa.windows.net", "sqlazure1"))
+      | union (queryCluster ("https://sqlazuresouthafrica.kustomfa.windows.net", "sqlazure1"))
+      | union (queryCluster ("https://sqlazureswitzerland.kustomfa.windows.net", "sqlazure1"))
+      | union (queryCluster ("https://sqlazuregermany.kustomfa.windows.net", "sqlazure1"))
+      | union (queryCluster ("https://sqlazurenorway.kustomfa.windows.net", "sqlazure1"))
+      | summarize affected_nodes_count = count() by ClusterName, NodeRole, usage_treshold, nodes_in_role, appFolderCount
+      | where usage_treshold == 30 and (affected_nodes_count + 1) >= nodes_in_role
+      // filtering only single GP clusters, for others we should have filed icm
+      | where appFolderCount == 1
+      | order by affected_nodes_count desc
+- id: MI-memory-4
+  Topic: TSGCLHE003-Shared_Disk_Owner_Node_Down
+  Source: content/Hermes/TSGCLHE003-Shared_Disk_Owner_Node_Down.md
+  Prompts:
+  - MI TSGCLHE003 Shared_Disk_Owner_Node_Down
+  - Managed Instance TSGCLHE003 Shared_Disk_Owner_Node_Down
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRgManager
+    ExecutedQuery: |-
+      MonRgManager
+      | where TIMESTAMP >= datetime(2025-11-23T05:30:00)
+      | where ClusterName =~ "{ClusterName}"
+      | where NodeRole =~ "DB16C"
+      | where event startswith "rg_managed_disks"
+      | where action_name != "set_acl"
+      | where isnotempty( message)
+      | where message !contains "CreateReservationHandler"
+      | where message !contains "CreateLayoutBasedReservationHandler"
+      | extend resultAsString = (case(result == 0, "S_OK",
+      result == 1, "S_FALSE",
+      result == -2147467259, "E_FAIL",
+      result == -2147483641, "E_INVALIDARG",
+      result == -2147467262, "E_NOINTERFACE",
+      result == -2147467263, "E_NOTIMPL",
+      result == -2147140863, "E_NOT_SET",
+- id: MI-memory-5
+  Topic: TSGCLHE004-Broken_Esan_Volume_Group_Endpoint
+  Source: content/Hermes/TSGCLHE004-Broken_Esan_Volume_Group_Endpoint.md
+  Prompts:
+  - MI TSGCLHE004 Broken_Esan_Volume_Group_Endpoint
+  - Managed Instance TSGCLHE004 Broken_Esan_Volume_Group_Endpoint
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: |-
+      let startDate = ago(1h);
+      let replMasterClaimFailureCapture = "Failed to claim ownership on shared managed disks, initiating SQL Exit.";
+      let connectFailurePattern = @"IscsiPsVolumeConnector::Connect\].*finished execution, status 0x[0-9a-fA-F]*[1-9a-fA-F]";
+      let loginUnsuccessfulPattern = @"Login\s+unsuccessful";
+      let connectSuccessPattern = @"IscsiPsVolumeConnector::Connect\].*finished execution, status 0x0+($|[^0-9a-fA-F])";
+      let minFailedConnectThreshold = 3;
+
+      let FailedClaimSqlExit =
+          MonSQLSystemHealth
+      | where originalEventTimestamp >= startDate
+      | where instance_rg_size startswith "MIWCOW" and instance_rg_size contains "HE"
+      | where message contains replMasterClaimFailureCapture
+      | project instance_rg_size, LogicalServerName, ClusterName, NodeRole, AppName, AppTypeName, SqlExitTs = originalEventTimestamp;
+
+      let FailedConnects =
+          MonRgManager
+      | where originalEventTimestamp >= startDate
+      | where event startswith "rg_managed_disks" and isnotempty(message)
+      | where message matches regex connectFailurePattern
+      | where message matches regex loginUnsuccessfulPattern
+      | extend VolumeName = extract(@"For volume '([^']+)'", 1, message, typeof(string))
+      | project ClusterName, NodeRole, VolumeName, FailedConnectMsg = message, FailedConnectTs = originalEventTimestamp;
+
+      let SuccessfulConnects =
+          MonRgManager
+      | where originalEventTimestamp >= startDate
+      | where event startswith "rg_managed_disks" and isnotempty(message)
+      | where message matches regex connectSuccessPattern
+      | extend VolumeName = extract(@"For volume '([^']+)'", 1, message, typeof(string))
+      | project ClusterName, NodeRole, VolumeName, SuccessConnectTs = originalEventTimestamp;
+
+      let FailedVolumeSummary =
+          FailedConnects
+      | summarize FailedConnectCnt = count(),
+                      FirstFailedConnectTs = min(FailedConnectTs),
+                      LastFailedConnectTs  = max(FailedConnectTs),
+                      FailedConnectMsg     = take_any(FailedConnectMsg)
+              by ClusterName, NodeRole, VolumeName
+      | where FailedConnectCnt >= minFailedConnectThreshold;
+
+      let RecoveredVolumes =
+          FailedVolumeSummary
+      | join kind=inner SuccessfulConnects on ClusterName, NodeRole, VolumeName
+      | where SuccessConnectTs > FirstFailedConnectTs
+      | distinct ClusterName, NodeRole, VolumeName;
+
+      let BrokenVolumeEndpoints =
+          FailedVolumeSummary
+      | join kind=leftanti RecoveredVolumes on ClusterName, NodeRole, VolumeName;
+
+      FailedClaimSqlExit
+      | join kind=inner BrokenVolumeEndpoints on ClusterName, NodeRole
+      | where SqlExitTs >= FirstFailedConnectTs
+      | summarize FailuresCnt = count(),
+                  FirstDetectionTime = min(FirstFailedConnectTs),
+                  FailedConnectCnt = max(FailedConnectCnt),
+                  FailedConnectMsg = take_any(FailedConnectMsg)
+          by instance_rg_size, LogicalServerName, ClusterName, AppName, AppTypeName, NodeRole, VolumeName
+- id: MI-memory-6
+  Topic: TSGCLHE004-Broken_Esan_Volume_Group_Endpoint
+  Source: content/Hermes/TSGCLHE004-Broken_Esan_Volume_Group_Endpoint.md
+  Prompts:
+  - MI TSGCLHE004 Broken_Esan_Volume_Group_Endpoint
+  - Managed Instance TSGCLHE004 Broken_Esan_Volume_Group_Endpoint
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRgManager
+    ExecutedQuery: |-
+      MonRgManager
+      | where originalEventTimestamp >= startDate
+      | where event startswith "rg_managed_disks" and isnotempty(message)
+      | where message matches regex connectFailurePattern
+      | where message matches regex loginUnsuccessfulPattern
+      | extend VolumeName = extract(@"For volume '([^']+)'", 1, message, typeof(string))
+      | project ClusterName, NodeRole, VolumeName, FailedConnectMsg = message, FailedConnectTs = originalEventTimestamp;
+- id: MI-memory-7
+  Topic: TSGCLHE004-Broken_Esan_Volume_Group_Endpoint
+  Source: content/Hermes/TSGCLHE004-Broken_Esan_Volume_Group_Endpoint.md
+  Prompts:
+  - MI TSGCLHE004 Broken_Esan_Volume_Group_Endpoint
+  - Managed Instance TSGCLHE004 Broken_Esan_Volume_Group_Endpoint
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRgManager
+    ExecutedQuery: |-
+      MonRgManager
+      | where originalEventTimestamp >= startDate
+      | where event startswith "rg_managed_disks" and isnotempty(message)
+      | where message matches regex connectSuccessPattern
+      | extend VolumeName = extract(@"For volume '([^']+)'", 1, message, typeof(string))
+      | project ClusterName, NodeRole, VolumeName, SuccessConnectTs = originalEventTimestamp;
+- id: MI-memory-8
+  Topic: TSGCLPerfScale002_Hekaton_memory_leak_detected
+  Source: content/sql_cloud_lifter_notebook/TSGCLPerfScale002_Hekaton_memory_leak_detected.md
+  Prompts:
+  - MI TSGCLPerfScale002_Hekaton_memory_leak_detected
+  - Managed Instance TSGCLPerfScale002_Hekaton_memory_leak_detected
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmRealTimeResourceStats
+    ExecutedQuery: |-
+      MonDmRealTimeResourceStats
+      | where replica\_type == 0
+      | where TIMESTAMP &lt; observed\_period\_end
+      | where LogicalServerName == serverName and database\_name == 'master'
+      | project originalEventTimestamp, ClusterName, AppName, NodeName, slo\_name, code\_package\_version
+      | order by originalEventTimestamp asc
+      | extend next\_NodeName = next(NodeName, 1, ''), next\_AppName = next(AppName, 1, ''), next\_slo\_name = next(slo\_name, 1, ''), next\_code\_package\_version = next(code\_package\_version, 1, '')
+      | where NodeName != next\_NodeName or AppName != next\_AppName or slo\_name != next\_slo\_name or code\_package\_version != next\_code\_package\_version
+      | where isnotempty(next\_NodeName)
+      | summarize max(originalEventTimestamp));
+- id: MI-memory-9
+  Topic: TSGCLPerfScale002_Hekaton_memory_leak_detected
+  Source: content/sql_cloud_lifter_notebook/TSGCLPerfScale002_Hekaton_memory_leak_detected.md
+  Prompts:
+  - MI TSGCLPerfScale002_Hekaton_memory_leak_detected
+  - Managed Instance TSGCLPerfScale002_Hekaton_memory_leak_detected
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: |-
+      MonSqlRgHistory
+      | where TIMESTAMP between (timestampOfInterest..observed\_period\_end)
+      | where LogicalServerName == serverName
+      | where pool\_name == 'SloHkPool'
+      | project TIMESTAMP , used\_memory\_percent = 100.00 \* used\_memory\_kb\_max / target\_memory\_kb\_max, NodeName
+      | summarize arg\_max(TIMESTAMP, used\_memory\_percent) by NodeName
+      | summarize max(used\_memory\_percent));
+- id: MI-memory-10
+  Topic: TSGCLPerfScale002_Hekaton_memory_leak_detected
+  Source: content/sql_cloud_lifter_notebook/TSGCLPerfScale002_Hekaton_memory_leak_detected.md
+  Prompts:
+  - MI TSGCLPerfScale002_Hekaton_memory_leak_detected
+  - Managed Instance TSGCLPerfScale002_Hekaton_memory_leak_detected
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: |-
+      MonSqlRgHistory
+      | where TIMESTAMP between (timestampOfInterest..observed\_period\_end)
+      | where LogicalServerName == serverName
+      | where pool\_name == 'SloHkPool'
+      | project TIMESTAMP , used\_memory\_percent = 100.00 \* used\_memory\_kb\_max / target\_memory\_kb\_max, NodeName
+      | make-series max(used\_memory\_percent) on TIMESTAMP from timestampOfInterest to observed\_period\_end step 15m by NodeName
+      // Try to fit line to estimate when issue will happen
+      | extend (confidence,slope,variance,rvariance,interception,lineseries) = series\_fit\_line(max\_used\_memory\_percent)
+      | project confidence, slope, interception, lineseries, max\_used\_memory\_percent, NodeName, TIMESTAMP;
+- id: MI-memory-11
+  Topic: Connection-errors-and-not-able-to-change-network-settings
+  Source: Performance-and-Query-Execution/Other-errors-and-exceptions/Connection-errors-and-not-able-to-change-network-settings.md
+  Prompts:
+  - MI Connection errors and not able to change network settings
+  - Managed Instance Connection errors and not able to change network settings
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCounterOneMinute
+    ExecutedQuery: |-
+      MonCounterOneMinute
+      | where TIMESTAMP between (datetime(2022-10-17 18:00)..datetime(2022-10-25 18:00)
+      | where NodeName =~ "{NodeName}" and ClusterName =~ "{ClusterName}"
+      | extend Category = case(CounterName =~  @"\Memory\Available MBytes", "Memory",
+- id: MI-memory-12
+  Topic: Fulltext-Investigation-Tips
+  Source: Performance-and-Query-Execution/Other-errors-and-exceptions/Fulltext-Investigation-Tips.md
+  Prompts:
+  - MI Fulltext Investigation Tips
+  - Managed Instance Fulltext Investigation Tips
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRgLoad
+    ExecutedQuery: |-
+      MonRgLoad
+      | where code_package_name == "FullTextSearchService"
+      and event == "instance_load" and application_name == "{FabricAppName}"
+      | project TIMESTAMP, mem_percent = (memory_load * 1.0 / memory_load_cap )*100
+      | render timechart
+- id: MI-memory-13
+  Topic: Known-issue_3AFrequent-FdHost-restart-issue-due-to-OOM
+  Source: Performance-and-Query-Execution/Other-errors-and-exceptions/Known-issue%3AFrequent-FdHost-restart-issue-due-to-OOM.md
+  Prompts:
+  - MI Known issue%3AFrequent FdHost restart issue due to OOM
+  - Managed Instance Known issue%3AFrequent FdHost restart issue due to OOM
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRgLoad
+    ExecutedQuery: |-
+      MonRgLoad
+      | where TIMESTAMP > datetime("2024-05-21T11:11:37.9030348Z") and TIMESTAMP < datetime("2024-05-21T18:20:37.9030348Z")
+      | where code_package_name == "FullTextSearchService"
+      and event == "instance_load" and application_name has "{AppName}"
+      | project TIMESTAMP, memory_percent = (memory_load * 1.0 / memory_load_cap )*100, rg_instance_process_id
+      | render timechart with (ycolumns = memory_percent, series = rg_instance_process_id)
+- id: MI-memory-14
+  Topic: Known-issue_3AFrequent-FdHost-restart-issue-due-to-OOM
+  Source: Performance-and-Query-Execution/Other-errors-and-exceptions/Known-issue%3AFrequent-FdHost-restart-issue-due-to-OOM.md
+  Prompts:
+  - MI Known issue%3AFrequent FdHost restart issue due to OOM
+  - Managed Instance Known issue%3AFrequent FdHost restart issue due to OOM
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmCloudDatabaseWaitStats
+    ExecutedQuery: |-
+      MonDmCloudDatabaseWaitStats
+      | where TIMESTAMP between (datetime(2024-05-21 11:11)..datetime(2024-05-21 18:11))
+      | where wait_time_ms > 100000
+      | where wait_type contains "FT_IFTS_SRCH_FD_MANAGER"
+      | where LogicalServerName =~ "{ServerName}"
+      | where AppName == "{AppName}"
+- id: MI-memory-15
+  Topic: Known-issue_3AFrequent-FdHost-restart-issue-due-to-OOM
+  Source: Performance-and-Query-Execution/Other-errors-and-exceptions/Known-issue%3AFrequent-FdHost-restart-issue-due-to-OOM.md
+  Prompts:
+  - MI Known issue%3AFrequent FdHost restart issue due to OOM
+  - Managed Instance Known issue%3AFrequent FdHost restart issue due to OOM
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRgLoad
+    ExecutedQuery: |-
+      MonRgLoad
+      | where application_name == "{FabricAppName}"
+      | where TIMESTAMP > ago(3h)
+      | where code_package_name =="FullTextSearchService"
+      | project TIMESTAMP, memory_current_cap, memory_load_cap
+- id: MI-memory-16
+  Topic: OnePager_-Connection-Error-10060-Operation-Timeout
+  Source: Performance-and-Query-Execution/Other-errors-and-exceptions/[OnePager]-Connection-Error-10060-Operation-Timeout.md
+  Prompts:
+  - MI [OnePager] Connection Error 10060 Operation Timeout
+  - Managed Instance [OnePager] Connection Error 10060 Operation Timeout
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCounterOneMinute
+    ExecutedQuery: |-
+      MonCounterOneMinute
+      | where TIMESTAMP between (datetime(2022-10-17 18:00)..datetime(2022-10-25 18:00)
+      | where NodeName =~ "{NodeName}" and ClusterName =~ "{ClusterName}"
+      | extend Category = case(CounterName =~  @"\Memory\Available MBytes", "Memory", strlen(extract(@"\\Processor\\([0-9]{1,2})\\% (Privileged Time|Processor Time)", 0, CounterName, typeof(string))) >0, "Processor", strlen(extract(@"\\Processor\\(_Total)\\% (Processor Time|Privileged Time)", 0, CounterName, typeof(string))) >0, "Total Processor", strlen(extract(@"\\LogicalDisk\\([A-Z]:)\\Avg. Disk sec/(Read|Write)", 0, CounterName, typeof(string))) >0, "Disk", "Other")
+      | where Category !in ( "Other", "Memory", "Disk")
+      | summarize avg(CounterValue) by bin(TIMESTAMP, 5min),  CounterName, Category
+      | render timechart
+- id: MI-memory-17
+  Topic: Additional-Memory
+  Source: Performance-and-Query-Execution/Reference/Additional-Memory.md
+  Prompts:
+  - MI Additional Memory
+  - Managed Instance Additional Memory
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlIdleMemCollectorStats
+    ExecutedQuery: |-
+      MonSqlIdleMemCollectorStats
+      | where LogicalServerName =~ "{ServerName}"
+      | where TIMESTAMP > ago(3h)
+      | where event == 'sql_memory_perf_stats'
+      | project TIMESTAMP,  current_job_memory_cap_mb=(current_job_memory_cap)/128
+      | order by TIMESTAMP asc
+- id: MI-memory-18
+  Topic: How-to-check-gateway-database-MonSQLSystemHealth-log-to-identify-OOM
+  Source: Performance-and-Query-Execution/Reference/How-to-check-gateway-database-MonSQLSystemHealth-log-to-identify-OOM.md
+  Prompts:
+  - MI How to check gateway database MonSQLSystemHealth log to identify OOM
+  - Managed Instance How to check gateway database MonSQLSystemHealth log to identify OOM
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRedirector
+    ExecutedQuery: |-
+      MonRedirector
+      | where originalEventTimestamp between(startTime..endTime)
+      | where ClusterName in ('tr5896.southeastasia1-a.worker.database.windows.net')
+      | where AppTypeName startswith 'Gateway.PDC'
+      | where event == 'sql_alias_odbc_failure'
+      | project TIMESTAMP,message,connection_string
+- id: MI-memory-19
+  Topic: How-to-check-gateway-database-MonSQLSystemHealth-log-to-identify-OOM
+  Source: Performance-and-Query-Execution/Reference/How-to-check-gateway-database-MonSQLSystemHealth-log-to-identify-OOM.md
+  Prompts:
+  - MI How to check gateway database MonSQLSystemHealth log to identify OOM
+  - Managed Instance How to check gateway database MonSQLSystemHealth log to identify OOM
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: |-
+      MonSQLSystemHealth
+      | where originalEventTimestamp between (datetime(2024-06-26 06:00:00) ..datetime(2024-06-26 10:00:00) )
+      | where AppName =='ac66d6932a7a' '
+      | project-away TIMESTAMP, PreciseTimeStamp, NodeRole, MachineName, ClusterName, AppTypeName, ResourceGroup, package, sessionName,
+- id: MI-memory-20
+  Topic: How-to-check-gateway-database-MonSQLSystemHealth-log-to-identify-OOM
+  Source: Performance-and-Query-Execution/Reference/How-to-check-gateway-database-MonSQLSystemHealth-log-to-identify-OOM.md
+  Prompts:
+  - MI How to check gateway database MonSQLSystemHealth log to identify OOM
+  - Managed Instance How to check gateway database MonSQLSystemHealth log to identify OOM
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: |-
+      MonSQLSystemHealth
+      | where originalEventTimestamp between (datetime('2024-06-01 12:00:00') ..datetime('2024-07-06 17:00:00') )
+      | where message contains "Failed allocate"
+      |where ClusterName =="'tr5896.southeastasia1-a.worker.database.windows.net" and instance_rg_size == "AliasDb"
+      |project NodeName,AppName,originalEventTimestamp,message
+      |order by originalEventTimestamp asc
+- id: MI-memory-21
+  Topic: How-to-troubleshoot-OOM-issues
+  Source: Performance-and-Query-Execution/Reference/How-to-troubleshoot-OOM-issues.md
+  Prompts:
+  - MI How to troubleshoot OOM issues
+  - Managed Instance How to troubleshoot OOM issues
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: |-
+      MonSQLSystemHealth
+      | where LogicalServerName =~ "{ServerName}"
+      | where TIMESTAMP > ago(3h)
+      | where message contains "memory"
+      | project TIMESTAMP, message
+- id: MI-memory-22
+  Topic: How-to-troubleshoot-OOM-issues
+  Source: Performance-and-Query-Execution/Reference/How-to-troubleshoot-OOM-issues.md
+  Prompts:
+  - MI How to troubleshoot OOM issues
+  - Managed Instance How to troubleshoot OOM issues
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: |-
+      MonSQLSystemHealth
+      | where AppName == appName
+      | where originalEventTimestamp between (incidentStartTime .. incidentEndTime)
+      | where event == "summarized_oom_snapshot"
+      | extend topClerks = parse_json(top_memory_clerks)
+      | extend topPools = parse_json(top_memory_pools)
+      | extend oomCause = case(oom_cause == 1, 'HEKATON_POOL_MEMORY_LOW', oom_cause == 2, 'MEMORY_LOW', oom_cause == 3, 'OS_MEMORY_PRESSURE',
+      oom_cause == 4, 'OS_MEMORY_PRESSURE_SQL', oom_cause == 5, 'NON_SOS_MEMORY_LEAK', oom_cause == 6, 'SERVERLESS_MEMORY_RECLAMATION',
+      oom_cause == 7, 'MEMORY_LEAK', oom_cause == 8, 'SLOW_BUFFER_POOL_SHRINK', oom_cause == 9, 'INTERNAL_POOL', oom_cause == 10, 'SYSTEM_POOL',
+      oom_cause == 11, 'QUERY_MEMORY_GRANTS', oom_cause == 12, 'REPLICAS_AND_AVAILABILITY', 'UNKNOWN')
+      | project originalEventTimestamp, ClusterName, NodeName, AppTypeName, instance_rg_size,
+- id: MI-memory-23
+  Topic: How-to-troubleshoot-OOM-issues
+  Source: Performance-and-Query-Execution/Reference/How-to-troubleshoot-OOM-issues.md
+  Prompts:
+  - MI How to troubleshoot OOM issues
+  - Managed Instance How to troubleshoot OOM issues
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlMemoryClerkStats
+    ExecutedQuery: |-
+      let topConsumers=MonSqlMemoryClerkStats
+      | where TIMESTAMP > startTime and TIMESTAMP < endTime
+      | where AppName == oomApp and NodeName == oomNode
+      | where pages_kb > 50000 or vm_committed_kb > 50000
+      | summarize by ['memory_clerk_type'];
+- id: MI-memory-24
+  Topic: How-to-troubleshoot-OOM-issues
+  Source: Performance-and-Query-Execution/Reference/How-to-troubleshoot-OOM-issues.md
+  Prompts:
+  - MI How to troubleshoot OOM issues
+  - Managed Instance How to troubleshoot OOM issues
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlMemoryClerkStats
+    ExecutedQuery: |-
+      MonSqlMemoryClerkStats
+      | where TIMESTAMP > startTime and TIMESTAMP < endTime
+      | where AppName == oomApp and NodeName == oomNode
+      | join kind= inner (
+- id: MI-memory-25
+  Topic: How-to-work-on-the-MI-OOM-issue
+  Source: Performance-and-Query-Execution/Reference/How-to-work-on-the-MI-OOM-issue.md
+  Prompts:
+  - MI How to work on the MI OOM issue
+  - Managed Instance How to work on the MI OOM issue
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: |-
+      MonSQLSystemHealth
+      | where PreciseTimeStamp >= datetime(****) and PreciseTimeStamp <= datetime(****)
+      | where AppName == "****"
+      | where message != ""
+      | where message contains "Error:"
+      | where not(message matches regex "Error: (35262|40613|913|18401|17187),")
+      | extend parsed_message = replace("[0-9-]+[ \t]+[0-9:.]+[ \t]+[a-zA-Z0-9]+[ ]+", "", message)
+      | project originalEventTimestamp, message, parsed_message
+      | summarize count(), min(originalEventTimestamp), max(originalEventTimestamp), any(message) by parsed_message
+      | order by count_ desc
+      | project min_originalEventTimestamp, max_originalEventTimestamp, count_, parsed_message, any_message
+- id: MI-memory-26
+  Topic: How-to-work-on-the-MI-OOM-issue
+  Source: Performance-and-Query-Execution/Reference/How-to-work-on-the-MI-OOM-issue.md
+  Prompts:
+  - MI How to work on the MI OOM issue
+  - Managed Instance How to work on the MI OOM issue
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlMemoryClerkStats
+    ExecutedQuery: |-
+      MonSqlMemoryClerkStats
+      //| where PreciseTimeStamp >= datetime(2024-09-30 20:00) and PreciseTimeStamp <= datetime(2024-09-30 22:00)
+      | where PreciseTimeStamp >= datetime(2024-10-01 20:00) and PreciseTimeStamp <= datetime(2024-10-01 23:00)
+      | where LogicalServerName == "***"
+      | summarize sum(pages_kb) by bin(TIMESTAMP, 5m), memory_clerk_type
+      | render timechart
+- id: MI-memory-27
+  Topic: How-to-work-on-the-MI-OOM-issue
+  Source: Performance-and-Query-Execution/Reference/How-to-work-on-the-MI-OOM-issue.md
+  Prompts:
+  - MI How to work on the MI OOM issue
+  - Managed Instance How to work on the MI OOM issue
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmDbResourceGovernance
+    ExecutedQuery: |-
+      MonDmDbResourceGovernance
+      |where TIMESTAMP > ago(30d)
+      | where LogicalServerName == "***"
+      | summarize min(TIMESTAMP), max(TIMESTAMP) by job_low_memory_signal_threshold_mb, min_sos_gap_with_job_mem_limit_in_mb
+- id: MI-memory-28
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlMemoryClerkStats
+    ExecutedQuery: |-
+      MonSqlMemoryClerkStats
+      | where LogicalServerName =~ ServerName
+      | where TIMESTAMP > ago(daysAgo)
+      | lookup kind = leftouter (
+- id: MI-memory-29
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlMemoryClerkStats
+    ExecutedQuery: |-
+      MonSqlMemoryClerkStats
+      | where LogicalServerName =~ ServerName
+      | where TIMESTAMP > ago(daysAgo)
+      | top-nested 5 of memory_clerk_type by sum(pages_kb) desc
+- id: MI-memory-30
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlMemoryClerkStats
+    ExecutedQuery: |-
+      MonSqlMemoryClerkStats
+      | where TIMESTAMP > datetime(2025-05-09 08:00:39.4366979) and TIMESTAMP < datetime(2025-05-09 16:00:39.4366979)
+      | where LogicalServerName =~ "{ServerName}"
+      | where memory_clerk_type contains "SQLQERESERVATIONS" or memory_clerk_type contains "bufferpool"
+      | project originalEventTimestamp, memory_clerk_type, memory_gb = pages_kb / 1024.0 / 1024.0
+      | render timechart

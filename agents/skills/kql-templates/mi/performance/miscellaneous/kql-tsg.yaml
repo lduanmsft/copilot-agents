@@ -1,0 +1,514 @@
+SqlSkills:
+- id: MI-miscellaneous-1
+  Topic: TSGCLHE004-Broken_Esan_Volume_Group_Endpoint
+  Source: content/Hermes/TSGCLHE004-Broken_Esan_Volume_Group_Endpoint.md
+  Prompts:
+  - MI TSGCLHE004 Broken_Esan_Volume_Group_Endpoint
+  - Managed Instance TSGCLHE004 Broken_Esan_Volume_Group_Endpoint
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: |-
+      MonSQLSystemHealth
+      | where originalEventTimestamp >= startDate
+      | where instance_rg_size startswith "MIWCOW" and instance_rg_size contains "HE"
+      | where message contains replMasterClaimFailureCapture
+      | project instance_rg_size, LogicalServerName, ClusterName, NodeRole, AppName, AppTypeName, SqlExitTs = originalEventTimestamp;
+- id: MI-miscellaneous-2
+  Topic: TSG-Increase-SQL-MI-reserved-storage-on-the-fly
+  Source: content/sql_cloud_lifter_notebook/TSG-Increase-SQL-MI-reserved-storage-on-the-fly.md
+  Prompts:
+  - MI TSG Increase SQL MI reserved storage on the fly
+  - Managed Instance TSG Increase SQL MI reserved storage on the fly
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: |-
+      MonManagedServers
+      | where name == '{LogicalServerName}'
+      | top 1 by TIMESTAMP desc
+      | project TIMESTAMP, edition
+- id: MI-miscellaneous-3
+  Topic: TSG-PLATVLDT-ErrorNode-DiskWatchdog-FullDisk
+  Source: content/sql_cloud_lifter_notebook/TSG-PLATVLDT-ErrorNode-DiskWatchdog-FullDisk.md
+  Prompts:
+  - MI TSG PLATVLDT ErrorNode DiskWatchdog FullDisk
+  - Managed Instance TSG PLATVLDT ErrorNode DiskWatchdog FullDisk
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: |-
+      MonSQLSystemHealth
+      | where TIMESTAMP between (startTime .. endTime)
+      | where ClusterName == clusterName
+      | where NodeName in (nodeNames)
+      | where AppName == appName
+      | summarize count(), take_any(message) by error_id, AppName
+      | where count_ > countThreshold
+      | project count_, error_id, message, AppName
+      | sort by count_
+- id: MI-miscellaneous-4
+  Topic: TSGCL0279-Hermes-Managed-server-encountered-a-stuck-upsert-operation
+  Source: content/sql_cloud_lifter_notebook/TSGCL0279-Hermes-Managed-server-encountered-a-stuck-upsert-operation.md
+  Prompts:
+  - MI TSGCL0279 Hermes Managed server encountered a stuck upsert operation
+  - Managed Instance TSGCL0279 Hermes Managed server encountered a stuck upsert operation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: |-
+      MonManagement
+      | where TIMESTAMP > ago(4d)
+      | where event startswith "managed_disk_azure_operation"
+      | where operation_type == "UpdateVMDataDiskConfig"
+      | where resource_group_name contains "tr54572"
+      | project originalEventTimestamp, event, operation_type, request_method, request_body //, response_body (add response_body for more details), I filtered it out in TSG for simplicity
+- id: MI-miscellaneous-5
+  Topic: TSGCL0279-Hermes-Managed-server-encountered-a-stuck-upsert-operation
+  Source: content/sql_cloud_lifter_notebook/TSGCL0279-Hermes-Managed-server-encountered-a-stuck-upsert-operation.md
+  Prompts:
+  - MI TSGCL0279 Hermes Managed server encountered a stuck upsert operation
+  - Managed Instance TSGCL0279 Hermes Managed server encountered a stuck upsert operation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: |-
+      MonManagement
+      | where TIMESTAMP > ago(10d)
+      | where event startswith "managed_disk_azure_operation_failure"
+      | where operation_type == "UpdateVMDataDiskConfig"
+      | project originalEventTimestamp, event, operation_type, request_method, request_body, response_body
+- id: MI-miscellaneous-6
+  Topic: Workflow-for-Index-Maintenance-and-statistics
+  Source: Performance-and-Query-Execution/Index-maintenance-and-statistics/Workflow-for-Index-Maintenance-and-statistics.md
+  Prompts:
+  - MI Workflow for Index Maintenance and statistics
+  - Managed Instance Workflow for Index Maintenance and statistics
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: AlrSQLErrorsReported
+    ExecutedQuery: |-
+      AlrSQLErrorsReported
+      | where LogicalServerName =~ MIName
+      | where originalEventTimestamp >= startTime
+      | where originalEventTimestamp <= endTime
+      | project originalEventTimestamp, database_name, error_number, state , session_id
+- id: MI-miscellaneous-7
+  Topic: Customer-complains-about-used-space-is-growing-or-too-high
+  Source: Performance-and-Query-Execution/Managing-space-for-databases-and-pools/Customer-complains-about-used-space-is-growing-or-too-high.md
+  Prompts:
+  - MI Customer complains about used space is growing or too high
+  - Managed Instance Customer complains about used space is growing or too high
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiDmDbPartitionStats
+    ExecutedQuery: |-
+      let PartitionStats=materialize(MonWiDmDbPartitionStats
+      | where AppName contains myAppName and logical_database_name !='master' and logical_database_name =~ dbName and index_id in (0,1)
+      | summarize used_page_count=max(used_page_count), row_count=max(row_count) by database_id, logical_database_name, object_id, index_id, partition_number, data_date=bin(TIMESTAMP, 1d));
+- id: MI-miscellaneous-8
+  Topic: Customer-complains-about-used-space-is-growing-or-too-high
+  Source: Performance-and-Query-Execution/Managing-space-for-databases-and-pools/Customer-complains-about-used-space-is-growing-or-too-high.md
+  Prompts:
+  - MI Customer complains about used space is growing or too high
+  - Managed Instance Customer complains about used space is growing or too high
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDatabaseMetadata
+    ExecutedQuery: |-
+      let FilteredResults=materialize(MonDatabaseMetadata
+      | where AppName contains myAppName and logical_db_name != 'master'
+      | where (table_name=='sysclsobjs' and class==50) or (table_name=='sysschobjs' and ['type']=='U ') or (table_name=='sysidxstats' and indid in (0,1))
+      | project TIMESTAMP, table_name, class, ['type'], id, name, nsid, indid);
+- id: MI-miscellaneous-9
+  Topic: Error-42019-when-adding-a-new-datafile
+  Source: Performance-and-Query-Execution/Managing-space-for-databases-and-pools/Error-42019-when-adding-a-new-datafile.md
+  Prompts:
+  - MI Error 42019 when adding a new datafile
+  - Managed Instance Error 42019 when adding a new datafile
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: AlrSQLErrorsReported
+    ExecutedQuery: |-
+      AlrSQLErrorsReported
+      | where LogicalServerName =~ "{ServerName}"
+      | where originalEventTimestamp > datetime(2023-08-12 00:23:45.4993029)-10m and originalEventTimestamp  < datetime(2023-08-12 00:23:45.4993029) + 10m
+      | summarize count() by error_number, severity, state
+- id: MI-miscellaneous-10
+  Topic: Error-42019-when-adding-a-new-datafile
+  Source: Performance-and-Query-Execution/Managing-space-for-databases-and-pools/Error-42019-when-adding-a-new-datafile.md
+  Prompts:
+  - MI Error 42019 when adding a new datafile
+  - Managed Instance Error 42019 when adding a new datafile
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: |-
+      MonSQLSystemHealth
+      | where TIMESTAMP >=  go(3d)
+      | where LogicalServerName =~ "{ServerName}"
+      |project TIMESTAMP , message
+- id: MI-miscellaneous-11
+  Topic: Error-42019-when-adding-a-new-datafile
+  Source: Performance-and-Query-Execution/Managing-space-for-databases-and-pools/Error-42019-when-adding-a-new-datafile.md
+  Prompts:
+  - MI Error 42019 when adding a new datafile
+  - Managed Instance Error 42019 when adding a new datafile
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonBackup
+    ExecutedQuery: |-
+      MonBackup
+      | where LogicalServerName =~ "{ServerName}"
+      | where event startswith "database_backup"
+      | where TIMESTAMP > datetime(2023-10-12 00:00:33.0708666)
+      | where logical_database_name contains "7f61f2de-3b97-4fef-a77f-767d5b960485" //physical database name
+- id: MI-miscellaneous-12
+  Topic: OnePager_-Error-42019-when-adding-a-new-datafile
+  Source: Performance-and-Query-Execution/Managing-space-for-databases-and-pools/[OnePager]-Error-42019-when-adding-a-new-datafile.md
+  Prompts:
+  - MI [OnePager] Error 42019 when adding a new datafile
+  - Managed Instance [OnePager] Error 42019 when adding a new datafile
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: AlrSQLErrorsReported
+    ExecutedQuery: |-
+      AlrSQLErrorsReported
+      | where LogicalServerName =~ "{ServerName}"
+      | where originalEventTimestamp > datetime(2023-08-12 00:23:45.4993029)-10m and originalEventTimestamp < datetime(2023-08-12 00:23:45.4993029) + 10m
+      | summarize count() by error_number, severity, state
+- id: MI-miscellaneous-13
+  Topic: OnePager_-Error-42019-when-adding-a-new-datafile
+  Source: Performance-and-Query-Execution/Managing-space-for-databases-and-pools/[OnePager]-Error-42019-when-adding-a-new-datafile.md
+  Prompts:
+  - MI [OnePager] Error 42019 when adding a new datafile
+  - Managed Instance [OnePager] Error 42019 when adding a new datafile
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: |-
+      MonSQLSystemHealth
+      | where TIMESTAMP >= go(3d)
+      | where LogicalServerName =~ "{ServerName}"
+      | project TIMESTAMP, message
+- id: MI-miscellaneous-14
+  Topic: Connection-errors-and-not-able-to-change-network-settings
+  Source: Performance-and-Query-Execution/Other-errors-and-exceptions/Connection-errors-and-not-able-to-change-network-settings.md
+  Prompts:
+  - MI Connection errors and not able to change network settings
+  - Managed Instance Connection errors and not able to change network settings
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: |-
+      MonLogin
+      | where ClusterName startswith "tr4487"
+      | where originalEventTimestamp >= issue_time - 2d
+      | where event == "process_login_finish"
+      | where is_success == 0
+      | where total_time_ms > ssl_treshold
+      | where isnotempty(message)
+      | project event, AppName, message
+      | extend parsed = parse_xml(message)
+      | project event, AppName, parsed_wait_stats = parsed.waitstats.wait
+      | mv-expand parsed_wait_stats
+      | extend wait_stat_name = tostring(parsed_wait_stats["@name"])
+      | extend wait_stat_max_time = toint(parsed_wait_stats["@maxTime"])
+      | project event, AppName, wait_stat_name, wait_stat_max_time
+      | summarize total_wait_stat_time = sum(wait_stat_max_time), avg_wait_stat_time = sum(wait_stat_max_time) / count() by AppName, wait_stat_name
+- id: MI-miscellaneous-15
+  Topic: Database-X-cannot-be-opened_-It-has-been-marked-SUSPECT-by-recovery-_2D-secondar
+  Source: Performance-and-Query-Execution/Other-errors-and-exceptions/Database-X-cannot-be-opened.-It-has-been-marked-SUSPECT-by-recovery-%2D-secondary-database.md
+  Prompts:
+  - MI Database X cannot be opened. It has been marked SUSPECT by recovery %2D secondary database
+  - Managed Instance Database X cannot be opened. It has been marked SUSPECT by recovery %2D secondary database
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: |-
+      MonSQLSystemHealth
+      | where LogicalServerName =~ "{ServerName}"
+      | where TIMESTAMP > ago(30m)
+      | project TIMESTAMP, message
+- id: MI-miscellaneous-16
+  Topic: Workflow-for-other-Errors-and-exceptions
+  Source: Performance-and-Query-Execution/Other-errors-and-exceptions/Workflow-for-other-Errors-and-exceptions.md
+  Prompts:
+  - MI Workflow for other Errors and exceptions
+  - Managed Instance Workflow for other Errors and exceptions
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: AlrSQLErrorsReported
+    ExecutedQuery: |-
+      AlrSQLErrorsReported
+      | where TIMESTAMP > ago(3d)
+      | where LogicalServerName =~ "{ServerName}"
+      | where database_name =~ "{DatabaseName}"
+      | project originalEventTimestamp, error_number, severity, state, session_id, database_name
+- id: MI-miscellaneous-17
+  Topic: Lock-Request-Timeout-Error-1222-State-51
+  Source: Performance-and-Query-Execution/Query-timeouts/Lock-Request-Timeout-Error-1222-State-51.md
+  Prompts:
+  - MI Lock Request Timeout Error 1222 State 51
+  - Managed Instance Lock Request Timeout Error 1222 State 51
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: AlrSQLErrorsReported
+    ExecutedQuery: |-
+      AlrSQLErrorsReported
+      | where TIMESTAMP between ({StartDateTime}..{EndDateTime})
+      | where LogicalServerName == "{MIName}" //Input customer server name
+      | where error_number == '1222'
+      | project originalEventTimestamp, NodeName, database_name, ['state'], code_package_version
+      | summarize count() by bin(originalEventTimestamp, 1h), database_name
+      | render timechart
+- id: MI-miscellaneous-18
+  Topic: Lock-Request-Timeout-Error-1222-State-51
+  Source: Performance-and-Query-Execution/Query-timeouts/Lock-Request-Timeout-Error-1222-State-51.md
+  Prompts:
+  - MI Lock Request Timeout Error 1222 State 51
+  - Managed Instance Lock Request Timeout Error 1222 State 51
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: |-
+      MonLogin
+      | where TIMESTAMP between ({StartDateTime}..{EndDateTime})
+      | where logical_server_name == "{MIName}" //Input customer server name
+      | where event == "process_login_finish"   and package == "sqlserver"
+      | where is_user_error == 0
+      | extend success=case(is_success == 1, 1, 0)
+      | extend failure=case(is_success == 0, 1, 0)
+      | extend failure_enqueue_time_ms=case(is_success == 1, total_time_ms, 0)
+      | summarize Successful_Login_Count=sum(success), Failed_Login_Count=sum(failure) by bin(originalEventTimestamp, 1min)
+      | render timechart
+- id: MI-miscellaneous-19
+  Topic: Customer-complains-of-slow-performance-pointing-into-a-possible-update-on-MI
+  Source: Performance-and-Query-Execution/Query-tuning/Customer-complains-of-slow-performance-pointing-into-a-possible-update-on-MI.md
+  Prompts:
+  - MI Customer complains of slow performance pointing into a possible update on MI
+  - Managed Instance Customer complains of slow performance pointing into a possible update on MI
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: |-
+      MonSQLSystemHealth
+      | where originalEventTimestamp > ago(10d)
+      | where logical_database_guid contains "b93eb8a9-f2ac-4d39-9649-e12a37037562"
+      | where LogicalServerName =~ "{ServerName}"
+      | project originalEventTimestamp, NodeName, AppName, AppTypeName, process_id, message, code_package_version, code_package_start_time
+      | summarize min(originalEventTimestamp), max(originalEventTimestamp) by code_package_version, AppName
+- id: MI-miscellaneous-20
+  Topic: Comparing-performance-between-2-MIs
+  Source: Performance-and-Query-Execution/Reference/Comparing-performance-between-2-MIs.md
+  Prompts:
+  - MI Comparing performance between 2 MIs
+  - Managed Instance Comparing performance between 2 MIs
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: |-
+      MonSQLSystemHealth
+      | where LogicalServerName =~ {ServerName}
+      | where AppName == {AppName}
+      | distinct code_package_version
+- id: MI-miscellaneous-21
+  Topic: Frequent-OLDEST_PAGE-for-change-LogReuseWaitDesc-in-SQL-managed-instance
+  Source: Performance-and-Query-Execution/Reference/Frequent-OLDEST_PAGE-for-change-LogReuseWaitDesc-in-SQL-managed-instance.md
+  Prompts:
+  - MI Frequent OLDEST_PAGE for change LogReuseWaitDesc in SQL managed instance
+  - Managed Instance Frequent OLDEST_PAGE for change LogReuseWaitDesc in SQL managed instance
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRecoveryTrace
+    ExecutedQuery: |-
+      MonRecoveryTrace
+      | where LogicalServerName =~ {MIName}
+      //| where database_name =~ {DBName}
+      | where TIMESTAMP >= {startTime} and TIMESTAMP <= {endTime}
+      | where trace_message contains "current log space"
+      | project TIMESTAMP, NodeName, database_id, trace_message
+      | order by TIMESTAMP asc
+- id: MI-miscellaneous-22
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmCloudDatabaseWaitStats
+    ExecutedQuery: |-
+      MonDmCloudDatabaseWaitStats
+      | where AppName !startswith 'b-' and AppName !startswith 'v-'
+      | where TIMESTAMP > ago(daysAgo)
+      | where LogicalServerName =~ ServerName
+      | top-nested of bin(TIMESTAMP, AggInterval) by sum(delta_wait_time_ms) asc
+- id: MI-miscellaneous-23
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmTranActiveTransactions
+    ExecutedQuery: |-
+      MonDmTranActiveTransactions
+      | where AppName !startswith 'b-' and AppName !startswith 'v-'
+      | where AppName contains appname_name_input
+      | where TIMESTAMP >= startTime and TIMESTAMP < endTime
+      | where session_id != -1
+      | extend duration_hour = (end_utc_date - transaction_begin_time) / time(1h)
+      | summarize max_duration_hour = arg_max(duration_hour,
+- id: MI-miscellaneous-24
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlTransactions
+    ExecutedQuery: |-
+      MonSqlTransactions
+      | where TIMESTAMP >= TimeCheckStart and TIMESTAMP <= TimeCheckEnd
+      | where LogicalServerName == ServerName
+      | where database_id == toscalar(MonDmDbHadrReplicaStates
+      | where LogicalServerName =~ ServerName
+      | where logical_database_name =~ DatabaseName
+      | project database_id
+      | limit 1)
+      | where isnotnull(persisted_version_store_kb)
+      | project TIMESTAMP, PVS_size_in_GB = persisted_version_store_kb/(1024*1024)
+      | render timechart
+- id: MI-miscellaneous-25
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: |-
+      MonSQLSystemHealth
+      | where LogicalServerName =~ ServerName
+      and originalEventTimestamp >= ago(daysAgo)
+- id: MI-miscellaneous-26
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiDmDbPartitionStats
+    ExecutedQuery: |-
+      let PartitionStats=materialize(MonWiDmDbPartitionStats
+      | where AppName contains myAppName and logical_database_name !='master' and logical_database_name in (physicaldbname) and index_id in (0,1)
+      | summarize used_page_count=max(used_page_count), row_count=max(row_count) by database_id, logical_database_name, object_id, index_id, partition_number, data_date=bin(TIMESTAMP, 1d));
+- id: MI-miscellaneous-27
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: AlrSQLErrorsReported
+    ExecutedQuery: |-
+      AlrSQLErrorsReported
+      | where LogicalServerName =~ ServerName
+      | where database_name =~ DatabaseName
+      | project PreciseTimeStamp, database_name, error_number, state, session_id
+- id: MI-miscellaneous-28
+  Topic: Waits-_2D-collect-and-description-of-common-wait-types
+  Source: Performance-and-Query-Execution/Reference/Waits-%2D-collect-and-description-of-common-wait-types.md
+  Prompts:
+  - MI Waits %2D collect and description of common wait types
+  - Managed Instance Waits %2D collect and description of common wait types
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmCloudDatabaseWaitStats
+    ExecutedQuery: |-
+      MonDmCloudDatabaseWaitStats
+      | where TIMESTAMP >= ago(1d)
+      | where LogicalServerName =~ "{ServerName}" and database_name =~ "{DatabaseName}"
+      | summarize sum(delta_wait_time_ms) by bin_at(TIMESTAMP, 1d, datetime(date_time)), wait_type
+      | order by TIMESTAMP, sum_delta_wait_time_ms desc
+      | render timechart
+- id: MI-miscellaneous-29
+  Topic: Waits-_2D-collect-and-description-of-common-wait-types
+  Source: Performance-and-Query-Execution/Reference/Waits-%2D-collect-and-description-of-common-wait-types.md
+  Prompts:
+  - MI Waits %2D collect and description of common wait types
+  - Managed Instance Waits %2D collect and description of common wait types
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmCloudDatabaseWaitStats
+    ExecutedQuery: |-
+      MonDmCloudDatabaseWaitStats
+      | where TIMESTAMP >= ago(1h)
+      | where LogicalServerName =~ "{ServerName}" and database_name =~ "{DatabaseName}" and (wait_type == "OLEDB" or wait_type == "WAIT_ON_SYNC_STATISTICS_REFRESH" or wait_type == "MSQL_DQ")
+      | summarize sum(delta_wait_time_ms) by bin_at(TIMESTAMP, 1d, datetime(2023-05-20 23:00)), wait_type
+      | order by TIMESTAMP, sum_delta_wait_time_ms desc
+      | render timechart

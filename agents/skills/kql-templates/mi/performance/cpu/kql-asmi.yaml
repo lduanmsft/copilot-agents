@@ -1,0 +1,59 @@
+SqlSkills:
+- id: MI-ASMI-CPU-01
+  Topic: CPU
+  Source: kusto-queries/CPU.md
+  Prompts:
+  - MI real-time resource telemetry by server_name, ServerName
+  - MonDmRealTimeResourceStats server_name ServerName
+  - Investigate CPU
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmRealTimeResourceStats
+    ExecutedQuery: 'MonDmRealTimeResourceStats
+
+      | where server_name =~ "{ServerName}"'
+- id: MI-ASMI-CPU-02
+  Topic: Fulltext
+  Source: kusto-queries/Fulltext.md
+  Prompts:
+  - MI resource governor load telemetry by code_package_name, FullTextSearchService
+  - MonRgLoad code_package_name FullTextSearchService
+  - Investigate Fulltext
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRgLoad
+    ExecutedQuery: 'MonRgLoad | where code_package_name == "FullTextSearchService"
+
+      | where LogicalServerName =~ "{ServerName}"'
+- id: MI-ASMI-CPU-03
+  Topic: Governance, Quota
+  Source: kusto-queries/Governance, Quota.md
+  Prompts:
+  - MI real-time resource telemetry by LogicalServerName, database_name
+  - MonDmRealTimeResourceStats LogicalServerName database_name ServerName DatabaseName
+  - Investigate Governance, Quota
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmRealTimeResourceStats
+    ExecutedQuery: MonDmRealTimeResourceStats//| where LogicalServerName =~ "{ServerName}" and database_name =~ "{DatabaseName}"
+- id: MI-ASMI-CPU-04
+  Topic: Resource Status
+  Source: kusto-queries/Resource Status.md
+  Prompts:
+  - MI real-time resource telemetry by database_name, server_name
+  - MonDmRealTimeResourceStats database_name server_name ServerName DatabaseName
+  - Investigate Resource Status
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmRealTimeResourceStats
+    ExecutedQuery: 'MonDmRealTimeResourceStats
+
+      | where server_name =~ "{ServerName}" //and database_name =~ "{DatabaseName}"'

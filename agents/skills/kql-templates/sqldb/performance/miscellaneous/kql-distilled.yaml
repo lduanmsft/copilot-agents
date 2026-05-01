@@ -1,0 +1,580 @@
+
+# ── Merged from worker.yaml ──
+SqlSkills:
+  - id: "79.0"
+    Prompts:
+      - "Worker Thread Exhaustion Detection"
+    EvaluationTrueMessage: "Worker Thread Exhaustion is detected, please type 'Worker Thread Exhaustion Analysis' to get more details."
+    EvaluationFalseMessage: "Worker Thread Exhaustion is not detected."
+    SuppressOutputOfDescendants: true
+    SubSqlSkills:
+      - Prompts:
+          - "Worker Thread Exhaustion Analysis"
+
+  - id: "18"
+    # Description:This skill will check Worker thread usage and find possible root cause if worker thread exhaustion happened.
+    Prompts:
+      - "Worker Thread Exhaustion Analysis"
+      - "thread exhaustion"
+      - "Worker exhaustion"
+      - "is worker exhausted"
+      - "is thread exhausted"
+    KustoQueries:
+      - TableName: "MonSQLSystemHealthWorkerExhaustion"
+        ExecutedQuery: |
+          MonSQLSystemHealth
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | where message contains 'The request limit for the database' or message contains 'The request limit for the elastic pool'
+          //| summarize Hits_PerHour = count() by bin(originalEventTimestamp, 1h)
+          //The error_id are 10928 and 10936. We use message instead of error_id to filter because the error_id covers both 'Request limit' and 'Session Limit'
+          | summarize count=count()
+        DisplayedQuery: |
+          MonSQLSystemHealth
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | where message contains 'The request limit for the database' or message contains 'The request limit for the elastic pool'
+          | summarize Hits_PerHour = count() by bin(originalEventTimestamp, 15m)
+    QuestionToAI: |-
+      Read the 'MonSQLSystemHealthWorkerExhaustion' table, which contains only one row, and assign values to the variables below based on its data and the following rules
+      Besides of previous three variables, there are another 1 variable:
+      1.{{count}}, the data type is Integer.
+
+      Rules:
+      1. Read the data from the row, and perform the following operations:
+      2. Store the value of count column in {{count}}.
+      3. If the {{count}} is greater than 0, then  {{IssueDetected}} is 'true', else {{IssueDetected}} is 'false'.
+      4. If {{IssueDetected}} is 'false', then {{ResultMessage}} is "Worker threads exhaustion didn't happen.",
+      else {{ResultMessage}} is "The worker threads limited is reached {{count}} time(s) for the database.
+      Potential causes include excessive blocking, a sudden surge in active sessions, and other factors.
+      We will now investigate these possible causes".
+    SubSqlSkills:
+      - id: "18.1"
+        ExecutedWhenParentIssueDetected: true
+        AlwaysDisplayResult: true
+        Prompts:
+          - "Worker thread grow possible cause"
+
+  - id: "18.1"
+    Prompts:
+      - "Worker thread grow possible cause"
+      - "Why Worker thread grow"
+    EvaluationTrueMessage: "Possible cause is found"
+    EvaluationFalseMessage: >
+      We conducted checks on Blocking, Session spawn, Non-Yielding Scheduler but did not identify any significant issue. You may need to collect Azure Profiler trace
+    SubSqlSkills:
+      - id: "18.2"
+        Prompts:
+          - "Possible cause of Worker growth "
+      - id: "18.2"
+        Prompts:
+          - "Blocking summary"
+      - id: "18.2"
+        Prompts:
+          - "Non-Yielding Scheduler"
+
+  - id: "18.2"
+    Prompts:
+      - "Possible cause of Worker growth "
+      - "Comparison of pattern similarity between 'Worker Threads' usage and 'Sessions' usage."
+    KustoQueries:
+      - TableName: "MonDmRealTimeResourceStats_Similiary"
+        ExecutedQuery: |
+          MonDmRealTimeResourceStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | summarize Max_Worker = max(max_worker_percent), Max_Session = max(max_session_percent) by bin(originalEventTimestamp, 15s)
+          | sort by originalEventTimestamp asc nulls last
+          | summarize workers=make_list(Max_Worker),sessions=make_list(Max_Session)
+          | extend similarity = series_cosine_similarity(workers, sessions)
+          | project similarity
+        DisplayedQuery: |
+          MonDmRealTimeResourceStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | project originalEventTimestamp ,max_worker_percent, max_session_percent
+          | order by originalEventTimestamp asc
+          | render timechart
+    QuestionToAI: |-
+      Read the 'MonDmRealTimeResourceStats_Similiary' table, which contains only one row, and assign values to the variables below based on its data and the following rules
+      Besides of previous three variables, there are another 1 variable:
+      1.{{similarity}}, the data type is Float.
+
+      Rules:
+      1. Store the value of similarity column in {{similarity}}.
+      2. The {{IssueDetected}} depends on the {{highCpuDuration_min}}: If {{similarity}} is greater than 0.9, then {{IssueDetected}} is 'true', else {{IssueDetected}} is 'false'.
+      3. If {{IssueDetected}} is true, then {{ResultMessage}} is "The pattern of worker threads and sessions is very similar. The increased number of worker threads may be caused by sessions spawned by user applications. Please review the ASC Report 'Database Resource Consumption Statistics' to confirm.",
+      else the {{ResultMessage}} is "No correlation between worker threads and session Spike has been detected.."
+
+# ── Merged from Misc.yaml ──
+SqlSkills:
+  - id: "20"
+    # Description:This skill displays all the Azure profiler traces collected in the Nodes where this Azure DB was running.
+    Prompts:
+      - "Azure Profiler Trace"
+      - "Was Azure profiler collected"
+      - "Azure profiler"
+      - "did server have Azure profiler"
+    KustoQueries:
+      - TableName: "AzureProfiler"
+        ExecutedQuery: |
+          let _desc='Please note that the file name is only correct if it was created by IcM Automation AzProfilerGeneva. If you find that this file does not exist, it was collected by a user running the CAS command. Please contact the user who issued the command to obtain the file name';
+          let rg_server_traces =(MonRgManager
+          | where {ApplicationNamesNodeNamesWithOriginalEventTimeRange}
+          | where event =='rg_process_azure_profiler_request'
+          | where is_success==1
+          | extend trace_name = tostring(split(message, ':', 1)[0])
+          | extend trace_name = replace_regex(trace_name, @'\s+', '')//remove the whitespaces
+          | extend trace_name = trim('"', trace_name)
+          | extend description
+          | project TIMESTAMP,application_name, NodeName, trace_name,description,ClusterName);
+          let casCommand_traces=(MonManagement
+          | extend ClusterName = ring_name
+          | extend NodeName = node_name
+          | extend application_name
+          | where {NodeNamesWithOriginalEventTimeRange}
+          | where event =~ 'cas_workflow_take_azure_profiler_trace_complete'
+          | extend trace_name = strcat(NodeName,'_',ClusterName)
+          | extend description=_desc
+          | project TIMESTAMP, application_name, trace_name,ClusterName,NodeName,description);
+          union rg_server_traces,casCommand_traces
+        DisplayedQuery: |
+          let _desc='Please note that the file name is only correct if it was created by IcM Automation AzProfilerGeneva. If you find that this file does not exist, it was collected by a user running the CAS command. Please contact the user who issued the command to obtain the file name';
+          let rg_server_traces =(MonRgManager
+          | where {ApplicationNamesNodeNamesWithOriginalEventTimeRange}
+          | where event =='rg_process_azure_profiler_request'
+          | where is_success==1
+          | extend trace_name = tostring(split(message, ':', 1)[0])
+          | extend trace_name = replace_regex(trace_name, @'\s+', '')//remove the whitespaces
+          | extend trace_name = trim('"', trace_name)
+          | extend description
+          | project TIMESTAMP,application_name, NodeName, trace_name,description,ClusterName);
+          let casCommand_traces=(MonManagement
+          | extend ClusterName = ring_name
+          | extend NodeName = node_name
+          | extend application_name
+          | where {NodeNamesWithOriginalEventTimeRange}
+          | where event =~ 'cas_workflow_take_azure_profiler_trace_complete'
+          | extend trace_name = strcat(NodeName,'_',ClusterName)
+          | extend description=_desc
+          | project TIMESTAMP, application_name, trace_name,ClusterName,NodeName,description);
+          union rg_server_traces,casCommand_traces
+    MessageForEmptyKustoResult: "The Azure Profiler trace was not collected for this Azure DB or its nodes while the database was running."
+    QuestionToAI: |-
+      Read the 'AzureProfiler' table, which contains only one row, and assign values to the variables below based on its data and the following rules
+      Besides of previous three variables, there are another 1 variable:
+      1.{{rowcount}}, the data type is Integer.
+
+      Rules:
+      1. Store the number of rows of table 'AzureProfiler' to {{rowcount}}.
+      2. The {{IssueDetected}} is set to 'true'.
+      3. The {{ResultMessage}} is set to "{{rowcount}} Azure profiler trace file(s) was/were collected for this Azure DB or its nodes while the database was running."
+    TSGs:
+      - Title: "High CPU - Azure Profiler Trace Collection"
+        Link: "https://eng.ms/docs/cloud-ai-platform/azure-data/azure-data-azure-databases/sql-/sosrgclr-host/sqlos-rg-xevents-clrhost/scheduler/high_cpu_azure_profiler_collection"
+
+  - id: "20.1"
+    Prompts:
+      - "SQL Restart and Failover analysis"
+      - "Did sql restart"
+      - "Did sql failover"
+    MessageForEmptyKustoResult: "No Restart/Failover detected."
+    KustoQueries:
+      - TableName: "MonSQLSystemHealth_RestartFailoverCount"
+        ExecutedQuery: |
+          MonSQLSystemHealth
+          | where {AppNamesNodeNamesWithPreciseTimeRange}
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | summarize count=dcount(process_id)
+          | extend restartStatus=strcat("Azure DB restart/failover ",count-1,"time(s),")
+          | where count>1
+          | project restartStatus
+        DisplayedQuery: |
+          MonSQLSystemHealth
+          | where {AppNamesNodeNamesWithPreciseTimeRange}
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | summarize count=dcount(process_id) by NodeName,ClusterName;
+
+          SqlFailovers
+          | where FailoverStartTime between (datetime({StartTime}) .. datetime({EndTime}))
+          | where logical_server_name =~'{LogicalServerName}' and logical_database_name =~'{LogicalDatabaseName}'
+          | project FailoverStartTime,FailoverEndTime,ReconfigurationType,CRMAction,PLBConstraintType,PLBConstraintTypeList,NewPrimary,OldPrimary,ClusterName
+          | take 1
+    QuestionToAI: |-
+      - {{restartStatus}}, the data type is String.
+
+      ### Rules
+      1. Store the value of restartStatus column in {{restartStatus}}.
+      2. Set {{IssueDetected}} to 'true'.
+      3. Set {{ResultMessage}} to {{restartStatus}}.
+
+  - id: "20.2"
+    Prompts:
+      - "Kill command analysis"
+      - "was Kill command executed"
+      - "was Kill executed"
+      - "any Kill command"
+      - "any Kill"
+    MessageForEmptyKustoResult: "Kill command was not detected."
+    KustoQueries:
+      - TableName: "MonSQLSystemHealth_KillCommandCount"
+        ExecutedQuery: |
+          let killStatusTemplate="Kill command was executed {{count}} time(s). Please note that the CPU resources of queries terminated by the Kill command are not accounted for by QDS. As a result, there is a discrepancy between the User Pool CPU usage and the combined total of CPU usage reported by 'QDS', 'Compile Compilation', and 'Failed Compile Compilation'.";
+          MonSQLSystemHealth
+          | where {AppNamesNodeNamesWithPreciseTimeRange}
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | where message contains "Kill"
+          | summarize count=count()
+          | extend killStatus=replace_string(killStatusTemplate,"{{count}}",tostring(count))
+          | where count>0
+          | project killStatus
+        DisplayedQuery: |
+          MonSQLSystemHealth
+          | where {AppNamesNodeNamesWithPreciseTimeRange}
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | where message contains "Kill"
+          | project PreciseTimeStamp,  message
+          | take 1//comment this line to see all the kill commands
+    QuestionToAI: |-
+      - {{killStatus}}, the data type is String.
+
+      ### Rules
+      1. Store the value of killStatus column in {{killStatus}}.
+      2. Set {{IssueDetected}} to 'true'.
+      3. Set {{ResultMessage}} to {{killStatus}}.
+
+
+  - id: "20.2"
+    Prompts:
+      - "AKV Error Detection"
+      - "Azure Key Vault Error Detection"
+    MessageForEmptyKustoResult: "AKV Error was not detected."
+    KustoQueries:
+      - TableName: "MonSQLSystemHealth_AKV"
+        ServiceTiers: "Free;Basic;Standard;Premium;GeneralPurpose;BusinessCritical"
+        ExecutedQuery: |
+          let AKVMessage=(totalCount:int,dcount:int,StartTime:string,EndTime:string)
+          {
+                    let suggestion=" The error may cause SQL Server to fail when reading data, lead to query delays, or even prevent the database from starting. Please engage the Azure Key Vault team (Security: Transparent Data Encryption (TDE) and AKV) for investigation.";
+                    let message=case(totalCount==0,"Azure Key Vault error is not detected.",
+                    totalCount==1, strcat("Azure Key Vault error was detected 1 time, at ",StartTime,". "),
+                    totalCount>1 and dcount==1, strcat("Azure Key Vault error was detected ",PluralOrSingular(totalCount,"time"), " between ",StartTime," and ", EndTime, ". "),
+                    strcat("Azure Key Vault error was detected ",PluralOrSingular(totalCount,"time"), " across ",dcount," different error types between ",StartTime," and ", EndTime, ". ")
+                    );
+                    iff(totalCount>0,strcat(message,suggestion),message)
+          };
+          MonSQLSystemHealth
+          | where {StartOriginalEventTimestampEndOriginalEventTimestamp}
+          | where LogicalServerName =~ '{LogicalServerName}' and AppName in ({AppNamesOnly})
+          | where error_id in (33183 , 37412,33184,37542,37566,37567,37568,37569,37570,37571,37572,37573,37574,37576,40981,45320,45321,45322,45324,45325,45326,45327,45329,45330,45362,45415,45463,45472,45494,45532,45538,45539,45654,45656,45720,45731,45746,45747,49981 ) 
+          | summarize totalCount=count(),dcount=dcount(error_id),StartTime=min(originalEventTimestamp), EndTime=max(originalEventTimestamp)
+          | extend StartTime=format_datetime(StartTime,'yyyy-MM-dd HH:mm:ss'),EndTime=format_datetime(EndTime,'yyyy-MM-dd HH:mm:ss')
+          | extend akvMessage=AKVMessage(totalCount,dcount,StartTime,EndTime)
+          | extend IssueDetected=iff(totalCount>0,'true','false')
+          | project akvMessage,IssueDetected
+        DisplayedQuery: |
+          MonSQLSystemHealth
+          | where {StartOriginalEventTimestampEndOriginalEventTimestamp}
+          | where LogicalServerName =~ '{LogicalServerName}' and AppName in ({AppNamesOnly})
+          | where error_id in (33183 , 37412 ,33184,37542,37566,37567,37568,37569,37570,37571,37572,37573,37574,37576,40981,45320,45321,45322,45324,45325,45326,45327,45329,45330,45362,45415,45463,45472,45494,45532,45538,45539,45654,45656,45720,45731,45746,45747,49981) 
+          | summarize count=count(),StartTime=min(originalEventTimestamp), EndTime=arg_max(originalEventTimestamp,message) by error_id,NodeName,ClusterName
+          | order by count desc
+      - TableName: "MonSQLSystemHealth_AKV_Hyperscale"
+        ServiceTiers: "Hyperscale"
+        ExecutedQuery: |
+          let AKVMessage=(totalCount:int,dcount:int,StartTime:string,EndTime:string)
+          {
+                    let suggestion=" The error may cause SQL Server to fail when reading data, lead to query delays, or even prevent the database from starting. Please engage the Azure Key Vault team (Security: Transparent Data Encryption (TDE) and AKV) for investigation.";
+                    let message=case(totalCount==0,"Azure Key Vault error is not detected.",
+                    totalCount==1, strcat("Azure Key Vault error was detected 1 time, at ",StartTime,". "),
+                    totalCount>1 and dcount==1, strcat("Azure Key Vault error was detected ",PluralOrSingular(totalCount,"time"), " between ",StartTime," and ", EndTime, ". "),
+                    strcat("Azure Key Vault error was detected ",PluralOrSingular(totalCount,"time"), " across ",dcount," different error types between ",StartTime," and ", EndTime, ". ")
+                    );
+                    iff(totalCount>0,strcat(message,suggestion),message)
+          };
+          let appNames=materialize (
+          MonSocrates
+          | where  (originalEventTimestamp between (datetime({StartTime})..datetime({EndTime})))
+          | where LogicalServerName =~ '{LogicalServerName}' and logical_database_name =~ '{LogicalDatabaseName}'
+          | where isnotempty(foreign_file_id)
+          | summarize by AppName,AppTypeName
+          );
+          MonSQLSystemHealth
+          | where {StartOriginalEventTimestampEndOriginalEventTimestamp}
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | join kind=inner(appNames) on AppName
+          | where error_id in (33183 , 37412,33184,37542,37566,37567,37568,37569,37570,37571,37572,37573,37574,37576,40981,45320,45321,45322,45324,45325,45326,45327,45329,45330,45362,45415,45463,45472,45494,45532,45538,45539,45654,45656,45720,45731,45746,45747,49981 ) 
+          | summarize totalCount=count(),dcount=dcount(error_id),StartTime=min(originalEventTimestamp), EndTime=max(originalEventTimestamp)
+          | extend StartTime=format_datetime(StartTime,'yyyy-MM-dd HH:mm:ss'),EndTime=format_datetime(EndTime,'yyyy-MM-dd HH:mm:ss')
+          | extend akvMessage=AKVMessage(totalCount,dcount,StartTime,EndTime)
+          | extend IssueDetected=iff(totalCount>0,'true','false')
+          | project akvMessage,IssueDetected
+        DisplayedQuery: |
+          let appNames=materialize (
+          MonSocrates
+          | where  (originalEventTimestamp between (datetime({StartTime})..datetime({EndTime})))
+          | where LogicalServerName =~ '{LogicalServerName}' and logical_database_name =~ '{LogicalDatabaseName}'
+          | where isnotempty(foreign_file_id)
+          | summarize by AppName,AppTypeName
+          );
+          MonSQLSystemHealth
+          | where {StartOriginalEventTimestampEndOriginalEventTimestamp}
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | join kind=inner(appNames) on AppName
+          | where error_id in (33183 , 37412,33184,37542,37566,37567,37568,37569,37570,37571,37572,37573,37574,37576,40981,45320,45321,45322,45324,45325,45326,45327,45329,45330,45362,45415,45463,45472,45494,45532,45538,45539,45654,45656,45720,45731,45746,45747,49981 ) 
+          | summarize count=count(),StartTime=min(originalEventTimestamp), EndTime=max(originalEventTimestamp), any(message) by error_id,NodeName,ClusterName,AppTypeName,AppName
+          | order by count desc
+    QuestionToAI: |-
+      ### Rules
+      1. Store the value of IssueDetected column in {{IssueDetected}}.
+      2. Store the value of akvMessage column in {{ResultMessage}}.
+
+# ── Merged from Misc_DatabaseCorruption.yaml ──
+SqlSkills:
+
+  - id: "20.2"
+    Prompts:
+      - "Database Corruption Detection"
+    MessageForEmptyKustoResult: "Corruption was not detected."
+    KustoQueries:
+      - TableName: "MonSQLSystemHealth_Corruption"
+        ServiceTiers: "Free;Basic;Standard;Premium;GeneralPurpose;BusinessCritical"
+        ExecutedQuery: |
+          let CorruptionMessage=(totalCount:int,dcount:int,StartTime:string,EndTime:string)
+          {
+                    let suggestion=" The Database corruption affects both data integrity and Azure DB availability, which can lead to severe consequences, including (but not limited to) database downtime, login failures, and query execution errors. Please Engage the Storage Engine team to investigate.";
+                    let message=case(totalCount==0,"Corruption is not detected.",
+                    totalCount==1, strcat("Corruption was detected 1 time, at ",StartTime,". "),
+                    totalCount>1 and dcount==1, strcat("Corruption was detected ",PluralOrSingular(totalCount,"time"), " between ",StartTime," and ", EndTime, ". "),
+                    strcat("Corruption was detected ",PluralOrSingular(totalCount,"time"), " across ",dcount," different corruption types between ",StartTime," and ", EndTime, ". ")
+                    );
+                    iff(totalCount>0,strcat(message,suggestion),message)
+          };
+          MonSQLSystemHealth
+          | where {StartOriginalEventTimestampEndOriginalEventTimestamp}
+          | where LogicalServerName =~ '{LogicalServerName}' and AppName in ({AppNamesOnly})
+          | where error_id in (211,823,824,825,829,2533,2570,2576,3203,7985,7989,8909,8914,8916,8928,8939,8942,8948,8964,8965,8978,8992,8998,8999) 
+          | summarize totalCount=count(),dcount=dcount(error_id),StartTime=min(originalEventTimestamp), EndTime=max(originalEventTimestamp)
+          | extend StartTime=format_datetime(StartTime,'yyyy-MM-dd HH:mm:ss'),EndTime=format_datetime(EndTime,'yyyy-MM-dd HH:mm:ss')
+          | extend corruptionMessage=CorruptionMessage(totalCount,dcount,StartTime,EndTime)
+          | extend IssueDetected=iff(totalCount>0,'true','false')
+          | project corruptionMessage,IssueDetected
+        DisplayedQuery: |
+          MonSQLSystemHealth
+          | where {StartOriginalEventTimestampEndOriginalEventTimestamp}
+          | where LogicalServerName =~ '{LogicalServerName}' and AppName in ({AppNamesOnly})
+          | where error_id in (211,823,824,825,829,2533,2570,2576,3203,7985,7989,8909,8914,8916,8928,8939,8942,8948,8964,8965,8978,8992,8998,8999) 
+          | summarize count=count(),StartTime=min(originalEventTimestamp), EndTime=arg_max(originalEventTimestamp,message) by error_id
+          | order by count desc
+      - TableName: "MonSQLSystemHealth_Corruption_Hyperscale"
+        ServiceTiers: "Hyperscale"
+        ExecutedQuery: |
+          let CorruptionMessage=(totalCount:int,dcount:int,StartTime:string,EndTime:string)
+          {
+                    let suggestion=" The Database corruption affects both data integrity and Azure DB availability, which can lead to severe consequences, including (but not limited to) database downtime, login failures, and query execution errors. Please Engage the Storage Engine team to investigate.";
+                    let message=case(totalCount==0,"Corruption is not detected.",
+                    totalCount==1, strcat("Corruption was detected 1 time, at ",StartTime,". "),
+                    totalCount>1 and dcount==1, strcat("Corruption was detected ",PluralOrSingular(totalCount,"time"), " between ",StartTime," and ", EndTime, ". "),
+                    strcat("Corruption was detected ",PluralOrSingular(totalCount,"time"), " across ",dcount," different corruption types between ",StartTime," and ", EndTime, ". ")
+                    );
+                    iff(totalCount>0,strcat(message,suggestion),message)
+          };
+          let appNames=materialize (
+          MonSocrates
+          | where  (originalEventTimestamp between (datetime({StartTime})..datetime({EndTime})))
+          | where LogicalServerName =~ '{LogicalServerName}' and logical_database_name =~ '{LogicalDatabaseName}'
+          | where isnotempty(foreign_file_id)
+          | summarize by AppName,AppTypeName
+          );
+          MonSQLSystemHealth
+          | where  (originalEventTimestamp between (datetime({StartTime})..datetime({EndTime})))
+          | where LogicalServerName =~ '{LogicalServerName}' 
+          | join kind=inner(appNames) on AppName
+          | where error_id in (211,823,824,825,829,2533,2570,2576,3203,7985,7989,8909,8914,8916,8928,8939,8942,8948,8964,8965,8978,8992,8998,8999) 
+          | summarize totalCount=count(),dcount=dcount(error_id),StartTime=min(originalEventTimestamp), EndTime=max(originalEventTimestamp)
+          | extend StartTime=format_datetime(StartTime,'yyyy-MM-dd HH:mm:ss'),EndTime=format_datetime(EndTime,'yyyy-MM-dd HH:mm:ss')
+          | extend corruptionMessage=CorruptionMessage(totalCount,dcount,StartTime,EndTime)
+          | extend IssueDetected=iff(totalCount>0,'true','false')
+          | project corruptionMessage,IssueDetected
+        DisplayedQuery: |
+          let appNames=materialize (
+          MonSocrates
+          | where  (originalEventTimestamp between (datetime({StartTime})..datetime({EndTime})))
+          | where LogicalServerName =~ '{LogicalServerName}' and logical_database_name =~ '{LogicalDatabaseName}'
+          | where isnotempty(foreign_file_id)
+          | summarize by AppName,AppTypeName
+          );
+          MonSQLSystemHealth
+          | where  (originalEventTimestamp between (datetime({StartTime})..datetime({EndTime})))
+          | where LogicalServerName =~ '{LogicalServerName}' 
+          | join kind=inner(appNames) on AppName
+          | where error_id in (211,823,824,825,829,2533,2570,2576,3203,7985,7989,8909,8914,8916,8928,8939,8942,8948,8964,8965,8978,8992,8998,8999) 
+          | summarize totalCount=count(),StartTime=min(originalEventTimestamp), EndTime=max(originalEventTimestamp),any(message) by error_id,NodeName,ClusterName,AppTypeName
+    QuestionToAI: |-
+      ### Rules
+      1. Store the value of IssueDetected column in {{IssueDetected}}.
+      2. Store the value of corruptionMessage column in {{ResultMessage}}.
+
+# ── Merged from Dump.yaml ──
+SqlSkills:
+  - id: "4.17"
+    Prompts:
+      - "Dump summary"
+      - "Dump Analysis"
+      - "Was dump created"
+      - "Any dump"
+      - "Any dump file"
+    KustoQueries:
+      - TableName: "MonSqlDumperActivity"
+        ServiceTiers: "Free;Basic;Standard;Premium;GeneralPurpose;BusinessCritical"
+        ExecutedQuery: |
+          let DumpMessage = (totalCount: int,dcount_StackSignature: int,StartTime: string,EndTime: string,StackSignature: string,count_TopSignature: int,DumpErrorDetails: string,StartTime_TopSignature: string,EndTime_TopSignature: string
+          )
+          {
+          strcat(
+          "Dump was created ", PluralOrSingular(totalCount,"time")," with ",
+          dcount_StackSignature, " distinct stack Signature from '",
+          StartTime, "' and '", EndTime, "'. The most frequent Stack Signature is ",
+          StackSignature, " associated with DumpErrorDetails '",DumpErrorDetails, "'. It happened ",PluralOrSingular(count_TopSignature,"time"), " between '", StartTime_TopSignature, "'~'", EndTime_TopSignature,"'"
+          )
+          //sample:Dump was created 44 times with 7 distinct stack Signature from '2025-08-23 18:33:59' and '2025-08-24 07:50:40'. The most frequent Stack Signature is 00000000000003BD associated with DumpErrorDetails'Stalled Dispatcher'. It happened 15 times between '2025-08-24 01:50:29'~'2025-08-24 07:32:04'
+          };
+          let baseUrl="https://portal.watson.azure.com/dump?dumpUID=";
+          MonSqlDumperActivity
+          | extend AppName=split(TargetAppName, "/")[-1]//To extract the appname after last slash in a value like fabric:/Worker.ISO.Premium/ABCDEFG
+          | extend LogicalServerName=split(TargetLogicalServerName, ".")[0]//To extract the string before the first dot in a value like "serverName.database.windows.net"
+          | where AppName in ({AppNames})
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | extend DumperStartTime=PreciseTimeStamp//DumperStartTime is supposed to be Datetime, however it's string datatype in some clusters(sqlazureeus12 for example). To make it work in all regions, temporarily use PreciseTimeStamp
+          | where DumperStartTime between(datetime({StartTime})..datetime({EndTime}))
+          | extend DumperStartTime=format_datetime(DumperStartTime, 'yyyy-MM-dd HH:mm:ss')
+          | summarize arg_max(TIMESTAMP,DumperStartTime, AppName,NodeName,ClusterName,CallStack,StackSignature,DumpErrorText,DumpErrorDetails) by DumpUID
+          | summarize count(),min(DumperStartTime),max(DumperStartTime) by StackSignature,DumpErrorDetails
+          | summarize totalCount=sum(count_),dcount_StackSignature=dcount(StackSignature),StartTime=min(min_DumperStartTime),EndTime=max(max_DumperStartTime), arg_max(count_TopSignature=count_,StackSignature,DumpErrorDetails,StartTime_TopSignature=min_DumperStartTime,EndTime_TopSignature=max_DumperStartTime)
+          | where totalCount>0
+          | extend dumpMessage=DumpMessage(totalCount,dcount_StackSignature,StartTime,EndTime,StackSignature,count_TopSignature,DumpErrorDetails,StartTime_TopSignature,EndTime_TopSignature)
+          | project dumpMessage
+        DisplayedQuery: |
+          let baseUrl="https://portal.watson.azure.com/dump?dumpUID=";
+          MonSqlDumperActivity
+          |extend AppName=split(TargetAppName, "/")[-1]
+          |extend LogicalServerName=split(TargetLogicalServerName, ".")[0]
+          | where AppName in ({AppNames})
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | extend DumperStartTime=PreciseTimeStamp//DumperStartTime is supposed to be Datetime, however it's string datatype in some clusters(sqlazureeus12 for example). To make it work in all regions, temporarily use PreciseTimeStamp
+          | where DumperStartTime between(datetime({StartTime})..datetime({EndTime}))
+          | extend DumperStartTime=format_datetime(DumperStartTime, 'yyyy-MM-dd HH:mm:ss')
+          | summarize arg_max(TIMESTAMP,DumperStartTime, AppName,NodeName,ClusterName,CallStack,StackSignature,DumpErrorText,DumpErrorDetails,IsFailed,FailReason) by DumpUID
+          | extend DumpURL =iff(IsFailed==false, strcat(baseUrl, DumpUID),FailReason)
+          | summarize arg_min(DumperStartTime,DumpURL,DumpErrorDetails,DumpErrorText,IsFailed,FailReason,NodeName) by StackSignature
+          | order by DumperStartTime asc
+      - TableName: "MonSqlDumperActivity_Hyperscale"
+        ServiceTiers: "Hyperscale"
+        ExecutedQuery: |
+          let DumpMessage = (totalCount: int,Count_PageServer_LogServer:int,dcount_StackSignature: int,StartTime: string,EndTime: string,
+          StackSignature: string,count_TopSignature: int,DumpErrorDetails: string,StartTime_TopSignature: string,EndTime_TopSignature: string)
+          {
+          strcat(
+          "Dump was created ", PluralOrSingular(totalCount,"time")," with ",
+          dcount_StackSignature, " distinct stack Signature from '",
+          StartTime, "' and '", EndTime, "'. The most frequent Stack Signature is ",
+          StackSignature, " associated with DumpErrorDetails '",DumpErrorDetails, "'. It happened ", PluralOrSingular(count_TopSignature,"time"),  " between '", StartTime_TopSignature, "'~'", EndTime_TopSignature,"'.",
+          case(Count_PageServer_LogServer==0," Please note, all dump files were created in ComputeNode.",
+          Count_PageServer_LogServer==totalCount," Please note, all dump files were created in Page/Log Servers.",
+          strcat("Please note, ", PluralOrSingular(totalCount-Count_PageServer_LogServer,"dump file")," were created in ComputeNode, rest of them were created in Page/Log Servers."))
+          )
+          //sample1:Dump was created 1792 times with 45 distinct stack Signature from '2025-08-15 03:56:11' and '2025-08-17 00:00:10'. The most frequent Stack Signature is 0000000000000193 associated with DumpErrorDetails 'Non-yielding Scheduler'. It happened 119 times between '2025-08-15 11:17:47'~'2025-08-16 23:37:06'. Please note, all dump files were created in Page Servers.
+          //sample 2:Dump was created 4014 times with 46 distinct stack Signature from '2025-08-15 03:56:11' and '2025-08-17 23:00:07'. The most frequent Stack Signature is 0000000000000193 associated with DumpErrorDetails 'Non-yielding Scheduler'. It happened 240 times between '2025-08-15 11:17:47'~'2025-08-17 22:32:20'.Please note, 15 dump files were created in ComputeNode, rest of them were created in Page/Log Servers.
+          };
+          let baseUrl="https://portal.watson.azure.com/dump?dumpUID=";
+          let appNames=materialize (
+          MonSocrates
+          | where  (originalEventTimestamp between (datetime({StartTime})..datetime({EndTime})))
+          | where LogicalServerName =~ '{LogicalServerName}' and logical_database_name =~ '{LogicalDatabaseName}'
+          | where isnotempty(foreign_file_id)
+          | summarize by AppName,AppTypeName
+          );
+          MonSqlDumperActivity
+          | extend AppName=split(TargetAppName, "/")[-1]
+          | extend AppName=tostring(AppName)
+          | extend LogicalServerName=split(TargetLogicalServerName, ".")[0]
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | join kind=inner(appNames) on AppName
+          | extend DumperStartTime=PreciseTimeStamp//DumperStartTime is supposed to be Datetime, however it's string datatype in some clusters(sqlazureeus12 for example). To make it work in all regions, temporarily use PreciseTimeStamp
+          | where DumperStartTime between (datetime({StartTime})..datetime({EndTime}))
+          | extend DumperStartTime=format_datetime(DumperStartTime, 'yyyy-MM-dd HH:mm:ss')
+          | summarize arg_min(DumperStartTime, AppName, NodeName,ClusterName,CallStack,StackSignature,DumpErrorText,DumpErrorDetails) by DumpUID,AppTypeName1
+          | summarize count(),min(DumperStartTime),max(DumperStartTime) by StackSignature,DumpErrorDetails,AppTypeName1
+          | summarize totalCount=sum(count_),Count_PageServer_LogServer=sumif(count_,AppTypeName1!='Worker.Vldb.Compute'),dcount_StackSignature=dcount(StackSignature),StartTime=min(min_DumperStartTime),EndTime=max(max_DumperStartTime), arg_max(count_TopSignature=count_,StackSignature,DumpErrorDetails,StartTime_TopSignature=min_DumperStartTime,EndTime_TopSignature=max_DumperStartTime)
+          | where totalCount>0
+          | extend dumpMessage=DumpMessage(totalCount,Count_PageServer_LogServer,dcount_StackSignature,StartTime,EndTime,StackSignature,count_TopSignature,DumpErrorDetails,StartTime_TopSignature,EndTime_TopSignature)
+          | project dumpMessage
+        DisplayedQuery: |
+          let appNames=materialize (
+          MonSocrates
+          | where  (originalEventTimestamp between (datetime({StartTime})..datetime({EndTime})))
+          | where LogicalServerName =~ '{LogicalServerName}' and logical_database_name =~ '{LogicalDatabaseName}'
+          | where isnotempty(foreign_file_id)
+          | summarize by AppName,AppTypeName
+          );
+          let baseUrl="https://portal.watson.azure.com/dump?dumpUID=";
+          MonSqlDumperActivity
+          |extend AppName=split(TargetAppName, "/")[-1]
+          | extend AppName=tostring(AppName)
+          |extend LogicalServerName=split(TargetLogicalServerName, ".")[0]
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | join kind=inner(appNames) on AppName
+          | extend DumperStartTime=PreciseTimeStamp//DumperStartTime is supposed to be Datetime, however it's string datatype in some clusters(sqlazureeus12 for example). To make it work in all regions, temporarily use PreciseTimeStamp
+          | where DumperStartTime between(datetime({StartTime})..datetime({EndTime}))
+          | extend DumperStartTime=format_datetime(DumperStartTime, 'yyyy-MM-dd HH:mm:ss')
+          | summarize arg_min(DumperStartTime, AppName1,NodeName,ClusterName,CallStack,StackSignature,DumpErrorText,DumpErrorDetails,IsFailed,FailReason) by DumpUID,AppTypeName1
+          | extend DumpURL =iff(IsFailed==false, strcat(baseUrl, DumpUID),FailReason)
+          | order by DumperStartTime asc
+          | take 5
+    MessageForEmptyKustoResult: "The azure Db didn't have dump created"
+    QuestionToAI: |-
+      -  {{dumpMessage}},  the data type is String.
+
+      ### Rules
+      1. Store the value of dumpMessage column in {{dumpMessage}}.
+      2. Set {{IssueDetected}} to 'true'.
+      3. Set {{ResultMessage}} to {{dumpMessage}}.
+# ── Merged from SqlOS.yaml ──
+SqlSkills:
+  - id: "232.1"
+    Prompts:
+      - "Non-yielding Scheduler"
+      - "Nonyielding Scheduler"
+      - "Nonyielding issue"
+      - "Nonyielding"
+    MessageForEmptyKustoResult: "Non-yielding was not detected."
+    KustoQueries:
+      - TableName: "MonSqlRmRingBuffer_nonyield_copiedstack_ring_buffer_recorded"
+        ExecutedQuery: |
+          MonSqlRmRingBuffer
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | where event =~'nonyield_copiedstack_ring_buffer_recorded'
+          | summarize Totalcount=count()
+          | where Totalcount > 0
+          | extend nonYieldingMessage=strcat("Non-yielding scheduler happened ", PluralOrSingular(Totalcount,"time")," This may lead to various performance issues, including but not limited to query slowness, system task failure, Azure DB hanging, and worker thread exhaustion. Please review the callstack to investigate.")
+          | project nonYieldingMessage
+        DisplayedQuery: |
+          MonSqlRmRingBuffer
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | where event =~'nonyield_copiedstack_ring_buffer_recorded'
+          | summarize count(), StartTime=arg_min(originalEventTimestamp,dispatcher_pool_name,user_mode_time,kernel_mode_time,
+          scheduler_id,thread_id,system_thread_id,session_id,
+          worker,task,request_id,nonyield_type,worker_wait_stats),EndTime=max(originalEventTimestamp) by stack_frames
+          | extend duration_minutes=datetime_diff('minute',EndTime,StartTime)
+          | project-reorder count_,stack_frames,StartTime,EndTime,duration_minutes
+          | order by StartTime asc
+    QuestionToAI: |-
+      -  {{nonYieldingMessage}}, the data type is String.
+
+      ### Rules
+      1. Store the value of nonYieldingMessage column in {{nonYieldingMessage}}.
+      2. Set {{IssueDetected}} to 'true'.
+      3. Set {{ResultMessage}} to {{nonYieldingMessage}}.
+

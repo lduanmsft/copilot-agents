@@ -1,0 +1,996 @@
+SqlSkills:
+- id: DB-performance-106
+  Topic: Debug-Pause_Resume-CRIs
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Debug-Pause_Resume-CRIs.md
+  Prompts:
+  - SQL DB biz management latency
+  - SQL DB MonBizManagement event logical_server_name
+  - SQL DB troubleshoot biz management latency
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonBizManagement
+    ExecutedQuery: 'MonBizManagement
+
+      | where originalEventTimestamp > ago()
+
+      | where event == "management_workflow_database_deactivation_complete"
+
+      | where logical_server_name == serverName
+
+      | where logical_database_name == dbName
+
+      | project logical_database_name, logical_server_name, round(elapsed_time_sec=elapsed_time_milliseconds/1000,1)
+
+      | summarize count(), avg(elapsed_time_sec)'
+- id: DB-performance-107
+  Topic: Debug-Pause_Resume-CRIs
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Debug-Pause_Resume-CRIs.md
+  Prompts:
+  - SQL DB login failures
+  - SQL DB MonLogin error state lookup_state lookup_error_code
+  - SQL DB troubleshoot login failures
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'MonLogin
+
+      | where logical_server_name =~ "" and database_name ==""
+
+      | where event == "process_login_finish"
+
+      | where error <> 0
+
+      | project originalEventTimestamp , database_name , AppName , MachineName , package , event, error , state, is_user_error , peer_address , lookup_error_code, lookup_state, application_name'
+- id: DB-performance-108
+  Topic: Debug-Pause_Resume-CRIs
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Debug-Pause_Resume-CRIs.md
+  Prompts:
+  - SQL DB management status
+  - SQL DB MonManagement event logical_server_name
+  - SQL DB investigate management
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement // activation rqeuests
+
+      | where originalEventTimestamp > ago(12h)
+
+      | where (event == ''track_activate_physical_database_request'')
+
+      | where logical_database_name == dbName
+
+      | project originalEventTimestamp, logical_database_name, logical_server_name, caller_line, caller_function, caller_address, caller_file, caller_keys, caller_state_machine_type, package'
+- id: DB-performance-109
+  Topic: Debug-Pause_Resume-CRIs
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Debug-Pause_Resume-CRIs.md
+  Prompts:
+  - SQL DB management resource provider analysis
+  - SQL DB MonManagementResourceProvider logical_server_name
+  - SQL DB investigate management resource provider
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagementResourceProvider
+    ExecutedQuery: 'MonManagementResourceProvider
+
+      | where originalEventTimestamp > ago(6h)
+
+      | where logical_server_name =~ "{ServerName}"
+
+      | where operation_name == "GET/MODULES/SUBSCRIPTIONS/RESOURCEGROUPS/PROVIDERS/MICROSOFT.SQL/SERVERS/DATABASES/AUDITINGSETTINGS/"
+
+      | project originalEventTimestamp, AudditingSettingsGET=1.2)
+
+      | union ('
+- id: DB-performance-110
+  Topic: Debug-Pause_Resume-CRIs
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Debug-Pause_Resume-CRIs.md
+  Prompts:
+  - SQL DB biz management analysis
+  - SQL DB MonBizManagement event logical_server_name
+  - SQL DB investigate biz management
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonBizManagement
+    ExecutedQuery: 'MonBizManagement // Activation finsihes
+
+      | where event == "management_workflow_database_activation_complete"
+
+      | where originalEventTimestamp > ago(6h)
+
+      | where logical_server_name =~ "{ServerName}"
+
+      | where logical_database_name =~ "{DatabaseName}"
+
+      | project originalEventTimestamp, ActivationCompletes=1.1'
+- id: DB-performance-111
+  Topic: Debug-Pause_Resume-CRIs
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Debug-Pause_Resume-CRIs.md
+  Prompts:
+  - SQL DB biz management analysis
+  - SQL DB MonBizManagement event logical_server_name
+  - SQL DB investigate biz management
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonBizManagement
+    ExecutedQuery: 'MonBizManagement // Activation finsihes
+
+      | where event == "management_workflow_database_deactivation_complete"
+
+      | where originalEventTimestamp > ago(6h)
+
+      | where logical_server_name =~ "{ServerName}"
+
+      | where logical_database_name =~ "{DatabaseName}"
+
+      | project originalEventTimestamp, DeactivationCompletes=1)
+
+      | render timechart'
+- id: DB-performance-115
+  Topic: Find Activation Trigger
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Find Activation Trigger.md
+  Prompts:
+  - SQL DB management analysis
+  - SQL DB MonManagement event logical_server_name
+  - SQL DB investigate management
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where TIMESTAMP between ({startTime} .. {endTime} )
+
+      | where event contains "track_activate_physical_database_request"
+
+      | where logical_server_name contains {servername} and logical_database_name contains {dbName}
+
+      | project TIMESTAMP, caller_function, caller_file, caller_ip_address, caller_line, logical_server_name, logical_database_name'
+- id: DB-performance-151
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB SQL system health
+  - SQL DB MonSQLSystemHealth event LogicalServerName
+  - SQL DB investigate SQL system health
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: "MonSQLSystemHealth\n\n| where TIMESTAMP &gt; datetime({StartTime}) and TIMESTAMP &lt; datetime({EndTime})\n\n| where LogicalServerName =~ \"{LogicalServerName}\" and AppName =~ \"{AppName}\"\
+      \ and NodeName =~ \"{NodeName}\"\n\n| where event == \"systemmetadata_written\"\n\n| where message notcontains \"[INFO]\" and message notcontains \"[TDE] SetDbeState\" and message notcontains \"Log\
+      \ was backed up\" and message notcontains \"created in FSLOG\"\n\n| where message notcontains \"accepting vlf header\" and message notcontains \"Log writer started sending\" and message notcontains\
+      \ \"DbMgrPartnerCommitPolicy::SetSyncAndRecoveryPoint\"\n\n| where message notcontains \"Started XE session\" and message notcontains \"[CFabricReplicaManager::GetHadrSessionTimeout] HADR Session\
+      \ Timeout\"\n\n| where message notcontains \"[CFabricReplicaManager::GetHadrPingFrequency] HADR Ping Frequency\" and message notcontains \"Zeroing completed on\"\n\n| where message notcontains \"\
+      HADR_FQDR_XRF: Sending the extended recovery forks to secondary\" and message notcontains \"Cleaning up conversations for\"\n\n| where message notcontains \"[CFabricReplicaManager::Start] Registered\
+      \ service type\" and message notcontains \"Backup\" and message notcontains \"Recovery of database\"\n\n| where message notcontains \"[DynamicDeactivationTask::DoDbOperation] DynamicFileAllocationDetectionUnderLockTask\
+      \ was called\"\n\n| where message notcontains \"No Changes detected from manager notification\"\n\n| where strlen(extract(@\"Backup(.*)s+processed\",1,message))&lt;=0 \n\n| where strlen(extract(@\"\
+      Backup(.*)s+LSN\",1,message))&lt;=0 \n\n| where strlen(extract(@\"Backup(.*)s+Estimated\",1,message))&lt;=0 \n\n| where strlen(extract(@\"Zeroing(.*)s+from page\",1,message))&lt;=0 \n\n| where strlen(extract(@\"\
+      Zeroing(.*)s+from page\",1,message))&lt;=0 \n\n| where strlen(extract(@\"Backup(.*)s+WITH DIFFERENTIAL\",1,message))&lt;=0\n\n| where strlen(extract(@\"[DecryptCurrDEK] (.*)s+Logical Database Name\"\
+      ,1,message))&lt;=0\n\n| where strlen(extract(@\"(Received|Sending) page request (from|to) (.*)s+for Undo or APR for page\",1,message))&lt;=0 \n\n| extend msg_TIMESTAMP = extract(@\"(20[0-9]{2}-[0-9]{2}-[0-9]{2}\
+      \ [0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{2})\", 1, message)\n\n| extend msg_TIMESTAMP = todatetime(msg_TIMESTAMP) \n\n| project PreciseTimeStamp, msg_TIMESTAMP, NodeName, message\n\n| order by PreciseTimeStamp\
+      \ asc nulls last , msg_TIMESTAMP asc nulls lastMonSQLSystemHealth\n\n| where TIMESTAMP &gt; datetime({StartTime}) and TIMESTAMP &lt; datetime({EndTime})\n\n| where LogicalServerName =~ \"{LogicalServerName}\"\
+      \ and AppName =~ \"{AppName}\" and NodeName =~ \"{NodeName}\"\n\n| project PreciseTimeStamp , message\n\n| where message contains \"stack\"\n"
+- id: DB-performance-181
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB recovery trace analysis
+  - SQL DB MonRecoveryTrace database_name LogicalServerName
+  - SQL DB investigate recovery trace
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonRecoveryTrace
+    ExecutedQuery: "MonRecoveryTrace\n\n| where TIMESTAMP &gt; datetime({StartTime}) and TIMESTAMP &lt; datetime({EndTime}) \n\n| where LogicalServerName == \"{LogicalServerName}\" and AppName == \"{AppName}\"\
+      \ //and database_name =~ \"{DatabaseName}\"\n\n| where database_name !in(\"msdb\",\"master\",\"model\",\"tempdb\", \"mssqlsystemresource\",\"model_userdb\", \"model_masterdb\")\n\n| order by originalEventTimestamp\
+      \ asc\n\n| serialize\n\n| extend PrevTimestamp=prev(originalEventTimestamp, 1)\n\n| extend elapse_time_sec = (originalEventTimestamp - PrevTimestamp) / 1s\n\n| project elapse_time_sec, originalEventTimestamp,\
+      \ database_name, trace_message\n\n| order by originalEventTimestamp asc nulls last\n\n//| order by elapse_time_sec asc  <tr class=\"even\">Long Activation issue //*\n"
+- id: DB-performance-269
+  Topic: RGDD008-20-Check-For-Sql-Alias,-SqlAlias-Cache-Record-Outage
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/RGDD008-20-Check-For-Sql-Alias,-SqlAlias-Cache-Record-Outage.md
+  Prompts:
+  - SQL DB management latency
+  - SQL DB MonManagement event originalEventTimestamp
+  - SQL DB troubleshoot management latency
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where originalEventTimestamp > startTime and originalEventTimestamp < endTime
+
+      | where event startswith "cas_workflow_activate_" | summarize by request_id
+
+      ) on request_id
+
+      | summarize cnt(), arg_max(duration_min, request_id) by stack_trace, keys
+
+      | top 20 by count_ desc'
+- id: DB-performance-270
+  Topic: RGDD008-Mitigating-stuck-_de_activation-workflow
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/RGDD008-Mitigating-stuck-_de_activation-workflow.md
+  Prompts:
+  - SQL DB management operations
+  - SQL DB MonManagementOperations
+  - SQL DB investigate management operations
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagementOperations
+    ExecutedQuery: 'MonManagementOperations
+
+      | where TIMESTAMP > _startTime and TIMESTAMP < _endTime
+
+      | where operation_type in (_operationtype)
+
+      | extend px = parse_xml(operation_parameters)
+
+      | extend servername = tostring(px.InputParameters.LogicalServerName)
+
+      | extend dbname = tostring(px.InputParameters.DatabaseName)
+
+      | where servername =~ _servername and dbname =~ _databasename
+
+      | where error_code == "45320" and error_message contains "Azure Key Vault key" and error_message contains "disabled"
+
+      | project originalEventTimestamp, event, request_id,operation_type, error_code, error_message'
+- id: DB-performance-271
+  Topic: RGDD008-Mitigating-stuck-_de_activation-workflow
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/RGDD008-Mitigating-stuck-_de_activation-workflow.md
+  Prompts:
+  - SQL DB SQL system health
+  - SQL DB MonSQLSystemHealth
+  - SQL DB investigate SQL system health
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where AppName contains _appName
+
+      | where event in ("errorlog_written", "systemmetadata_written")
+
+      | where message contains "Error: 33183" or message contains "Failed WRAP access" or message contains "WrapKeyUsingRsaKey operation failed" or'
+- id: DB-performance-272
+  Topic: RGDD008-Mitigating-stuck-_de_activation-workflow
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/RGDD008-Mitigating-stuck-_de_activation-workflow.md
+  Prompts:
+  - SQL DB management operations
+  - SQL DB MonManagementOperations event error_message
+  - SQL DB investigate management operations
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagementOperations
+    ExecutedQuery: 'MonManagementOperations
+
+      | where TIMESTAMP > _startTime and TIMESTAMP < _endTime
+
+      | where operation_parameters contains _servername and operation_parameters contains _databasename
+
+      | project originalEventTimestamp, event, request_id, operation_type, error_code, error_message,  operation_parameters, message, exception_message, stack_trace
+
+      | sort by originalEventTimestamp desc'
+- id: DB-performance-273
+  Topic: RGDD008-Mitigating-stuck-_de_activation-workflow
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/RGDD008-Mitigating-stuck-_de_activation-workflow.md
+  Prompts:
+  - SQL DB management status
+  - SQL DB MonManagement event originalEventTimestamp
+  - SQL DB investigate management
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where request_id =~ "25224F6B-32B1-4984-B3A2-8790EAF69160"
+
+      | project originalEventTimestamp, event, state_machine_type, keys, action, old_state, new_state, message, stack_trace
+
+      | sort by originalEventTimestamp asc'
+- id: DB-performance-363
+  Topic: MM0001-6-Serverless-OOMs
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Memory/MM0001-6-Serverless-OOMs.md
+  Prompts:
+  - SQL DB SQL system health
+  - SQL DB MonSQLSystemHealth AppName NodeName TIMESTAMP
+  - SQL DB investigate SQL system health
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'let appName = "{AppName}";
+
+      //let nodeName = "DB.44";
+
+      let tag = "MSR-";
+
+      //let tag = "MSExtra-"; // Uncomment this if you also want to see the extra info
+
+      let MemoryDumpTable = MonSQLSystemHealth
+
+      | where TIMESTAMP > datetime(3/4/2021 18:50:00) and TIMESTAMP < datetime(3/4/2021 19:20:00)
+
+      | where AppName == appName
+
+      //| where NodeName == nodeName
+
+      | where message contains tag
+
+      | extend MSRNumber = strcat(tag, extract(strcat(tag, "([0-9]+)"), 1, message, typeof(int)))
+
+      | project originalEventTimestamp, NodeName, MSRNumber, message;'
+- id: DB-performance-364
+  Topic: MM0001-6-Serverless-OOMs
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Memory/MM0001-6-Serverless-OOMs.md
+  Prompts:
+  - SQL DB global query events analysis
+  - SQL DB MonGlobalQueryEvents AppName serverlessAppName
+  - SQL DB investigate global query events
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonGlobalQueryEvents
+    ExecutedQuery: 'MonGlobalQueryEvents
+
+      | where AppName == serverlessAppName
+
+      | extend hasGQ = 1
+
+      | union'
+- id: DB-performance-365
+  Topic: MM0001-6-Serverless-OOMs
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Memory/MM0001-6-Serverless-OOMs.md
+  Prompts:
+  - SQL DB database metadata analysis
+  - SQL DB MonDatabaseMetadata AppName long xtype
+  - SQL DB investigate database metadata
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDatabaseMetadata
+    ExecutedQuery: 'MonDatabaseMetadata
+
+      | where AppName == serverlessAppName
+
+      | where xtype == long(240)
+
+      | extend hasGeomGeogOrHId = 1
+
+      | union'
+- id: DB-performance-366
+  Topic: MM0001-6-Serverless-OOMs
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Memory/MM0001-6-Serverless-OOMs.md
+  Prompts:
+  - SQL DB QDS exec stats activity
+  - SQL DB MonWiQdsExecStats AppName hasGQ hasClrTime
+  - SQL DB investigate QDS exec stats
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: 'MonWiQdsExecStats
+
+      | where AppName == serverlessAppName
+
+      | where max_clr_time > 0
+
+      | extend hasClrTime = 1
+
+      | summarize by serverlessAppName, hasGeomGeogOrHId, hasGQ, hasClrTime'
+- id: DB-performance-367
+  Topic: MM0001-6-Serverless-OOMs
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Memory/MM0001-6-Serverless-OOMs.md
+  Prompts:
+  - SQL DB idle mem collector stats analysis
+  - SQL DB MonSqlIdleMemCollectorStats event AppName
+  - SQL DB investigate idle mem collector stats
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSqlIdleMemCollectorStats
+    ExecutedQuery: 'MonSqlIdleMemCollectorStats
+
+      | where TIMESTAMP > datetime(3/4/2021 12:50:00) and TIMESTAMP < datetime(3/4/2021 20:20:00)
+
+      | where event == "set_reclaim_target"
+
+      | where AppName == "{AppName}"
+
+      | where NodeName == "{NodeName}"
+
+      | project TIMESTAMP, new_target_pages_kb =new_target_pages*8, committed_pages_kb=committed_pages*8 , current_target_pages_kb=current_target_pages*8'
+- id: DB-performance-370
+  Topic: MM0001-8-Summarized-OOM-snapshot
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Memory/MM0001-8-Summarized-OOM-snapshot.md
+  Prompts:
+  - SQL DB SQL system health
+  - SQL DB MonSQLSystemHealth event AppName AppTypeName
+  - SQL DB investigate SQL system health
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where AppName == appName
+
+      | where originalEventTimestamp between (incidentStartTime .. incidentEndTime)
+
+      | where event == "summarized_oom_snapshot"
+
+      | extend topClerks = parse_json(top_memory_clerks)
+
+      | extend topPools = parse_json(top_memory_pools)
+
+      | extend top1Clerk_size_mb=tolong(topClerks[0][''page_allocated_mb''])+tolong(topClerks[0][''vm_committed_mb''])
+
+      | extend top1Pool_target_mb=tolong(topPools[0][''pool_target_mb''])
+
+      | extend ratioOftop1Clerk_poolTarget=round(top1Clerk_size_mb*100.0/top1Pool_target_mb,1)
+
+      | extend non_sos_usage_pct = non_sos_usage_mb * 100 / current_job_cap_mb
+
+      | extend oom_pool_name = parse_json(oom_memory_pool).pool_name
+
+      | extend is_oom_pool_system_pool = oom_pool_name !contains "SloSharedPool" and  oom_pool_name !contains "UserPool"
+
+      // Temporary fix to give precedence to SYSTEM_POOL (10) over NON_SOS_MEMORY_LEAK as oomCause if non-sos usage is less than 60% and oom_factor is OomMemoryPool, and it is a system pool
+
+      | extend oom_cause = iff(non_sos_usage_pct < 60 and oom_factor == 5 and is_oom_pool_system_pool, 10, oom_cause)
+
+      | extend oomCause = case(oom_cause == 1, ''HEKATON_POOL_MEMORY_LOW'', oom_cause == 2, ''MEMORY_LOW'', oom_cause == 3, ''OS_MEMORY_PRESSURE'',
+
+      oom_cause == 4, ''OS_MEMORY_PRESSURE_SQL'', oom_cause == 5, ''NON_SOS_MEMORY_LEAK'', oom_cause == 6, ''SERVERLESS_MEMORY_RECLAMATION'',
+
+      oom_cause == 7, ''MEMORY_LEAK'', oom_cause == 8, ''SLOW_BUFFER_POOL_SHRINK'', oom_cause == 9, ''INTERNAL_POOL'', oom_cause == 10, ''SYSTEM_POOL'',
+
+      oom_cause == 11, ''QUERY_MEMORY_GRANTS'', oom_cause == 12, ''REPLICAS_AND_AVAILABILITY'', ''UNKNOWN'')
+
+      | project originalEventTimestamp, ClusterName, NodeName, AppTypeName, instance_rg_size,
+
+      is_non_sos_usage_leaked, oom_factor, oomCause, available_physical_memory_mb, current_job_cap_mb, process_memory_usage_mb,
+
+      non_sos_usage_mb, committed_target_mb, committed_mb, allocation_potential_memory_mb,
+
+      topClerks[0], topClerks[1], topClerks[2], topPools[0], oom_memory_pool,ratioOftop1Clerk_poolTarget,leaked_memory_clerk'
+- id: DB-performance-407
+  Topic: Serverless-TSG-001-Login-Outages-During-Memory-Reclamation-Flush
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Memory/Serverless-TSG-001-Login-Outages-During-Memory-Reclamation-Flush.md
+  Prompts:
+  - SQL DB snapshot status
+  - SQL DB MonAnalyticsDBSnapshot logical_server_name
+  - SQL DB investigate snapshot
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: 'MonAnalyticsDBSnapshot
+
+      | where logical_server_name == _LogicalServerName
+
+      | where sql_instance_name == _AppName
+
+      | where logical_database_name == _DatabaseName
+
+      | distinct service_level_objective
+
+      If service_level_objective contains "_S_", then database is serverless, if not, then this TSG cannot be applicable.'
+- id: DB-performance-408
+  Topic: Serverless-TSG-001-Login-Outages-During-Memory-Reclamation-Flush
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Memory/Serverless-TSG-001-Login-Outages-During-Memory-Reclamation-Flush.md
+  Prompts:
+  - SQL DB idle mem collector stats analysis
+  - SQL DB MonSqlIdleMemCollectorStats event LogicalServerName
+  - SQL DB investigate idle mem collector stats
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSqlIdleMemCollectorStats
+    ExecutedQuery: 'MonSqlIdleMemCollectorStats
+
+      | where TIMESTAMP between (_startTime .. _endTime) // Time range filtering
+
+      | where LogicalServerName == _LogicalServerName
+
+      | where AppName == _AppName
+
+      | where event == "flush_user_dbs_caches" or event == "flush_all_caches"
+
+      | where reclaim_target_pages > 0
+
+      | project originalEventTimestamp
+
+      If there are no rows in the output, then there might not be any flush happening or flush is already disabled.'
+- id: DB-performance-409
+  Topic: Serverless-TSG-001-Login-Outages-During-Memory-Reclamation-Flush
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Memory/Serverless-TSG-001-Login-Outages-During-Memory-Reclamation-Flush.md
+  Prompts:
+  - SQL DB memory pressure analysis
+  - SQL DB MonSqlIdleMemCollectorStats event LogicalServerName
+  - SQL DB troubleshoot memory pressure
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSqlIdleMemCollectorStats
+    ExecutedQuery: 'MonSqlIdleMemCollectorStats
+
+      | where TIMESTAMP between (_startTime .. _endTime) // Time range filtering
+
+      | where LogicalServerName == _LogicalServerName
+
+      | where AppName == _AppName
+
+      | where event == "shrink_if_needed" or event == "shrink_user_dbs_externalcaches"
+
+      | where reclaim_target_set_in_sos == true and reclaim_target_pages > 0
+
+      | project originalEventTimestamp
+
+      If there are no rows in the output, then, there might not be any memory reclamation happening or it is already disabled.'
+- id: DB-performance-410
+  Topic: Serverless-TSG-002-High-Billing-Issues
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Memory/Serverless-TSG-002-High-Billing-Issues.md
+  Prompts:
+  - SQL DB snapshot status
+  - SQL DB MonAnalyticsDBSnapshot logical_server_name
+  - SQL DB investigate snapshot
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: 'MonAnalyticsDBSnapshot
+
+      | where logical_server_name == _LogicalServerName
+
+      | where sql_instance_name == _AppName
+
+      | where logical_database_name == _DatabaseName
+
+      | where service_level_objective contains "_GP_S_"
+
+      | distinct service_level_objective, logical_resource_pool_id
+
+      If the result is empty, then, the database is NOT serverless, this TSG is not applicable.
+
+      If database is serverless, and logical_resource_pool_id field is EMPTY, then database is singleton serverless. Follow next steps.
+
+      If service_level_objective contains "_S_" AND logical_resource_pool_id field is NOT EMPTY, then it is Serverless Elastic Pool, this TSG won''t be helpful in this case, please reach out to below Contact
+      Information.'
+- id: DB-performance-411
+  Topic: Serverless-TSG-002-High-Billing-Issues
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Memory/Serverless-TSG-002-High-Billing-Issues.md
+  Prompts:
+  - SQL DB memory pressure analysis
+  - SQL DB MonSqlIdleMemCollectorStats event LogicalServerName
+  - SQL DB troubleshoot memory pressure
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSqlIdleMemCollectorStats
+    ExecutedQuery: 'MonSqlIdleMemCollectorStats
+
+      | where TIMESTAMP between (_startTime .. _endTime) // Time range filtering
+
+      | where LogicalServerName == _LogicalServerName
+
+      | where AppName == _AppName
+
+      | where event == "shrink_if_needed"
+
+      | extend cache_reclaim_policy = tostring(iff(cache_reclaim_policy == 3, "Work Relative Reclamation", "Cache Activeness"))
+
+      | where cache_reclaim_policy == "Cache Activeness"
+
+      In the output, check the latest record based on timestamp, and if cache_reclaim_policy is "Cache Activeness", then go to next step to verify memory is indeed not getting reclaimed, and if cache_reclaim_policy
+      is "Work Relative Reclamation", then, this mitigation won''t help, please reach out on below Contact Information.'
+- id: DB-performance-447
+  Topic: CRI-_case-study1_,-deactivationstatus-xts-times-ou
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Team-TSGs/Dynamic-Deactivation-Activation-Pause-Resume/CRI-_case-study1_,-deactivationstatus-xts-times-ou.md
+  Prompts:
+  - SQL DB management operations
+  - SQL DB MonManagementOperations originalEventTimestamp
+  - SQL DB investigate management operations
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagementOperations
+    ExecutedQuery: 'MonManagementOperations
+
+      | where originalEventTimestamp > ago(1d)'
+- id: DB-performance-448
+  Topic: Proactive-Pause-Resume001
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Team-TSGs/Dynamic-Deactivation-Activation-Pause-Resume/Proactive-Pause-Resume001.md
+  Prompts:
+  - SQL DB user activity detectIOn analysis
+  - SQL DB MonDmUserActivityDetection event dbid prev
+  - SQL DB investigate user activity detectIOn
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmUserActivityDetection
+    ExecutedQuery: 'MonDmUserActivityDetection
+
+      | where event == "deactivation_detection_outcome" and logical_database_id == dbid
+
+      | where outcome in ("ACTIVE","SENTLOGICALPAUSE","INLOGICALPAUSE","SENTPHYSICALPAUSE")
+
+      | distinct TIMESTAMP, logical_database_id, outcome
+
+      | order by TIMESTAMP
+
+      | where outcome == "ACTIVE" and prev(outcome) != "ACTIVE"'
+- id: DB-performance-449
+  Topic: Proactive-Pause-Resume001
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Team-TSGs/Dynamic-Deactivation-Activation-Pause-Resume/Proactive-Pause-Resume001.md
+  Prompts:
+  - SQL DB instance history store analysis
+  - SQL DB MonInstanceHistoryStore event slo_name event_type
+  - SQL DB investigate instance history store
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonInstanceHistoryStore
+    ExecutedQuery: 'MonInstanceHistoryStore
+
+      | where event == "ihs_pause_resume_history"
+
+      | project TIMESTAMP, logical_database_id, physical_database_guid, slo_name, time_snapshot, event_type'
+- id: DB-performance-450
+  Topic: Proactive-Pause-Resume001
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Team-TSGs/Dynamic-Deactivation-Activation-Pause-Resume/Proactive-Pause-Resume001.md
+  Prompts:
+  - SQL DB instance history store analysis
+  - SQL DB MonInstanceHistoryStore event slo_name
+  - SQL DB investigate instance history store
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonInstanceHistoryStore
+    ExecutedQuery: 'MonInstanceHistoryStore
+
+      | where event == "ihs_next_predicted_activity"
+
+      | project TIMESTAMP, logical_database_id, physical_database_guid, slo_name, analysis_time_ms,
+
+      start_of_predicted_activity, end_of_predicted_activity, is_db_old, confidence'
+- id: DB-performance-451
+  Topic: Proactive-Pause-Resume001
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Team-TSGs/Dynamic-Deactivation-Activation-Pause-Resume/Proactive-Pause-Resume001.md
+  Prompts:
+  - SQL DB user activity detectIOn analysis
+  - SQL DB MonDmUserActivityDetection event is_db_old
+  - SQL DB investigate user activity detectIOn
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmUserActivityDetection
+    ExecutedQuery: 'MonDmUserActivityDetection
+
+      | where event == "deactivation_detection_outcome" and (start_of_predicted_activity != "" or is_db_old == 1)
+
+      | distinct TIMESTAMP, logical_database_id, start_of_predicted_activity, end_of_predicted_activity, is_db_old, proactive_decision'
+- id: DB-performance-452
+  Topic: Proactive-Pause-Resume001
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Team-TSGs/Dynamic-Deactivation-Activation-Pause-Resume/Proactive-Pause-Resume001.md
+  Prompts:
+  - SQL DB management errors
+  - SQL DB MonManagement event logical_server_name
+  - SQL DB troubleshoot management errors
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where event in ("cas_workflow_update_next_predicted_activity_start", "cas_workflow_update_next_predicted_activity_failure",
+
+      "cas_workflow_update_next_predicted_activity_complete")
+
+      | project TIMESTAMP, event, logical_server_name, logical_database_name, new_value'
+- id: DB-performance-453
+  Topic: Proactive-Pause-Resume001
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Team-TSGs/Dynamic-Deactivation-Activation-Pause-Resume/Proactive-Pause-Resume001.md
+  Prompts:
+  - SQL DB management analysis
+  - SQL DB MonManagement event is_forced logical_database_id
+  - SQL DB investigate management
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where event == "cas_workflow_activate_physical_database_async_complete" and is_forced == "True"
+
+      | distinct proactive_activation_time = TIMESTAMP, logical_database_id = toupper(logical_database_id)
+
+      | join kind = inner ('
+- id: DB-performance-454
+  Topic: Proactive-Pause-Resume001
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Team-TSGs/Dynamic-Deactivation-Activation-Pause-Resume/Proactive-Pause-Resume001.md
+  Prompts:
+  - SQL DB instance history store analysis
+  - SQL DB MonInstanceHistoryStore event AppName todatetime
+  - SQL DB investigate instance history store
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonInstanceHistoryStore
+    ExecutedQuery: 'MonInstanceHistoryStore
+
+      | where event == "ihs_next_predicted_activity"
+
+      | distinct start_of_predicted_activity = todatetime(start_of_predicted_activity), logical_database_id = toupper(logical_database_id), AppName
+
+      ) on logical_database_id
+
+      | where proactive_activation_time  between (start_of_predicted_activity-5m .. start_of_predicted_activity)
+
+      | project AppName, logical_database_id, start_of_predicted_activity, proactive_activation_time'
+- id: DB-performance-455
+  Topic: Proactive-Pause-Resume001
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Team-TSGs/Dynamic-Deactivation-Activation-Pause-Resume/Proactive-Pause-Resume001.md
+  Prompts:
+  - SQL DB user activity detectIOn analysis
+  - SQL DB MonDmUserActivityDetection event isnotempty
+  - SQL DB investigate user activity detectIOn
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmUserActivityDetection
+    ExecutedQuery: 'MonDmUserActivityDetection
+
+      | where event == "deactivation_detection_outcome" and isnotempty(is_proactive_activation)
+
+      | distinct TIMESTAMP, logical_database_id, is_proactive_activation'
+- id: DB-performance-456
+  Topic: Proactive-Pause-Resume001
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Team-TSGs/Dynamic-Deactivation-Activation-Pause-Resume/Proactive-Pause-Resume001.md
+  Prompts:
+  - SQL DB management operations
+  - SQL DB MonManagementOperations event ClusterName
+  - SQL DB investigate management operations
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagementOperations
+    ExecutedQuery: 'MonManagementOperations
+
+      | project originalEventTimestamp, event, request_id, operation_type, error_code, error_message, operation_parameters, code_package_version, ClusterName
+
+      | where operation_type =~ "ActivatePhysicalDatabaseAsync"
+
+      | where event in ("management_operation_failure", "management_operation_timeout")
+
+      | where operation_type  <> "GetPurviewScanRunInfo"
+
+      | extend px = parse_xml(operation_parameters)
+
+      | extend server = tostring(px.InputParameters.LogicalServerName)
+
+      | extend isProactive = tostring(px.InputParameters.IsProactiveActivation)
+
+      | where isProactive == "true"'
+- id: DB-performance-457
+  Topic: Proactive-Pause-Resume001
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Team-TSGs/Dynamic-Deactivation-Activation-Pause-Resume/Proactive-Pause-Resume001.md
+  Prompts:
+  - SQL DB management analysis
+  - SQL DB MonManagement event row_count
+  - SQL DB investigate management
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where event == "proactive_resume_periodic_operation"
+
+      | project TIMESTAMP, row_count'
+- id: DB-performance-458
+  Topic: Proactive-Pause-Resume001
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Team-TSGs/Dynamic-Deactivation-Activation-Pause-Resume/Proactive-Pause-Resume001.md
+  Prompts:
+  - SQL DB instance history store analysis
+  - SQL DB MonInstanceHistoryStore event TIMESTAMP
+  - SQL DB investigate instance history store
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonInstanceHistoryStore
+    ExecutedQuery: 'MonInstanceHistoryStore
+
+      | where event == "ihs_next_predicted_activity" and TIMESTAMP >= ago(28d) // history retention is 28 days
+
+      | distinct TIMESTAMP, logical_database_id, analysis_time_ms'
+- id: DB-performance-459
+  Topic: Queries
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Team-TSGs/Dynamic-Deactivation-Activation-Pause-Resume/Queries.md
+  Prompts:
+  - SQL DB CPU pressure analysis
+  - SQL DB object_store_total_pages event AppName gt
+  - SQL DB troubleshoot CPU pressure
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSqlIdleMemCollectorStatsServerless
+    ExecutedQuery: '<col style="width: 33%" /><col style="width: 33%" /><col style="width: 33%" /><tr class="odd">NameDescriptionQuery examples<tr class="even">MonSqlIdleMemCollectorStatsServerless idle
+      memory collectionCalculating cache activeness.MonSqlIdleMemCollectorStats
+
+
+      | where TIMESTAMP &gt; datetime(2020-02-06 11:25:36.7332701) and TIMESTAMP &lt; datetime(2020-02-06 17:00:00)
+
+
+      | where AppName == "{AppName}"
+
+
+      | where event == "cache_activeness_stats"
+
+
+      | project TIMESTAMP, user_store_total_pages, user_store_active_pages, cache_store_total_pages, cache_store_active_pages, large_cache_total_pages, large_cache_active_pages,
+
+
+      object_store_total_pages, object_store_active_pages, buffer_pool_total_pages, buffer_pool_active_pages,
+
+
+      total_pages, active_pages  Shrink if needed eventsMonSqlIdleMemCollectorStats
+
+
+      | where TIMESTAMP &gt; datetime(2020-02-06 11:25:36.7332701) and TIMESTAMP &lt; datetime(2020-02-06 17:00:00)
+
+
+      | where AppName == "{AppName}"
+
+
+      | where event == "shrink_if_needed"
+
+
+      | project TIMESTAMP, cache_reclaim_trigger_status, min_memory_pages, cache_total_pages, free_pages, committed_pages, is_cpu_usage_low, cache_active_page_ratio, reclaim_target_pages '
+- id: DB-performance-460
+  Topic: RGDD008-A-How-to-check-if-DB-is-active-now
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Team-TSGs/Dynamic-Deactivation-Activation-Pause-Resume/RGDD008-A-How-to-check-if-DB-is-active-now.md
+  Prompts:
+  - SQL DB login failures
+  - SQL DB MonLogin error is_success lookup_state event
+  - SQL DB troubleshoot login failures
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'MonLogin
+
+      | where originalEventTimestamp > ago(1h)
+
+      | where logical_server_name =~ "{ServerName}" and database_name =~ "{DatabaseName}"
+
+      | where event =~"process_login_finish"
+
+      | project originalEventTimestamp, NodeName, package, is_success, is_user_error, error, state_desc, lookup_state
+
+      | summarize arg_max(originalEventTimestamp, NodeName), cnt() by package, is_success, is_user_error, error, state_desc, lookup_state'
+- id: DB-performance-678
+  Topic: Bot-to-move-Lowly-used-IO-databases-to-XStore
+  Source: TSG-SQL-DB-Performance/content/Predictable-Performance/Bot-to-move-Lowly-used-IO-databases-to-XStore.md
+  Prompts:
+  - SQL DB total xIO based latency
+  - SQL DB totalXIOBasedDb logical_server_name AppName
+  - SQL DB troubleshoot total xIO based latency
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmRealTimeResourceStats
+    ExecutedQuery: 'let deactivatedDB = totalXIOBasedDb
+
+      | where physical_database_state == "Deactivated";
+
+      let dbsWithIOInPast6days = MonDmRealTimeResourceStats
+
+      | where originalEventTimestamp >= filter_dtu_usage_start_inclusive
+
+      | where avg_data_io_percent > 0 or avg_log_write_percent > 0
+
+      | extend region = extract("[ct]r[0-9]+[.]([^.]+)[.]", 1, ClusterName, typeof(string))
+
+      | extend logical_server_name = LogicalServerName, logical_database_name = database_name
+
+      | summarize makeset( slo_name), sum(avg_data_io_percent), sum(avg_log_write_percent) by logical_server_name, logical_database_name, region, SourceNamespace;
+
+      let dbsNeedingXIOPast6days = MonDmRealTimeResourceStats
+
+      | where originalEventTimestamp >= filter_dtu_usage_start_inclusive
+
+      | where avg_data_io_percent > filter_xio_dtu_percentage
+
+      | extend region = extract("[ct]r[0-9]+[.]([^.]+)[.]", 1, ClusterName, typeof(string))
+
+      | extend logical_server_name = LogicalServerName, logical_database_name = database_name
+
+      | summarize makeset( slo_name), sum(avg_data_io_percent), sum(avg_log_write_percent), samples = count() by logical_server_name, logical_database_name, region, SourceNamespace
+
+      | extend duration = samples * time(15s)
+
+      | where duration > filter_xio_max_duration;
+
+      let dbsWithZeroIOInPast6Days = totalXIOBasedDb
+
+      | join kind=leftanti dbsWithIOInPast6days on logical_server_name, logical_database_name, region, SourceNamespace;
+
+      let dbsWithZeroDataIOInPast6Days = totalXIOBasedDb
+
+      | join kind=leftanti ( dbsWithIOInPast6days | where ( sum_avg_data_io_percent != 0) ) on logical_server_name, logical_database_name, region, SourceNamespace;
+
+      let dbsActiveWithZeroDataIOInPast6Days = totalXIOBasedDb
+
+      | where physical_database_state <> "Deactivated"
+
+      | join kind=leftanti ( dbsWithIOInPast6days | where ( sum_avg_data_io_percent != 0) ) on logical_server_name, logical_database_name, region, SourceNamespace;
+
+      let active_xstore_candidates = totalXIOBasedDb
+
+      | where physical_database_state <> "Deactivated"
+
+      | join kind=leftanti ( dbsNeedingXIOPast6days ) on logical_server_name, logical_database_name, region, SourceNamespace;
+
+      let db_map = MonAnalyticsDBSnapshot
+
+      | where TIMESTAMP >= snapshot_start_inclusive and TIMESTAMP < snapshot_end_exclusive
+
+      | where edition !in ( ''Premium'', ''DataWarehouse'', ''Stretch'', ''System'' )
+
+      | where AppTypeName == ''Worker.ISO''
+
+      | project TIMESTAMP, ClusterName, AppName, AppTypeName, physical_database_id, logical_server_name, logical_database_name, SourceNamespace
+
+      | extend region = extract(''[ct]r[0-9]+[.]([^.]+)[.]'', 1, ClusterName, typeof(string))
+
+      | summarize by SourceNamespace, region, AppName, AppTypeName, physical_database_id, logical_server_name, logical_database_name'

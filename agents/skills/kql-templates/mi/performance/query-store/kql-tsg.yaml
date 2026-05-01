@@ -1,0 +1,18 @@
+SqlSkills:
+- id: MI-query-store-1
+  Topic: Troubleshooting-plan-forcing-errors
+  Source: Performance-and-Query-Execution/Other-errors-and-exceptions/Troubleshooting-plan-forcing-errors.md
+  Prompts:
+  - MI Troubleshooting plan forcing errors
+  - Managed Instance Troubleshooting plan forcing errors
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonQueryStoreFailures
+    ExecutedQuery: |-
+      MonQueryStoreFailures
+      | where LogicalServerName =~ "{ServerName}" and logical_database_name =~ "{DatabaseName}"
+      | where TIMESTAMP > ago(5d)
+      | where event == "query_store_plan_forcing_failed_core"
+      | summarize count(), min(TIMESTAMP), max(TIMESTAMP) by query_id, plan_id,  event, error_number

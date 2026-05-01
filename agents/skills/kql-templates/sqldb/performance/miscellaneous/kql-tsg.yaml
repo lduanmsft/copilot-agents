@@ -1,0 +1,4081 @@
+SqlSkills:
+- id: DB-performance-7
+  Topic: All-impacted-databases
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Archive/All-impacted-databases.md
+  Prompts:
+  - SQL DB database metadata activity
+  - SQL DB MonDatabaseMetadata LogicalServerName AppName
+  - SQL DB investigate database metadata
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDatabaseMetadata
+    ExecutedQuery: 'MonDatabaseMetadata
+
+      | where table_name == "sysidxstats" and (type == 5 or type == 6)
+
+      | summarize by AppName, LogicalServerName
+
+      | project AppName
+
+      )'
+- id: DB-performance-8
+  Topic: All-potentially-affected-customers-that-are-on-the
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Archive/All-potentially-affected-customers-that-are-on-the.md
+  Prompts:
+  - SQL DB database metadata activity
+  - SQL DB MonDatabaseMetadata AppName ClusterName
+  - SQL DB investigate database metadata
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDatabaseMetadata
+    ExecutedQuery: 'let queryCluster = (clusterName: string, databaseName: string)
+
+      { cluster(clusterName).database(databaseName).MonDatabaseMetadata
+
+      | where table_name == "sysidxstats" and (type == 5 or type == 6)
+
+      | where TIMESTAMP > ago(1d)
+
+      | where code_package_version startswith "14.0.6"
+
+      | summarize by AppName, ClusterName'
+- id: DB-performance-14
+  Topic: CPU-Pressure-Detection
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Archive/CPU-Pressure-Detection.md
+  Prompts:
+  - SQL DB positive slope rq analysis
+  - SQL DB PositiveSlopeRQ LogicalServerName AppName
+  - SQL DB investigate positive slope rq
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: PositiveSlopeRQ
+    ExecutedQuery: 'let RqViolation = PositiveSlopeRQ
+
+      | join kind = fullouter HighSpikeRq on TIMESTAMP, AppName;
+
+      let RunnableQPressure = WorkersUsed
+
+      | join kind = inner RqViolation on TIMESTAMP, LogicalServerName, AppName
+
+      | join kind = leftouter HighLoad on TIMESTAMP, LogicalServerName, AppName
+
+      | project TIMESTAMP, LogicalServerName, AppName, HighWorkersViolation, GradualViolation, HighLoadViolation, HighSpikeRqViolation'
+- id: DB-performance-22
+  Topic: CSS-Feedback-for-ASC-Perf-troubleshooter_Insights
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Archive/CSS-Feedback-for-ASC-Perf-troubleshooter_Insights.md
+  Prompts:
+  - SQL DB SQL system health
+  - SQL DB MonSQLSystemHealth event LogicalServerName
+  - SQL DB investigate SQL system health
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where TIMESTAMP >= ago(5h)
+
+      | where message contains "is full due to"
+
+      | where AppName == "{appname}"
+
+      | project TIMESTAMP, message, NodeName , event, LogicalServerName'
+- id: DB-performance-23
+  Topic: Currently-Impacted-Customers
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Archive/Currently-Impacted-Customers.md
+  Prompts:
+  - SQL DB errors reported errors
+  - SQL DB AlrSQLErrorsReported database_name LogicalServerName
+  - SQL DB troubleshoot errors reported errors
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: AlrSQLErrorsReported
+    ExecutedQuery: 'AlrSQLErrorsReported
+
+      | where PreciseTimeStamp > ago(4h)
+
+      | where error_number == 9833
+
+      | summarize count() by ClusterName, LogicalServerName, database_name, AppName, AppTypeName'
+- id: DB-performance-24
+  Topic: Generating-commands
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Archive/Generating-commands.md
+  Prompts:
+  - SQL DB XDB host errors
+  - SQL DB MonXdbhost AppName NodeName ClusterName
+  - SQL DB troubleshoot XDB host errors
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonXdbhost
+    ExecutedQuery: 'MonXdbhost
+
+      | where TIMESTAMP > ago({TimeRange})
+
+      | where text contains "Duplicate task stuck"
+
+      | project TIMESTAMP , ClusterName, NodeName, text
+
+      | extend AppName = substring(text, 48, 12)
+
+      | union (MonXdbhost
+
+      | where TIMESTAMP > ago({TimeRange})
+
+      | where text contains "Waiting UCS socketDup failed"
+
+      | project TIMESTAMP , ClusterName, NodeName, text
+
+      | extend AppName = extract(".*appname: (.*)", 1, text))
+
+      | summarize total_errors = count(), argmax(TIMESTAMP, text) by ClusterName, NodeName, AppName
+
+      | join ('
+- id: DB-performance-32
+  Topic: IHS-Telemetry-Troubleshooting
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Archive/IHS-Telemetry-Troubleshooting.md
+  Prompts:
+  - SQL DB instance history store analysis
+  - SQL DB MonInstanceHistoryStore event LogicalServerName
+  - SQL DB investigate instance history store
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonInstanceHistoryStore
+    ExecutedQuery: 'MonInstanceHistoryStore
+
+      | where event == "ihs_inserts"
+
+      | project TIMESTAMP, ClusterName, NodeName, MachineName, LogicalServerName, AppName, AppTypeName, metric_name
+
+      -   ihs_analytics: tracks the scenario name (*scenario_name*), config name (config_name) for which analysis is being done. The result value of the analysis (*result_uint32_val, result_uint64_val*),
+      time it took for doing the analysis (*analysis_time_ms*) and whether the analysis value has been persisted in ICS (*is_config_persisted*).'
+- id: DB-performance-33
+  Topic: IHS-Telemetry-Troubleshooting
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Archive/IHS-Telemetry-Troubleshooting.md
+  Prompts:
+  - SQL DB instance history store analysis
+  - SQL DB MonInstanceHistoryStore event LogicalServerName
+  - SQL DB investigate instance history store
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonInstanceHistoryStore
+    ExecutedQuery: 'MonInstanceHistoryStore
+
+      | where event == "ihs_analytics"
+
+      | project TIMESTAMP, ClusterName, NodeName, MachineName, LogicalServerName, AppName, AppTypeName,
+
+      scenario_name, config_name, result_uint32_val, result_uint64_val, analysis_time_ms, is_config_persisted
+
+      -   ihs_apply: tracks the scenario name (*scenario_name*), config name (*config_name*) for which ihs is trying to apply. The initial value of the config (*previous_uint32_val, previous_uint64_val)*,
+      ihs recommended value(*ihs_recommended_uint32_val, ihs_recommended_uint64_val*), has the config been tuned to the ihs recommended value (*is_tuned*), if not tuned why (*tuning_skipped_reason*)'
+- id: DB-performance-34
+  Topic: IHS-Telemetry-Troubleshooting
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Archive/IHS-Telemetry-Troubleshooting.md
+  Prompts:
+  - SQL DB instance history store analysis
+  - SQL DB MonInstanceHistoryStore event LogicalServerName
+  - SQL DB investigate instance history store
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonInstanceHistoryStore
+    ExecutedQuery: 'MonInstanceHistoryStore
+
+      | where event == "ihs_apply"
+
+      | project TIMESTAMP, ClusterName, NodeName, MachineName, LogicalServerName, AppName, AppTypeName,
+
+      scenario_name, config_name, ihs_recommended_uint32_val, ihs_recommended_uint64_val, previous_uint32_val, previous_uint64_val, is_tuned, tuning_skipped_reason
+
+      -   ihs_deletes: captures num of files deleted (*num_files_deleted)* with the deletion logic that by default runs every once in 24 hours, num of files left (num_files_after_deletion) for the particular
+      metric (metric_name) in the storage container. It also tracks the time it took for the deletion logic to run (deletion_time_ms) and timestamp of oldest ihs file (timestamp_of_oldest_file) for the
+      metric in the storage container.'
+- id: DB-performance-36
+  Topic: IHS-Telemetry-Troubleshooting
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Archive/IHS-Telemetry-Troubleshooting.md
+  Prompts:
+  - SQL DB management analysis
+  - SQL DB MonManagement event logical_server_name
+  - SQL DB investigate management
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where event =="ihs_delete_file_on_drop_instance"
+
+      | project TIMESTAMP, ClusterName, NodeName, MachineName, logical_server_name, sql_instance_name, metric_name, num_files_deleted
+
+
+      '
+- id: DB-performance-37
+  Topic: IHS-Tempdb-presizing
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Archive/IHS-Tempdb-presizing.md
+  Prompts:
+  - SQL DB instance history store analysis
+  - SQL DB MonInstanceHistoryStore event LogicalServerName
+  - SQL DB investigate instance history store
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonInstanceHistoryStore
+    ExecutedQuery: 'MonInstanceHistoryStore
+
+      | where TIMESTAMP between (datetime(''{p_startTime}'')..datetime(''{p_endTime}''))
+
+      | where AppName == ''{p_appname}''
+
+      | where event == "ihs_apply"
+
+      | where scenario_name == "ihs_tempdb_space_usage"
+
+      | project TIMESTAMP, ClusterName, NodeName, MachineName, LogicalServerName, AppName, AppTypeName,
+
+      scenario_name, config_name, ihs_recommended_uint32_val, previous_uint32_val, is_tuned, tuning_skipped_reason'
+- id: DB-performance-40
+  Topic: IHS-Tempdb-presizing
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Archive/IHS-Tempdb-presizing.md
+  Prompts:
+  - SQL DB instance history store analysis
+  - SQL DB MonInstanceHistoryStore event LogicalServerName
+  - SQL DB investigate instance history store
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonInstanceHistoryStore
+    ExecutedQuery: 'MonInstanceHistoryStore
+
+      | where AppName == ''{p_appname}''
+
+      | where event == "ihs_analytics"
+
+      | where scenario_name == "ihs_tempdb_space_usage"
+
+      | project TIMESTAMP, ClusterName, NodeName, MachineName, LogicalServerName, AppName, AppTypeName,
+
+      scenario_name, config_name, result_uint32_val, analysis_time_ms, is_config_persisted'
+- id: DB-performance-51
+  Topic: Incident-59546911-_CSS-CASE-SEV-A_-_Prem_-_V12-and
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Archive/Incident-59546911-_CSS-CASE-SEV-A_-_Prem_-_V12-and.md
+  Prompts:
+  - SQL DB governor workload groups analysis
+  - SQL DB MonGovernorWorkloadGroups AppName TIMESTAMP
+  - SQL DB investigate governor workload groups
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonGovernorWorkloadGroups
+    ExecutedQuery: 'MonGovernorWorkloadGroups
+
+      | where TIMESTAMP > ago(48h)
+
+      | where AppName == "{AppName}"
+
+      | where name contains "SloPriDGroup" or name contains "SloPriSGroup" or name contains "UserPrimaryGroup"
+
+      | project end_utc_date, delta_total_request_count, delta_total_query_optimization_count
+
+      | render timechart'
+- id: DB-performance-53
+  Topic: Incident-59546911-_CSS-CASE-SEV-A_-_Prem_-_V12-and
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Archive/Incident-59546911-_CSS-CASE-SEV-A_-_Prem_-_V12-and.md
+  Prompts:
+  - SQL DB transactIOns activity
+  - SQL DB MonSqlTransactions AppName NodeName TIMESTAMP
+  - SQL DB investigate transactIOns
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSqlTransactions
+    ExecutedQuery: 'MonSqlTransactions
+
+      | where TIMESTAMP > ago(48h)
+
+      | where AppName == "{AppName}"
+
+      | where NodeName in ("DB.19", "DB.18", "DB.42")
+
+      | summarize max(version_store_inserts), max(tempdb_version_store_inserts), max(tempdb_version_store_small_inserts), max(version_store_reads), max(version_store_deep_reads) by bin(originalEventTimestamp,
+      1h), NodeName
+
+      | render timechart'
+- id: DB-performance-61
+  Topic: Pinning-CAS-Command
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Archive/Pinning-CAS-Command.md
+  Prompts:
+  - SQL DB login activity
+  - SQL DB MonLogin database_name LogicalServerName
+  - SQL DB investigate login
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'MonLogin
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where database_name =~ "{DatabaseName}"
+
+      | summarize argmax(TIMESTAMP, TIMESTAMP) by ClusterName, database_name, AppName, AppTypeName, code_package_version
+
+      | extend RollbackCompleted = iff(code_package_version contains "15.0.400.", true, false)
+
+      | summarize argmax(max_TIMESTAMP, RollbackCompleted) by ClusterName, database_name, AppName, AppTypeName
+
+      | project max_max_TIMESTAMP, RollbackCompleted=max_max_TIMESTAMP_RollbackCompleted, ClusterName, database_name, AppName, AppTypeName'
+- id: DB-performance-65
+  Topic: RCA-for-period-2_9-1400-UTC---2_10-1000-UTC-on-T34
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Archive/RCA-for-period-2_9-1400-UTC---2_10-1000-UTC-on-T34.md
+  Prompts:
+  - SQL DB cloud database wait stats activity
+  - SQL DB MonDmCloudDatabaseWaitStats database_name
+  - SQL DB investigate cloud database wait stats
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmCloudDatabaseWaitStats
+    ExecutedQuery: 'MonDmCloudDatabaseWaitStats
+
+      //| where TIMESTAMP > ago(72h)
+
+      | where (TIMESTAMP > ago({TimeRange}) and TIMESTAMP < now())
+
+      | where LogicalServerName =~ "{ServerName}" and database_name =~ "{DatabaseName}"
+
+      | summarize sum(delta_wait_time_ms) by bin(PreciseTimeStamp, 15min), wait_type
+
+      | where sum_delta_wait_time_ms > 200000 // 200s per second total
+
+      | render stackedareachart'
+- id: DB-performance-70
+  Topic: RCA-for-period-2_9-1400-UTC---2_10-1000-UTC-on-T34
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Archive/RCA-for-period-2_9-1400-UTC---2_10-1000-UTC-on-T34.md
+  Prompts:
+  - SQL DB os spinlock stats activity
+  - SQL DB MonDmOsSpinlockStats LogicalServerName AppName
+  - SQL DB investigate os spinlock stats
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmOsSpinlockStats
+    ExecutedQuery: 'MonDmOsSpinlockStats
+
+      | where (TIMESTAMP > ago({TimeRange}) and TIMESTAMP < now())
+
+      | where LogicalServerName =~ "{ServerName}" and AppName == "{AppName}"
+
+      | summarize sum(spins) by bin(PreciseTimeStamp, 1h), name
+
+      | where sum_spins > 5000000
+
+      | render stackedareachart'
+- id: DB-performance-73
+  Topic: Tracking-total-count-306-Instances
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Archive/Tracking-total-count-306-Instances.md
+  Prompts:
+  - SQL DB XDB host activity
+  - SQL DB MonXdbhost NodeName ClusterName text
+  - SQL DB investigate XDB host
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonXdbhost
+    ExecutedQuery: 'MonXdbhost
+
+      | where text contains "Waiting UCS socketDup failed" or text contains "Duplicate task stuck"
+
+      | project originalEventTimestamp, ClusterName, NodeName, text
+
+      | extend AppName = extract(".*appname: (.*)", 1, text)
+
+      | summarize dcount(AppName) by bin(originalEventTimestamp, 10min)
+
+      | render timechart'
+- id: DB-performance-81
+  Topic: User-details-4b284f42-9636-4efc-a70f-b20e7e799597
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Archive/User-details-4b284f42-9636-4efc-a70f-b20e7e799597.md
+  Prompts:
+  - SQL DB cloud database wait stats activity
+  - SQL DB MonDmCloudDatabaseWaitStats AppName wait_type
+  - SQL DB investigate cloud database wait stats
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmCloudDatabaseWaitStats
+    ExecutedQuery: 'MonDmCloudDatabaseWaitStats
+
+      | where AppName == "{AppName}"
+
+      | where wait_type in ("GLOBAL_QUERY_CLOSE")
+
+      | summarize max(wait_time_ms) by bin(TIMESTAMP, 5min), wait_type
+
+      | render timechart'
+- id: DB-performance-82
+  Topic: User-details-4b284f42-9636-4efc-a70f-b20e7e799597
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Archive/User-details-4b284f42-9636-4efc-a70f-b20e7e799597.md
+  Prompts:
+  - SQL DB cloud database wait stats activity
+  - SQL DB MonDmCloudDatabaseWaitStats AppName wait_type
+  - SQL DB investigate cloud database wait stats
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmCloudDatabaseWaitStats
+    ExecutedQuery: 'MonDmCloudDatabaseWaitStats
+
+      | where wait_type in ("GLOBAL_QUERY_CLOSE")
+
+      | where wait_time_ms > 100000
+
+      | summarize max(wait_time_ms) by bin(TIMESTAMP, 5min), AppName
+
+      | render timechart'
+- id: DB-performance-83
+  Topic: User-details-4b284f42-9636-4efc-a70f-b20e7e799597
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Archive/User-details-4b284f42-9636-4efc-a70f-b20e7e799597.md
+  Prompts:
+  - SQL DB SQL system health
+  - SQL DB MonSQLSystemHealth LogicalServerName AppName
+  - SQL DB investigate SQL system health
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where TIMESTAMP > ago(3d)
+
+      | where AppName == "{AppName}"
+
+      | where message contains "Failed allocate pages: FAIL_PAGE_ALLOCATION" or message contains "Failed Virtual Allocate Bytes: FAIL_VIRTUAL_RESERVE" or message contains "Failed to reserve pages: FAIL_PAGE_RESERVATION"
+
+      | project TIMESTAMP, AppName, LogicalServerName, NodeName, message'
+- id: DB-performance-94
+  Topic: ASC-Queries-for-TxLog-Insights
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/ASC-Queries-for-TxLog-Insights.md
+  Prompts:
+  - SQL DB cloud database wait stats analysis
+  - SQL DB MonDmCloudDatabaseWaitStats end_utc_date
+  - SQL DB investigate cloud database wait stats
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmCloudDatabaseWaitStats
+    ExecutedQuery: 'MonDmCloudDatabaseWaitStats
+
+      | where end_utc_date > start_time and end_utc_date <= datetime({EndTime})
+
+      | where {LogicalServerAndDatabaseName}
+
+      | where wait_type contains ''THROTTLE_LOG'' or wait_type contains ''LOG_RATE''
+
+      | extend rg = wait_type in (''LOG_RATE_GOVERNOR'', ''POOL_LOG_RATE_GOVERNOR'', ''INSTANCE_LOG_RATE_GOVERNOR'')
+
+      | extend feedback = wait_type in (''HADR_THROTTLE_LOG_RATE_SEND_RECV_QUEUE_SIZE'', ''HADR_THROTTLE_LOG_RATE_MISMATCHED_SLO'',''HADR_THROTTLE_LOG_RATE_LOG_SIZE'', ''THROTTLE_LOG_RATE_LOG_STORAGE'')
+
+      | where rg or feedback
+
+      | extend isWI = AppTypeName startswith ''Worker.ISO''
+
+      | join kind = leftouter('
+- id: DB-performance-95
+  Topic: ASC-Queries-for-TxLog-Insights
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/ASC-Queries-for-TxLog-Insights.md
+  Prompts:
+  - SQL DB snapshot status
+  - SQL DB MonAnalyticsDBSnapshot AppName TIMESTAMP
+  - SQL DB investigate snapshot
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: 'MonAnalyticsDBSnapshot
+
+      | where TIMESTAMP > start_time and TIMESTAMP <= datetime({EndTime})
+
+      | where logical_database_name =~ ''{DatabaseName}''
+
+      | summarize by AppName = sql_instance_name, logical_database_name, logical_resource_pool_id, service_level_objective
+
+      | extend isEP = iff(isnotnull(logical_resource_pool_id) and isnotempty(logical_resource_pool_id), 1, 0)
+
+      | extend isVcore = iff(service_level_objective contains ''SQLDB_'', 1, 0)
+
+      ) on AppName
+
+      | extend isDTUSingleton = isVcore == 0 and isEP == 0 and isWI
+
+      // For DTU singleton, POOL_LOG_RATE_GOVERNOR/LOG_RATE_GOVERNOR get mixed here and actually they both indicate DB log rate limit hit.
+
+      // So here we change POOL_LOG_RATE_GOVERNOR to LOG_RATE_GOVERNOR if it is DTU singleton.
+
+      // Note the reason we do this weird change is that the logic/query can be tricky if we take updateSLO into consideration here. For now the summarize (aggregation) is done
+
+      // only on wait_type, which doesn''t distinguish SLOs or EP or etc. If we want to check details for different apps, app types, EP or not EP here, it would be better to plot a chart
+
+      // for these log related waits. This is a future improvement.
+
+      //
+
+      | extend wait_type = iff(wait_type == ''POOL_LOG_RATE_GOVERNOR'' and isDTUSingleton, ''LOG_RATE_GOVERNOR'', wait_type)
+
+      | summarize delta_wait_time_ms = sum(delta_wait_time_ms),
+
+      delta_waiting_tasks_count = sum(delta_waiting_tasks_count) by wait_type,
+
+      bin(TIMESTAMP, p_sample_interval)
+
+      | extend avg_ms = round(delta_wait_time_ms / (1. * delta_waiting_tasks_count), 2)
+
+      | extend insight_level = iff(delta_wait_time_ms > p_wait_ms_per_sample or avg_ms > p_average_wait_per_sample, 1, 0)
+
+      | summarize throttled_samples = count(),
+
+      impacted_samples = countif(insight_level > 0) by wait_type
+
+      | where throttled_samples > p_throttled_samples_threshold or impacted_samples > p_impacted_samples_threshold
+
+      | extend throttling_desc = iff(wait_type in (''POOL_LOG_RATE_GOVERNOR'', ''INSTANCE_LOG_RATE_GOVERNOR''), ''Pool/Instance log rate limits hit'',
+
+      iff(wait_type == ''LOG_RATE_GOVERNOR'', ''DB log rate limit hit'',
+
+      iff(wait_type == ''THROTTLE_LOG_RATE_LOG_STORAGE'', ''Log size limit hit'',
+
+      iff(wait_type == ''HADR_THROTTLE_LOG_RATE_MISMATCHED_SLO'', ''Geodr replicas (maybe with smaller capabilities) cant catch up'',
+
+      ''Replication not able to keep up or something prevents log from truncation''))))
+
+      | extend suggestion = iff(wait_type in (''POOL_LOG_RATE_GOVERNOR'', ''INSTANCE_LOG_RATE_GOVERNOR''), ''For elastic pools check overall utilization, not only database; most common mitigation update
+      SLO'',
+
+      iff(wait_type == ''LOG_RATE_GOVERNOR'', ''Update SLO'',
+
+      iff(wait_type == ''THROTTLE_LOG_RATE_LOG_STORAGE'', ''If MI, increase the log size to provision a larger log; Otherwise involve availability team if wait analysis or the incident specifically targets
+      these waits'',
+
+      iff(wait_type == ''HADR_THROTTLE_LOG_RATE_MISMATCHED_SLO'', ''Upgrade the geo replicas to match(or have higher SLOs than) the source'',
+
+      ''Reroute/Involve availability team if wait analysis or the incident specifically targets these waits''))))
+
+      | extend status = iff(wait_type in (''LOG_RATE_GOVERNOR'', ''HADR_THROTTLE_LOG_RATE_MISMATCHED_SLO''), ''Warning'', ''Info'')
+
+      | project wait_type, throttling_desc, status, suggestion'
+- id: DB-performance-99
+  Topic: ASC-Queries-for-TxLog-Insights
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/ASC-Queries-for-TxLog-Insights.md
+  Prompts:
+  - SQL DB snapshot status
+  - SQL DB MonAnalyticsDBSnapshot AppName TIMESTAMP
+  - SQL DB investigate snapshot
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: 'MonAnalyticsDBSnapshot
+
+      | where TIMESTAMP > start_time and TIMESTAMP <= datetime({EndTime})
+
+      | where logical_database_name =~ ''{DatabaseName}''
+
+      | summarize by AppName = sql_instance_name, logical_database_name, logical_resource_pool_id
+
+      | extend isEP = iff(isnotnull(logical_resource_pool_id) and isnotempty(logical_resource_pool_id), 1, 0)
+
+      ) on AppName
+
+      | where isEP == 0 // Exclude elastic pool
+
+      | join kind = inner ('
+- id: DB-performance-103
+  Topic: Code-Version--Primary-Node-History
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Code-Version--Primary-Node-History.md
+  Prompts:
+  - SQL DB primary replica status
+  - SQL DB MonDmDbHadrReplicaStates LogicalServerName
+  - SQL DB investigate primary replica
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmDbHadrReplicaStates
+    ExecutedQuery: 'MonDmDbHadrReplicaStates
+
+      | where LogicalServerName =~ "{ServerName}" and logical_database_name =~ "{DatabaseName}"
+
+      | extend c1=""
+
+      | where is_primary_replica == 0
+
+      | extend SecondaryNodeName=NodeName
+
+      | project TIMESTAMP, SecondaryNodeName , c1 , AppName
+
+      ) on AppName
+
+      | where TIMESTAMP >= PrimaryNodeFirstAppearTime and TIMESTAMP <= PrimaryNodeLastAppearTime and PrimaryNodeName != SecondaryNodeName
+
+      | summarize SecondaryNodeNames=makeset(SecondaryNodeName) by bin(PrimaryNodeFirstAppearTime, 1s), bin(PrimaryNodeLastAppearTime,1s), ClusterName, AppName, codeversion, PrimaryNodeName
+
+      | order by PrimaryNodeFirstAppearTime asc nulls last'
+- id: DB-performance-104
+  Topic: ConfigSQLCloudServerDbVersionCausedActionfail
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/ConfigSQLCloudServerDbVersionCausedActionfail.md
+  Prompts:
+  - SQL DB SQL system health
+  - SQL DB MonSQLSystemHealth LogicalServerName AppName
+  - SQL DB investigate SQL system health
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where LogicalServerName =~serverName
+
+      | where originalEventTimestamp >=startTime and originalEventTimestamp <=endTime
+
+      |where error_id in (910,5084,33599,5069,912)
+
+      |project originalEventTimestamp, AppName, error_code,error_id,message
+
+      |order by originalEventTimestamp asc'
+- id: DB-performance-114
+  Topic: ExceptionFNSM
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/ExceptionFNSM.md
+  Prompts:
+  - SQL DB management status
+  - SQL DB MonManagement event NodeName originalEventTimestamp
+  - SQL DB investigate management
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  - TimeRange
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where keys endswith "fabric:/Worker.ISO/c2820447ca38"
+
+      and originalEventTimestamp between (ago({TimeRange})..datetime(2021-04-25 06:35:00.940995)) and isnotempty(state_machine_type)
+
+      and state_machine_type in ("FabricApplicationStateMachine", "FabricNameStateMachine")
+
+      | project originalEventTimestamp, NodeName, request_id, state_machine_type, event, action, old_state, new_state, keys, stack_trace'
+- id: DB-performance-122
+  Topic: How-to-find-table-sizes
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/How-to-find-table-sizes.md
+  Prompts:
+  - SQL DB wi partitIOn stats activity
+  - SQL DB MonWiDmDbPartitionStats AppName name id
+  - SQL DB investigate wi partitIOn stats
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonWiDmDbPartitionStats
+    ExecutedQuery: 'let myAppName="{AppName}";
+
+      let PartitionStats=materialize(MonWiDmDbPartitionStats
+
+      | where AppName contains myAppName and logical_database_name !=''master'' and index_id in (0,1)
+
+      | summarize used_page_count=max(used_page_count), row_count=max(row_count) by database_id, logical_database_name, object_id, index_id, partition_number, data_date=bin(TIMESTAMP, 1d));
+
+      let FilteredResults=materialize(MonDatabaseMetadata
+
+      | where AppName contains myAppName and logical_db_name != ''master''
+
+      | where (table_name==''sysclsobjs'' and class==50) or (table_name==''sysschobjs'' and [''type'']==''U '') or (table_name==''sysidxstats'' and indid in (0,1))
+
+      | project TIMESTAMP, table_name, class, [''type''], id, name, nsid, indid);
+
+      let schemas=FilteredResults
+
+      | where (table_name==''sysclsobjs'' and class==50)
+
+      | summarize by schema_id=id, schema_name=tolower(name);
+
+      let tables=FilteredResults
+
+      | where (table_name==''sysschobjs'' and [''type'']==''U '')
+
+      | summarize by schema_id=nsid, object_id=id, table_name=name;
+
+      let indexes=FilteredResults
+
+      | where (table_name==''sysidxstats'' and indid in (0,1))
+
+      | extend index_type_desc=iff([''type'']==0, ''HEAP'', iff([''type'']==1, ''CLUSTERED'', iff([''type'']==5, ''CCI'', tostring([''type'']))))
+
+      | summarize by object_id=id,index_id=indid,index_type=type,index_type_desc;'
+- id: DB-performance-123
+  Topic: How-to-run-ASC-Troubleshooter-for-partners-_-first
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/How-to-run-ASC-Troubleshooter-for-partners-_-first.md
+  Prompts:
+  - SQL DB real time resource stats activity
+  - SQL DB MonDmRealTimeResourceStats
+  - SQL DB investigate real time resource stats
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmRealTimeResourceStats
+    ExecutedQuery: 'MonDmRealTimeResourceStats\
+
+      \| where LogicalServerName =\~ ''skz48fobj6'' and database\_name =\~ ''ams-use2-2-sql-contentindexsql-1-1''\
+
+      \| summarize by SubscriptionId'
+- id: DB-performance-124
+  Topic: INC255320352
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/INC255320352.md
+  Prompts:
+  - SQL DB management operations
+  - SQL DB MonManagementOperations event error_message
+  - SQL DB investigate management operations
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagementOperations
+    ExecutedQuery: 'MonManagementOperations
+
+      | where TIMESTAMP > ago(1d)
+
+      | where operation_parameters contains databaseName and operation_parameters contains serverName
+
+      | project originalEventTimestamp, event, request_id, operation_type, error_code, error_message, operation_parameters
+
+      | sort by originalEventTimestamp asc'
+- id: DB-performance-125
+  Topic: INC255320352
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/INC255320352.md
+  Prompts:
+  - SQL DB management status
+  - SQL DB MonManagement event originalEventTimestamp
+  - SQL DB investigate management
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where request_id =~ "6D0381DE-BAEA-4D42-BAAC-29B5A29003C4"
+
+      | project originalEventTimestamp, event, state_machine_type, keys, action, old_state,new_state, exception_type, stack_trace, exception_message, message
+
+      | sort by originalEventTimestamp asc'
+- id: DB-performance-126
+  Topic: Kusto-Queries-for-Perf-by-jackli
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf-by-jackli.md
+  Prompts:
+  - SQL DB database metadata analysis
+  - SQL DB MonDatabaseMetadata LogicalServerName AppName
+  - SQL DB investigate database metadata
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDatabaseMetadata
+    ExecutedQuery: 'MonDatabaseMetadata
+
+      | where LogicalServerName=~ "{LogicalServerName}" and AppName =~ "{AppName}" //logical_db_name =~ "{LogicalDatabaseName}"
+
+      | where table_name== "sysobjvalues" and valclass ==7 and objid == 1032 //DB_CONFIG_MAX_DOP
+
+      | project TIMESTAMP, MAXDOP=value'
+- id: DB-performance-129
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB primary replica status
+  - SQL DB MonAnalyticsRPSnapshot logical_server_name
+  - SQL DB investigate primary replica
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonAnalyticsRPSnapshot
+    ExecutedQuery: 'MonAnalyticsRPSnapshot
+
+
+      | where logical_server_name == "{LogicalServerName}"
+
+
+      | summarize min(TIMESTAMP) by logical_server_name,resource_pool_name=name, resource_pool_dtu_guarantee, database_dtu_cap
+
+
+      ) on resource_pool_name
+
+
+      | project AppFirstAppearTime, logical_server_name , database_name , AppName , resource_pool_name, resource_pool_dtu_guarantee , database_dtu_cap ;
+
+
+      (MonDmDbHadrReplicaStates
+
+
+      | where LogicalServerName =~ "{LogicalServerName}" and logical_database_name =~ "{LogicalDatabaseName}"
+
+
+      | where is_primary_replica == 1 and is_forwarder ==0
+
+
+      | where AppName notcontains "b-"
+
+
+      | order by TIMESTAMP asc nulls first
+
+
+      | serialize
+
+
+      | extend prevNodeName=prev(NodeName)
+
+
+      | extend nextNodeName = next(NodeName)
+
+
+      | extend isFirst= (NodeName != prevNodeName)
+
+
+      | extend isLast=(NodeName != nextNodeName)
+
+
+      | where isFirst == true or isLast == true
+
+
+      | extend EndTime=next(TIMESTAMP)
+
+
+      | extend StartTime=TIMESTAMP
+
+
+      | where isFirst ==true
+
+
+      | extend codeversion=extract("^(.*)-WASD", 1, code_package_version)
+
+
+      | extend PrimaryNodeName=NodeName, PrimaryNodeFirstAppearTime=StartTime, PrimaryNodeLastAppearTime=EndTime
+
+
+      | extend fake="fake"
+
+
+      | project ClusterName, LogicalServerName, logical_database_name, PrimaryNodeName, AppName, PrimaryNodeFirstAppearTime, PrimaryNodeLastAppearTime, codeversion, fake, primary_group_database_id=group_database_id
+
+      '
+- id: DB-performance-130
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB primary replica status
+  - SQL DB MonDmDbHadrReplicaStates LogicalServerName
+  - SQL DB investigate primary replica
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmDbHadrReplicaStates
+    ExecutedQuery: 'MonDmDbHadrReplicaStates
+
+
+      | where LogicalServerName =~ "{LogicalServerName}" and logical_database_name =~ "{LogicalDatabaseName}"
+
+
+      | extend SecondaryNodeName=NodeName
+
+
+      | where is_primary_replica == 0 and is_forwarder ==0
+
+
+      | project Secondary_TIMESTAM=TIMESTAMP, SecondaryNodeName , AppName, secondary_group_database_id = group_database_id
+
+
+      ) on $left.AppName==$right.AppName and $left.primary_group_database_id == $right.secondary_group_database_id // group_database_id different of replica is for geo partner
+
+      '
+- id: DB-performance-131
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB resource pool stats activity
+  - SQL DB resource pool stats LogicalServerName AppName ClusterName
+  - SQL DB investigate toscalar
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonResourcePoolStats
+    ExecutedQuery: 'MonResourcePoolStats
+
+
+      | where LogicalServerName=~ "{LogicalServerName}"
+
+
+      | summarize by AppName, resource_pool_name
+
+
+      ) on AppName
+
+
+      | join kind= leftouter (
+
+
+      PoolInfo
+
+
+      ) on AppName
+
+
+      | project KustoCluster, ClusterName, AppName, PrimaryNodeName, SecondaryNodeNames, format_datetime(PrimaryNodeFirstAppearTime,''yyyy-MM-dd HH:mm:ss''), format_datetime(PrimaryNodeLastAppearTime,''yyyy-MM-dd
+      HH:mm:ss''), codeversion, resource_pool_name, resource_pool_dtu_guarantee, database_dtu_cap
+
+
+      |order by PrimaryNodeFirstAppearTime asc nulls last , PrimaryNodeLastAppearTime asc nulls last // C.01.A
+
+
+      // Standard edition (outdated, use above query) .show cluster monitoring;
+
+
+      let KustoCluster=toscalar($command_results
+
+
+      | project ClusterAlias);
+
+
+      let PoolAppName=toscalar(
+
+      '
+- id: DB-performance-132
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB resource pool stats analysis
+  - SQL DB resource pool stats LogicalServerName AppName gt lt
+  - SQL DB investigate toscalar
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonResourcePoolStats
+    ExecutedQuery: 'MonResourcePoolStats
+
+
+      | where TIMESTAMP &gt; datetime({StartTime}) and TIMESTAMP &lt; datetime({EndTime})
+
+
+      | where LogicalServerName=~ "{LogicalServerName}" and resource_pool_name =~ "{PoolName}"
+
+
+      | project AppName
+
+
+      | take 1);
+
+
+      let RandomPoolDbName=toscalar(
+
+      '
+- id: DB-performance-133
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB primary replica status
+  - SQL DB MonDmDbHadrReplicaStates LogicalServerName
+  - SQL DB investigate primary replica
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmDbHadrReplicaStates
+    ExecutedQuery: 'MonDmDbHadrReplicaStates
+
+
+      | where TIMESTAMP &gt; datetime({StartTime}) and TIMESTAMP &lt; datetime({EndTime})
+
+
+      | where LogicalServerName=~ "{LogicalServerName}" and AppName =~ PoolAppName
+
+
+      | project logical_database_name
+
+
+      | take 1);
+
+      '
+- id: DB-performance-134
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB primary replica status
+  - SQL DB MonDmDbHadrReplicaStates LogicalServerName
+  - SQL DB investigate primary replica
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmDbHadrReplicaStates
+    ExecutedQuery: 'MonDmDbHadrReplicaStates
+
+
+      | where LogicalServerName =~ "{LogicalServerName}" and (logical_database_name =~ "{LogicalDatabaseName}" or ("{LogicalDatabaseName}" == "" and logical_database_name =~ RandomPoolDbName))cpu
+
+
+      | where is_primary_replica == 1
+
+
+      | where AppName notcontains "b-"
+
+
+      | order by TIMESTAMP asc nulls first
+
+
+      | serialize
+
+
+      | extend prevNodeName=prev(NodeName)
+
+
+      | extend nextNodeName = next(NodeName)
+
+
+      | extend isFirst= (NodeName != prevNodeName)
+
+
+      | extend isLast=(NodeName != nextNodeName)
+
+
+      | where isFirst == true or isLast == true
+
+
+      | extend EndTime=next(TIMESTAMP)
+
+
+      | extend StartTime=TIMESTAMP
+
+
+      | where isFirst ==true
+
+
+      | extend codeversion=extract("^(.*)-WASD", 1, code_package_version)
+
+
+      | extend PrimaryNodeName=NodeName, PrimaryNodeFirstAppearTime=StartTime, PrimaryNodeLastAppearTime=EndTime
+
+
+      | extend fake="fake"
+
+
+      | project KustoCluster, ClusterName, PrimaryNodeName, AppName, PrimaryNodeFirstAppearTime, PrimaryNodeLastAppearTime, codeversion, fake
+
+
+      // C.01.A
+
+      '
+- id: DB-performance-135
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB primary replica status
+  - SQL DB PrimaryNodes LogicalServerName AppName ClusterName
+  - SQL DB investigate primary replica
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: PrimaryNodes
+    ExecutedQuery: 'let PrimaryNodes=
+
+
+      (MonDmDbHadrReplicaStates
+
+
+      | where LogicalServerName =~ "{LogicalServerName}" and logical_database_name =~ "{LogicalDatabaseName}"
+
+
+      | where is_primary_replica == 1
+
+
+      | where AppName notcontains "b-"
+
+
+      | order by TIMESTAMP asc nulls first
+
+
+      | serialize
+
+
+      | extend prevNodeName=prev(NodeName)
+
+
+      | extend nextNodeName = next(NodeName)
+
+
+      | extend isFirst= (NodeName != prevNodeName)
+
+
+      | extend isLast=(NodeName != nextNodeName)
+
+
+      | where isFirst == true or isLast == true
+
+
+      | extend EndTime=next(TIMESTAMP)
+
+
+      | extend StartTime=TIMESTAMP
+
+
+      | where isFirst ==true
+
+
+      | extend codeversion=extract("^(.*)-WASD", 1, code_package_version)
+
+
+      | extend PrimaryNodeName=NodeName, PrimaryNodeFirstAppearTime=StartTime, PrimaryNodeLastAppearTime=EndTime
+
+
+      | project ClusterName, PrimaryNodeName, AppName, PrimaryNodeFirstAppearTime, PrimaryNodeLastAppearTime, codeversion )
+
+
+      |union
+
+
+      (MonDmDbHadrReplicaStates
+
+
+      | where LogicalServerName =~ "{LogicalServerName}" and logical_database_name =~ "{LogicalDatabaseName}"
+
+
+      | where AppName contains "b-"
+
+
+      | where is_primary_replica == 1
+
+
+      | order by TIMESTAMP asc nulls first
+
+
+      | serialize
+
+
+      | extend prevNodeName=prev(NodeName)
+
+
+      | extend nextNodeName = next(NodeName)
+
+
+      | extend isFirst= (NodeName != prevNodeName)
+
+
+      | extend isLast=(NodeName != nextNodeName)
+
+
+      | where isFirst == true or isLast == true
+
+
+      | extend EndTime=next(TIMESTAMP)
+
+
+      | extend StartTime=TIMESTAMP
+
+
+      | where isFirst ==true
+
+
+      | extend codeversion=extract("^(.*)-WASD", 1, code_package_version)
+
+
+      | extend PrimaryNodeName=NodeName, PrimaryNodeFirstAppearTime=StartTime, PrimaryNodeLastAppearTime=EndTime
+
+
+      | project ClusterName, PrimaryNodeName, AppName, PrimaryNodeFirstAppearTime, PrimaryNodeLastAppearTime, codeversion );
+
+
+      let AllNodes=
+
+
+      PrimaryNodes
+
+
+      | join kind= leftouter (
+
+      '
+- id: DB-performance-136
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB primary replica status
+  - SQL DB MonDmDbHadrReplicaStates LogicalServerName
+  - SQL DB investigate primary replica
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmDbHadrReplicaStates
+    ExecutedQuery: 'MonDmDbHadrReplicaStates
+
+
+      | where LogicalServerName =~ "{LogicalServerName}" and logical_database_name =~ "{LogicalDatabaseName}"
+
+
+      | extend c1=""
+
+
+      | where is_primary_replica == 0
+
+
+      | extend SecondaryNodeName=NodeName
+
+
+      | project TIMESTAMP, SecondaryNodeName , c1 , AppName
+
+
+      ) on AppName
+
+
+      | where (TIMESTAMP &gt;= PrimaryNodeFirstAppearTime and TIMESTAMP &lt;= PrimaryNodeLastAppearTime and PrimaryNodeName != SecondaryNodeName) or isnull(SecondaryNodeName) == true or SecondaryNodeName
+      == ""
+
+
+      | extend fake="fake"
+
+
+      | summarize SecondaryNodeNames=makeset(SecondaryNodeName) by bin(PrimaryNodeFirstAppearTime, 1s), bin(PrimaryNodeLastAppearTime,1s), ClusterName, AppName, codeversion, PrimaryNodeName;
+
+
+      AllNodes
+
+
+      | order by PrimaryNodeFirstAppearTime asc nulls last , PrimaryNodeLastAppearTime asc nulls last // C.02
+
+      '
+- id: DB-performance-139
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB snapshot status
+  - SQL DB MonAnalyticsDBSnapshot logical_server_name
+  - SQL DB investigate snapshot
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: 'MonAnalyticsDBSnapshot
+
+
+      | where logical_server_name =~ "{LogicalServerName}" and logical_database_name =~ "{LogicalDatabaseName}"
+
+
+      | summarize min(start_utc_date), max(end_utc_date) by sql_instance_name, AppName, service_level_objective , physical_database_id, fabric_partition_id, logical_database_id
+
+
+      | project min_start_utc_date, max_end_utc_date, sql_instance_name, service_level_objective, physical_database_id,logical_database_id,fabric_partition_id
+
+
+      | order by min_start_utc_date asc nulls last // C.05.A
+
+      '
+- id: DB-performance-140
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB primary replica status
+  - SQL DB MonDmDbHadrReplicaStates LogicalServerName
+  - SQL DB investigate primary replica
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmDbHadrReplicaStates
+    ExecutedQuery: 'MonDmDbHadrReplicaStates
+
+
+      | where LogicalServerName =~ "{LogicalServerName}" and AppName =~ "{AppName}" //and logical_database_name =~ "{LogicalDatabaseName}"
+
+
+      | where TIMESTAMP &gt; datetime({StartTime}) and TIMESTAMP &lt; datetime({EndTime})
+
+
+      | where synchronization_state_desc == "NOT SYNCHRONIZING" or synchronization_health_desc == "NOT_HEALTHY"
+
+
+      | project TIMESTAMP, NodeName , synchronization_state_desc , synchronization_health_desc
+
+
+      | order by TIMESTAMP asc nulls last // C.05
+
+      '
+- id: DB-performance-141
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB fabric api status
+  - SQL DB MonFabricApi event AppName NodeName gt lt
+  - SQL DB investigate fabric api
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonFabricApi
+    ExecutedQuery: 'MonFabricApi
+
+
+      | filter LogicalServerName =~ "{LogicalServerName}" and AppName =~ "{AppName}"
+
+
+      | filter event in ("hadr_fabric_api_replicator_begin_change_role", "hadr_fabric_api_replica_end_change_role")
+
+
+      | where TIMESTAMP &gt;datetime({StartTime}) and TIMESTAMP &lt; datetime({EndTime})
+
+
+      | filter new_role_desc == "PRIMARY"
+
+
+      | project originalEventTimestamp,AppName, event , NodeName , hotpatch_data_package_version, current_state_desc ,new_role , new_role_desc, logical_database_id, physical_database_id, partition_id, code_package_version,
+      result_desc
+
+
+      | order by originalEventTimestamp asc nulls last// C.06
+
+      '
+- id: DB-performance-142
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB database metadata analysis
+  - SQL DB MonDatabaseMetadata LogicalServerName AppName
+  - SQL DB investigate database metadata
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDatabaseMetadata
+    ExecutedQuery: 'MonDatabaseMetadata
+
+
+      | where LogicalServerName=~ "{LogicalServerName}" and AppName =~ "{AppName}" //logical_db_name =~ "{LogicalDatabaseName}"
+
+
+      | where table_name== "sysobjvalues" and valclass ==7 and objid == 1032 //DB_CONFIG_MAX_DOP
+
+
+      | project TIMESTAMP, MAXDOP=value // C.07_2 MAXDOP server level for Managed Instance
+
+
+      // MAXDOP, 0 means MAXDOP is not set. MAXDOP=# processors// Backend query equivalent: select * from sys.configurations where configuration_id = 1539MonDatabaseMetadata
+
+
+      | where LogicalServerName=~ "{LogicalServerName}" and AppName =~ "{AppName}" //logical_db_name =~ "{LogicalDatabaseName}"
+
+
+      | where table_name== "sysobjvalues" and valclass ==50 and objid == 1539 //CFG_MAXDOP
+
+
+      | project TIMESTAMP, MAXDOP=value, value_in_use = valnum// C.08 Database Options
+
+      '
+- id: DB-performance-143
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB wi partitIOn stats activity
+  - SQL DB MonWiDmDbPartitionStats AppName name id
+  - SQL DB investigate wi partitIOn stats
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonWiDmDbPartitionStats
+    ExecutedQuery: 'let myAppName="{AppName}";
+
+
+      let PartitionStats=materialize(MonWiDmDbPartitionStats
+
+
+      | where AppName contains myAppName and logical_database_name !=''master'' and index_id in (0,1)
+
+
+      | summarize used_page_count=max(used_page_count), row_count=max(row_count) by database_id, logical_database_name, object_id, index_id, partition_number, data_date=bin(TIMESTAMP, 1d));
+
+
+      let FilteredResults=materialize(MonDatabaseMetadata
+
+
+      | where AppName contains myAppName and logical_db_name != ''master''
+
+
+      | where (table_name==''sysclsobjs'' and class==50) or (table_name==''sysschobjs'' and [''type'']==''U '') or (table_name==''sysidxstats'' and indid in (0,1))
+
+
+      | project TIMESTAMP, table_name, class, [''type''], id, name, nsid, indid);
+
+
+      let schemas=FilteredResults
+
+
+      | where (table_name==''sysclsobjs'' and class==50)
+
+
+      | summarize by schema_id=id, schema_name=tolower(name);
+
+
+      let tables=FilteredResults
+
+
+      | where (table_name==''sysschobjs'' and [''type'']==''U '')
+
+
+      | summarize by schema_id=nsid, object_id=id, table_name=name;
+
+
+      let indexes=FilteredResults
+
+
+      | where (table_name==''sysidxstats'' and indid in (0,1))
+
+
+      | extend index_type_desc=iff([''type'']==0, ''HEAP'', iff([''type'']==1, ''CLUSTERED'', iff([''type'']==5, ''CCI'', tostring([''type'']))))
+
+
+      | summarize by object_id=id,index_id=indid,index_type=type,index_type_desc;
+
+
+      tables
+
+
+      | join kind=inner (schemas) on schema_id
+
+
+      | join kind=inner (indexes) on object_id
+
+
+      | join kind=inner (PartitionStats) on object_id
+
+
+      | project database_id, schema_id, object_id, table_type=index_type_desc, partition_number, used_page_count, row_count, size_kb=used_page_count*8, data_date
+
+      '
+- id: DB-performance-144
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB node trace diagnostics
+  - SQL DB MonNodeTraceETW p gt td tr info Node Wide
+  - SQL DB investigate node trace diagnostics
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonNodeTraceETW
+    ExecutedQuery: "MonNodeTraceETW        \n\n| where Message contains 'trace'\n\n| where Message contains \"{AppName}\"\n\n| where TIMESTAMP &gt; ago(1d)<tr class=\"odd\">Node Wide info//*\n"
+- id: DB-performance-147
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB system event log errors errors
+  - SQL DB MonSystemEventLogErrors NodeName ClusterName
+  - SQL DB troubleshoot system event log errors errors
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSystemEventLogErrors
+    ExecutedQuery: 'MonSystemEventLogErrors
+
+
+      | where TIMESTAMP &gt; datetime({StartTime}) and TIMESTAMP &lt; datetime({EndTime})
+
+
+      | where NodeName =~ "{NodeName}" and ClusterName =~ "{ClusterName}"
+
+
+      | summarize Count=count(), min(TIMESTAMP), max(TIMESTAMP), min(EventDescription)by EventID
+
+
+      | order by Count desc nulls last
+
+
+      // N.04
+
+      '
+- id: DB-performance-148
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB app event log errors errors
+  - SQL DB MonAppEventLogErrors NodeName ClusterName
+  - SQL DB troubleshoot app event log errors errors
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonAppEventLogErrors
+    ExecutedQuery: 'MonAppEventLogErrors
+
+
+      | where TIMESTAMP &gt; datetime({StartTime}) and TIMESTAMP &lt; datetime({EndTime})
+
+
+      | where NodeName =~ "{NodeName}" and ClusterName =~ "{ClusterName}"
+
+
+      | summarize Count=count(), min(TIMESTAMP), max(TIMESTAMP), min(EventDescription)by EventID
+
+
+      | order by Count desc nulls last <tr class="even">Errorlog Analysis//*
+
+      '
+- id: DB-performance-149
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB dump activity
+  - SQL DB MonSqlDump LogicalServerName AppName NodeName
+  - SQL DB investigate dump
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSqlDump
+    ExecutedQuery: 'MonSqlDump
+
+
+      | where LogicalServerName =~ "{LogicalServerName}" and AppName == "{AppName}"
+
+
+      | where CompleteFileName endswith ".dmp"
+
+
+      | summarize TIMESTAMP=min(TIMESTAMP) by NodeName, CompleteFileName
+
+
+      | order by TIMESTAMP asc
+
+
+      | project TIMESTAMP, NodeName, CompleteFileName;
+
+
+      PrimaryReplicas
+
+
+      | join kind= inner (
+
+
+      AllDumps
+
+
+      ) on NodeName
+
+
+      | project TIMESTAMP, NodeName, CompleteFileName
+
+
+      | top 100000 by TIMESTAMP desc
+
+
+      // E.02
+
+      '
+- id: DB-performance-150
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB errors reported errors
+  - SQL DB AlrSQLErrorsReported LogicalServerName AppName
+  - SQL DB troubleshoot errors reported errors
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: AlrSQLErrorsReported
+    ExecutedQuery: 'AlrSQLErrorsReported
+
+
+      | where TIMESTAMP &gt; datetime({StartTime}) and TIMESTAMP &lt; datetime({EndTime})
+
+
+      | where LogicalServerName =~ "{LogicalServerName}" and AppName =~ "{AppName}" //and NodeName =~ "{NodeName}"
+
+
+      | where error_number ==701
+
+
+      | summarize error_count=count(), sample_error_msg=min(message) by bin(TIMESTAMP, 5min), error_no=strcat(error_number, ""), NodeName
+
+
+      | render timechart AlrSQLErrorsReported
+
+
+      | where TIMESTAMP &gt; datetime({StartTime}) and TIMESTAMP &lt; datetime({EndTime})
+
+
+      | where LogicalServerName =~ "{LogicalServerName}" and AppName =~ "{AppName}" //and NodeName =~ "{NodeName}"
+
+
+      | where error_number in (3314,911,9001)
+
+
+      //| render timechart // E.03
+
+
+      // Errorlog (filtered)
+
+      '
+- id: DB-performance-152
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB SQL system health
+  - SQL DB MonSQLSystemHealth event LogicalServerName
+  - SQL DB investigate SQL system health
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: "MonSQLSystemHealth\n\n| where TIMESTAMP &gt; datetime({StartTime}) and TIMESTAMP &lt; datetime({EndTime})\n\n| where LogicalServerName =~ \"{LogicalServerName}\" and AppName =~ \"{AppName}\"\
+      \ and NodeName =~ \"{NodeName}\"\n\n| where event == \"systemmetadata_written\"\n\n| where message notcontains \"[INFO]\" and message notcontains \"[TDE] SetDbeState\" and message notcontains \"Log\
+      \ was backed up\" and message notcontains \"created in FSLOG\"\n\n| where message notcontains \"accepting vlf header\" and message notcontains \"Log writer started sending\" and message notcontains\
+      \ \"DbMgrPartnerCommitPolicy::SetSyncAndRecoveryPoint\"\n\n| where message notcontains \"Started XE session\" and message notcontains \"[CFabricReplicaManager::GetHadrSessionTimeout] HADR Session\
+      \ Timeout\"\n\n| where message notcontains \"[CFabricReplicaManager::GetHadrPingFrequency] HADR Ping Frequency\" and message notcontains \"Zeroing completed on\"\n\n| where message notcontains \"\
+      HADR_FQDR_XRF: Sending the extended recovery forks to secondary\" and message notcontains \"Cleaning up conversations for\"\n\n| where message notcontains \"[CFabricReplicaManager::Start] Registered\
+      \ service type\" and message notcontains \"Backup\" and message notcontains \"Recovery of database\"\n\n| where strlen(extract(@\"Backup(.*)s+processed\",1,message))&lt;=0 // Backup(b394e9a7-1ae7-48e6-b2d6-0725e6b3e7a7):\
+      \ 10 percent (405405696/4053934080 by tes) processed\n\n| where strlen(extract(@\"Backup(.*)s+LSN\",1,message))&lt;=0 // Backup(b394e9a7-1ae7-48e6-b2d6-0725e6b3e7a7): Last LSN: 11817791:18192:1\n\n\
+      | where strlen(extract(@\"Backup(.*)s+Estimated\",1,message))&lt;=0 // Backup(b394e9a7-1ae7-48e6-b2d6-0725e6b3e7a7): Estimated total size = 4665073664 by tes (data size = 0 by tes, log size = 4665073664\
+      \ by tes)\n\n| where strlen(extract(@\"Zeroing(.*)s+from page\",1,message))&lt;=0 // Zeroing ... from page\n\n| where strlen(extract(@\"Backup(.*)s+WITH DIFFERENTIAL\",1,message))&lt;=0\n\n| where\
+      \ strlen(extract(@\"[DecryptCurrDEK] (.*)s+Logical Database Name\",1,message))&lt;=0\n\n| where strlen(extract(@\"Backup(.*)s+Copying\",1,message))&lt;=0 \n\n| extend msg = case (strlen(extract(@\"\
+      \ spid[0-9]{1,9}[s]{0,1}s+([^$]*)\",1,message))&gt;0, extract(@\" spid[0-9]{1,9}[s]{0,1}s+([^$]*)\",1,message), message)\n\n| summarize min(TIMESTAMP), max(TIMESTAMP), count() by msg\n\n| order by\
+      \ count_ desc nulls last \n"
+- id: DB-performance-153
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB SQL system health
+  - SQL DB MonSQLSystemHealth event LogicalServerName
+  - SQL DB investigate SQL system health
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+
+      | where TIMESTAMP &gt; datetime({StartTime}) and TIMESTAMP &lt; datetime({EndTime})
+
+
+      | where LogicalServerName =~ "{LogicalServerName}" and AppName =~ "{AppName}" and NodeName =~ "{NodeName}"
+
+
+      | where event == "errorlog_written"
+
+
+      | where message !contains "DecryptCurrDEK"
+
+      '
+- id: DB-performance-154
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB SQL system health
+  - SQL DB MonSQLSystemHealth event LogicalServerName
+  - SQL DB investigate SQL system health
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: "MonSQLSystemHealth\n\n| where TIMESTAMP &gt; datetime({StartTime}) and TIMESTAMP &lt; datetime({EndTime})\n\n| where LogicalServerName =~ \"{LogicalServerName}\" and AppName =~ \"{AppName}\"\
+      \ and NodeName =~ \"{NodeName}\"\n\n| where event == \"systemmetadata_written\"\n\n| where message contains \"I/O requests taking er than 15 seconds\" or message contains \"Wait for replica catchup\
+      \ for\"\n\nor message contains \"Error:\" or message contains \"is not currently available\" \n\nor message contains \"[DbrSubscriber] Switching role to primary\" \n\nor message contains \"is changing\
+      \ roles from\"\n\nor message contains \"A connection timeout has occurred\"\n\nor message contains \"DBR Subscriber is now invoking switch role\"\n\nor message contains \"CHadrTransportReplica State\
+      \ change from\"\n\nor message contains \"latch\"\n\nor message contains \"dbg\"\n\nor message contains \"yield\"\n\nor (message contains \"701\" and message contains \"Error\" )\n\nor message contains\
+      \ \"FAIL_\" \n\nor message contains \"limit for the database\"\n\n| extend msg_TIMESTAMP = extract(@\"(20[0-9]{2}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}.[0-9]{2})\", 1, message)\n\n| extend\
+      \ msg_TIMESTAMP = todatetime(msg_TIMESTAMP) \n\n| project PreciseTimeStamp, msg_TIMESTAMP, NodeName, message\n\n| order by PreciseTimeStamp asc nulls last , msg_TIMESTAMP asc nulls last// E.06\n"
+- id: DB-performance-169
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB RG load activity
+  - SQL DB MonRgLoad NodeName ClusterName drive_name
+  - SQL DB investigate RG load
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonRgLoad
+    ExecutedQuery: 'MonRgLoad
+
+
+      | where NodeName == "{NodeName}"
+
+
+      | where ClusterName contains "{ClusterName}"
+
+
+      | summarize arg_max(TIMESTAMP, drive_usage_percentage, drive_capacity_in_bytes ) by drive_name, NodeName, ClusterName
+
+      '
+- id: DB-performance-170
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB cluster load
+  - SQL DB MonClusterLoad ClusterName PreciseTimeStamp
+  - SQL DB investigate cluster load
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonClusterLoad
+    ExecutedQuery: 'MonClusterLoad
+
+
+      | where PreciseTimeStamp &gt; ago(2h)
+
+
+      | where ClusterName == ''{ClusterName}'' and node_name == ''{NodeName}''
+
+
+      | where metric_name == ''InstanceDiskSpaceUsed''
+
+
+      | project PreciseTimeStamp, node_load = [''load''] / 1024, node_cap = [''capacity''] / 1024, node_name
+
+
+      | extend violation = iff(node_load &gt; node_cap, 1, 0)// D.04
+
+      '
+- id: DB-performance-171
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB snapshot status
+  - SQL DB MonAnalyticsRPSnapshot logical_server_name
+  - SQL DB investigate snapshot
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonAnalyticsRPSnapshot
+    ExecutedQuery: 'MonAnalyticsRPSnapshot | where logical_server_name == "{LogicalServerName}"
+
+
+      | summarize arg_max(TIMESTAMP, *) by name
+
+
+      | project TIMESTAMP,logical_server_name, pool_name=name, resource_pool_dtu_guarantee, database_dtu_cap
+
+
+      | order by logical_server_name , pool_name// EP.02
+
+      '
+- id: DB-performance-172
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB snapshot status
+  - SQL DB MonAnalyticsRPSnapshot logical_server_name
+  - SQL DB investigate snapshot
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonAnalyticsRPSnapshot
+    ExecutedQuery: 'MonAnalyticsRPSnapshot
+
+
+      | where logical_server_name == "{LogicalServerName}"
+
+
+      | summarize min(TIMESTAMP) by logical_server_name,resource_pool_name=name, resource_pool_dtu_guarantee, database_dtu_cap
+
+
+      ) on resource_pool_name
+
+
+      | project AppFirstAppearTime, logical_server_name , database_name , AppName , resource_pool_name, resource_pool_dtu_guarantee , database_dtu_cap ;
+
+      '
+- id: DB-performance-173
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB primary replica status
+  - SQL DB MonDmDbHadrReplicaStates LogicalServerName
+  - SQL DB investigate primary replica
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmDbHadrReplicaStates
+    ExecutedQuery: 'MonDmDbHadrReplicaStates
+
+
+      | where LogicalServerName =~ "{LogicalServerName}" and logical_database_name =~ "{LogicalDatabaseName}"
+
+
+      | where is_primary_replica == 1
+
+
+      | where AppName notcontains "b-"
+
+
+      | order by TIMESTAMP asc nulls first
+
+
+      | serialize
+
+
+      | extend prevNodeName=prev(NodeName)
+
+
+      | extend nextNodeName = next(NodeName)
+
+
+      | extend isFirst= (NodeName != prevNodeName)
+
+
+      | extend isLast=(NodeName != nextNodeName)
+
+
+      | where isFirst == true or isLast == true
+
+
+      | extend EndTime=next(TIMESTAMP)
+
+
+      | extend StartTime=TIMESTAMP
+
+
+      | where isFirst ==true
+
+
+      | extend codeversion=extract("^(.*)-WASD", 1, code_package_version)
+
+
+      | extend PrimaryNodeName=NodeName, PrimaryNodeFirstAppearTime=StartTime, PrimaryNodeLastAppearTime=EndTime
+
+
+      | project ClusterName, LogicalServerName, logical_database_name, PrimaryNodeName, AppName, PrimaryNodeFirstAppearTime, PrimaryNodeLastAppearTime, codeversion
+
+
+      | join kind= leftouter (
+
+
+      PoolInfo
+
+
+      ) on AppName
+
+
+      | project ClusterName, LogicalServerName, logical_database_name, AppName, PrimaryNodeName, PrimaryNodeFirstAppearTime, PrimaryNodeLastAppearTime, codeversion, resource_pool_name, resource_pool_dtu_guarantee,
+      database_dtu_cap
+
+
+      | order by PrimaryNodeFirstAppearTime asc nulls last // EP.03
+
+      '
+- id: DB-performance-175
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB real time resource stats analysis
+  - SQL DB MonDmRealTimeResourceStats AppName gt lt
+  - SQL DB investigate real time resource stats
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmRealTimeResourceStats
+    ExecutedQuery: 'MonDmRealTimeResourceStats
+
+
+      | where  AppName == "{AppName}"
+
+
+      | where TIMESTAMP &gt;= datetime({StartTime}) and TIMESTAMP &lt;= datetime({EndTime})
+
+      '
+- id: DB-performance-176
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB temp file space usage analysis
+  - SQL DB MonDmTempDbFileSpaceUsage AppName NodeName
+  - SQL DB investigate temp file space usage
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmTempDbFileSpaceUsage
+    ExecutedQuery: "MonDmTempDbFileSpaceUsage \n\n| where TIMESTAMP &gt; datetime({StartTime}) and TIMESTAMP &lt; datetime({EndTime})\n\n| where NodeName =~ \"{NodeName}\" and AppName =~ \"{AppName}\"\n\
+      \n| extend version_store_usage_mb=round((version_store_reserved_page_count)*8.0/1024,0) \n\n| project PreciseTimeStamp, version_store_usage_mb\n\n| render timechart // tempdb.02\n"
+- id: DB-performance-177
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB errors reported errors
+  - SQL DB AlrSQLErrorsReported error LogicalServerName
+  - SQL DB troubleshoot errors reported errors
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: AlrSQLErrorsReported
+    ExecutedQuery: 'AlrSQLErrorsReported
+
+
+      | where TIMESTAMP &gt; datetime({StartTime}) and TIMESTAMP &lt; datetime({EndTime})
+
+
+      | where LogicalServerName =~ "{LogicalServerName}" and AppName =~ "{AppName}" and NodeName =~ "{NodeName}"
+
+
+      | where error_number in (1105)
+
+
+      | extend error=strcat(error_number,"")
+
+
+      | summarize error_count=count(), sample_error_msg=min(message) by bin(TIMESTAMP, 5min), error
+
+
+      | render timechart // tempdb.03
+
+      '
+- id: DB-performance-180
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB backup status
+  - SQL DB AlrBackup AppName NodeName originalEventTimestamp
+  - SQL DB investigate backup
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: AlrBackup
+    ExecutedQuery: "AlrBackup\n\n| where AppName == \"{AppName}\"\n\n| where TIMESTAMP &gt; datetime({StartTime}) and TIMESTAMP &lt; datetime({EndTime}) \n\n| where  event_type == \"BACKUP_METADATA_DETAILS\"\
+      \ and (backup_type == \"Full\" or backup_type == \"Diff\")\n\n| project originalEventTimestamp ,  NodeName,  backup_type ,  backup_start_date , backup_end_date ,  backup_size , uncompressed_backup_size\n\
+      \n, backup_path //,  AppName ,  logical_database_id , logical_database_name// Recovery\n"
+- id: DB-performance-182
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB node trace diagnostics
+  - SQL DB MonNodeTraceETW NodeName gt Pid
+  - SQL DB investigate node trace diagnostics
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonNodeTraceETW
+    ExecutedQuery: 'MonNodeTraceETW
+
+
+      | where TIMESTAMP &gt;ago(40h)
+
+
+      | where Message contains "{AppName}"
+
+
+      | summarize min(TIMESTAMP) by NodeName, Pid
+
+
+      | order by NodeName asc, min_TIMESTAMP asc nulls last // Step 3 check for ETW trace for networks xml from NMAgent API
+
+      '
+- id: DB-performance-183
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB login failures error 0
+  - SQL DB MonLogin event LogicalServerName AppName
+  - SQL DB troubleshoot login failures error 0
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'MonLogin
+
+
+      |where TIMESTAMP &gt;= datetime({StartTime}) and TIMESTAMP &lt;= datetime({EndTime})
+
+
+      | where LogicalServerName =~ "{LogicalServerName}" and AppName == "{AppName}"
+
+
+      | where event == "process_login_finish" and package == "sqlserver"
+
+
+      | where is_user_error == 0
+
+
+      | extend success=case(is_success == 1, 1, 0)
+
+
+      | extend failure=case(is_success == 0, 1, 0)
+
+
+      | extend failure_enqueue_time_ms=case(is_success == 1, total_time_ms, 0)
+
+
+      | summarize Successful_Login_Count=sum(success), Failed_Login_Count=sum(failure), FailureRate=sum(failure)*100/(sum(success)+sum(failure)), avg_failure_enqueue_time_ms=sum(failure_enqueue_time_ms)/sum(failure),
+      Avg_Login_Time_ms=avg(total_time_ms), Avg_Enqueu_Time_ms=avg(enqueue_time_ms) by bin(originalEventTimestamp, 1min)
+
+
+      | render timechart // L.02
+
+      '
+- id: DB-performance-184
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB login failures
+  - SQL DB MonLogin is_success event LogicalServerName
+  - SQL DB troubleshoot login failures
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: "MonLogin\n\n|where TIMESTAMP &gt;= datetime({StartTime}) and TIMESTAMP &lt;= datetime({EndTime})\n\n| where LogicalServerName =~ \"{LogicalServerName}\" and AppName == \"{AppName}\"\n\
+      \n| where event == \"process_login_finish\" and package == \"sqlserver\"\n\n| where (is_success == false and is_user_error == false) or total_time_ms &gt; 14000\n\n| project TIMESTAMP , enqueue_time_ms\
+      \ ,total_time_ms, find_login_ms, message// L.03\n\n// Login resource usage comparison// Use xdb for rgGroupPrefix \n\n|where event == 'aggregated_workload_groups_plus_history'\n\n| where AppName ==\
+      \ \"{AppName}\" and NodeName =~ \"{NodeName}\" // and LogicalServerName =~ \"{LogicalServerName}}\"\n\n| where end_aggregated_sample &gt;= datetime({StartTime}) and end_aggregated_sample &lt;= datetime({EndTime})\n\
+      \n| where group_name contains \"{rgGroupPrefix}\" or ( \"{rgGroupPrefix}\" == \"SloPri\" and group_name contains \"UserPrimaryGroup\" )\n\n// or ( \"{rgGroupPrefix}\" == \"SloSec\" and group_name\
+      \ contains \"UserSecondaryGroup\" )\n\n| where delta_total_cpu_usage_ms &lt;&gt; total_cpu_usage_ms\n\n| project end_utc_date = end_aggregated_sample , name = group_name , start_utc_date = start_aggregated_sample\
+      \ , delta_total_cpu_usage_ms, delta_total_request_count, active_request_count = active_request_count_max , active_session_count = active_session_count_max , delta_writes_completed_total, delta_reads_completed_total,\n\
+      \ndelta_log_bytes_used_total, delta_log_temp_db_bytes_used_total, used_databasepages_kb = 0 , physical_database_name\n\n| extend duration = (end_utc_date - start_utc_date)/time(1s)\n\n| extend CpuCoreUsage\
+      \ = (delta_total_cpu_usage_ms/1000.0)/ duration\n\n| extend TotalRequests = (delta_total_request_count *1.0) /1.0\n\n| extend ActiveRequests = (active_request_count *1.0) /1.0\n\n| extend ActiveSessions\
+      \ = (active_session_count *1.0) /1.0\n\n| extend TotalIOPS = ((delta_reads_completed_total + delta_writes_completed_total)*1.0)/duration\n\n| extend ReadIOPS = (delta_reads_completed_total*1.0)/duration\n\
+      \n| extend WriteIOPS = (delta_writes_completed_total*1.0)/duration\n\n| extend LogKbps = (delta_log_bytes_used_total)/(1024.0*duration)\n\n| extend TempDbLogKbps = (delta_log_temp_db_bytes_used_total)/(1024.0*duration)\n\
+      \n| extend UsedDatabasePagesMb = used_databasepages_kb*1.0/(1024)\n\n| top-nested of bin(end_utc_date, 5min) by avg(CpuCoreUsage), top-nested 5 of name by avg_cpucoreusage=avg(CpuCoreUsage) desc\n\
+      \n| order by end_utc_date desc\n\n//| project end_utc_date, name, CpuCoreUsage, TotalIOPS, ReadIOPS, WriteIOPS, LogKbps, TempDbLogKbps, TotalRequests, ActiveRequests, ActiveSessions, UsedDatabasePagesMb\n"
+- id: DB-performance-192
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB governor workload groups analysis
+  - SQL DB MonGovernorWorkloadGroups LogicalServerName
+  - SQL DB investigate governor workload groups
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonGovernorWorkloadGroups
+    ExecutedQuery: 'MonGovernorWorkloadGroups
+
+
+      | where TIMESTAMP &gt;= datetime({StartTime}) and TIMESTAMP &lt;= datetime({EndTime})
+
+
+      | where LogicalServerName =~ "{LogicalServerName}" and AppName =~ "{AppName}" and NodeName =~ "{NodeName}"
+
+
+      | extend GroupName= case(name contains "UserPrimaryGroup.DBID", "UserPrimaryGroup(multiple DBs if MALMO)", name)
+
+      '
+- id: DB-performance-193
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB governor workload groups analysis
+  - SQL DB MonGovernorWorkloadGroups AppName NodeName
+  - SQL DB investigate governor workload groups
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonGovernorWorkloadGroups
+    ExecutedQuery: 'MonGovernorWorkloadGroups
+
+
+      | where AppName =~ "{AppName}" and NodeName == "{NodeName}"
+
+
+      | where TIMESTAMP &gt;= datetime({StartTime}) and TIMESTAMP &lt;= datetime({EndTime})
+
+
+      | where delta_is_valid == 1
+
+      '
+- id: DB-performance-196
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB os b pool perf counters activity
+  - SQL DB MonDmOsBPoolPerfCounters LogicalServerName
+  - SQL DB investigate os b pool perf counters
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmOsBPoolPerfCounters
+    ExecutedQuery: 'MonDmOsBPoolPerfCounters
+
+
+      | where TIMESTAMP &gt; datetime({StartTime}) and TIMESTAMP &lt; datetime({EndTime})
+
+
+      | where NodeName == "{NodeName}" and ClusterName == "{ClusterName}"
+
+
+      | where LogicalServerName =~ "{LogicalServerName}" and AppName =~ "{AppName}"
+
+
+      | summarize avg(cntr_value) by bin(TIMESTAMP, 10min), counter_name, NodeName
+
+
+      | render timechart // M.03
+
+      '
+- id: DB-performance-206
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB cloud database wait stats analysis
+  - SQL DB MonDmCloudDatabaseWaitStats database_name
+  - SQL DB investigate cloud database wait stats
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmCloudDatabaseWaitStats
+    ExecutedQuery: 'MonDmCloudDatabaseWaitStats
+
+
+      | where TIMESTAMP &gt;= datetime({StartTime}) and TIMESTAMP &lt;= datetime({EndTime})
+
+
+      | where LogicalServerName =~ "{LogicalServerName}" and database_name =~ "{LogicalDatabaseName}" and NodeName =~ "{NodeName}" and AppName =~ "{AppName}"
+
+
+      | top-nested of bin(TIMESTAMP, 5min) by sum(delta_wait_time_ms), top-nested 5 of wait_type by total_wait_time_ms_per_sec=round(sum(delta_wait_time_ms)/(5*60),0) desc
+
+
+      | sort by TIMESTAMP asc nulls last
+
+
+      | project TIMESTAMP, wait_type, total_wait_time_ms_per_sec
+
+
+      | render timechart // W.01.A
+
+      '
+- id: DB-performance-207
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB cloud database wait stats activity
+  - SQL DB MonDmCloudDatabaseWaitStats database_name
+  - SQL DB investigate cloud database wait stats
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmCloudDatabaseWaitStats
+    ExecutedQuery: 'MonDmCloudDatabaseWaitStats
+
+
+      | where TIMESTAMP &gt;= datetime({StartTime}) and TIMESTAMP &lt;= datetime({EndTime})
+
+
+      | where LogicalServerName =~ "{LogicalServerName}" and database_name =~ "{LogicalDatabaseName}" and NodeName =~ "{NodeName}" and AppName =~ "{AppName}"
+
+
+      | summarize sum(delta_wait_time_ms) by wait_type
+
+
+      | top 10 by sum_delta_wait_time_ms desc nulls last
+
+
+      | project wait_type, wait_time_ms_per_sec // W.02
+
+      '
+- id: DB-performance-215
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB IO virtual file stats activity
+  - SQL DB MonDmIoVirtualFileStats AppName NodeName
+  - SQL DB investigate IO virtual file stats
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmIoVirtualFileStats
+    ExecutedQuery: 'MonDmIoVirtualFileStats
+
+
+      | where AppName =~"{AppName}" //and NodeName =~ "{NodeName}"
+
+
+      | where TIMESTAMP &gt;= datetime({StartTime}) and TIMESTAMP &lt;= datetime({EndTime})
+
+
+      | where db_name !in("tempdb", "msdb", "master", "model")
+
+
+      | extend file_id_str=tostring(file_id)
+
+
+      | summarize sum(delta_io_stall_queued_write_ms), sum(delta_io_stall_queued_read_ms), sum(delta_num_of_bytes_written), sum(delta_num_of_bytes_read) by bin(TIMESTAMP, 1min), file_id_str
+
+
+      | render timechart // Virtual File Stats throttling. If Worker.DW app, use MonDwIoVirtualFileStats (as of T41 Worker.DW deployment)
+
+      '
+- id: DB-performance-216
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB IO virtual file stats activity
+  - SQL DB MonDmIoVirtualFileStats AppName NodeName
+  - SQL DB investigate IO virtual file stats
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmIoVirtualFileStats
+    ExecutedQuery: 'MonDmIoVirtualFileStats
+
+
+      | where AppName =~ "{AppName}" // and NodeName =~ "{NodeName}"
+
+
+      | where TIMESTAMP &gt;= datetime({StartTime}) and TIMESTAMP &lt;= datetime({EndTime})
+
+
+      | where db_name !in("tempdb", "msdb", "master", "model")
+
+
+      | extend file_id_str=tostring(file_id)
+
+
+      | summarize sum(delta_io_stall_queued_write_ms), sum(delta_io_stall_queued_read_ms), sum(delta_num_of_bytes_written), sum(delta_num_of_bytes_read) by TIMESTAMP=bin(TIMESTAMP, 1min), file_id_str
+
+
+      | project TIMESTAMP, file_id_str, Packed=pack(''delta_io_stall_queued_write_ms'', sum_delta_io_stall_queued_write_ms, ''delta_io_stall_queued_read_ms'', sum_delta_io_stall_queued_read_ms, ''delta_num_of_bytes_written'',
+      sum_delta_num_of_bytes_written, ''delta_num_of_bytes_read'', sum_delta_num_of_bytes_read)
+
+
+      | mvexpand Packed
+
+
+      | parse tostring(Packed) with ''{"''Category''":''Value:double''}''
+
+
+      | project TIMESTAMP, file_id_str, Category, Value
+
+
+      | render timechart
+
+
+      // IO.03
+
+      '
+- id: DB-performance-220
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB clr telemetry analysis
+  - SQL DB MonCLRTelemetry event LogicalServerName
+  - SQL DB investigate clr telemetry
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonCLRTelemetry
+    ExecutedQuery: 'MonCLRTelemetry
+
+
+      | where LogicalServerName =~ "{ServerName}" and AppName =~ "{AppName}"
+
+
+      | where event contains "on_app_domain_unloading" MonGlobalQueryEvents
+
+
+      | where LogicalServerName =~ "{ServerName}" and AppName =~ "{AppName}"
+
+
+      | where event == "globalquery_appdomain_create"<tr class="even">Other //*
+
+      '
+- id: DB-performance-221
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB management resource provider analysis
+  - SQL DB MonManagementResourceProvider http_verb
+  - SQL DB investigate management resource provider
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagementResourceProvider
+    ExecutedQuery: 'MonManagementResourceProvider
+
+
+      | where http_verb == "PUT" and request_url contains "{LogicalDatabaseName}"
+
+      '
+- id: DB-performance-222
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB management analysis
+  - SQL DB MonManagement PreciseTimeStamp event_type
+  - SQL DB investigate management
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+
+      ) on request_id
+
+
+      | where event_type != "" or operation_parameters != ""
+
+
+      |project PreciseTimeStamp, request_id, operation_type , operation_parameters
+
+
+      | order by PreciseTimeStamp asc nulls last // OP.02 all operations
+
+      '
+- id: DB-performance-223
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB management activity
+  - SQL DB MonManagement OP specific operations request_id
+  - SQL DB investigate management
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement | where operation_parameters contains "{LogicalServerName}" and operation_parameters contains "{LogicalDatabaseName}"
+
+
+      | summarize min(originalEventTimestamp), max(originalEventTimestamp) by request_id, operation_type, operation_parameters, operation_name // OP.03 specific operations
+
+      '
+- id: DB-performance-224
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB management analysis
+  - SQL DB MonManagement PreciseTimeStamp OP any WAFL
+  - SQL DB investigate management
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+
+      | where request_id =~ "488729B4-C0C5-44D3-9CC6-709268956910" //and operation_parameters contains \"{ServerName}\"
+
+
+      | project PreciseTimeStamp , instance_id, operation_type, application_name , operation_parameters, [''type''] // OP.4 any WAFL operations
+
+      '
+- id: DB-performance-225
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB wafl log entries analysis
+  - SQL DB MonWaflLogEntries p
+  - SQL DB investigate wafl log entries
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonWaflLogEntries
+    ExecutedQuery: 'MonWaflLogEntries
+
+
+      | where message contains "{LogicalServerName}"//*
+
+      '
+- id: DB-performance-227
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB xtp hash index stats activity
+  - SQL DB MonDmDbXtpHashIndexStats LogicalServerName
+  - SQL DB investigate xtp hash index stats
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmDbXtpHashIndexStats
+    ExecutedQuery: "MonDmDbXtpHashIndexStats\n\n| where LogicalServerName =~\"{LogicalServerName}\" and logical_database_name =~ \"{LogicalDatabaseName}\"\n\n| summarize arg_max(TIMESTAMP, *) by LogicalServerName,\
+      \ logical_database_name, AppName, object_id, index_id\n\n| project TIMESTAMP, LogicalServerName, logical_database_name, AppName, object_id, index_id, total_bucket_count, empty_bucket_count, avg_chain_length,\
+      \ max_chain_length//*\n\n// Winfab / \n\n//*// WF.01\n"
+- id: DB-performance-275
+  Topic: TSG-for-Auto-Stats-update-waits
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/TSG-for-Auto-Stats-update-waits.md
+  Prompts:
+  - SQL DB cloud database wait stats analysis
+  - SQL DB MonDmCloudDatabaseWaitStats database_name
+  - SQL DB investigate cloud database wait stats
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmCloudDatabaseWaitStats
+    ExecutedQuery: 'MonDmCloudDatabaseWaitStats
+
+      | where TIMESTAMP >= datetime({StartTime}) and TIMESTAMP <= datetime({EndTime})
+
+      | where LogicalServerName =~ "{LogicalServerName}" and database_name =~ "{LogicalDatabaseName}" and NodeName =~ "{NodeName}" and AppName =~ "{AppName}"
+
+      | top-nested of bin(TIMESTAMP, 5min) by sum(delta_wait_time_ms), top-nested 5 of wait_type by total_wait_time_ms_per_sec=round(sum(delta_wait_time_ms)/(5*60),0) desc
+
+      | sort by TIMESTAMP asc nulls last
+
+      | project TIMESTAMP, wait_type, total_wait_time_ms_per_sec
+
+      | render timechart'
+- id: DB-performance-276
+  Topic: TSG-for-Auto-Stats-update-waits
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/TSG-for-Auto-Stats-update-waits.md
+  Prompts:
+  - SQL DB cloud database wait stats activity
+  - SQL DB MonDmCloudDatabaseWaitStats database_name
+  - SQL DB investigate cloud database wait stats
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmCloudDatabaseWaitStats
+    ExecutedQuery: 'MonDmCloudDatabaseWaitStats
+
+      | where TIMESTAMP >= datetime({StartTime}) and TIMESTAMP <= datetime({EndTime})
+
+      | where LogicalServerName =~ "{LogicalServerName}" and database_name =~ "{LogicalDatabaseName}" and NodeName =~ "{NodeName}" and AppName =~ "{AppName}"
+
+      | summarize sum(delta_wait_time_ms) by wait_type
+
+      | top 10 by sum_delta_wait_time_ms desc nulls last
+
+      | project wait_type, wait_time_ms_per_sec'
+- id: DB-performance-281
+  Topic: TSG-for-larger-than-4TB-support-on-Gen5-or-higher_
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/TSG-for-larger-than-4TB-support-on-Gen5-or-higher_.md
+  Prompts:
+  - SQL DB snapshot status
+  - SQL DB MonAnalyticsDBSnapshot logical_server_name
+  - SQL DB investigate snapshot
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: 'MonAnalyticsDBSnapshot
+
+      | where logical_server_name =~ "{ServerName}"
+
+      and sql_instance_name =~ "fd674a61b413"
+
+      | summarize arg_max(TIMESTAMP, sql_instance_name, service_level_objective, logical_resource_pool_id, tenant_ring_name)
+
+      by logical_database_name, logical_database_id, physical_database_id, logical_server_name
+
+      | extend update_pool_storage_limit = strcat(
+
+      "Set-DatabasePropertyOverride -LogicalServerName ''", logical_server_name,
+
+      "'' -LogicalDatabaseName ''", logical_database_name,
+
+      "'' -CategoryName ''SloPropertyBag'' -OverrideValue ''<SloRgMapping><pool_max_data_space_kb>5586812928</pool_max_data_space_kb></SloRgMapping>''")
+
+      | project update_pool_storage_limit, service_level_objective, logical_resource_pool_id'
+- id: DB-performance-284
+  Topic: pdb_state-stuck-in-WaitingForWinFabDatabaseService
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/pdb_state-stuck-in-WaitingForWinFabDatabaseService.md
+  Prompts:
+  - SQL DB SQL system health
+  - SQL DB MonSQLSystemHealth AppName NodeName ClusterName
+  - SQL DB investigate SQL system health
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where AppName in ("fc15a380189b", "f09b89f337c4", "c2b21e0fa520")
+
+      and originalEventTimestamp > ago(30m) and message contains "Error: 948"
+
+      | project originalEventTimestamp, AppName, NodeName, message, code_package_version, ClusterName
+
+      | summarize arg_max(originalEventTimestamp, *) by AppName'
+- id: DB-performance-285
+  Topic: pdb_state-stuck-in-WaitingForWinFabDatabaseService
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/pdb_state-stuck-in-WaitingForWinFabDatabaseService.md
+  Prompts:
+  - SQL DB snapshot status
+  - SQL DB MonCapacityTenantSnapshot tenant_ring_name
+  - SQL DB investigate snapshot
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonCapacityTenantSnapshot
+    ExecutedQuery: 'MonCapacityTenantSnapshot
+
+      | summarize arg_max(TIMESTAMP, vm_size, placement_preference_tag) by tenant_ring_name
+
+      ) on tenant_ring_name
+
+      | project-away TIMESTAMP, tenant_ring_name1'
+- id: DB-performance-288
+  Topic: General-Perf-Troubleshooting
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/General-Perf-Troubleshooting.md
+  Prompts:
+  - SQL DB cloud database wait stats analysis
+  - SQL DB MonDmCloudDatabaseWaitStats database_name
+  - SQL DB investigate cloud database wait stats
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmCloudDatabaseWaitStats
+    ExecutedQuery: 'MonDmCloudDatabaseWaitStats
+
+      | where TIMESTAMP <= datetime({StartTime}) and TIMESTAMP >= datetime({EndTime})
+
+      | where LogicalServerName =~ "{LogicalServerName}" and database_name =~ "{LogicalDatabaseName}"
+
+      | top-nested of bin(TIMESTAMP, 5min) by sum(delta_wait_time_ms), top-nested 5 of wait_type by total_wait_time_ms_per_sec=round(sum(delta_wait_time_ms)/(5*60),0) desc
+
+      | sort by TIMESTAMP asc nulls last
+
+      | project TIMESTAMP, wait_type, total_wait_time_ms_per_sec
+
+      | render timechart'
+- id: DB-performance-296
+  Topic: SQL-Perf-Trending-Issue-Tracker
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/SQL-Perf-Trending-Issue-Tracker.md
+  Prompts:
+  - SQL DB dumper activity errors
+  - SQL DB MonSqlDumperActivity NodeName ClusterName
+  - SQL DB troubleshoot dumper activity errors
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSqlDumperActivity
+    ExecutedQuery: 'MonSqlDumperActivity
+
+      | where PreciseTimeStamp >ago(48h)
+
+      | where TargetAppName has "cf2c4f0bc29e"
+
+      | where DumpErrorDetails has "HK Recovery Failure!"
+
+      | project PreciseTimeStamp, ClusterName, NodeName, DumpErrorDetails, DumpUID
+
+      | take 10'
+- id: DB-performance-297
+  Topic: SQL-Perf-Trending-Issue-Tracker
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/SQL-Perf-Trending-Issue-Tracker.md
+  Prompts:
+  - SQL DB SQL system health
+  - SQL DB MonSQLSystemHealth LogicalServerName serverName
+  - SQL DB investigate SQL system health
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where LogicalServerName == serverName
+
+      | where PreciseTimeStamp >ago(2h)
+
+      | where message contains "error" and message contains "encountered while trying to attach to Database"'
+- id: DB-performance-299
+  Topic: SQL-Perf-Trending-Issue-Tracker
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/SQL-Perf-Trending-Issue-Tracker.md
+  Prompts:
+  - SQL DB watson analysis analysis
+  - SQL DB MonWatsonAnalysis
+  - SQL DB investigate watson analysis
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonWatsonAnalysis
+    ExecutedQuery: 'cluster("sqladhoc").database("sqlazure1").MonWatsonAnalysis
+
+      | where DumpCrashTime >ago(7d)//replace with actual time
+
+      | where AppName contains appName
+
+      | extend  AppName =tolower(AppName)
+
+      | where LogicalServerName contains serverName
+
+      | distinct   BucketString,CallStack'
+- id: DB-performance-333
+  Topic: Performance-TSG
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Data-Virtualization/Performance-TSG.md
+  Prompts:
+  - SQL DB frontend analysis
+  - SQL DB MonSqlFrontend event
+  - SQL DB investigate frontend
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSqlFrontend
+    ExecutedQuery: 'MonSqlFrontend
+
+      | where event == "wildcard_expansion"'
+- id: DB-performance-340
+  Topic: Surface-Area-TSG
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Data-Virtualization/Surface-Area-TSG.md
+  Prompts:
+  - SQL DB config logical server overrides activity
+  - SQL DB MonConfigLogicalServerOverrides TIMESTAMP
+  - SQL DB investigate config logical server overrides
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonConfigLogicalServerOverrides
+    ExecutedQuery: 'MonConfigLogicalServerOverrides
+
+      | where TIMESTAMP > ago(3d)
+
+      | where Logical_Server_Name =~ ''''
+
+      | where Property_Name in (
+
+      ''SQL.Config_FeatureSwitches_PolybaseLocalExec'',
+
+      ''SQL.Config_FeatureSwitches_ManagedIdentityAuthForOpenrowsetBulk'',
+
+      ''SQL.Config_FeatureSwitches_PolarisDeltaDecodeEncodedCharacters'',
+
+      ''SQL.Config_FeatureSwitches_PolarisDeltaExternalTable'',
+
+      ''SQL.Config_FeatureSwitches_PolarisDeltaOpenrowset'',
+
+      ''SQL.Config_FeatureSwitches_EnableFormatTypeDelta'')
+
+      | order by PreciseTimeStamp desc
+
+      | summarize max(PreciseTimeStamp) by Property_Name, Property_Value, Logical_Server_Name'
+- id: DB-performance-342
+  Topic: Useful-Kusto-queries
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Data-Virtualization/Useful-Kusto-queries.md
+  Prompts:
+  - SQL DB frontend latency
+  - SQL DB MonSqlFrontend event
+  - SQL DB troubleshoot frontend latency
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSqlFrontend
+    ExecutedQuery: 'MonSqlFrontend
+
+      | where event == "wildcard_expansion"
+
+      You can find info on: size and count of files resolved, duration, query batch GUID and statement number, and more'
+- id: DB-performance-345
+  Topic: Useful-Kusto-queries
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Data-Virtualization/Useful-Kusto-queries.md
+  Prompts:
+  - SQL DB win fab health node event issues
+  - SQL DB AlrWinFabHealthNodeEvent
+  - SQL DB troubleshoot win fab health node event issues
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: AlrWinFabHealthNodeEvent
+    ExecutedQuery: 'AlrWinFabHealthNodeEvent
+
+      | where TIMESTAMP > ago(10m)
+
+      | where Description startswith ''TcpStats: ''
+
+      | extend AvailableDynamicPortsPct = extract("AvailableDynamicPortsPercentage=(\\d+.\\d+)", 1, Description, typeof(double))
+
+      | summarize min(AvailableDynamicPortsPct) by bin(TIMESTAMP, 1h), ClusterName
+
+      //| where min_AvailableDynamicPortsPct < 0.55
+
+      | render timechart'
+- id: DB-performance-346
+  Topic: Useful-Kusto-queries
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Data-Virtualization/Useful-Kusto-queries.md
+  Prompts:
+  - SQL DB SQL system health
+  - SQL DB MonSQLSystemHealth LogicalServerName AppName
+  - SQL DB investigate SQL system health
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where TIMESTAMP >= ago(10d)
+
+      | where LogicalServerName =~ ""
+
+      | where message has "MonSqlFrontend"
+
+      | project message,PreciseTimeStamp, NodeName, AppName, AppTypeName'
+- id: DB-performance-347
+  Topic: Useful-Kusto-queries
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Data-Virtualization/Useful-Kusto-queries.md
+  Prompts:
+  - SQL DB frontend errors
+  - SQL DB MonSqlFrontend event LogicalServerName AppTypeName
+  - SQL DB troubleshoot frontend errors
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSqlFrontend
+    ExecutedQuery: 'MonSqlFrontend
+
+      //| where SubscriptionId == tolower("88d5392f-a34f-4769-b405-f597fc533613")
+
+      //| where LogicalServerName =~ "{ServerName}"
+
+      | where event =~ "data_virtualization_failed_query"
+
+      | where AppTypeName == "Worker.ISO" or AppTypeName == "Worker.ISO.Premium" or AppTypeName == "Worker.Vldb.Compute"
+
+      | order by originalEventTimestamp desc
+
+      | project TIMESTAMP, ClusterName, MachineName, AppTypeName, LogicalServerName, query_type, failure_reason'
+- id: DB-performance-349
+  Topic: Useful-Kusto-queries
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Data-Virtualization/Useful-Kusto-queries.md
+  Prompts:
+  - SQL DB database metadata analysis (MI/GeoDR context)
+  - SQL DB MonDatabaseMetadata LogicalServerName AppTypeName
+  - SQL DB investigate database metadata
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDatabaseMetadata
+    ExecutedQuery: 'MonDatabaseMetadata
+
+      | where name =~ '''' // EXTERNAL DATA SOURCE Name
+
+      | where LogicalServerName =~ ""
+
+      | where logical_db_name == "dvirt-gp"
+
+      | where AppTypeName == "Worker.ISO"
+
+      or AppTypeName == "Worker.ISO.Premium"
+
+      or AppTypeName == "Worker.Vldb.Compute"
+
+      or AppTypeName == "Worker.CL"
+
+      | where table_name == "sysextsources"
+
+      | extend prefix = substring(location, 0, indexof(location, ":/"))
+
+      // name is external data source name
+
+      | project name, id, AppTypeName, SubscriptionId, logical_database_guid, prefix, type, credential_id'
+- id: DB-performance-350
+  Topic: Useful-Kusto-queries
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Data-Virtualization/Useful-Kusto-queries.md
+  Prompts:
+  - SQL DB database metadata activity
+  - SQL DB MonDatabaseMetadata LogicalServerName AppTypeName
+  - SQL DB investigate database metadata
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDatabaseMetadata
+    ExecutedQuery: 'MonDatabaseMetadata
+
+      | where LogicalServerName == ""
+
+      | where logical_db_name == ""
+
+      | where AppTypeName == "Worker.ISO" or AppTypeName == "Worker.ISO.Premium" or AppTypeName == "Worker.Vldb.Compute"
+
+      | where table_name == "sysschobjs" and [''type''] startswith "ET"
+
+      | extend region_name = tostring(split(ClusterName, ".")[1])
+
+      | extend ShortClusterName = extract("^[^.]*\\.([^.]*)\\.", 1, ClusterName)
+
+      | extend ShortClusterName = strcat(''wasd-prod-'', ShortClusterName)
+
+      | project name, ShortClusterName
+
+      | summarize n_external_table  = count() by ShortClusterName'
+- id: DB-performance-351
+  Topic: Useful-Kusto-queries
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Data-Virtualization/Useful-Kusto-queries.md
+  Prompts:
+  - SQL DB database metadata analysis
+  - SQL DB MonDatabaseMetadata LogicalServerName AppTypeName
+  - SQL DB investigate database metadata
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDatabaseMetadata
+    ExecutedQuery: 'MonDatabaseMetadata
+
+      | where LogicalServerName == ""
+
+      | where logical_db_name == ""
+
+      | where AppTypeName == "Worker.ISO" or AppTypeName == "Worker.ISO.Premium" or AppTypeName == "Worker.Vldb.Compute"
+
+      | where table_name == "sysextfileformats"
+
+      | extend region_name = tostring(split(ClusterName, ".")[1])
+
+      | extend ShortClusterName = extract("^[^.]*\\.([^.]*)\\.", 1, ClusterName)
+
+      | extend ShortClusterName = strcat(''wasd-prod-'', ShortClusterName)
+
+      | project name, id, region_name, ShortClusterName, AppTypeName, SubscriptionId, logical_database_guid, format_type'
+- id: DB-performance-424
+  Topic: List-of-High-Pri-larger-then-4TB-CRM-databases
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Other-Waits-and-Issues/List-of-High-Pri-larger-then-4TB-CRM-databases.md
+  Prompts:
+  - SQL DB snapshot status
+  - SQL DB MonAnalyticsDBSnapshot logical_server_name
+  - SQL DB investigate snapshot
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: 'MonAnalyticsDBSnapshot
+
+      | where (logical_server_name =~ "{ServerName}" and logical_database_name =~ "{DatabaseName}")
+
+      | summarize arg_max(TIMESTAMP, service_level_objective, logical_server_name, logical_database_name, tenant_ring_name, service_level_objective) by sql_instance_name, logical_resource_pool_id
+
+      | project logical_server_name, logical_database_name, AppName = sql_instance_name
+
+      | extend application_name = strcat("fabric:/Worker.ISO.Premium/", AppName)
+
+      | join kind = leftouter ('
+- id: DB-performance-425
+  Topic: List-of-High-Pri-larger-then-4TB-CRM-databases
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Other-Waits-and-Issues/List-of-High-Pri-larger-then-4TB-CRM-databases.md
+  Prompts:
+  - SQL DB resource pool stats activity
+  - SQL DB MonResourcePoolStats AppName AppTypeName
+  - SQL DB investigate resource pool stats
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonResourcePoolStats
+    ExecutedQuery: 'MonResourcePoolStats
+
+      | where AppTypeName =~"Worker.ISO.Premium"
+
+      | where originalEventTimestamp > ago(10h) | summarize arg_max(originalEventTimestamp, pool_storage_limit_gb = tolong(resource_pool_storage_limit)/1024/1024, tolong(resource_pool_storage_limit)) by
+      AppName
+
+      ) on AppName
+
+      | join kind = inner('
+- id: DB-performance-429
+  Topic: Slow-Index-Maintenance
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Other-Waits-and-Issues/Slow-Index-Maintenance.md
+  Prompts:
+  - SQL DB wi partitIOn stats activity
+  - SQL DB MonWiDmDbPartitionStats LogicalServerName
+  - SQL DB investigate wi partitIOn stats
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonWiDmDbPartitionStats
+    ExecutedQuery: 'MonWiDmDbPartitionStats
+
+      | where LogicalServerName =~ serverName
+
+      | where logical_database_name =~ databaseName
+
+      | summarize arg_max(PreciseTimeStamp, used_page_count) by bin(PreciseTimeStamp, 1d), object_id, index_id, partition_number
+
+      | summarize used_size_mb = sum(used_page_count) / 128.0 by bin(PreciseTimeStamp, 1d)
+
+      | render timechart'
+- id: DB-performance-430
+  Topic: Slow-Index-Maintenance
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Other-Waits-and-Issues/Slow-Index-Maintenance.md
+  Prompts:
+  - SQL DB real time resource stats activity
+  - SQL DB MonDmRealTimeResourceStats database_name
+  - SQL DB investigate real time resource stats
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmRealTimeResourceStats
+    ExecutedQuery: 'let serverName = \"{ServerName}\";
+
+      let databaseName = \"{DatabaseName}\";
+
+      let dbGuidMapping = MonDmRealTimeResourceStats
+
+      | where originalEventTimestamp > ago(24h) // Time filter added to reduce window of search data
+
+      | where LogicalServerName =~ serverName
+
+      | where database_name =~ databaseName
+
+      | summarize by database_name, logical_database_name = physical_database_guid;'
+- id: DB-performance-431
+  Topic: Slow-Index-Maintenance
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Other-Waits-and-Issues/Slow-Index-Maintenance.md
+  Prompts:
+  - SQL DB wi partitIOn stats analysis
+  - SQL DB MonWiDmDbPartitionStats LogicalServerName
+  - SQL DB investigate wi partitIOn stats
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonWiDmDbPartitionStats
+    ExecutedQuery: 'MonWiDmDbPartitionStats
+
+      | where LogicalServerName =~ serverName
+
+      | join kind = inner (dbGuidMapping)'
+- id: DB-performance-432
+  Topic: Slow-Index-Maintenance
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Other-Waits-and-Issues/Slow-Index-Maintenance.md
+  Prompts:
+  - SQL DB wi index defragmentatIOn latency
+  - SQL DB MonWiIndexDefragmentation LogicalServerName
+  - SQL DB troubleshoot wi index defragmentatIOn latency
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonWiIndexDefragmentation
+    ExecutedQuery: 'MonWiIndexDefragmentation
+
+      | where LogicalServerName =~ serverName
+
+      | where logical_database_name =~ databaseName
+
+      | where index_build_duration_sec > 0
+
+      | summarize total_index_build_time = sum(index_build_duration_sec)
+
+      by bin(originalEventTimestamp, 24h), LogicalServerName, logical_database_name'
+- id: DB-performance-433
+  Topic: Slow-Index-Maintenance
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Other-Waits-and-Issues/Slow-Index-Maintenance.md
+  Prompts:
+  - SQL DB wi index defragmentatIOn latency
+  - SQL DB MonWiIndexDefragmentation LogicalServerName
+  - SQL DB troubleshoot wi index defragmentatIOn latency
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonWiIndexDefragmentation
+    ExecutedQuery: 'MonWiIndexDefragmentation
+
+      | where originalEventTimestamp between (startDay..endDay)
+
+      | where LogicalServerName =~ serverName
+
+      | where logical_database_name =~ databaseName
+
+      | where index_build_duration_sec > 0
+
+      | summarize arg_max(originalEventTimestamp, index_build_duration_sec) by LogicalServerName, logical_database_name, object_id, index_id
+
+      | summarize total_index_build_time = sum(index_build_duration_sec)
+
+      ,index_build_start_time = min(originalEventTimestamp)
+
+      by LogicalServerName, logical_database_name, object_id
+
+      | extend index_build_end_time = datetime_add(''second'', total_index_build_time, index_build_start_time)
+
+      | summarize build_start_time = min(index_build_start_time), build_end_time = max(index_build_end_time)
+
+      by LogicalServerName, database_name = logical_database_name;'
+- id: DB-performance-434
+  Topic: Slow-Index-Maintenance
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Other-Waits-and-Issues/Slow-Index-Maintenance.md
+  Prompts:
+  - SQL DB cloud database wait stats analysis
+  - SQL DB MonDmCloudDatabaseWaitStats database_name
+  - SQL DB investigate cloud database wait stats
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmCloudDatabaseWaitStats
+    ExecutedQuery: 'MonDmCloudDatabaseWaitStats
+
+      | where PreciseTimeStamp between (datetime(<index maintenance start time>)..datetime(<index maintenance end time>))
+
+      | where LogicalServerName =~ serverName
+
+      | where database_name =~ databaseName
+
+      | top-nested of bin(PreciseTimeStamp, 5m) by sum(delta_wait_time_ms) asc
+
+      , top-nested 5 of wait_type by total_wait_time_ms_per_sec = round(sum(delta_wait_time_ms)/(time(5m)/1s),0) desc
+
+      | sort by PreciseTimeStamp asc nulls last
+
+      | project PreciseTimeStamp, wait_type, total_wait_time_ms_per_sec
+
+      | render timechart'
+- id: DB-performance-437
+  Topic: Troubleshooting-Invoice-Cloud-High-Shard-Count
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Other-Waits-and-Issues/Troubleshooting-Invoice-Cloud-High-Shard-Count.md
+  Prompts:
+  - SQL DB real time resource stats activity
+  - SQL DB MonDmRealTimeResourceStats database_name
+  - SQL DB investigate real time resource stats
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmRealTimeResourceStats
+    ExecutedQuery: 'MonDmRealTimeResourceStats
+
+      | where LogicalServerName =~ "{ServerName}" and database_name startswith \"{DatabaseName}\"
+
+      | where originalEventTimestamp > now(-1h)
+
+      | summarize arg_max(originalEventTimestamp, ClusterName, NodeName, AppName) by database_name
+
+      | summarize dcount(AppName), dcount(database_name) by ClusterName, NodeName
+
+      | order by dcount_database_name desc
+
+      | where dcount_database_name >= 500'
+- id: DB-performance-461
+  Topic: json-modify-null-msjson-dump
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Team-TSGs/JSON-and-XML-mitigations/json-modify-null-msjson-dump.md
+  Prompts:
+  - SQL DB watson analysis analysis
+  - SQL DB MonWatsonAnalysis LogicalServerName TIMESTAMP
+  - SQL DB investigate watson analysis
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonWatsonAnalysis
+    ExecutedQuery: 'MonWatsonAnalysis
+
+      | where TIMESTAMP > ago(5d)
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where CallStack contains "CMSJsonUtility::GetLOBSize"
+
+      2. Monitor for any new dump files related to JSON_MODIFY'
+- id: DB-performance-463
+  Topic: PERFTS003-Config--Change-History-Tab
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Tools-and-Tips/ASC/PERFTS003-Config--Change-History-Tab.md
+  Prompts:
+  - SQL DB config logical server overrides activity
+  - SQL DB MonConfigLogicalServerOverrides
+  - SQL DB investigate config logical server overrides
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonConfigLogicalServerOverrides
+    ExecutedQuery: 'MonConfigLogicalServerOverrides
+
+
+      | summarize min(TIMESTAMP)
+
+      '
+- id: DB-performance-559
+  Topic: Enable-auto-rotation
+  Source: TSG-SQL-DB-Performance/content/IORG/RemoteStorage/Enable-auto-rotation.md
+  Prompts:
+  - SQL DB certificate watchdog rotation
+  - SQL DB MonMachineLocalWatchdog component NodeName
+  - SQL DB investigate certificate watchdog rotation
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonMachineLocalWatchdog
+    ExecutedQuery: 'MonMachineLocalWatchdog
+
+      | where TIMESTAMP > ago(1d)
+
+      | where component == "CertificateWatchdog"
+
+      | extend new_message = message_resourcename
+
+      | summarize argmax(TIMESTAMP, new_message) by ClusterName, NodeName, new_message
+
+      | extend tokens=split(max_TIMESTAMP_new_message, ";")
+
+      | extend Subject=extract("Subject=(.*)", 1, tostring(tokens[1]))
+
+      | extend Thumbprint=extract("Thumbprint=(.*)", 1, tostring(tokens[2]))
+
+      | extend Created=extract("Created=(.*)", 1, tostring(tokens[3]))
+
+      | extend Expires=extract("Expires=(.*)", 1, tostring(tokens[4]))
+
+      | extend LogicalName = iff(arraylength(tokens) > 4, extract("RegistryLogicalName=(.*)", 1, tostring(tokens[5])) , "")
+
+      | extend CertStore = iff(arraylength(tokens) > 5, extract("CertStore=(.*)", 1, tostring(tokens[6])) , "")
+
+      | extend Key = strcat(ClusterName, "_", NodeName)
+
+      | summarize NodeCount=dcount(Key), LastSeen=max(max_TIMESTAMP) by Thumbprint, Subject, todatetime(Created),todatetime(Expires), LogicalName, CertStore
+
+      | where Subject contains "storageaad"'
+- id: DB-performance-560
+  Topic: Failures
+  Source: TSG-SQL-DB-Performance/content/IORG/RemoteStorage/Failures.md
+  Prompts:
+  - SQL DB failures
+  - SQL DB MonNodeAgentEvents event TIMESTAMP
+  - SQL DB troubleshoot failures
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonNodeAgentEvents
+    ExecutedQuery: 'MonNodeAgentEvents
+
+      | where TIMESTAMP > ago(5h)
+
+      | where event == "node_agent_update_sbs_blob_tier_failure"'
+- id: DB-performance-570
+  Topic: Incorrect-TelemetryPath-no-upgrade
+  Source: TSG-SQL-DB-Performance/content/IORG/RemoteStorage/Incorrect-TelemetryPath-no-upgrade.md
+  Prompts:
+  - SQL DB dump signal activity
+  - SQL DB MonSqlDumpSignal LogicalServerName AppName
+  - SQL DB investigate dump signal
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSqlDumpSignal
+    ExecutedQuery: 'let impactedApps = cluster("https://sqladhoc.kustomfa.windows.net").database("sqlazure1").MonSqlDumpSignal
+
+      | where TIMESTAMP > ago(1h)
+
+      | where ResolvedCallStack contains "ContextAccessor::FHasMsqlXact" //"InstanceHistoryStore" or ResolvedCallStack contains "IHS"
+
+      | summarize min(TIMESTAMP), max(TIMESTAMP) by LogicalServerName, AppName, ClusterName
+
+      | extend AppName = tostring(split(AppName, "/")[2])
+
+      | extend LogicalServerName = tostring(split(LogicalServerName, ".")[0]);
+
+      //| extend update_cmd = strcat("Raise-SqlAzureFsmEvent3 -TableName tbl_sql_instances -Keys @(\"", AppName, "\") -EventName UpdateTelemetryContainer -CabId 123456 -VerifiedSafe -Force")'
+- id: DB-performance-575
+  Topic: Is-it-a-BC-candidate
+  Source: TSG-SQL-DB-Performance/content/IORG/RemoteStorage/Is-it-a-BC-candidate.md
+  Prompts:
+  - SQL DB IO virtual file stats activity
+  - SQL DB MonDmIoVirtualFileStats database_name NodeName
+  - SQL DB investigate IO virtual file stats
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmIoVirtualFileStats
+    ExecutedQuery: 'let bc_database_storage_size_utilization = MonDmIoVirtualFileStats
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where database_id > 4
+
+      | where TIMESTAMP <= p_end_incident
+
+      | where db_name =~ p_database
+
+      | project TIMESTAMP = end_utc_date, database_name = db_name, type_desc, spaceused_mb, NodeName, file_id, size_on_disk_bytes
+
+      | summarize hint.shufflekey=database_name sum(spaceused_mb), sum(size_on_disk_bytes), files = dcount(file_id, 2) by bin(TIMESTAMP, 1s), database_name, NodeName, type_desc
+
+      | summarize gb_used = max(sum_spaceused_mb)/1024., gb = max(sum_size_on_disk_bytes)/(1024.*1024.*1024), files = max(files) by database_name, type_desc
+
+      | extend bc = iff(type_desc == ''LOG'' and gb > 5 or type_desc == ''ROWS'' and gb_used / files > 256, 1, 0)
+
+      | summarize hint.shufflekey=database_name bc = sum(bc) by database_name'
+- id: DB-performance-597
+  Topic: Script-for-pool-Set-ElasticPool
+  Source: TSG-SQL-DB-Performance/content/IORG/RemoteStorage/Script-for-pool-Set-ElasticPool.md
+  Prompts:
+  - SQL DB snapshot status
+  - SQL DB MonStorageAccountContainerSnapshot TIMESTAMP
+  - SQL DB investigate snapshot
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonStorageAccountContainerSnapshot
+    ExecutedQuery: 'MonStorageAccountContainerSnapshot
+
+      | where TIMESTAMP > ago(1d)
+
+      | where storage_account_purpose  == "RemoteStorage" and storage_account_type == "Premium_LRS" and private_cluster_subscription_affinity_tag == ""
+
+      | summarize arg_max(TIMESTAMP, placement_base_weight, database_file_blob_count) by storage_account_name, resource_group
+
+      ) on storage_account_name
+
+      | where is_not_fixed > 0  and page_blob_tier != "" and placement_base_weight == 0 and resource_pool_name != ""
+
+      | project server_name,file_path, resource_pool_name, storage_account_name'
+- id: DB-performance-684
+  Topic: CAS-Command-Updating-Log-Max-Size-Limit-of-Databas
+  Source: TSG-SQL-DB-Performance/content/Predictable-Performance/CAS-Command-Updating-Log-Max-Size-Limit-of-Databas.md
+  Prompts:
+  - SQL DB RG load analysis
+  - SQL DB MonRgLoad event NodeName ClusterName drive_name
+  - SQL DB investigate RG load
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonRgLoad
+    ExecutedQuery: 'MonRgLoad
+
+      | where event == "drive_usage_report_load" and drive_name == "S:"
+
+      | where ClusterName == "{clusterName}" and NodeName == "{NodeName}"
+
+      | project TIMESTAMP, ClusterName , NodeName , drive_usage_percentage'
+- id: DB-performance-688
+  Topic: Dynamics--tempdb-issue
+  Source: TSG-SQL-DB-Performance/content/Predictable-Performance/Dynamics--tempdb-issue.md
+  Prompts:
+  - SQL DB errors reported errors
+  - SQL DB AlrSQLErrorsReported
+  - SQL DB troubleshoot errors reported errors
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: AlrSQLErrorsReported
+    ExecutedQuery: 'AlrSQLErrorsReported
+
+      \| where error\_number == 1105 or error\_number == 3949 or error\_number == 3958 and message contains "tempdb"
+
+      \| where TIMESTAMP \> ago(7d)\
+
+      \| project TIMESTAMP , AppName, error\_number , LogicalServerName , message, NodeName, code\_package\_version\
+
+      \| summarize count() by bin(TIMESTAMP, 5m) , NodeName, LogicalServerName, code\_package\_version\
+
+      //\| where LogicalServerName in ("SYNSAM-U1\_axdb\_bb8d8e7aab79bd42", "ssprod-appdbserver-53edbc8a", "prod01-3f\_axdb\_fefd1ac5b3aad3c3", "pi9a3wwc08", "synsam-u1-appdbserver-34c12eba", "msft-moc-prod-appdbserver-6c368df9")'
+- id: DB-performance-696
+  Topic: PP0004-The-LoginLimit-limit-for-the-database-is-12
+  Source: TSG-SQL-DB-Performance/content/Predictable-Performance/PP0004-The-LoginLimit-limit-for-the-database-is-12.md
+  Prompts:
+  - SQL DB governor resource pools analysis
+  - SQL DB MonGovernorResourcePools AppTypeName TIMESTAMP
+  - SQL DB investigate governor resource pools
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonGovernorResourcePools
+    ExecutedQuery: 'MonGovernorResourcePools
+
+      | where TIMESTAMP >= beginTime and TIMESTAMP <= endTime and name contains "SloPool.DBId" and AppTypeName == "Worker.ISO"
+
+      | join kind=leftouter ('
+- id: DB-performance-697
+  Topic: PP0004-The-LoginLimit-limit-for-the-database-is-12
+  Source: TSG-SQL-DB-Performance/content/Predictable-Performance/PP0004-The-LoginLimit-limit-for-the-database-is-12.md
+  Prompts:
+  - SQL DB governor workload groups activity
+  - SQL DB MonGovernorWorkloadGroups LogicalServerName
+  - SQL DB investigate governor workload groups
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonGovernorWorkloadGroups
+    ExecutedQuery: 'MonGovernorWorkloadGroups | where TIMESTAMP >= beginTime and TIMESTAMP <= endTime and name contains ".DBId" and AppTypeName == "Worker.ISO"
+
+      ) on NodeName, AppTypeName, LogicalServerName, AppName, pool_id
+
+      | summarize by NodeName, AppTypeName, LogicalServerName, AppName, pool_id, group_id, bin(TIMESTAMP, 30s)
+
+      | where isnull(group_id)
+
+      | summarize count(AppName) by NodeName, AppTypeName, LogicalServerName, AppName, pool_id
+
+      | where count_AppName >= 1 and AppName contains app and LogicalServerName == server'
+- id: DB-performance-698
+  Topic: PP0004-The-LoginLimit-limit-for-the-database-is-12
+  Source: TSG-SQL-DB-Performance/content/Predictable-Performance/PP0004-The-LoginLimit-limit-for-the-database-is-12.md
+  Prompts:
+  - SQL DB governor workload groups activity
+  - SQL DB MonGovernorWorkloadGroups LogicalServerName
+  - SQL DB investigate governor workload groups
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonGovernorWorkloadGroups
+    ExecutedQuery: 'MonGovernorWorkloadGroups | where TIMESTAMP >= beginTime and TIMESTAMP <= endTime and name contains ".DBId" and AppTypeName == "Worker.ISO"
+
+      ) on NodeName, AppTypeName, LogicalServerName, AppName, pool_id
+
+      | summarize by NodeName, AppTypeName, LogicalServerName, AppName, pool_id, group_id, bin(TIMESTAMP, 30s)
+
+      | where isnull(group_id)
+
+      | summarize count(AppName) by NodeName, AppTypeName, LogicalServerName, AppName, pool_id
+
+      | where count_AppName >= 1;
+
+      let Slos ='
+- id: DB-performance-700
+  Topic: PP0004-The-LoginLimit-limit-for-the-database-is-12
+  Source: TSG-SQL-DB-Performance/content/Predictable-Performance/PP0004-The-LoginLimit-limit-for-the-database-is-12.md
+  Prompts:
+  - SQL DB SQL system health
+  - SQL DB MonSQLSystemHealth LogicalServerName AppName
+  - SQL DB investigate SQL system health
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where message contains "The LoginLimit limit for the database is 120"
+
+      | where TIMESTAMP > ago(2h)
+
+      | summarize by AppName, NodeName,ClusterName, instance_rg_size, LogicalServerName
+
+      | extend KillCmd= strcat("Get-FabricNode -NodeName ", NodeName, " -NodeClusterName ", ClusterName, " | Kill-Process -ProcessName sqlservr.exe -ApplicationNameUri fabric:/Worker.ISO/",AppName)
+
+      | project ClusterName, NodeName, instance_rg_size, LogicalServerName, AppName, KillCmd'
+- id: DB-performance-706
+  Topic: PP0009-2-Useful-Kusto-queries
+  Source: TSG-SQL-DB-Performance/content/Predictable-Performance/PP0009-2-Useful-Kusto-queries.md
+  Prompts:
+  - SQL DB SQL system health
+  - SQL DB MonSQLSystemHealth event AppName NodeName
+  - SQL DB investigate SQL system health
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where originalEventTimestamp > ago(1d) and AppName == "{instance_name}" and event == "errorlog_written" and message contains "Error: 3257"
+
+      | summarize count() by ClusterName , NodeName, bin(originalEventTimestamp, 15m)
+
+      | render timechart'
+- id: DB-performance-709
+  Topic: PP0009-2-Useful-Kusto-queries
+  Source: TSG-SQL-DB-Performance/content/Predictable-Performance/PP0009-2-Useful-Kusto-queries.md
+  Prompts:
+  - SQL DB RG manager analysis
+  - SQL DB MonRgManager event AppName NodeName ClusterName
+  - SQL DB investigate RG manager
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonRgManager
+    ExecutedQuery: 'MonRgManager
+
+      | where originalEventTimestamp > ago(1d) and ClusterName == "{tr_name}" and NodeName == "{node_name}"
+
+      | where event == "sql_plb_metrics_reporting" and AppName == "{instance_name}" and metric_name == "InstanceDiskSpaceUsed"
+
+      | project originalEventTimestamp , NodeName , AppName , metric_name , metric_value , metric_frq'
+- id: DB-performance-710
+  Topic: PP0009-2-Useful-Kusto-queries
+  Source: TSG-SQL-DB-Performance/content/Predictable-Performance/PP0009-2-Useful-Kusto-queries.md
+  Prompts:
+  - SQL DB node trace diagnostics
+  - SQL DB MonNodeTraceETW NodeName ClusterName
+  - SQL DB investigate node trace diagnostics
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonNodeTraceETW
+    ExecutedQuery: 'MonNodeTraceETW
+
+      | where PreciseTimeStamp > ago(1d) and ClusterName == "{tr_name}" and NodeName == "{node_name}"
+
+      | where Message contains "client_reporting_metric: metric_name:InstanceDiskSpaceUsed" and Message contains "{instance_name}"
+
+      | extend AppName = extract(''Application Name : "(.*)" CodePackageName'', 1, Message, typeof(string)),
+
+      idsu = extract(''InstanceDiskSpaceUsed, metric_value:(.*), metric_frq'', 1, Message, typeof(int))'
+- id: DB-performance-711
+  Topic: PP0009-2-Useful-Kusto-queries
+  Source: TSG-SQL-DB-Performance/content/Predictable-Performance/PP0009-2-Useful-Kusto-queries.md
+  Prompts:
+  - SQL DB RG load analysis
+  - SQL DB MonRgLoad event NodeName ClusterName metric_name
+  - SQL DB investigate RG load
+  CustomizedParameters:
+  - AppName
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonRgLoad
+    ExecutedQuery: 'MonRgLoad
+
+      | where originalEventTimestamp > ago(1d) and ClusterName == "{tr_name}" and NodeName == "{node_name}"
+
+      | where event == "reporting_win_fab_metric" and application_name == \"{AppName}\" and metric_name == "InstanceDiskSpaceUsed"
+
+      | project originalEventTimestampFrom , NodeName , application_name , metric_name , metric_value'
+- id: DB-performance-712
+  Topic: PP0009-2-Useful-Kusto-queries
+  Source: TSG-SQL-DB-Performance/content/Predictable-Performance/PP0009-2-Useful-Kusto-queries.md
+  Prompts:
+  - SQL DB RG load activity
+  - SQL DB MonRgLoad event NodeName ClusterName drive_name
+  - SQL DB investigate RG load
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonRgLoad
+    ExecutedQuery: 'MonRgLoad
+
+      | where originalEventTimestampFrom > ago(1d) and ClusterName == "{tr_name}" and NodeName == "{node_name}"
+
+      | where event == "drive_usage_report_load"
+
+      | summarize min(drive_usage_percentage), max(drive_usage_percentage), capacity_mb = max(drive_capacity_in_bytes / 1024.0 / 1024)
+
+      by NodeName , drive_name , bin(originalEventTimestampFrom, 15m)
+
+      | where drive_name startswith "S"'
+- id: DB-performance-713
+  Topic: PP0009-2-Useful-Kusto-queries
+  Source: TSG-SQL-DB-Performance/content/Predictable-Performance/PP0009-2-Useful-Kusto-queries.md
+  Prompts:
+  - SQL DB RG manager activity
+  - SQL DB MonRgManager event NodeName ClusterName
+  - SQL DB investigate RG manager
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonRgManager
+    ExecutedQuery: 'MonRgManager
+
+      | where originalEventTimestamp > ago(1d) and ClusterName == "{tr_name}" and NodeName == "{node_name}"
+
+      | where event == "delta_dsu_reporting"
+
+      | summarize disk_usage_mb = max(drive_used_space/1024.0/1024), app_total_usage_mb = max(app_total_used/1024.0/1024)
+
+      by NodeName, buffer_space_mb, TIMESTAMP = bin(originalEventTimestamp, 15m)
+
+      | extend expected_delta_idsu = toint(disk_usage_mb - app_total_usage_mb - buffer_space_mb)
+
+      | join kind=leftouter ('
+- id: DB-performance-714
+  Topic: PP0009-2-Useful-Kusto-queries
+  Source: TSG-SQL-DB-Performance/content/Predictable-Performance/PP0009-2-Useful-Kusto-queries.md
+  Prompts:
+  - SQL DB RG load activity
+  - SQL DB MonRgLoad event NodeName ClusterName metric_name
+  - SQL DB investigate RG load
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonRgLoad
+    ExecutedQuery: 'MonRgLoad
+
+      | where originalEventTimestampFrom > ago(1d) and ClusterName == "{tr_name}" and NodeName == "{node_name}"
+
+      | where event == "reporting_win_fab_metric" and metric_name == "InstanceDiskSpaceUsed" and service_manifest_name == "RgManager"
+
+      | summarize reported_delta_idsu = max(metric_value) by NodeName, TIMESTAMP = bin(originalEventTimestampFrom, 15m)
+
+      ) on TIMESTAMP , NodeName
+
+      | project-away NodeName1, TIMESTAMP1'
+- id: DB-performance-715
+  Topic: PP0009-2-Useful-Kusto-queries
+  Source: TSG-SQL-DB-Performance/content/Predictable-Performance/PP0009-2-Useful-Kusto-queries.md
+  Prompts:
+  - SQL DB RG manager activity
+  - SQL DB MonRgManager event AppName NodeName ClusterName
+  - SQL DB investigate RG manager
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonRgManager
+    ExecutedQuery: 'MonRgManager
+
+      | where originalEventTimestamp > ago(1d) and ClusterName == "{tr_name}" and NodeName == "{node_name}"
+
+      | where event == "sql_plb_metrics_reporting" and metric_name == "InstanceDiskSpaceUsed"
+
+      | summarize max(metric_value) by NodeName, bin(originalEventTimestamp, 30m), AppName
+
+      | summarize app_total_reporting = sum(max_metric_value) by NodeName , bin(originalEventTimestamp, 30m)'
+- id: DB-performance-716
+  Topic: PP0009-2-Useful-Kusto-queries
+  Source: TSG-SQL-DB-Performance/content/Predictable-Performance/PP0009-2-Useful-Kusto-queries.md
+  Prompts:
+  - SQL DB cluster load
+  - SQL DB MonClusterLoad event ClusterName node_name
+  - SQL DB investigate cluster load
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonClusterLoad
+    ExecutedQuery: 'MonClusterLoad
+
+      | where originalEventTimestamp > ago(1d) and ClusterName == "{tr_name}" and node_name == "{node_name}"
+
+      | where metric_name == "InstanceDiskSpaceUsed" and event == "node_loads_report"
+
+      | project originalEventTimestamp , [''load''] , [''capacity''] , violated = ([''load''] > [''capacity''])'
+- id: DB-performance-773
+  Topic: Perf-OnCall---Assist-CRM-with-Tempdb-Troubleshooti
+  Source: TSG-SQL-DB-Performance/content/Predictable-Performance/Perf-OnCall---Assist-CRM-with-Tempdb-Troubleshooti.md
+  Prompts:
+  - SQL DB resource pool stats activity
+  - SQL DB MonResourcePoolStats LogicalServerName AppName
+  - SQL DB investigate resource pool stats
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonResourcePoolStats
+    ExecutedQuery: 'MonResourcePoolStats
+
+      | where TIMESTAMP > ago(1d)
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | summarize by AppName , ClusterName , NodeName
+
+      | extend cmd = strcat("Get-FabricNode -NodeName " , NodeName , " -NodeClusterName " , ClusterName , " | Kill-Process -ProcessName sqlservr.exe -ApplicationNameUri fabric:/Worker.ISO/" , AppName)
+
+      | project cmd'
+- id: DB-performance-774
+  Topic: Query-to-get-ww-status
+  Source: TSG-SQL-DB-Performance/content/Predictable-Performance/Query-to-get-ww-status.md
+  Prompts:
+  - SQL DB root he update informatIOnal event etw table analysi
+  - SQL DB RootHEUpdateInformationalEventEtwTable TIMESTAMP
+  - SQL DB investigate root he update informatIOnal event etw t
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: RootHEUpdateInformationalEventEtwTable
+    ExecutedQuery: 'let mt = 0.65; // mild
+
+      let ht = 0.70; // hot threshold
+
+      let vht = 0.8; // very hot threshold
+
+      let ct = 0.20; // cold threshold
+
+      let vct = 0.15; // very cold threshold
+
+      let ect = 0.10; // extremely cold threshold
+
+      let snapshotTimestamp = ago(1m);
+
+      // Gets clusters that were already upgraded
+
+      let UpgradedCM = materialize(
+
+      cluster("azurecm").database("AzureCM").RootHEUpdateInformationalEventEtwTable
+
+      | where TIMESTAMP > ago(90d) and EventName == "RootHE_NewHERolloutScheduled" and Message contains "171013-0913" and Message contains "RDOSAzureHost" and Message contains "TenantImpact: ''True''" and
+      (Tenant contains "App" or Tenant contains "DDC")
+
+      | parse Message with * "OwnerMetadata: ''" DeploymentId:long *
+
+      | extend Message2 = replace("rn","", Message)
+
+      | extend Message2 = replace(" ","", Message2)
+
+      | extend Message2 = replace("''", """, Message2)
+
+      | extend Message2 = replace(",}", "}", Message2)
+
+      | extend Message2 = replace(" {", "{", Message2)
+
+      | parse kind = regex Message2 with * "NodeAllocationType:"" NodeAllocationType'
+- id: DB-performance-802
+  Topic: QP011-1-Investigating-potential-issues
+  Source: TSG-SQL-DB-Performance/content/QP/QP011-1-Investigating-potential-issues.md
+  Prompts:
+  - SQL DB database metadata status
+  - SQL DB MonDatabaseMetadata id status binary_and
+  - SQL DB investigate database metadata
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDatabaseMetadata
+    ExecutedQuery: 'MonDatabaseMetadata
+
+      | where table_name == "sysschobjs"
+
+      | where binary_and(status, 33554432) == 33554432;
+
+      | where id == <udf_object_id>'
+- id: DB-performance-815
+  Topic: SQP001-Socrates-QP-Pushdown-Overview
+  Source: TSG-SQL-DB-Performance/content/Socrates-QP-Pushdown/SQP001-Socrates-QP-Pushdown-Overview.md
+  Prompts:
+  - SQL DB database metadata analysis
+  - SQL DB MonDatabaseMetadata LogicalServerName objid
+  - SQL DB investigate database metadata
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDatabaseMetadata
+    ExecutedQuery: 'MonDatabaseMetadata
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where logical_db_name =~ ''database''
+
+      | where valclass == 7 and objid in (1034, 1035)
+
+      ) on objid
+
+      | project node_type = iff(objid == 1034, ''primary'', ''secondary'')
+
+      , setting = iff(isempty(value) or binary_and(toint(value), 0x20000000) == 0, ''on'', ''off'')'
+- id: DB-performance-818
+  Topic: SQP001-Socrates-QP-Pushdown-Overview
+  Source: TSG-SQL-DB-Performance/content/Socrates-QP-Pushdown/SQP001-Socrates-QP-Pushdown-Overview.md
+  Prompts:
+  - SQL DB UCS message latency
+  - SQL DB MonSocratesQp event LogicalServerName counter
+  - SQL DB troubleshoot UCS message latency
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSocratesQp
+    ExecutedQuery: 'MonSocratesQp
+
+      | where originalEventTimestamp > ago(1d)
+
+      | where LogicalServerName =~ ''{LogicalServerName}''
+
+      | where event == ''hyperscale_pushdown_stats''
+
+      | where event_hyperscale_pushdown_stats == ''SubrequestCompute''
+
+      | where counter == ''Pages''
+
+      | project originalEventTimestamp, tracked_count
+
+      , percentile_0, percentile_50, percentile_90, percentile_95, percentile_99, percentile_999'
+- id: DB-performance-820
+  Topic: QuantumThiefRingBuffer
+  Source: TSG-SQL-DB-Performance/content/SOS/QuantumThiefRingBuffer.md
+  Prompts:
+  - SQL DB rm ring buffer analysis
+  - SQL DB MonSqlRmRingBuffer AppName quantum_used_ms
+  - SQL DB investigate rm ring buffer
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSqlRmRingBuffer
+    ExecutedQuery: 'MonSqlRmRingBuffer
+
+      | where AppName =~ "{AppName}"
+
+      | where quantum_used_ms > 0
+
+      | order by TIMESTAMP desc'
+- id: DB-performance-827
+  Topic: useful-kusto-queries-for-investigating-test-failures
+  Source: TSG-SQL-DB-Performance/content/SOS/DRI-Work/useful-kusto-queries-for-investigating-test-failures.md
+  Prompts:
+  - SQL DB snapshot status
+  - SQL DB MonCvChangesetSnapshot TIMESTAMP GitCommitId
+  - SQL DB investigate snapshot
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonCvChangesetSnapshot
+    ExecutedQuery: 'MonCvChangesetSnapshot
+
+      | where GitCommitId != ""
+
+      | where datetime("2021-02-08T00:00:00Z") <= TIMESTAMP and TIMESTAMP <= now()
+
+      | sort by TIMESTAMP desc
+
+      | take 5'
+- id: DB-performance-829
+  Topic: useful-kusto-queries-for-investigating-test-failures
+  Source: TSG-SQL-DB-Performance/content/SOS/DRI-Work/useful-kusto-queries-for-investigating-test-failures.md
+  Prompts:
+  - SQL DB useful kusto queries for investigating test failures
+  - SQL DB MonLabRunSessions SessionId VstsNavigationUrl
+  - SQL DB troubleshoot useful kusto queries for investigating
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonLabRunSessions
+    ExecutedQuery: 'MonLabRunSessions
+
+      | where SessionId == ''4afcc551-f7ce-49bd-abd1-97ab6cbacf7d''
+
+      | project VstsNavigationUrl
+
+      | take 1'
+- id: DB-performance-830
+  Topic: Perf-Validation-Before-Feature-Enablement
+  Source: TSG-SQL-DB-Performance/content/SOS/FeatureSwitch/Perf-Validation-Before-Feature-Enablement.md
+  Prompts:
+  - SQL DB lab run sessIOns analysis
+  - SQL DB MonLabRunSessions BuildSessionId
+  - SQL DB investigate lab run sessIOns
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonLabRunSessions
+    ExecutedQuery: 'MonLabRunSessions
+
+      | where BuildSessionId in ("<YOUR_BUILD_SESSION_ID>")
+
+      | extend SqlCloudTestSessionId = SessionId'
+- id: DB-performance-831
+  Topic: Perf-Validation-Before-Feature-Enablement
+  Source: TSG-SQL-DB-Performance/content/SOS/FeatureSwitch/Perf-Validation-Before-Feature-Enablement.md
+  Prompts:
+  - SQL DB lab run results analysis
+  - SQL DB MonLabRunResults BuildSessionId
+  - SQL DB investigate lab run results
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonLabRunResults
+    ExecutedQuery: 'MonLabRunResults
+
+      | where BuildSessionId == "<YOUR_BUILD_SESSION_ID>"'
+- id: DB-performance-832
+  Topic: Perf-Validation-Before-Feature-Enablement
+  Source: TSG-SQL-DB-Performance/content/SOS/FeatureSwitch/Perf-Validation-Before-Feature-Enablement.md
+  Prompts:
+  - SQL DB lab run results analysis
+  - SQL DB MonLabRunResults SessionName BuildSessionId
+  - SQL DB investigate lab run results
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonLabRunResults
+    ExecutedQuery: 'let _Build_Session_Id = "<YOUR_BUILD_SESSION_ID>";
+
+      let My_Perf_Session = MonLabRunResults
+
+      | where BuildSessionId == _Build_Session_Id
+
+      | distinct SessionName;'
+- id: DB-performance-833
+  Topic: sosfeatureswitchmigration
+  Source: TSG-SQL-DB-Performance/content/SOS/FeatureSwitch/sosfeatureswitchmigration.md
+  Prompts:
+  - SQL DB config app type overrides analysis
+  - SQL DB MonConfigAppTypeOverrides settingName section_name
+  - SQL DB investigate config app type overrides
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonConfigAppTypeOverrides
+    ExecutedQuery: 'cluster(clstr).database("sqlazure1").MonConfigAppTypeOverrides
+
+      | where setting_name  == settingName
+
+      | project fabric_cluster_name, application_type_name, service_manifest_name, config_package_name, section_name, setting_name, override_value, description
+
+      | distinct fabric_cluster_name, application_type_name, service_manifest_name, config_package_name, section_name, setting_name, override_value'
+- id: DB-performance-834
+  Topic: sosfeatureswitchmigration
+  Source: TSG-SQL-DB-Performance/content/SOS/FeatureSwitch/sosfeatureswitchmigration.md
+  Prompts:
+  - SQL DB config logical server overrides analysis
+  - SQL DB MonConfigLogicalServerOverrides settingName
+  - SQL DB investigate config logical server overrides
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonConfigLogicalServerOverrides
+    ExecutedQuery: 'cluster(clstr).database("sqlazure1").MonConfigLogicalServerOverrides
+
+      | where Property_Name contains settingName'
+- id: DB-performance-860
+  Topic: EnableSpinlockWaitStatisticFeatureSwitch
+  Source: TSG-SQL-DB-Performance/content/SOS/Scheduler/EnableSpinlockWaitStatisticFeatureSwitch.md
+  Prompts:
+  - SQL DB os spinlock stats activity
+  - SQL DB MonDmOsSpinlockStats AppName name
+  - SQL DB investigate os spinlock stats
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmOsSpinlockStats
+    ExecutedQuery: 'MonDmOsSpinlockStats
+
+      | where TIMESTAMP = datetime(2025-02-27T19:42:13.5946595Z) > ago(30m)
+
+      | where AppName == "{AppName}"
+
+      | summarize sum(delta_spins) by bin(TIMESTAMP, 1min), name
+
+      | render timechart'
+- id: DB-performance-863
+  Topic: Login_Spikes_and_Worker_Exhaustion
+  Source: TSG-SQL-DB-Performance/content/SOS/Scheduler/Login_Spikes_and_Worker_Exhaustion.md
+  Prompts:
+  - SQL DB real time resource stats activity
+  - SQL DB MonDmRealTimeResourceStats database_name
+  - SQL DB investigate real time resource stats
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonDmRealTimeResourceStats
+    ExecutedQuery: 'MonDmRealTimeResourceStats
+
+      | where originalEventTimestamp between (datetime(<start time>)..datetime(<end time>))
+
+      | where LogicalServerName =~ \"{ServerName}\"
+
+      | where database_name =~ \"{DatabaseName}\"
+
+      | summarize max(max_worker_percent)
+
+      by bin(originalEventTimestamp, 5s)
+
+      | render timechart'
+- id: DB-performance-864
+  Topic: Login_Spikes_and_Worker_Exhaustion
+  Source: TSG-SQL-DB-Performance/content/SOS/Scheduler/Login_Spikes_and_Worker_Exhaustion.md
+  Prompts:
+  - SQL DB login failures error 1
+  - SQL DB MonLogin event logical_server_name database_name
+  - SQL DB troubleshoot login failures error 1
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'MonLogin
+
+      | where logical_server_name =~ \"{ServerName}\"
+
+      | where database_name =~ \"{DatabaseName}\"
+
+      | where TIMESTAMP > datetime(<start time>) and TIMESTAMP < datetime(<end time>)
+
+      | extend logical_server_name = tolower(logical_server_name), database_name = tolower(database_name)
+
+      | where event == "process_login_finish"
+
+      | summarize sum_nb_connection_accept_finish= sum(iff(is_success == 1 and (package == "sqlserver" or package == "mpdw"), 1 , 0))
+
+      ,sum_nb_connection_accept_only = toint(0)
+
+      ,sum_nb_connection_accept_failure = toint(0)
+
+      ,sum_nb_connection_accept_failure_finish = sum(iff(is_success == 0 and is_user_error == 1, 1 , 0))
+
+      ,sum_nb_connection_accept_failure_finish_is_system_error = sum(iff(is_success == 0 and is_user_error == 0, 1 , 0))
+
+      by bin(TIMESTAMP, 1m)
+
+      | extend total_succeed = sum_nb_connection_accept_finish
+
+      | extend total_failures_system_error = sum_nb_connection_accept_only + sum_nb_connection_accept_failure + sum_nb_connection_accept_failure_finish_is_system_error
+
+      | extend total_failures_user_error = sum_nb_connection_accept_failure_finish
+
+      | extend total_logins = total_succeed + total_failures_system_error + total_failures_user_error
+
+      | project TIMESTAMP,
+
+      [''Total Logins'']=total_logins,
+
+      [''Failed Logins Due to System Error'']=total_failures_system_error,
+
+      [''Failed Logins Due to User Error'']=total_failures_user_error
+
+      | render timechart'
+- id: DB-performance-865
+  Topic: Login_Spikes_and_Worker_Exhaustion
+  Source: TSG-SQL-DB-Performance/content/SOS/Scheduler/Login_Spikes_and_Worker_Exhaustion.md
+  Prompts:
+  - SQL DB SQL system health
+  - SQL DB MonSQLSystemHealth AppName TIMESTAMP name
+  - SQL DB investigate SQL system health
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where TIMESTAMP > datetime(<start time>) and TIMESTAMP < datetime(<end time>)
+
+      | where AppName =~ "<app name>"
+
+      | where error_id in (10928, 10936)
+
+      | extend error_id_str = tostring(error_id)
+
+      | summarize count()
+
+      by bin(PreciseTimeStamp, 1m), error_id_str
+
+      | render timechart'
+- id: DB-performance-870
+  Topic: PendingTaskQueueImbalanceAlert
+  Source: TSG-SQL-DB-Performance/content/SOS/Scheduler/PendingTaskQueueImbalanceAlert.md
+  Prompts:
+  - SQL DB rm ring buffer analysis
+  - SQL DB MonSqlRmRingBuffer event AppName TIMESTAMP
+  - SQL DB investigate rm ring buffer
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSqlRmRingBuffer
+    ExecutedQuery: 'MonSqlRmRingBuffer
+
+      | where TIMESTAMP > datetime({timestamp from email}) - 1d
+
+      | where AppName =~ {AppName from email}
+
+      | where event == ''scheduler_monitor_non_yielding_ring_buffer_recorded''
+
+      | project TIMESTAMP, scheduler, scheduler_id, worker
+
+      3) Using DScript - From  the output of `!dscript.run "sosschedulersdbg.js;sch={Sched id from email}"` get the
+
+      `Worker` where `Queue Type` == `CURRENT`'
+- id: DB-performance-886
+  Topic: SOS0001-NonYieldAlert
+  Source: TSG-SQL-DB-Performance/content/SOS/TSGs/SOS0001-NonYieldAlert.md
+  Prompts:
+  - SQL DB rm ring buffer activity
+  - SQL DB MonSqlRmRingBuffer event originalEventTimestamp
+  - SQL DB investigate rm ring buffer
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSqlRmRingBuffer
+    ExecutedQuery: 'let SingleCluster = (clstr:string) {
+
+      cluster(clstr).database(''sqlazure1'').MonSqlRmRingBuffer
+
+      | where originalEventTimestamp > ago(24h)
+
+      | where event == "nonyield_copiedstack_ring_buffer_recorded"
+
+      | summarize count() by stack_frames'

@@ -1,0 +1,170 @@
+SqlSkills:
+- id: MI-ASMI-BLOCKING-01
+  Topic: Blocking
+  Source: kusto-queries/Blocking.md
+  Prompts:
+  - MonGovernorWorkloadGroups by whereAppName, WF
+  - MonGovernorWorkloadGroups whereAppName WF
+  - Investigate Blocking
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonGovernorWorkloadGroups
+    ExecutedQuery: 'MonGovernorWorkloadGroups
+
+      | where AppName =~ "{AppName}"//and NodeName == "WF.5"'
+- id: MI-ASMI-BLOCKING-02
+  Topic: Blocking
+  Source: kusto-queries/Blocking.md
+  Prompts:
+  - MonBlockedProcessReportFiltered by whereTIMESTAMP
+  - MonBlockedProcessReportFiltered whereTIMESTAMP
+  - Investigate Blocking
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonBlockedProcessReportFiltered
+    ExecutedQuery: 'MonBlockedProcessReportFiltered
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where TIMESTAMP > ago(1d)'
+- id: MI-ASMI-BLOCKING-03
+  Topic: Deadlock
+  Source: kusto-queries/Deadlock.md
+  Prompts:
+  - MonDeadlockReportsFiltered
+  - Investigate Deadlock
+  - MI performance MonDeadlockReportsFiltered
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDeadlockReportsFiltered
+    ExecutedQuery: 'MonDeadlockReportsFiltered
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where TIMESTAMP > ago(1d)
+
+      | limit 100'
+- id: MI-ASMI-BLOCKING-04
+  Topic: Deadlock
+  Source: kusto-queries/Deadlock.md
+  Prompts:
+  - MonDeadlockReportsFiltered by LogicalServerName, database_name
+  - MonDeadlockReportsFiltered LogicalServerName database_name af42e839 ServerName
+  - Investigate Deadlock
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDeadlockReportsFiltered
+    ExecutedQuery: 'MonDeadlockReportsFiltered
+
+      | where LogicalServerName =~ "{ServerName}"//and database_name =~ "{DatabaseName}"
+
+      | project TIMESTAMP, xml_report_filtered'
+- id: MI-ASMI-BLOCKING-05
+  Topic: Deadlock
+  Source: kusto-queries/Deadlock.md
+  Prompts:
+  - MonDeadlockReportsFiltered by LogicalServerName, af42e839
+  - MonDeadlockReportsFiltered LogicalServerName af42e839 ServerName xml_report_filteredcontains
+  - Investigate Deadlock
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDeadlockReportsFiltered
+    ExecutedQuery: 'MonDeadlockReportsFiltered
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where xml_report_filtered contains''spid="74"''
+
+      | project TIMESTAMP, xml_report_filtered'
+- id: MI-ASMI-BLOCKING-06
+  Topic: Deadlock
+  Source: kusto-queries/Deadlock.md
+  Prompts:
+  - MonDeadlockReportsFiltered by LogicalServerName, af42e839
+  - MonDeadlockReportsFiltered LogicalServerName af42e839 ServerName xml_report_filteredcontains
+  - Investigate Deadlock
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDeadlockReportsFiltered
+    ExecutedQuery: 'MonDeadlockReportsFiltered
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where xml_report_filtered contains"spid=\"186\""
+
+      | project TIMESTAMP, xml_report_filtered'
+- id: MI-ASMI-BLOCKING-07
+  Topic: Deadlock
+  Source: kusto-queries/Deadlock.md
+  Prompts:
+  - MonEventLog for database xml deadlock report
+  - MonEventLog LogicalServerName event ServerName database_xml_deadlock_report
+  - Investigate Deadlock
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonEventLog
+    ExecutedQuery: 'MonEventLog
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where event== "database_xml_deadlock_report"'
+- id: MI-ASMI-BLOCKING-08
+  Topic: Investigation memory incidents
+  Source: kusto-queries/Investigation memory incidents.md
+  Prompts:
+  - MonBlockedProcessReportFiltered by LogicalServerName, logical_database_name
+  - MonBlockedProcessReportFiltered LogicalServerName logical_database_name string anystr
+  - Investigate Investigation memory incidents
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonBlockedProcessReportFiltered
+    ExecutedQuery: 'MonBlockedProcessReportFiltered
+
+      | where LogicalServerName =~ "{ServerName}" and logical_database_name =~ "{DatabaseName}"
+
+      | where TIMESTAMP > ago(1d)
+
+      | parse blocked_process_filtered with anystr:string"<blocking-process>" blocking:string "" ExcType:string
+
+      | parse blocked_process_filtered with anystr:string"<blocked-process>" blocked:string "/>" ExcType:string
+
+      | parse blocked with anystr:string"<frame queryhash=\""query_hash:string"\" queryplanhash=\""query_plan_hash:string"\""anystr:string
+
+      | parse blocking with anystr:string"spid=\""blocking_spid:string"\""anystr:string"xactid=\""blocking_xactid:string"\""anystr:string'
+- id: MI-ASMI-BLOCKING-09
+  Topic: Investigation memory incidents
+  Source: kusto-queries/Investigation memory incidents.md
+  Prompts:
+  - MonBlockedProcessReportFiltered by database_name, duration
+  - MonBlockedProcessReportFiltered database_name duration object_id index_id
+  - Investigate Investigation memory incidents
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonBlockedProcessReportFiltered
+    ExecutedQuery: 'MonBlockedProcessReportFiltered
+
+      | where TIMESTAMP > ago(1d)
+
+      | where AppName =~ "{AppName}"
+
+      | where NodeName == "{NodeName}"
+
+      | project TIMESTAMP, duration, database_name, object_id, index_id, lock_mode, transaction_id, resource_owner_type, blocked_process_filtered'

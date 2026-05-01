@@ -1,0 +1,735 @@
+SqlSkills:
+- id: MI-out-of-disk-1
+  Topic: 2_-Managed-Instance-log-growth-in-danger-of-fillin
+  Source: content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/2.-Managed-Instance-log-growth-in-danger-of-fillin.ipynb
+  Prompts:
+  - MI 2. Managed Instance log growth in danger of fillin
+  - Managed Instance 2. Managed Instance log growth in danger of fillin
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmIoVirtualFileStats
+    ExecutedQuery: |-
+      let DatabaseSizes = MonDmIoVirtualFileStats
+      | where FilterFunc (TIMESTAMP, ago(FileSizeQueryTimeWindow), true, AppTypeName, ClusterName, ClusterNameParam, NodeName)
+      | where type_desc == 'ROWS'
+      | summarize arg_max(TIMESTAMP, spaceused_mb, size_on_disk_bytes ) by LogicalServerName, db_name, file_id
+      | summarize sum(spaceused_mb), sum(size_on_disk_bytes ) by LogicalServerName, db_name
+      | extend DatabaseSizeUsedMB = sum_spaceused_mb, DatabaseSizeOnDiskMB = sum_size_on_disk_bytes / 1024. / 1024.
+      | project LogicalServerName, DatabaseNameGuid = db_name, DatabaseSizeUsedMB, DatabaseSizeOnDiskMB;
+      // Log sizes
+- id: MI-out-of-disk-2
+  Topic: 2_-Managed-Instance-log-growth-in-danger-of-fillin
+  Source: content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/2.-Managed-Instance-log-growth-in-danger-of-fillin.ipynb
+  Prompts:
+  - MI 2. Managed Instance log growth in danger of fillin
+  - Managed Instance 2. Managed Instance log growth in danger of fillin
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmIoVirtualFileStats
+    ExecutedQuery: "let LogSizes = MonDmIoVirtualFileStats\n| where FilterFunc (TIMESTAMP, ago(FileSizeQueryTimeWindow), true, AppTypeName, ClusterName, ClusterNameParam, NodeName)\n| where type_desc ==\
+      \ 'LOG'\n| summarize arg_max(TIMESTAMP, spaceused_mb, size_on_disk_bytes ) by LogicalServerName, db_name, file_id\n| summarize sum(spaceused_mb), sum(size_on_disk_bytes ) by LogicalServerName, db_name\n\
+      | extend LogSizeUsedMB = sum_spaceused_mb, LogSizeOnDiskMB = sum_size_on_disk_bytes / 1024. / 1024.\n| project LogicalServerName, DatabaseNameGuid = db_name, LogSizeUsedMB, LogSizeOnDiskMB;\n// SVM\
+      \ Managed Servers used and reserved storage space  \nlet InstanceUsedSpaceAndReservedSpace = MonManagedInstanceResourceStats\n| where FilterFunc (TIMESTAMP, ago(QueryTimeWindow), true, AppTypeName,\
+      \ ClusterName, ClusterNameParam, NodeName)\n| summarize arg_max(TIMESTAMP, storage_space_used_mb, reserved_storage_mb) by LogicalServerName\n| project LogicalServerName, InstanceUsedSpaceMB=storage_space_used_mb,\
+      \ InstanceReservedSpaceMB=reserved_storage_mb;\n// SVMs which did not change SVM size in the last SloChangeQueryTimeWindow hours"
+- id: MI-out-of-disk-3
+  Topic: SOPCL00193-CloudLifter-High-disk-usage-detection
+  Source: content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/SOPCL00193-CloudLifter-High-disk-usage-detection.ipynb
+  Prompts:
+  - MI SOPCL00193 CloudLifter High disk usage detection
+  - Managed Instance SOPCL00193 CloudLifter High disk usage detection
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmIoVirtualFileStats
+    ExecutedQuery: |-
+      MonDmIoVirtualFileStats
+      | where TIMESTAMP > ago(1h)
+      | where ClusterName == "{ClusterName}" //ex. tr7310.eastus1-a.worker.database.windows.net
+      | where NodeName == "{NodeName}" //ex. DB4C.2
+      | where db_name =~ "{DatabaseName}"
+      | where type_desc == "ROWS"
+      | project TIMESTAMP, file_id, max_size_mb, size_on_disk_mb = size_on_disk_bytes/1024./1024., spaceused_mb
+- id: MI-out-of-disk-4
+  Topic: TSGCL0156-SVM-Network-Throughput-Saturation
+  Source: content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/TSGCL0156-SVM-Network-Throughput-Saturation.ipynb
+  Prompts:
+  - MI TSGCL0156 SVM Network Throughput Saturation
+  - Managed Instance TSGCL0156 SVM Network Throughput Saturation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedInstanceResourceStats
+    ExecutedQuery: "let startTime = datetime(2020-10-09 02:10:13);  \nlet endTime = datetime(2020-10-15 03:12:11);  \nlet srvrName = 'pccsql-use2-prod-w26-cli0010';  \nlet clusName = 'tr5433.eastus2-a.worker.database.windows.net';\
+      \  \nMonManagedInstanceResourceStats\n| where TIMESTAMP>=startTime and TIMESTAMP<=endTime\n| where LogicalServerName == srvrName\n| project TIMESTAMP, LogicalServerName, ClusterName, NodeName\n| summarize\
+      \ by bin(TIMESTAMP,5m), LogicalServerName, ClusterName, NodeName\n| join kind=inner (  \nMonCounterOneMinute\n| where TIMESTAMP>=startTime and TIMESTAMP<=endTime\n| where ClusterName == clusName\n\
+      | where CounterName startswith '[Network](file://Network) Interface(Microsoft Hyper-V' and (CounterName endswith '[Bytes](file://Bytes) Received/sec' or CounterName endswith '[Bytes](file://Bytes)\
+      \ Sent/sec')\n| project TIMESTAMP, ClusterName, NodeName, Cnt = iif (CounterName endswith '[Bytes](file://Bytes) Received/sec', 'Received', 'Sent'), round(MBps = CounterValue / 1024. / 1024., 2)\n\
+      | summarize avg(MBps), max(MBps) by bin(TIMESTAMP,5m), ClusterName, NodeName, Cnt  \n) on TIMESTAMP, ClusterName, NodeName\n| parse NodeName with 'DB' core_count:int 'C.' *\n| extend core_count=iif(isempty(\
+      \ core_count), 80, core_count)\n| extend netLimitMBps = 62.5 * core_count\n| extend avg_netPerc = 1. * avg_MBps / netLimitMBps, max_netPerc = 1. * max_MBps / netLimitMBps\n| project TIMESTAMP, LogicalServerName,\
+      \ NodeName, Cnt, round(avg_MBps,2), round(max_MBps,2), netLimitMBps, round(avg_netPerc,2), round(max_netPerc,2)"
+- id: MI-out-of-disk-5
+  Topic: TSGCL0156-SVM-Network-Throughput-Saturation
+  Source: content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/TSGCL0156-SVM-Network-Throughput-Saturation.ipynb
+  Prompts:
+  - MI TSGCL0156 SVM Network Throughput Saturation
+  - Managed Instance TSGCL0156 SVM Network Throughput Saturation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmIoVirtualFileStats
+    ExecutedQuery: |-
+      MonDmIoVirtualFileStats
+      | where TIMESTAMP > ago(6h)
+      | where LogicalServerName == "{ServerName}"
+      | where type_desc == 'ROWS'
+      | summarize arg_max(TIMESTAMP, spaceused_mb, size_on_disk_bytes ) by LogicalServerName, db_name, file_id
+      | summarize sum(spaceused_mb), sum(size_on_disk_bytes ) by LogicalServerName, db_name
+      | extend DatabaseSizeUsedMB = sum_spaceused_mb, DatabaseSizeOnDiskMB = sum_size_on_disk_bytes / 1024. / 1024.
+      | project LogicalServerName, DatabaseNameGuid = db_name, DatabaseSizeUsedMB, DatabaseSizeOnDiskMB
+- id: MI-out-of-disk-6
+  Topic: TSGCL0156-SVM-Network-Throughput-Saturation
+  Source: content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/TSGCL0156-SVM-Network-Throughput-Saturation.ipynb
+  Prompts:
+  - MI TSGCL0156 SVM Network Throughput Saturation
+  - Managed Instance TSGCL0156 SVM Network Throughput Saturation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmIoVirtualFileStats
+    ExecutedQuery: |-
+      MonDmIoVirtualFileStats
+      | where TIMESTAMP > ago(6h)
+      | where LogicalServerName == "{ServerName}"
+      | where type_desc == 'LOG'
+      | summarize arg_max(TIMESTAMP, spaceused_mb, size_on_disk_bytes ) by LogicalServerName, db_name, file_id
+      | summarize sum(spaceused_mb), sum(size_on_disk_bytes ) by LogicalServerName, db_name
+      | extend LogSizeUsedMB = sum_spaceused_mb, LogSizeOnDiskMB = sum_size_on_disk_bytes / 1024. / 1024.
+      | project LogicalServerName, DatabaseNameGuid = db_name, LogSizeUsedMB, LogSizeOnDiskMB
+- id: MI-out-of-disk-7
+  Topic: TSGCL0156-SVM-Network-Throughput-Saturation
+  Source: content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/TSGCL0156-SVM-Network-Throughput-Saturation.ipynb
+  Prompts:
+  - MI TSGCL0156 SVM Network Throughput Saturation
+  - Managed Instance TSGCL0156 SVM Network Throughput Saturation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedInstanceResourceStats
+    ExecutedQuery: |-
+      MonManagedInstanceResourceStats
+      | where TIMESTAMP between (todatetime("{StartTime}")..todatetime("{EndTime}"))
+      | where LogicalServerName=="{ServerName}"
+      | project TIMESTAMP, LogicalServerName, InstanceUsedSpaceMB=storage_space_used_mb, InstanceReservedSpaceMB=reserved_storage_mb
+      | render timechart
+- id: MI-out-of-disk-8
+  Topic: TSGCL0271-Tempdb-file-layout-customization-issues
+  Source: content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/TSGCL0271-Tempdb-file-layout-customization-issues.ipynb
+  Prompts:
+  - MI TSGCL0271 Tempdb file layout customization issues
+  - Managed Instance TSGCL0271 Tempdb file layout customization issues
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagementOperations
+    ExecutedQuery: "let managedServerName = \"Enter_managed_server_name_here\";\r\nMonManagementOperations\n| where operation_type == \"AlterFileTempdb\"\n| where operation_parameters has managedServerName\n\
+      | project PreciseTimeStamp, ClusterName, event, request_id, operation_type, operation_parameters, operation_result"
+- id: MI-out-of-disk-9
+  Topic: TSG-Increase-SQL-MI-reserved-storage-on-the-fly
+  Source: content/sql_cloud_lifter_notebook/TSG-Increase-SQL-MI-reserved-storage-on-the-fly.md
+  Prompts:
+  - MI TSG Increase SQL MI reserved storage on the fly
+  - Managed Instance TSG Increase SQL MI reserved storage on the fly
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedInstanceResourceStats
+    ExecutedQuery: |-
+      MonManagedInstanceResourceStats
+      | where TIMESTAMP > ago(6h)
+      | where LogicalServerName == '{LogicalServerName}'
+      | project TIMESTAMP, storage_space_used_mb, reserved_storage_mb
+      | render timechart
+- id: MI-out-of-disk-10
+  Topic: TSG-Increase-SQL-MI-reserved-storage-on-the-fly
+  Source: content/sql_cloud_lifter_notebook/TSG-Increase-SQL-MI-reserved-storage-on-the-fly.md
+  Prompts:
+  - MI TSG Increase SQL MI reserved storage on the fly
+  - Managed Instance TSG Increase SQL MI reserved storage on the fly
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedInstanceResourceStats
+    ExecutedQuery: |-
+      MonManagedInstanceResourceStats
+      | where TIMESTAMP > ago(1h)
+      | where LogicalServerName == '{LogicalServerName}'
+      | project TIMESTAMP, storage_space_used_mb, reserved_storage_mb
+      | render timechart
+- id: MI-out-of-disk-11
+  Topic: TSG-PLATVLDT-ErrorNode-DiskWatchdog-FullDisk
+  Source: content/sql_cloud_lifter_notebook/TSG-PLATVLDT-ErrorNode-DiskWatchdog-FullDisk.md
+  Prompts:
+  - MI TSG PLATVLDT ErrorNode DiskWatchdog FullDisk
+  - Managed Instance TSG PLATVLDT ErrorNode DiskWatchdog FullDisk
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: |-
+      MonSqlRgHistory
+      | where TIMESTAMP between (startTime .. endTime)
+      | where ClusterName =~ clusterName
+      | where NodeName in (nodeNames)
+      | where event == 'aggregated_virtual_files_io_history'
+      | where file_path contains 'tempdb' and (file_path endswith '.ndf' or file_path endswith '.mdf')
+      | summarize
+- id: MI-out-of-disk-12
+  Topic: Rebuild-or-Create-Index-fails-with-Could-not-allocate-a-new-page-for-database
+  Source: Performance-and-Query-Execution/Index-maintenance-and-statistics/Rebuild-or-Create-Index-fails-with-Could-not-allocate-a-new-page-for-database.md
+  Prompts:
+  - MI Rebuild or Create Index fails with Could not allocate a new page for database
+  - Managed Instance Rebuild or Create Index fails with Could not allocate a new page for database
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmIoVirtualFileStats
+    ExecutedQuery: |-
+      MonDmIoVirtualFileStats
+      | where LogicalServerName =~ "{ServerName}"
+      | where db_name =~ "{DatabaseName}"
+      | where is_primary_replica == 1
+      | where type_desc = 'ROWS'
+      | project TIMESTAMP, type_desc,spaceused_mb, max_size_mb, size_on_disk_mb =(size_on_disk_bytes/1024/1024), file_id
+- id: MI-out-of-disk-13
+  Topic: Backup-failing-due-to-Log-full-with-AVAILABILITY_REPLICA
+  Source: Performance-and-Query-Execution/Managing-space-for-databases-and-pools/Backup-failing-due-to-Log-full-with-AVAILABILITY_REPLICA.md
+  Prompts:
+  - MI Backup failing due to Log full with AVAILABILITY_REPLICA
+  - Managed Instance Backup failing due to Log full with AVAILABILITY_REPLICA
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedInstanceResourceStats
+    ExecutedQuery: |-
+      MonManagedInstanceResourceStats
+      | where TIMESTAMP > ago(1h)
+      | where LogicalServerName =~ "<MI-Name>"
+      | project TIMESTAMP, reserved_storage_mb, storage_space_used_mb, percent_used = round(storage_space_used_mb / reserved_storage_mb * 100, 2)
+- id: MI-out-of-disk-14
+  Topic: Error-42019-when-adding-a-new-datafile
+  Source: Performance-and-Query-Execution/Managing-space-for-databases-and-pools/Error-42019-when-adding-a-new-datafile.md
+  Prompts:
+  - MI Error 42019 when adding a new datafile
+  - Managed Instance Error 42019 when adding a new datafile
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmIoVirtualFileStats
+    ExecutedQuery: |-
+      MonDmIoVirtualFileStats
+      | where LogicalServerName =~ "{ServerName}"
+      | where (type_desc == 'ROWS' or type_desc == 'LOG')
+      | where TIMESTAMP > ago(1d)
+      | extend size_on_disk_GB= size_on_disk_bytes/1024.0/1024/1024, spaceused_GB = spaceused_mb / 1024.0, max_size_GB = max_size_mb / 1024.0
+      | extend unused_space_GB=(size_on_disk_GB-spaceused_GB)
+      | summarize max(spaceused_GB), max(max_size_GB), max(size_on_disk_GB), max(unused_space_GB) by bin(TIMESTAMP, 1h), db_name
+      //| render timechart
+- id: MI-out-of-disk-15
+  Topic: MI-storage-above-100
+  Source: Performance-and-Query-Execution/Managing-space-for-databases-and-pools/MI-storage-above-100%.md
+  Prompts:
+  - MI MI storage above 100%
+  - Managed Instance MI storage above 100%
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedInstanceResourceStats
+    ExecutedQuery: |-
+      MonManagedInstanceResourceStats
+      | where TIMESTAMP > ago(3d)
+      | where LogicalServerName =~ "{ServerName}"
+      | project TIMESTAMP, reserved_storage_mb, storage_space_used_mb
+      | render timechart
+- id: MI-out-of-disk-16
+  Topic: Shrink-Database-that-have-ColumnStore-Indexes
+  Source: Performance-and-Query-Execution/Managing-space-for-databases-and-pools/Shrink-Database-that-have-ColumnStore-Indexes.md
+  Prompts:
+  - MI Shrink Database that have ColumnStore Indexes
+  - Managed Instance Shrink Database that have ColumnStore Indexes
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlShrinkInfo
+    ExecutedQuery: |-
+      MonSqlShrinkInfo
+      | where TIMESTAMP >= ago(3d)
+      | where LogicalServerName contains {MIName}
+      | where isnotempty(failure_reason) or status  == "shrink_fail"
+      | project TIMESTAMP, LogicalServerName, AppName, database_id, file_id, shrink_id, tag, status, target_mb = (toint(target_size)/128), file_size_mb = (toint(file_size)/128), diffingb = ((toint(file_size)-toint(target_size))*8/1024/1024), percent_complete, failure_reason, code_package_version
+      | order by TIMESTAMP asc
+- id: MI-out-of-disk-17
+  Topic: Shrink-Database-that-have-ColumnStore-Indexes
+  Source: Performance-and-Query-Execution/Managing-space-for-databases-and-pools/Shrink-Database-that-have-ColumnStore-Indexes.md
+  Prompts:
+  - MI Shrink Database that have ColumnStore Indexes
+  - Managed Instance Shrink Database that have ColumnStore Indexes
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlShrinkInfo
+    ExecutedQuery: |-
+      MonSqlShrinkInfo
+      | where TIMESTAMP >= ago(3d)
+      | where LogicalServerName contains {MIName}
+      | where status contains "shrink_last_pages_columnstore"
+      | project TIMESTAMP, LogicalServerName, AppName, database_id, file_id, shrink_id, tag, status, target_mb = (toint(target_size)/128), file_size_mb = (toint(file_size)/128), diffingb = ((toint(file_size)-toint(target_size))*8/1024/1024), percent_complete, failure_reason, code_package_version
+      | order by TIMESTAMP asc
+- id: MI-out-of-disk-18
+  Topic: Shrink-Database-that-have-ColumnStore-Indexes
+  Source: Performance-and-Query-Execution/Managing-space-for-databases-and-pools/Shrink-Database-that-have-ColumnStore-Indexes.md
+  Prompts:
+  - MI Shrink Database that have ColumnStore Indexes
+  - Managed Instance Shrink Database that have ColumnStore Indexes
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: |-
+      MonSQLSystemHealth
+      | where TIMESTAMP >= {StartTime} and TIMESTAMP <= {EndTime}
+      | where LogicalServerName == {MIName}
+      | where message contains "Page information during shrink" and message contains "IsColumnstore 1"
+      | project TIMESTAMP, message
+- id: MI-out-of-disk-19
+  Topic: Shrink-fails-with-error-3140-Could-not-adjust-the-space-allocation-for-file
+  Source: Performance-and-Query-Execution/Managing-space-for-databases-and-pools/Shrink-fails-with-error-3140-Could-not-adjust-the-space-allocation-for-file.md
+  Prompts:
+  - MI Shrink fails with error 3140 Could not adjust the space allocation for file
+  - Managed Instance Shrink fails with error 3140 Could not adjust the space allocation for file
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonBackup
+    ExecutedQuery: |-
+      MonBackup
+      | where LogicalServerName =~ "{ServerName}"
+      | where logical_database_id =~ 'd8a6a7f6-8ab1-4fe0-9012-41089a3010ff'
+      | where TIMESTAMP > ago(7d) and isnotempty(backup_set_guid)
+      | where backup_type == 'Diff' //change this to Full if needed
+      | project backup_start_date, backup_end_date, backup_type, process_id, backup_set_guid,request_id,
+- id: MI-out-of-disk-20
+  Topic: Shrink-not-working-on-column-store-tables-with-LOBs
+  Source: Performance-and-Query-Execution/Managing-space-for-databases-and-pools/Shrink-not-working-on-column-store-tables-with-LOBs.md
+  Prompts:
+  - MI Shrink not working on column store tables with LOBs
+  - Managed Instance Shrink not working on column store tables with LOBs
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: |-
+      MonSQLSystemHealth
+      | where LogicalServerName =~ "{ServerName}"
+      | where TIMESTAMP > datetime('2022-11-01 00:00:00') and TIMESTAMP <  datetime('2022-11-09 00:00:00')
+      | where message !contains"Federated Auth"
+      | where message !contains"Login failed for user"
+      | where message contains "IsColumnStore 1"
+      | where message contains "shrink" or message contains "shrunk" or message contains "DBCC SHRINKFILE" or message contains "DBCC SHRINKDATABASE"
+      | where message contains "DbId: 26"
+      | project PreciseTimeStamp, NodeName, event, message
+- id: MI-out-of-disk-21
+  Topic: Tempdb-size-increase-after-failover-on-Business-Critical
+  Source: Performance-and-Query-Execution/Managing-space-for-databases-and-pools/Tempdb-size-increase-after-failover-on-Business-Critical.md
+  Prompts:
+  - MI Tempdb size increase after failover on Business Critical
+  - Managed Instance Tempdb size increase after failover on Business Critical
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: |-
+      MonLogin
+      | where TIMESTAMP > datetime(2024-01-09 06:00:39.8951914) and TIMESTAMP < datetime(2024-01-09 20:00:39.8951914)
+      | where LogicalServerName =~ "{ServerName}" or logical_server_name =~ "{ServerName}"
+      | where event == "process_login_finish" and package == "xdbgateway" and event == "process_login_finish"
+      | extend bit21 = toint(login_flags / 2097152) % 2
+      | extend appIntentReadOnly = bit21
+      //| summarize count() by bin(originalEventTimestamp, time(1h)), is_success, instance_port, appIntentReadOnly, NodeName
+      | project originalEventTimestamp, appIntentReadOnly, is_success, instance_port, instance_name, application_name
+      | where appIntentReadOnly == 1
+      | sort by originalEventTimestamp desc
+- id: MI-out-of-disk-22
+  Topic: Tempdb-size-increase-after-failover-on-Business-Critical
+  Source: Performance-and-Query-Execution/Managing-space-for-databases-and-pools/Tempdb-size-increase-after-failover-on-Business-Critical.md
+  Prompts:
+  - MI Tempdb size increase after failover on Business Critical
+  - Managed Instance Tempdb size increase after failover on Business Critical
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: |-
+      let FileSizes = materialize(MonSqlRgHistory
+      | where  (AppName =~  "appname" and ((originalEventTimestamp between (datetime(2024-01-05 07:35:04)..datetime(2024-01-10 10:04:19)) and ClusterName =~ 'clustername' and NodeName =~ 'NodeName')
+- id: MI-out-of-disk-23
+  Topic: Tempdb-size-increase-after-failover-on-Business-Critical
+  Source: Performance-and-Query-Execution/Managing-space-for-databases-and-pools/Tempdb-size-increase-after-failover-on-Business-Critical.md
+  Prompts:
+  - MI Tempdb size increase after failover on Business Critical
+  - Managed Instance Tempdb size increase after failover on Business Critical
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmTempDbFileSpaceUsage
+    ExecutedQuery: |-
+      MonDmTempDbFileSpaceUsage
+      | where  (AppName =~  "appname" and ((PreciseTimeStamp between (datetime(2024-01-07 07:35:04)..datetime(2024-01-10 10:04:19)) and ClusterName =~ 'clustername' and NodeName =~ 'nodename')
+- id: MI-out-of-disk-24
+  Topic: Transaction-log-usage-increases-during-failover
+  Source: Performance-and-Query-Execution/Managing-space-for-databases-and-pools/Transaction-log-usage-increases-during-failover.md
+  Prompts:
+  - MI Transaction log usage increases during failover
+  - Managed Instance Transaction log usage increases during failover
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmIoVirtualFileStats
+    ExecutedQuery: |-
+      MonDmIoVirtualFileStats
+      | where TIMESTAMP  between (datetime(2023-03-07 12:00:00)..datetime(2023-03-07 20:00:00))
+      | where db_name == '{databaseName}'
+      | where LogicalServerName== "{ServerName}"
+      | where type_desc== "LOG"
+      | project TIMESTAMP, db_name, spaceused= spaceused_mb/ (1024.0)
+      | render timechart
+- id: MI-out-of-disk-25
+  Topic: OnePager_-Error-42019-when-adding-a-new-datafile
+  Source: Performance-and-Query-Execution/Managing-space-for-databases-and-pools/[OnePager]-Error-42019-when-adding-a-new-datafile.md
+  Prompts:
+  - MI [OnePager] Error 42019 when adding a new datafile
+  - Managed Instance [OnePager] Error 42019 when adding a new datafile
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmIoVirtualFileStats
+    ExecutedQuery: |-
+      MonDmIoVirtualFileStats
+      | where LogicalServerName =~ "{ServerName}"
+      | where (type_desc == 'ROWS' or type_desc == 'LOG')
+      | where TIMESTAMP > ago(1d)
+      | extend size_on_disk_GB= size_on_disk_bytes/1024.0/1024/1024, spaceused_GB = spaceused_mb / 1024.0, max_size_GB = max_size_mb / 1024.0
+      | extend unused_space_GB=(size_on_disk_GB-spaceused_GB)
+      | summarize max(spaceused_GB), max(max_size_GB), max(size_on_disk_GB), max(unused_space_GB) by bin(TIMESTAMP, 1h), db_name
+- id: MI-out-of-disk-26
+  Topic: OnePager_-Transaction-log-usage-increases-during-failover
+  Source: Performance-and-Query-Execution/Managing-space-for-databases-and-pools/[OnePager]-Transaction-log-usage-increases-during-failover.md
+  Prompts:
+  - MI [OnePager] Transaction log usage increases during failover
+  - Managed Instance [OnePager] Transaction log usage increases during failover
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmIoVirtualFileStats
+    ExecutedQuery: |-
+      MonDmIoVirtualFileStats
+      | where TIMESTAMP between (datetime(2023-03-07 12:00:00)..datetime(2023-03-07 20:00:00))
+      | where db_name == '{databaseName}'
+      | where LogicalServerName== '{ServerName}'
+      | where type_desc== 'LOG'
+      | project TIMESTAMP, db_name, spaceused= spaceused_mb/ (1024.0)
+      | render timechart
+- id: MI-out-of-disk-27
+  Topic: Check-IO-throttling
+  Source: Performance-and-Query-Execution/Reference/Check-IO-throttling.md
+  Prompts:
+  - MI Check IO throttling
+  - Managed Instance Check IO throttling
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: |-
+      MonSqlRgHistory
+      | where TIMESTAMP >= startTime
+      | where TIMESTAMP <= endTime
+      | where LogicalServerName == srvrName
+      | where AppTypeName == 'Worker.CL.WCOW.SQL22'
+      | where event == 'aggregated_virtual_files_io_history'
+      | where physical_database_name =~ physical_db_name
+      | where physical_database_name !in ('managed_model','master','model','model_msdb','model_replicatedmaster','msdb','replicatedmaster','tempdb')
+      | where datetime_diff('second', end_aggregated_sample, start_aggregated_sample) >= 1
+      | where isnotempty(physical_database_name)
+      | where file_path endswith "mdf"
+      | extend key = strcat(physical_database_name, "_", file_id, ".", iif(type_desc == 'LOG', 'ldf', iif(file_id == 1, 'mdf', 'ndf')))
+      | extend LogicalServerName, NodeName, key,
+- id: MI-out-of-disk-28
+  Topic: General-Troubleshooting-of-space-used-on-managed-instance
+  Source: Performance-and-Query-Execution/Reference/General-Troubleshooting-of-space-used-on-managed-instance.md
+  Prompts:
+  - MI General Troubleshooting of space used on managed instance
+  - Managed Instance General Troubleshooting of space used on managed instance
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedInstanceResourceStats
+    ExecutedQuery: |-
+      MonManagedInstanceResourceStats
+      | where TIMESTAMP > ago(3d)
+      | where LogicalServerName =~ "{ServerName}"
+      | project TIMESTAMP, storage_space_used_mb, reserved_storage_mb
+      | render timechart
+- id: MI-out-of-disk-29
+  Topic: How-to-check-shrink-progress
+  Source: Performance-and-Query-Execution/Reference/How-to-check-shrink-progress.md
+  Prompts:
+  - MI How to check shrink progress
+  - Managed Instance How to check shrink progress
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmIoVirtualFileStats
+    ExecutedQuery: |-
+      MonDmIoVirtualFileStats
+      | where  (originalEventTimestamp between (startdate..enddate))
+      | where LogicalServerName == MIName
+      | extend file_size_mb = size_on_disk_bytes / 1024. / 1024
+      | extend file_size_gb = size_on_disk_bytes / 1024. / 1024 / 1024, spaceused_gb = spaceused_mb / 1024.
+      | extend file_tier =
+- id: MI-out-of-disk-30
+  Topic: How-to-check-shrink-progress
+  Source: Performance-and-Query-Execution/Reference/How-to-check-shrink-progress.md
+  Prompts:
+  - MI How to check shrink progress
+  - Managed Instance How to check shrink progress
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: |-
+      MonAnalyticsDBSnapshot
+      | where  (PreciseTimeStamp between (startdate..enddate))
+      | where logical_server_name == MIName
+      | summarize arg_max(PreciseTimeStamp, logical_database_name) by logical_database_id
+- id: MI-out-of-disk-31
+  Topic: How-to-shrink-a-transaction-log
+  Source: Performance-and-Query-Execution/Reference/How-to-shrink-a-transaction-log.md
+  Prompts:
+  - MI How to shrink a transaction log
+  - Managed Instance How to shrink a transaction log
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmIoVirtualFileStats
+    ExecutedQuery: |-
+      MonDmIoVirtualFileStats
+      | where LogicalServerName =~ "{ServerName}" //server name
+      | where db_name =~ "{DatabaseName}" //on MI the database name is equal to the physical_database_name
+      | where type_desc == "LOG" //looking only for data only
+      | where is_primary_replica == 1
+      | summarize sum(spaceused_mb), sum(size_on_disk_mb =(size_on_disk_bytes/1024/1024)) by TIMESTAMP
+      | render timechart
+- id: MI-out-of-disk-32
+  Topic: Shrink-with-low-priority
+  Source: Performance-and-Query-Execution/Reference/Shrink-with-low-priority.md
+  Prompts:
+  - MI Shrink with low priority
+  - Managed Instance Shrink with low priority
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlShrinkInfo
+    ExecutedQuery: |-
+      MonSqlShrinkInfo
+      | where AppName contains {AppName}
+      | where TIMESTAMP >= startTime and TIMESTAMP <= endTime
+      | where event contains "shrink_file_telemetry"
+      | where tag contains "shrink_failure_reasons"
+      | where failure_reason contains "shrink timeout waiting to acquire schema modify lock in WLP mode"
+- id: MI-out-of-disk-33
+  Topic: Shrink-with-low-priority
+  Source: Performance-and-Query-Execution/Reference/Shrink-with-low-priority.md
+  Prompts:
+  - MI Shrink with low priority
+  - Managed Instance Shrink with low priority
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlShrinkInfo
+    ExecutedQuery: |-
+      MonSqlShrinkInfo
+      | where AppName contains {AppName}
+      | where TIMESTAMP >= startTime and TIMESTAMP <= endTime
+      | where event contains "shrink_file_telemetry"
+      | where status contains "shrink_wlp_wait_time"
+- id: MI-out-of-disk-34
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedInstanceResourceStats
+    ExecutedQuery: |-
+      MonManagedInstanceResourceStats
+      | where LogicalServerName =~ ServerName
+      | where TIMESTAMP > ago(daysAgo)
+      | summarize CPU = avg(avg_cpu_percent) by bin(TIMESTAMP, 5m);
+- id: MI-out-of-disk-35
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedInstanceResourceStats
+    ExecutedQuery: |-
+      MonManagedInstanceResourceStats
+      | where LogicalServerName =~ ServerName
+      | where TIMESTAMP > ago(daysAgo)
+      | summarize logWriteLimit = max(iff ((virtual_core_count) * 4 < 48, virtual_core_count * 4, 48)), iops_limit = max(virtual_core_count) * 1375 by bin(TIMESTAMP, 30m);
+- id: MI-out-of-disk-36
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedInstanceResourceStats
+    ExecutedQuery: |-
+      MonManagedInstanceResourceStats
+      | where LogicalServerName =~ "{ServerName}"
+      | where TIMESTAMP between(datetime(2024-10-01 20:00:00)..datetime(2024-10-02 05:00:00))
+      | project TIMESTAMP, NodeName, avg_cpu_percent, active_workers_percent, active_workers
+      | render timechart
+- id: MI-out-of-disk-37
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedInstanceResourceStats
+    ExecutedQuery: |-
+      MonManagedInstanceResourceStats
+      | where TIMESTAMP > ago(3h)
+      | where LogicalServerName =~ "{ServerName}"
+      | project TIMESTAMP, reserved_storage_mb, storage_space_used_mb
+      | render timechart
+- id: MI-out-of-disk-38
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedInstanceResourceStats
+    ExecutedQuery: |-
+      MonManagedInstanceResourceStats
+      | where TIMESTAMP > ago(7d)
+      | where LogicalServerName =~ "{ServerName}"
+      | summarize
+- id: MI-out-of-disk-39
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmIoVirtualFileStats
+    ExecutedQuery: |-
+      MonDmIoVirtualFileStats
+      | where  originalEventTimestamp >= ago(daysAgo)
+      and LogicalServerName =~ ServerName
+- id: MI-out-of-disk-40
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlShrinkInfo
+    ExecutedQuery: |-
+      MonSqlShrinkInfo
+      | where TIMESTAMP > ago(daysAgo)
+      | where LogicalServerName =~ ServerName
+      |project TIMESTAMP, LogicalServerName, AppName, database_id, logical_database_name,file_id, shrink_id, tag, status
+- id: MI-out-of-disk-41
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmIoVirtualFileStats
+    ExecutedQuery: |-
+      MonDmIoVirtualFileStats
+      | where originalEventTimestamp > lookBack
+      | project-rename tenant_ring_name = ClusterName, sql_instance_name = AppName, logical_server_name_1 = LogicalServerName, db_name = db_name
+      //| where tenant_ring_name == TenantRingName
+      | where sql_instance_name == SqlInstanceName
+      | where is_primary_replica == 1
+      | where type_desc == 'ROWS' // logs _typically_ do not need to be shrunk
+      | project tenant_ring_name, file_id, sql_instance_name , NodeName , logical_server_name_1, db_name , type_desc, originalEventTimestamp, logical_database_id , spaceused_gb = round(spaceused_mb / 1024.0, 2), max_size_mb , size_on_disk_Gb = round(size_on_disk_bytes / 1024.0 / 1024 / 1024, 2)
+      | summarize arg_max(originalEventTimestamp, *) by NodeName, logical_server_name_1, db_name, type_desc, file_id
+      | extend
+      free_percentage = round(iif(spaceused_gb == 0, 0.0 , 100 - spaceused_gb / (size_on_disk_Gb / 100)),2)

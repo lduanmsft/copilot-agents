@@ -1,0 +1,1289 @@
+SqlSkills:
+- id: DB-performance-166
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB CPU pressure analysis
+  - SQL DB MonWiQueryParamData LogicalServerName problem_level
+  - SQL DB troubleshoot CPU pressure
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonWiQueryParamData
+    ExecutedQuery: 'MonWiQueryParamData
+
+
+      | where LogicalServerName =~ ''{LogicalServerName}'' and logical_database_name =~ ''{LogicalDatabaseName}''
+
+
+      | summarize count(), dcount(statement_sql_hash), dcount(query_hash), dcount(query_plan_hash), avg(compile_cpu_time), max(compile_cpu_time), avg(compile_duration), max(compile_duration) by query_param_type
+
+
+      | extend statement_query_ratio = todouble(dcount_statement_sql_hash) / todouble(dcount_query_hash)
+
+
+      | extend parameterization_type = iff(query_param_type == 0, ''NONE'', iff(query_param_type == 1, ''USER'', iff(query_param_type == 2, ''SIMPLE'', ''FORCED'')))
+
+
+      | extend problem_level = iff(query_param_type &lt;&gt; 0 and query_param_type &lt;&gt; 1, ''X'', iff(statement_query_ratio &gt; 1000, ''Extremely High'', iff(statement_query_ratio &gt; 100, ''High'',
+      iff(statement_query_ratio &gt; 20, ''Medium'', iff(statement_query_ratio &gt; 10, ''Low'', ''No problem'')))))
+
+
+      | extend compiles_count = count_
+
+
+      | project query_param_type, parameterization_type, problem_level, statement_query_ratio, compiles_count, dcount_statement_sql_hash, dcount_query_hash, dcount_query_plan_hash, avg_compile_cpu_time,
+      max_compile_cpu_time, avg_compile_duration, max_compile_duration
+
+
+      | order by query_param_type asc nulls last // PARAM.02
+
+      '
+- id: DB-performance-167
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB CPU pressure analysis
+  - SQL DB MonWiQueryParamData LogicalServerName query_hash
+  - SQL DB troubleshoot CPU pressure
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonWiQueryParamData
+    ExecutedQuery: 'MonWiQueryParamData
+
+
+      | where LogicalServerName =~ ''{LogicalServerName}'' and logical_database_name =~ ''{LogicalDatabaseName}''
+
+
+      | summarize count(), dcount(statement_sql_hash), dcount(template_hash), dcount(query_plan_hash), avg(compile_cpu_time), max(compile_cpu_time), avg(compile_duration), max(compile_duration), makeset(query_plan_hash),
+      argmax(originalEventTimestamp, ClusterName), argmax(originalEventTimestamp, NodeName), argmax(originalEventTimestamp, AppName) by query_hash, query_param_type
+
+
+      | extend parameterization_type = iff(query_param_type == 0, ''NONE'', iff(query_param_type == 1, ''USER'', iff(query_param_type == 2, ''SIMPLE'', ''FORCED'')))
+
+
+      | extend compiles_count = count_
+
+
+      | project query_hash, parameterization_type, query_param_type, compiles_count, dcount_statement_sql_hash, dcount_template_hash, dcount_query_plan_hash, avg_compile_cpu_time, max_compile_cpu_time,
+      avg_compile_duration, max_compile_duration, set_query_plan_hash, last_known_cluster=max_originalEventTimestamp_ClusterName, last_known_node_name=max_originalEventTimestamp_NodeName, last_known_app_name=max_originalEventTimestamp_AppName
+
+
+      | order by compiles_count desc
+
+
+      | limit 100 <tr class="odd">Disk space usage //*
+
+      '
+- id: DB-performance-189
+  Topic: Kusto-Queries-for-Perf
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/CRI-Flowchart/Kusto-Queries-for-Perf.md
+  Prompts:
+  - SQL DB CPU pressure analysis
+  - SQL DB SQL system health event database_name LogicalServerName
+  - SQL DB troubleshoot CPU pressure
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: '| where TIMESTAMP &gt; datetime({EndTime})
+
+
+      | where LogicalServerName =~ "{LogicalServerName}" and database_name =~ "{LogicalDatabaseName}"
+
+
+      | where is_primary == 1
+
+
+      | where query_hash =~ "0x6919447CA6760071"
+
+
+      | extend cpu_time_ms=round(cpu_time/1024.0,0), elapsed_time_ms=round(elapsed_time/1024.0,0)
+
+
+      | summarize exec_count=count(), avg_row_count=round(avg(rowcount),0), avg_cpu_ms=round(avg(cpu_time_ms),0), max_cpu_ms=max(cpu_time_ms) by exec_type| project TIMESTAMP, query_hash, cpu_time_ms, elapsed_time_ms
+      , rowcount, exec_type , statement_type
+
+
+      | top 100 by cpu_time_ms desc nulls last MonSQLSystemHealth
+
+
+      | where TIMESTAMP &gt; datetime({StartTime}) and TIMESTAMP &lt; datetime({EndTime})
+
+
+      | where LogicalServerName =~ "{LogicalServerName}" and AppName =~ "{AppName}" and NodeName =~ "{NodeName}"
+
+
+      | where event == "errorlog_written"
+
+
+      | where message contains "KILL" or message contains "kill" MonWiQueryParamData
+
+
+      | where query_hash =~"0x6919447CA6760071"| where query_plan_hash == "0x73bca08b2c86e1c6"MonQPTelemetry | where query_plan_hash == "0x73bca08b2c86e1c6"<tr class="odd">Instance &amp; DB Over all Resource
+      Usage//*
+
+      '
+- id: DB-performance-286
+  Topic: DBA-Performance-Troubleshooting-Guide
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/DBA-Performance-Troubleshooting-Guide.md
+  Prompts:
+  - SQL DB query param data analysis
+  - SQL DB MonWiQueryParamData event originalEventTimestamp
+  - SQL DB investigate query param data
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonWiQueryParamData
+    ExecutedQuery: 'MonWiQueryParamData
+
+      | where originalEventTimestamp > ago(3d)
+
+      | distinct event
+
+      - Check for increases in certain events.  Start with the same approach mentioned earlier (higher level of granularity, then drill down).  For example:'
+- id: DB-performance-287
+  Topic: DBA-Performance-Troubleshooting-Guide
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/DBA-Performance-Troubleshooting-Guide.md
+  Prompts:
+  - SQL DB query processing activity
+  - SQL DB MonQueryProcessing database_name LogicalServerName
+  - SQL DB investigate query processing
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonQueryProcessing
+    ExecutedQuery: 'MonQueryProcessing
+
+      | where LogicalServerName =~ \"{ServerName}\"
+
+      | where database_name =~ \"{DatabaseName}\"
+
+      | summarize
+
+      count()
+
+      by bin(originalEventTimestamp, 1h), event
+
+      | render timechart'
+- id: DB-performance-318
+  Topic: CPU001-CPU-Troubleshooting
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/CPU/CPU001-CPU-Troubleshooting.md
+  Prompts:
+  - SQL DB CPU pressure analysis
+  - SQL DB MonWiQueryParamData LogicalServerName AppName
+  - SQL DB troubleshoot CPU pressure
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonWiQueryParamData
+    ExecutedQuery: 'MonWiQueryParamData
+
+      | where LogicalServerName =~ "{LogicalServerName}" and logical_database_name =~ "{LogicalDatabaseName}"
+
+      | where AppName == "{AppName}" and NodeName =~ "{NodeName}"
+
+      | where TIMESTAMP >= datetime({StartTime}) and TIMESTAMP <= datetime({EndTime})
+
+      | extend compile_cpu_time_ms = compile_cpu_time / 1000
+
+      | extend compile_duration_ms = compile_duration / 1000
+
+      | summarize total_cpu_ms=sum(compile_cpu_time_ms) by TIMESTAMP=bin(TIMESTAMP, 5min)
+
+      | order by TIMESTAMP asc nulls first
+
+      | serialize
+
+      | extend PrevTimestamp=prev(TIMESTAMP, 1)
+
+      | where isnull(PrevTimestamp) == false
+
+      | extend elapsed_second = datetime_diff (''second'', TIMESTAMP, PrevTimestamp)
+
+      | project TIMESTAMP, cpu_percent_over_dtu=round((total_cpu_ms*100.0/1000)/(elapsed_second* cpu_cap_in_sec),4)
+
+      | render timechart'
+- id: DB-performance-319
+  Topic: CPU001-CPU-Troubleshooting
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/CPU/CPU001-CPU-Troubleshooting.md
+  Prompts:
+  - SQL DB query param data activity
+  - SQL DB MonWiQueryParamData LogicalServerName TIMESTAMP
+  - SQL DB investigate query param data
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonWiQueryParamData
+    ExecutedQuery: 'MonWiQueryParamData
+
+      | where LogicalServerName =~ "{LogicalServerName}"
+
+      | where logical_database_name =~ "{LogicalDatabaseName}"
+
+      | where TIMESTAMP >= datetime({StartTime}) and TIMESTAMP <= datetime({EndTime})
+
+      | summarize _count=count() by bin(TIMESTAMP, 20m), compile_code
+
+      | project TIMESTAMP, recompile_code=compile_code, _count
+
+      | render timechart'
+- id: DB-performance-332
+  Topic: Performance-TSG
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Data-Virtualization/Performance-TSG.md
+  Prompts:
+  - SQL DB query param data analysis
+  - SQL DB MonWiQueryParamData has_external_extraction
+  - SQL DB investigate query param data
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonWiQueryParamData
+    ExecutedQuery: 'MonWiQueryParamData
+
+      | ...
+
+      | where has_external_extraction == 1
+
+      This will give you all the other required info about the compilation. Then, you can use that information and plug it in to [Useful-Kusto-queries  ](../Data-Virtualization/Useful-Kusto-queries.md)
+
+      Please check [TSGDV004] (../Data-Virtualization/Known-Issues-TSG.md) for known perf issue.'
+- id: DB-performance-334
+  Topic: Performance-TSG
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Data-Virtualization/Performance-TSG.md
+  Prompts:
+  - SQL DB CPU pressure analysis
+  - SQL DB MonWiQueryParamData AppName AppTypeName
+  - SQL DB troubleshoot CPU pressure
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonWiQueryParamData
+    ExecutedQuery: 'MonWiQueryParamData
+
+      | where originalEventTimestamp between (startTime .. endTime)
+
+      | where AppName in (''a05fa03caf70'')
+
+      | where AppTypeName == "Worker.ISO" or AppTypeName == "Worker.ISO.Premium" or AppTypeName == "Worker.Vldb.Compute"
+
+      | where logical_database_name =~ databaseName or isempty(databaseName)
+
+      | where has_external_extraction == 1
+
+      | project originalEventTimestamp, database_id, logical_database_name, statement_sql_hash, query_hash, query_plan_hash, has_external_extraction, compile_duration, compile_cpu_time
+
+      | join kind=inner  ('
+- id: DB-performance-335
+  Topic: Performance-TSG
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Data-Virtualization/Performance-TSG.md
+  Prompts:
+  - SQL DB CPU pressure analysis
+  - SQL DB MonSqlFrontend event AppName originalEventTimestamp
+  - SQL DB troubleshoot CPU pressure
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSqlFrontend
+    ExecutedQuery: 'MonSqlFrontend
+
+      | where originalEventTimestamp between (startTime .. endTime)
+
+      | where AppName in (''a05fa03caf70'')
+
+      | where event == ''data_virtualization_query''
+
+      | project statement_sql_hash, query_hash, query_plan_hash, statement_number, batch_id, is_openrowset, is_external_table
+
+      ) on statement_sql_hash, query_plan_hash
+
+      | project originalEventTimestamp, database_id, logical_database_name, statement_sql_hash, query_hash, query_plan_hash, has_external_extraction, compile_duration, compile_cpu_time, statement_number,
+      batch_id, is_openrowset, is_external_table
+
+      | join kind=leftouter ('
+- id: DB-performance-336
+  Topic: Performance-TSG
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Data-Virtualization/Performance-TSG.md
+  Prompts:
+  - SQL DB CPU pressure analysis
+  - SQL DB MonSqlFrontend event AppName originalEventTimestamp
+  - SQL DB troubleshoot CPU pressure
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSqlFrontend
+    ExecutedQuery: 'MonSqlFrontend
+
+      | where originalEventTimestamp between (startTime .. endTime)
+
+      | where AppName in (''a05fa03caf70'')
+
+      | where event == ''wildcard_expansion''
+
+      | project statement_number, batch_id, duration, matches_found, list_dir_calls
+
+      ) on statement_number, batch_id
+
+      | project originalEventTimestamp, database_id, logical_database_name, statement_sql_hash, query_hash, query_plan_hash, has_external_extraction, compile_duration, compile_cpu_time, statement_number,
+      batch_id, is_openrowset, is_external_table, duration, matches_found, list_dir_calls
+
+      );
+
+      let topQueryHashes = ('
+- id: DB-performance-341
+  Topic: Useful-Kusto-queries
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Data-Virtualization/Useful-Kusto-queries.md
+  Prompts:
+  - SQL DB query param data analysis
+  - SQL DB MonWiQueryParamData LogicalServerName AppName
+  - SQL DB investigate query param data
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonWiQueryParamData
+    ExecutedQuery: 'MonWiQueryParamData
+
+      | where LogicalServerName =~ ""
+
+      | where AppName =~ ""
+
+      | where has_external_extraction == true'
+- id: DB-performance-344
+  Topic: Useful-Kusto-queries
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Data-Virtualization/Useful-Kusto-queries.md
+  Prompts:
+  - SQL DB CPU pressure analysis (MI/GeoDR context)
+  - SQL DB MonWiQueryParamData
+  - SQL DB troubleshoot CPU pressure
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonWiQueryParamData
+    ExecutedQuery: 'MonWiQueryParamData
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where AppTypeName !startswith "Worker.CL"
+
+      | where has_external_extraction == true
+
+      | extend compile_cpu_time_ms = 1.0 * compile_cpu_time / 1000
+
+      | extend compile_duration_ms = 1.0 * compile_duration / 1000
+
+      | summarize sum(compile_cpu_time_ms), sum(compile_duration_ms) by bin(originalEventTimestamp, 1h)
+
+      | render timechart'
+- id: DB-performance-369
+  Topic: MM0001-7-Large-USERSTORE_SXC-usage
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Memory/MM0001-7-Large-USERSTORE_SXC-usage.md
+  Prompts:
+  - SQL DB query param data analysis
+  - SQL DB MonWiQueryParamData LogicalServerName AppName
+  - SQL DB investigate query param data
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonWiQueryParamData
+    ExecutedQuery: 'MonWiQueryParamData
+
+      | where AppName =~''{AppName}''
+
+      | where LogicalServerName =~''{ServerName}''
+
+      | where originalEventTimestamp between (datetime({startTime})..datetime({endTime}))
+
+      | project PreciseTimeStamp,query_hash,parameterized_values_count
+
+      | order by parameterized_values_count
+
+      | take 10'
+- id: DB-performance-371
+  Topic: MM0001-9-Large-MEMORYCLERK_SQLOPTIMIZER
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Memory/MM0001-9-Large-MEMORYCLERK_SQLOPTIMIZER.md
+  Prompts:
+  - SQL DB memory pressure analysis
+  - SQL DB MonWiQueryParamData AppName originalEventTimestamp
+  - SQL DB troubleshoot memory pressure
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonWiQueryParamData
+    ExecutedQuery: 'MonWiQueryParamData//Please note, it only records succeeded compilation
+
+      | where AppName =~''{AppName}''
+
+      | where originalEventTimestamp >=datetime({StartTime}) and originalEventTimestamp <=datetime({EndTime})
+
+      | extend compile_memory_mb=round(compile_memory/1024,1)
+
+      | summarize max(compile_memory_mb) by query_hash
+
+      | order by max_compile_memory_mb
+
+      | take 5'
+- id: DB-performance-372
+  Topic: MM0001-9-Large-MEMORYCLERK_SQLOPTIMIZER
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Memory/MM0001-9-Large-MEMORYCLERK_SQLOPTIMIZER.md
+  Prompts:
+  - SQL DB query processing errors
+  - SQL DB MonQueryProcessing event AppName error_code
+  - SQL DB troubleshoot query processing errors
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonQueryProcessing
+    ExecutedQuery: 'MonQueryProcessing
+
+      | where AppName =~''{AppName}''
+
+      | where originalEventTimestamp >=datetime({StartTime}) and originalEventTimestamp <=datetime({EndTime})
+
+      | where event in(''failed_compilation'' ,''query_compile_abort'')
+
+      | extend query_hash = strcat(''0x'', toupper(tohex(query_hash_signed)))
+
+      | extend compile_duration_seconds=round(compile_duration/1000.0,1)
+
+      | project originalEventTimestamp,event,logical_database_name,query_hash,tasks_count,abort_state, compile_duration_seconds,error_code'
+- id: DB-performance-373
+  Topic: MM0001-9-Large-MEMORYCLERK_SQLOPTIMIZER
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Memory/MM0001-9-Large-MEMORYCLERK_SQLOPTIMIZER.md
+  Prompts:
+  - SQL DB CPU pressure analysis
+  - SQL DB MonWiQueryParamData AppName originalEventTimestamp
+  - SQL DB troubleshoot CPU pressure
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonWiQueryParamData
+    ExecutedQuery: 'MonWiQueryParamData
+
+      | where AppName =~''{AppName}''
+
+      | where originalEventTimestamp >=datetime({StartTime}) and originalEventTimestamp <=datetime({EndTime})
+
+      | extend compile_memory_mb=round(compile_memory/1024,1)
+
+      //| extend compile_cpu_time_ms=compile_cpu_time/1000
+
+      //| extend compile_duration_ms=compile_duration/1000
+
+      //| project originalEventTimestamp,query_hash,compile_memory_mb,compile_code,compile_cpu_time_ms,compile_duration_ms
+
+      | summarize sum(compile_memory_mb),count() by bin(originalEventTimestamp,AggInterval)'
+- id: DB-performance-374
+  Topic: MM0001-9-Large-MEMORYCLERK_SQLOPTIMIZER_handsonLab1
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Memory/MM0001-9-Large-MEMORYCLERK_SQLOPTIMIZER_handsonLab1.md
+  Prompts:
+  - SQL DB memory pressure analysis
+  - SQL DB MonWiQueryParamData LogicalServerName query_hash
+  - SQL DB troubleshoot memory pressure
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonWiQueryParamData
+    ExecutedQuery: 'MonWiQueryParamData
+
+      | where LogicalServerName =~ "{ServerName}" and logical_database_name =~ "{DatabaseName}"
+
+      | where query_hash =~''0x87A92BFAF6C8E784''
+
+      | extend compile_memory_mb=compile_memory/1024
+
+      | extend compile_duration_second=compile_duration/1000/1000
+
+      | project originalEventTimestamp, compile_memory_mb,compile_duration_second'
+- id: DB-performance-443
+  Topic: System-Catalog-View-Queries-Causing-Plan-Force-Failures
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Query-Performance/System-Catalog-View-Queries-Causing-Plan-Force-Failures.md
+  Prompts:
+  - SQL DB timeout analysis
+  - SQL DB MonQueryProcessing error event LogicalServerName
+  - SQL DB troubleshoot timeout
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonQueryProcessing
+    ExecutedQuery: 'MonQueryProcessing
+
+      | where LogicalServerName =~serverName and logical_database_name =~dbName
+
+      | where originalEventTimestamp between(statTime..endTime)
+
+      | where AppName =~appName
+
+      | where event =~''failed_compilation''
+
+      | extend query_hash = strcat(''0x'', toupper(tohex(query_hash_signed)))
+
+      | extend compile_duration_seconds = round(compile_duration/1000.0,1)
+
+      | extend compile_cpu_seconds = round(compile_cpu/1000.0,1)
+
+      | where error_code  in (3617,8684,8698)//if command timeout is set, error 3617 instead of 8684 is raised
+
+      | project originalEventTimestamp,session_id,tasks_count,error_code,query_hash,compile_duration_seconds,compile_cpu_seconds
+
+      | order by originalEventTimestamp asc'
+- id: DB-performance-444
+  Topic: Query-Timeout-During-Compilation
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Query-Performance/Query-Timeouts-Overview/Query-Timeout-During-Compilation.md
+  Prompts:
+  - SQL DB query timeout during compilation
+  - SQL DB MonQueryProcessing event LogicalServerName
+  - SQL DB troubleshoot query timeout during compilation
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonQueryProcessing
+    ExecutedQuery: 'MonQueryProcessing
+
+      | where AppName =~  ''?''
+
+      | where LogicalServerName =~\"{ServerName}\" and logical_database_name =~\"{DatabaseName}\"
+
+      | where originalEventTimestamp  >datetime(??)
+
+      | where event =~''failed_compilation''
+
+      | extend query_hash = strcat(''0x'', toupper(tohex(query_hash_signed)))
+
+      | extend compile_duration_seconds=round(compile_duration/1000.0,1)
+
+      | where error_code ==3617
+
+      | project originalEventTimestamp,session_id,query_hash,compile_duration_seconds'
+- id: DB-performance-445
+  Topic: Query-Timeout-During-Compilation
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Query-Performance/Query-Timeouts-Overview/Query-Timeout-During-Compilation.md
+  Prompts:
+  - SQL DB query timeout during compilation
+  - SQL DB AlrSQLErrorsReported database_name LogicalServerName
+  - SQL DB troubleshoot query timeout during compilation
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: AlrSQLErrorsReported
+    ExecutedQuery: 'AlrSQLErrorsReported
+
+      | where  (AppName =~  ''??''
+
+      | where originalEventTimestamp> datetime(??)
+
+      | where LogicalServerName =~ \"{ServerName}\"  and database_name =~ \"{DatabaseName}\"
+
+      | where error_number ==3617'
+- id: DB-performance-446
+  Topic: Query-Timeout-During-Compilation
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Query-Performance/Query-Timeouts-Overview/Query-Timeout-During-Compilation.md
+  Prompts:
+  - SQL DB query timeout during compilation
+  - SQL DB MonQueryProcessing event LogicalServerName
+  - SQL DB troubleshoot query timeout during compilation
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonQueryProcessing
+    ExecutedQuery: 'MonQueryProcessing
+
+      | where AppName =~  "?"
+
+      | where LogicalServerName =~\"{ServerName}\" and logical_database_name =~\"{DatabaseName}\"
+
+      | where originalEventTimestamp  >datetime(??)
+
+      | where event in(''failed_compilation'' )
+
+      | extend query_hash = strcat(''0x'', toupper(tohex(query_hash_signed)))
+
+      | extend compile_duration_seconds=round(compile_duration/1000.0,1)
+
+      | where error_code ==3617
+
+      | project originalEventTimestamp,session_id,query_hash,compile_duration_seconds,error_code'
+- id: DB-performance-464
+  Topic: PERFTS003-Config--Change-History-Tab
+  Source: TSG-SQL-DB-Performance/content/Common-Perf-Queue-TSGs/Self-Help-TSGs/Tools-and-Tips/ASC/PERFTS003-Config--Change-History-Tab.md
+  Prompts:
+  - SQL DB config logical server overrides activity
+  - SQL DB MonConfigLogicalServerOverrides AppName
+  - SQL DB investigate config logical server overrides
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonConfigLogicalServerOverrides
+    ExecutedQuery: 'MonConfigLogicalServerOverrides
+
+
+      | where AppName !startswith ''b-'' and AppName !startswith ''v-''
+
+
+      | where Logical_Server_Name =~ ''{ServerName}''
+
+
+      | project TIMESTAMP, Property_Name, Property_Value
+
+
+      | order by Property_Name asc, TIMESTAMP asc // Must sort by both Property_Name and TIMESTAMP in asc. order for the rest of the query to work
+
+
+      | serialize next_TIMESTAMP = next(TIMESTAMP),
+
+
+      prev_TIMESTAMP = prev(TIMESTAMP),
+
+
+      next_name = next(Property_Name),
+
+
+      prev_name = prev(Property_Name),
+
+
+      next_value = next(Property_Value),
+
+
+      prev_value = prev(Property_Value)
+
+
+      | extend first_config = Property_Name != prev_name // The first row (ie. earliest event (out of the past 7 days)) of a config setting
+
+
+      | extend last_config = Property_Name != next_name // The last row (ie. last event (out of the past 7 days)) of a config setting
+
+
+      | extend same_config_new_value = not(first_config) and Property_Value != prev_value // The first row (ie. earliest event) when the config has its new value
+
+
+      | extend same_config_before_value_change = not(last_config) and Property_Value != next_value // The last row (ie. last event) when the config has its old value, before it is changed
+
+
+      | extend is_prev_gap = not(first_config) and (datetime_diff(''hour'', TIMESTAMP, prev_TIMESTAMP) &gt; log_collection_interval * fudge_factor) // Check if there is a time gap right before the current
+      event
+
+
+      | extend is_next_gap = not(last_config) and (datetime_diff(''hour'', next_TIMESTAMP, TIMESTAMP) &gt; log_collection_interval * fudge_factor) // Check if there is a time gap right after the current
+      event
+
+
+      | where first_config
+
+
+      or last_config
+
+
+      or same_config_new_value
+
+
+      or same_config_before_value_change
+
+
+      or is_prev_gap
+
+
+      or is_next_gap
+
+
+      | extend first_logged_time = TIMESTAMP
+
+
+      // There are few scenarios to consider when populating ''last_logged_time'' column:
+
+
+      // (1) There is ONLY one event for the config setting with its current value. If so, we set last_logged_time = first_logged_time
+
+
+      // * This scenario happens when this condition is TRUE -&gt; (first_config OR same_config_new_value OR is_prev_gap) AND (last_config OR same_config_before_value_change OR is_next_gap)
+
+
+      // (2) There are consecutive events for the current config with the same value, and the current event is the first row (ie. earliest event).
+
+
+      // If so, we set last_logged_time = next(TIMESTAMP) since we want to merge the next row (which must the last row) with the current row.
+
+
+      // * This scenario happens when this condition is TRUE -&gt; (first_config OR same_config_new_value OR is_prev_gap) AND not(last_config OR same_config_before_value_change OR is_next_gap)
+
+
+      // (3) Similar scenario as scenario (2), except now the current event is the last row for a config setting (ie. last event).
+
+
+      // Since we will be discarding the last row in the final result, we do not really care about what TIMESTAMP is used to populate ''last_logged_time'' here.
+
+
+      | extend last_logged_time = case(last_config or same_config_before_value_change or is_next_gap, // Scenario (1)
+
+
+      first_logged_time,
+
+
+      next(TIMESTAMP)) // Scenario (2) or Scenario (3)
+
+
+      | extend gap_detected_before = case(is_prev_gap, 1, int(null)) // Checking if there is a time gap between the current event and the previous event for the same config setting
+
+
+      | where first_config or same_config_new_value or is_prev_gap
+
+
+      | extend first_logged_time = case(first_logged_time &lt; min_cutoff_time,
+
+
+      datetime(null),
+
+
+      first_logged_time)
+
+
+      | extend last_logged_time = case(last_logged_time &gt; max_cutoff_time,
+
+
+      datetime(null),
+
+
+      last_logged_time)
+
+
+      | project Property_Name, Property_Value, first_logged_time, last_logged_time, gap_detected_before
+
+
+      //QueryName:''Feature Switch and Config Override History''<tr class="odd">Number of Databases in an Elastic Pool Trend (only shown if database is part of an elastic pool)MonDmRealTimeResourceStats
+      | where AppName =~ ''{AppName}''| summarize dcount(database_name) by bin(TIMESTAMP, 30m)| order by TIMESTAMP asc//QueryName:''Number of Databases in an Elastic Pool Trend''<tr class="even">Crash DumpsMonSqlDump
+      | where AppName =~ ''{AppName}'' and TIMESTAMP between {StartTime}..{EndTime} and ClusterName =~ ''{Cluster}'' and NodeName =~ ''{NodeName}''| where CompleteFileName endswith ''.dmp'' | summarize
+      TIMESTAMP = min(TIMESTAMP) by AppName, ClusterName, NodeName, CompleteFileName| project TIMESTAMP, AppName, ClusterName, NodeName, CompleteFileName | order by TIMESTAMP asc//QueryName:''Crash Dumps''<tr
+      class="odd">Database Metadata Change SummaryMonQueryProcessing| where TIMESTAMP &gt;= {StartTime} and TIMESTAMP &lt;= {EndTime}| where AppName !startswith ''b-'' and AppName !startswith ''v-''| where
+      event == ''metadata_change''| extend database_name=logical_database_name | where LogicalServerName =~ "{ServerName}" and database_name =~ "{DatabaseName}"| summarize change_count = count() by operation_type,
+      database_name| project operation_type, change_count//QueryName:''Database Metadata Change Summary''<tr class="even">100 Database Metadata Change DetailMonQueryProcessing| where TIMESTAMP &gt;= {StartTime}
+      and TIMESTAMP &lt;= {EndTime}| where AppName !startswith ''b-'' and AppName !startswith ''v-''| where event == ''metadata_change''| extend database_name=logical_database_name | where LogicalServerName
+      =~ "{ServerName}" and database_name =~ "{DatabaseName}"| project TIMESTAMP, database_name, object_id, operation_type, operation_code| order by TIMESTAMP desc| take 100//QueryName:''100 Database Metadata
+      Change Detail'''
+- id: DB-performance-789
+  Topic: QP010-IndexCorruption-or-QPError8630-or-QPError8646-Alerts
+  Source: TSG-SQL-DB-Performance/content/QP/QP010-IndexCorruption-or-QPError8630-or-QPError8646-Alerts.md
+  Prompts:
+  - SQL DB qp010 index corruption or qp error8630 or qp error86
+  - SQL DB MonQueryProcessing event LogicalServerName
+  - SQL DB troubleshoot qp010 index corruption or qp error8630
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonQueryProcessing
+    ExecutedQuery: 'MonQueryProcessing
+
+      | where LogicalServerName =~ ''{LogicalServerName}''
+
+      | where logical_database_name =~ ''{LogicalDatabaseName}''
+
+      | where event == ''index_corruption_detected''
+
+      | project TIMESTAMP, database_id, object_id, index_id
+
+      //, database_name, schema_name, object_name, index_name
+
+      , query_hash = strcat(''0x'',toupper(tohex(query_hash_signed)))
+
+      , query_plan_hash = strcat(''0x'',toupper(tohex(query_plan_hash_signed)))'
+- id: DB-performance-792
+  Topic: QP010-IndexCorruption-or-QPError8630-or-QPError8646-Alerts
+  Source: TSG-SQL-DB-Performance/content/QP/QP010-IndexCorruption-or-QPError8630-or-QPError8646-Alerts.md
+  Prompts:
+  - SQL DB qp010 index corruption or qp error8630 or qp error86
+  - SQL DB MonQueryProcessing event LogicalServerName
+  - SQL DB troubleshoot qp010 index corruption or qp error8630
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonQueryProcessing
+    ExecutedQuery: 'MonQueryProcessing
+
+      | where LogicalServerName =~ ''{LogicalServerName}''
+
+      | where logical_database_name =~ ''{LogicalDatabaseName}''
+
+      | where event == ''metadata_change''
+
+      | where operation_type == ''DropObj'' and operation_code == ''8277'' // user table
+
+      | where object_id == {object_id} and object_name =~ ''{object_name}''
+
+      | project operation_type, operation_code, object_id, object_name'
+- id: DB-performance-799
+  Topic: QP011-1-Investigating-potential-issues
+  Source: TSG-SQL-DB-Performance/content/QP/QP011-1-Investigating-potential-issues.md
+  Prompts:
+  - SQL DB query processing analysis
+  - SQL DB MonQueryProcessing event udf_name stmt_count
+  - SQL DB investigate query processing
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonQueryProcessing
+    ExecutedQuery: 'MonQueryProcessing
+
+      | where event == "query_tsql_scalar_udf_inlined"
+
+      | distinct udf_name, stmt_count'
+- id: DB-performance-800
+  Topic: QP011-1-Investigating-potential-issues
+  Source: TSG-SQL-DB-Performance/content/QP/QP011-1-Investigating-potential-issues.md
+  Prompts:
+  - SQL DB query processing status
+  - SQL DB MonQueryProcessing event udf_name statement_sql_hash
+  - SQL DB investigate query processing
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonQueryProcessing
+    ExecutedQuery: 'MonQueryProcessing
+
+      | where event == "query_tsql_scalar_udf_inlined"
+
+      | where is_candidate_for_simple_param  == 0
+
+      | distinct udf_name, statement_sql_hash
+
+      | join kind=inner('
+- id: DB-performance-803
+  Topic: QP013-1-Optional-Parameter-Plan-Optimization
+  Source: TSG-SQL-DB-Performance/content/QP/QP013-1-Optional-Parameter-Plan-Optimization.md
+  Prompts:
+  - SQL DB query processing analysis
+  - SQL DB MonQueryProcessing event logical_server_name
+  - SQL DB investigate query processing
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonQueryProcessing
+    ExecutedQuery: 'MonQueryProcessing
+
+      | where PreciseTimeStamp >ago(1d)
+
+      | where logical_server_name =~''{ServerName}'' and logical_database_name =~''{DatabaseName}''
+
+      | where event == ''multiplan_dispatcher_plan_compiled''
+
+      | extend original_query_plan_hash = strcat(''0x'', toupper(tohex(original_query_plan_hash_signed)))
+
+      | extend query_plan_hash =  strcat(''0x'', toupper(tohex(query_plan_hash_signed)))
+
+      | where predicate_count_opo > 0
+
+      | project-reorder TIMESTAMP, query_plan_hash, predicate_count, predicate_count_psp, predicate_count_opo'
+- id: DB-performance-808
+  Topic: QP013-Parameter-Sensitive-Plan-Optimization-Main
+  Source: TSG-SQL-DB-Performance/content/QP/QP013-Parameter-Sensitive-Plan-Optimization-Main.md
+  Prompts:
+  - SQL DB query processing analysis
+  - SQL DB MonQueryProcessing event logical_server_name
+  - SQL DB investigate query processing
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonQueryProcessing
+    ExecutedQuery: 'MonQueryProcessing
+
+      | where PreciseTimeStamp > ago(1d)
+
+      | where logical_server_name =~''{ServerName}'' and logical_database_name =~''{DatabaseName}''
+
+      | where event == ''multiplan_dispatcher_plan_compiled''
+
+      | extend original_query_plan_hash = strcat(''0x'', toupper(tohex(original_query_plan_hash_signed)))
+
+      | extend query_plan_hash =  strcat(''0x'', toupper(tohex(query_plan_hash_signed)))
+
+      | where predicate_count_psp > 0
+
+      | project-reorder TIMESTAMP, query_plan_hash, predicate_count, predicate_count_psp, predicate_count_opo'
+- id: DB-performance-809
+  Topic: QP014-Memory-Grant-Feedback-Persistance-and-Percentile-grant
+  Source: TSG-SQL-DB-Performance/content/QP/QP014-Memory-Grant-Feedback-Persistance-and-Percentile-grant.md
+  Prompts:
+  - SQL DB memory pressure analysis
+  - SQL DB MonQueryProcessing
+  - SQL DB troubleshoot memory pressure
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonQueryProcessing
+    ExecutedQuery: 'MonQueryProcessing
+
+      |   where   originalEventTimestamp  between(startTime..endTime)
+
+      |   where   AppName == aname
+
+      |   where   logical_database_name == dname
+
+      |   where   LogicalServerName == sname
+
+      |   where   query_plan_hash_signed == phash
+
+      |   where   event ==   "memory_grant_updated_by_feedback"
+
+      |   mv-expand   parse_json(memory_summary_by_operator_kb)
+
+      |   extend   ni = parse_json(memory_summary_by_operator_kb)
+
+      |   where   tolong(ni.Granted) == tolong(ni.Used)   and   tolong(ni.Granted) >   1024
+
+      |   project   TIMESTAMP, ideal_additional_memory_before_kb, ideal_additional_memory_after_kb, memory_summary_by_operator_kb'
+- id: DB-performance-810
+  Topic: QP014-Memory-Grant-Feedback-Persistance-and-Percentile-grant
+  Source: TSG-SQL-DB-Performance/content/QP/QP014-Memory-Grant-Feedback-Persistance-and-Percentile-grant.md
+  Prompts:
+  - SQL DB memory pressure analysis
+  - SQL DB MonQueryProcessing
+  - SQL DB troubleshoot memory pressure
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonQueryProcessing
+    ExecutedQuery: 'MonQueryProcessing
+
+      |   where   originalEventTimestamp  between(startTime..endTime)
+
+      |   where   AppName == aname
+
+      |   where   logical_database_name == dname
+
+      |   where   LogicalServerName == sname
+
+      |   where   query_plan_hash_signed == phash
+
+      |   where   event ==   "memory_grant_updated_by_feedback"
+
+      |   extend   overestimate_kb = ideal_additional_memory_before_kb - ideal_additional_memory_after_kb
+
+      |   where   overestimate_kb >   0
+
+      |   project   TIMESTAMP, overestimate_kb, ideal_additional_memory_before_kb, ideal_additional_memory_after_kb'
+- id: DB-performance-811
+  Topic: QP014-Memory-Grant-Feedback-Persistance-and-Percentile-grant
+  Source: TSG-SQL-DB-Performance/content/QP/QP014-Memory-Grant-Feedback-Persistance-and-Percentile-grant.md
+  Prompts:
+  - SQL DB query param data status
+  - SQL DB MonWiQueryParamData
+  - SQL DB investigate query param data
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonWiQueryParamData
+    ExecutedQuery: 'MonWiQueryParamData
+
+      |   where   originalEventTimestamp between(startTime..endTime)
+
+      |   where   AppName == aname
+
+      |   where   logical_database_name == dname
+
+      |   where   LogicalServerName == sname
+
+      |   where   event ==   "query_parameterization_data"
+
+      |   where   query_plan_hash == phash
+
+      |   where   mgf_persistence_used_status ==   ''FeedbackApplied'''
+- id: DB-performance-812
+  Topic: QP014-Memory-Grant-Feedback-Persistance-and-Percentile-grant
+  Source: TSG-SQL-DB-Performance/content/QP/QP014-Memory-Grant-Feedback-Persistance-and-Percentile-grant.md
+  Prompts:
+  - SQL DB memory pressure analysis
+  - SQL DB MonQueryProcessing
+  - SQL DB troubleshoot memory pressure
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonQueryProcessing
+    ExecutedQuery: 'MonQueryProcessing
+
+      |   where   originalEventTimestamp  between(startTime..endTime)
+
+      |   where   AppName == aname
+
+      |   where   logical_database_name == dname
+
+      |   where   LogicalServerName == sname
+
+      |   where   query_plan_hash_signed == phash
+
+      |   where   event ==   "memory_grant_feedback_percentile_grant"
+
+      |   summarize   countExec = sum(current_interval), countSpill = sum(spill_count_pg), totalOverestimate_kb = sum(overestimate_error_pg_kb)'
+- id: DB-performance-813
+  Topic: QP014-Memory-Grant-Feedback-Persistance-and-Percentile-grant
+  Source: TSG-SQL-DB-Performance/content/QP/QP014-Memory-Grant-Feedback-Persistance-and-Percentile-grant.md
+  Prompts:
+  - SQL DB memory pressure analysis
+  - SQL DB MonQueryProcessing
+  - SQL DB troubleshoot memory pressure
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonQueryProcessing
+    ExecutedQuery: 'MonQueryProcessing
+
+      |   where   originalEventTimestamp  between(startTime..endTime)
+
+      |   where   AppName == aname
+
+      |   where   logical_database_name == dname
+
+      |   where   LogicalServerName == sname
+
+      |   where   event ==   "memory_grant_feedback_percentile_grant"
+
+      |   summarize   countExec = sum(current_interval), countSpill = sum(spill_count_pg), totalOverestimate_kb= sum(overestimate_error_pg_kb)'
+- id: DB-performance-814
+  Topic: QP016-AQCS-Optimized-sp_executesql
+  Source: TSG-SQL-DB-Performance/content/QP/QP016-AQCS-Optimized-sp_executesql.md
+  Prompts:
+  - SQL DB qp telemetry activity
+  - SQL DB MonQPTelemetry event LogicalServerName Server
+  - SQL DB investigate qp telemetry
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonQPTelemetry
+    ExecutedQuery: 'MonQPTelemetry
+
+      | where originalEventTimestamp >= <Customer StartTime> and originalEventTimestamp <= <Customer EndTime>
+
+      | where LogicalServerName == <Customer Logical Server>
+
+      | where logical_database_name == <Customer Logical DB>
+
+      | where event contains ''spexec_batch_compilation_serialization_telemetry''
+
+      | summarize count()'
+- id: DB-performance-902
+  Topic: VectorIndex001-Monitoring-and-Telemetry
+  Source: TSG-SQL-DB-Performance/content/Vector/VectorIndex001-Monitoring-and-Telemetry.md
+  Prompts:
+  - SQL DB query processing latency
+  - SQL DB MonQueryProcessing event TIMESTAMP timeFilter
+  - SQL DB troubleshoot query processing latency
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonQueryProcessing
+    ExecutedQuery: 'MonQueryProcessing
+
+      | where event == "vector_index_update_dml_aggregated_telemetry"
+
+      | where TIMESTAMP >= ago(timeFilter)
+
+      | extend
+
+      DatabaseId = tolong(database_id),
+
+      ObjectId = tolong(object_id),
+
+      AvgDurationMs = tolong(avg_operation_duration_ms)
+
+      | where AvgDurationMs > performanceThreshold
+
+      | summarize
+
+      SlowOperationCount = count(),
+
+      WorstAvgDuration = max(AvgDurationMs),
+
+      RecentTimestamp = max(TIMESTAMP)
+
+      by DatabaseId, ObjectId
+
+      | order by WorstAvgDuration desc'
+- id: DB-performance-903
+  Topic: VectorIndex001-Monitoring-and-Telemetry
+  Source: TSG-SQL-DB-Performance/content/Vector/VectorIndex001-Monitoring-and-Telemetry.md
+  Prompts:
+  - SQL DB query processing errors
+  - SQL DB MonQueryProcessing event error_message TIMESTAMP
+  - SQL DB troubleshoot query processing errors
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonQueryProcessing
+    ExecutedQuery: 'MonQueryProcessing
+
+      | where event == "vector_index_update_dml_aggregated_telemetry"
+
+      | where TIMESTAMP >= ago(timeFilter)
+
+      | where isnotempty(error_message) and error_message != ""
+
+      | extend
+
+      DatabaseId = tolong(database_id),
+
+      ObjectId = tolong(object_id),
+
+      ErrorTimestamp = TIMESTAMP
+
+      | summarize
+
+      ErrorCount = count(),
+
+      LastErrorTime = max(TIMESTAMP),
+
+      LastError = any(error_message)
+
+      by DatabaseId, ObjectId
+
+      | order by ErrorCount desc, LastErrorTime desc'
+- id: DB-performance-904
+  Topic: VectorIndex001-Monitoring-and-Telemetry
+  Source: TSG-SQL-DB-Performance/content/Vector/VectorIndex001-Monitoring-and-Telemetry.md
+  Prompts:
+  - SQL DB query processing activity
+  - SQL DB MonQueryProcessing event TIMESTAMP timeFilter
+  - SQL DB investigate query processing
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonQueryProcessing
+    ExecutedQuery: 'MonQueryProcessing
+
+      | where event == "vector_index_update_dml_aggregated_telemetry"
+
+      | where TIMESTAMP >= ago(timeFilter)
+
+      | extend
+
+      DatabaseId = tolong(database_id),
+
+      ObjectId = tolong(object_id),
+
+      Inserts = tolong(total_vectors_inserted),
+
+      Deletes = tolong(total_vectors_deleted),
+
+      Hour = bin(TIMESTAMP, 1h)
+
+      | summarize
+
+      TotalInserts = sum(Inserts),
+
+      TotalDeletes = sum(Deletes)
+
+      by Hour, DatabaseId, ObjectId
+
+      | extend InsertDeleteRatio = todouble(TotalInserts) / todouble(TotalDeletes + 1) // +1 to avoid division by zero
+
+      | order by Hour desc
+
+      | render timechart'
+- id: DB-performance-906
+  Topic: VectorIndex002-Resource-Governance
+  Source: TSG-SQL-DB-Performance/content/Vector/VectorIndex002-Resource-Governance.md
+  Prompts:
+  - SQL DB CPU pressure analysis
+  - SQL DB SQL RG history event LogicalServerName TIMESTAMP _endTime
+  - SQL DB troubleshoot CPU pressure
+  CustomizedParameters:
+  - DatabaseName
+  - ServerName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: 'let _startTime = ago(24h);
+
+      let _endTime = now();
+
+      let _serverName = "<LogicalServerName>";
+
+      // Get VectorIndexGroup resource violations
+
+      let VectorGroupViolations = MonSqlRgHistory
+
+      | where TIMESTAMP between (_startTime .. _endTime)
+
+      | where LogicalServerName == _serverName
+
+      | where event == ''aggregated_workload_groups_plus_history''
+
+      | where group_name == "VectorIndexGroup"
+
+      | summarize
+
+      cpu_violations = sum(delta_total_cpu_delayed_ms),
+
+      queued_requests = sum(active_request_count),
+
+      active_requests = avg(active_request_count)
+
+      by TIMESTAMP = bin(end_aggregated_sample, 15m), LogicalServerName;
+
+      // Get Vector Index Update Task telemetry for same period
+
+      let VectorIndexActivity = MonQueryProcessing
+
+      | where event == "vector_index_update_dml_aggregated_telemetry"
+
+      | where TIMESTAMP between (_startTime .. _endTime)
+
+      | extend
+
+      DatabaseId = tolong(database_id),
+
+      BatchCount = tolong(batch_count),
+
+      AvgDuration = tolong(avg_operation_duration_ms),
+
+      TotalInserts = tolong(total_vectors_inserted),
+
+      TotalDeletes = tolong(total_vectors_deleted)
+
+      | summarize
+
+      total_batches = sum(BatchCount),
+
+      avg_operation_duration = avg(AvgDuration),
+
+      total_insert_volume = sum(TotalInserts),
+
+      total_delete_volume = sum(TotalDeletes),
+
+      affected_databases = dcount(DatabaseId)
+
+      by TIMESTAMP = bin(TIMESTAMP, 15m);
+
+      // Correlate violations with vector activity'

@@ -1,0 +1,557 @@
+SqlSkills:
+- id: MI-ASMI-QUERIES-01
+  Topic: Execution Stats (MonWiQdsExecStats
+  Source: kusto-queries/Execution Stats (MonWiQdsExecStats.md
+  Prompts:
+  - MonWiQdsExecStats by LogicalServerName, ServerName
+  - MonWiQdsExecStats LogicalServerName ServerName
+  - Investigate Execution Stats (MonWiQdsExecStats
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: 'MonWiQdsExecStats
+
+      | where LogicalServerName =~ "{ServerName}"'
+- id: MI-ASMI-QUERIES-02
+  Topic: Execution Stats (MonWiQdsExecStats
+  Source: kusto-queries/Execution Stats (MonWiQdsExecStats.md
+  Prompts:
+  - MonWiQdsExecStats by LogicalServerName, database_name
+  - MonWiQdsExecStats LogicalServerName database_name ServerName DatabaseName
+  - Investigate Execution Stats (MonWiQdsExecStats
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: 'MonWiQdsExecStats
+
+      | where LogicalServerName =~ "{ServerName}" and database_name =~ "{DatabaseName}"'
+- id: MI-ASMI-QUERIES-03
+  Topic: Execution Stats (MonWiQdsExecStats
+  Source: kusto-queries/Execution Stats (MonWiQdsExecStats.md
+  Prompts:
+  - MonWiQdsExecStats by LogicalServerName, database_name
+  - MonWiQdsExecStats LogicalServerName database_name ServerName DatabaseName
+  - Investigate Execution Stats (MonWiQdsExecStats
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: 'MonWiQdsExecStats
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where database_name =~ "{DatabaseName}"
+
+      | where query_hash== "0xA3051A0F03024F2E"
+
+      | where query_id== 583'
+- id: MI-ASMI-QUERIES-04
+  Topic: Execution Stats (MonWiQdsExecStats
+  Source: kusto-queries/Execution Stats (MonWiQdsExecStats.md
+  Prompts:
+  - MonWiQdsExecStats by LogicalServerName, database_name
+  - MonWiQdsExecStats LogicalServerName database_name ServerName DatabaseName
+  - Investigate Execution Stats (MonWiQdsExecStats
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: 'MonWiQdsExecStats
+
+      | where LogicalServerName =~ "{ServerName}" and database_name =~ "{DatabaseName}"
+
+      | where query_id== 8837'
+- id: MI-ASMI-QUERIES-05
+  Topic: Execution Stats (MonWiQdsExecStats
+  Source: kusto-queries/Execution Stats (MonWiQdsExecStats.md
+  Prompts:
+  - MonWiQdsExecStats by LogicalServerName, database_name
+  - MonWiQdsExecStats LogicalServerName database_name ServerName DatabaseName
+  - Investigate Execution Stats (MonWiQdsExecStats
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: 'MonWiQdsExecStats
+
+      | where LogicalServerName =~ "{ServerName}" and database_name =~ "{DatabaseName}"
+
+      | where originalEventTimestamp> now(-1d)'
+- id: MI-ASMI-QUERIES-06
+  Topic: Execution Stats (MonWiQdsExecStats
+  Source: kusto-queries/Execution Stats (MonWiQdsExecStats.md
+  Prompts:
+  - MonWiQdsExecStats by LogicalServerName, database_name
+  - MonWiQdsExecStats LogicalServerName database_name ServerName DatabaseName
+  - Investigate Execution Stats (MonWiQdsExecStats
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: 'MonWiQdsExecStats
+
+      | where LogicalServerName =~ "{ServerName}" and database_name =~ "{DatabaseName}"
+
+      | where statement_sql_hash== "0x090016A4C8C0DCFDF832AD38A792C301EE960000000000000000000000000000000000000000000000000000"'
+- id: MI-ASMI-QUERIES-07
+  Topic: Execution Stats (MonWiQdsExecStats
+  Source: kusto-queries/Execution Stats (MonWiQdsExecStats.md
+  Prompts:
+  - MonWiQdsExecStats for query store runtime stats update
+  - MonWiQdsExecStats LogicalServerName event logicalServerName let
+  - Investigate Execution Stats (MonWiQdsExecStats
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: 'let logicalServerName = ''ish34-pre-db01'';
+
+      MonWiQdsExecStats
+
+      | where TIMESTAMP >= startTime
+
+      | where TIMESTAMP <= endTime
+
+      | where LogicalServerName == logicalServerName
+
+      | where event == "query_store_runtime_stats_update"'
+- id: MI-ASMI-QUERIES-08
+  Topic: Execution Stats (MonWiQdsExecStats
+  Source: kusto-queries/Execution Stats (MonWiQdsExecStats.md
+  Prompts:
+  - MonWiQdsExecStats by LogicalServerName, database_name
+  - MonWiQdsExecStats LogicalServerName database_name let ServerName
+  - Investigate Execution Stats (MonWiQdsExecStats
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: 'let ServerName = ''{ServerName}'';
+
+      let StartTime=datetime(2024-03-01);
+
+      let EndTime=datetime(2024-03-31);
+
+      let Database = ''database_name'';
+
+      MonWiQdsExecStats
+
+      | where LogicalServerName =~ ServerName'
+- id: MI-ASMI-QUERIES-09
+  Topic: Investigation memory incidents
+  Source: kusto-queries/Investigation memory incidents.md
+  Prompts:
+  - MonWiQdsExecStats by query_id, plan_id
+  - MonWiQdsExecStats query_id plan_id exec_type cpu_time
+  - Investigate Investigation memory incidents
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: 'MonWiQdsExecStats
+
+      | where AppName =~ "{AppName}"
+
+      | project originalEventTimestamp , query_id , plan_id ,exec_type , cpu_time , elapsed_time , dop, max_dop , logical_reads , logical_writes , physical_reads,
+      execution_count , memory_grant_kb = max_max_query_memory_pages * 8, query_hash , query_plan_hash'
+- id: MI-ASMI-QUERIES-10
+  Topic: Investigation memory incidents
+  Source: kusto-queries/Investigation memory incidents.md
+  Prompts:
+  - MonWiQdsWaitStats
+  - Investigate Investigation memory incidents
+  - MI performance MonWiQdsWaitStats
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsWaitStats
+    ExecutedQuery: 'MonWiQdsWaitStats
+
+      | where TIMESTAMP > ago(1d)
+
+      | where AppName =~ "{AppName}"'
+- id: MI-ASMI-QUERIES-11
+  Topic: Investigation memory incidents
+  Source: kusto-queries/Investigation memory incidents.md
+  Prompts:
+  - MonWiQdsWaitStats by LogicalServerName, app_mem_compil_total_query_wait_time_ms
+  - MonWiQdsWaitStats LogicalServerName app_mem_compil_total_query_wait_time_ms wait_category all_total_query_wait_time_ms
+  - Investigate Investigation memory incidents
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsWaitStats
+    ExecutedQuery: 'MonWiQdsWaitStats
+
+      | where originalEventTimestamp > ago(1h)
+
+      | where wait_category in ("MEMORY", "COMPILATION")
+
+      | summarize app_mem_compil_total_query_wait_time_ms=sum(total_query_wait_time_ms) by ClusterName, AppTypeName, AppName, LogicalServerName, NodeName, wait_category
+
+      | where app_mem_compil_total_query_wait_time_ms > 100
+
+      | join kind= inner (
+
+      MonWiQdsWaitStats
+
+      | where originalEventTimestamp > ago(1h)
+
+      | summarize all_total_query_wait_time_ms=sum(total_query_wait_time_ms) by ClusterName, AppTypeName, AppName, LogicalServerName, NodeName
+
+      ) on ClusterName, AppTypeName, AppName, LogicalServerName, NodeName
+
+      | where app_mem_compil_total_query_wait_time_ms * 1.0 / all_total_query_wait_time_ms > 0.30
+
+      | project ClusterName, AppTypeName, AppName, LogicalServerName, NodeName, wait_category, all_total_query_wait_time_ms, app_mem_compil_total_query_wait_time_ms'
+- id: MI-ASMI-QUERIES-12
+  Topic: Investigation memory incidents
+  Source: kusto-queries/Investigation memory incidents.md
+  Prompts:
+  - MonWiQdsExecStats by execution_count, cpu_time
+  - MonWiQdsExecStats execution_count cpu_time max_query_memory_pages query_hash
+  - Investigate Investigation memory incidents
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: 'MonWiQdsExecStats
+
+      | where TIMESTAMP > ago(1d)
+
+      | where AppName =~ "{AppName}"
+
+      | where NodeName == "{NodeName}"
+
+      | summarize sum(execution_count), sum(cpu_time), sum(max_query_memory_pages) by query_hash, plan_id, query_id
+
+      | order by sum_cpu_time desc
+
+      | take 10'
+- id: MI-ASMI-QUERIES-13
+  Topic: Investigation memory incidents
+  Source: kusto-queries/Investigation memory incidents.md
+  Prompts:
+  - MonWiQdsExecStats by database_name, DatabaseName
+  - MonWiQdsExecStats database_name DatabaseName
+  - Investigate Investigation memory incidents
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: 'MonWiQdsExecStats
+
+      | where TIMESTAMP > ago(6h)
+
+      | where AppName =~ "{AppName}" and database_name =~ "{DatabaseName}"'
+- id: MI-ASMI-QUERIES-14
+  Topic: Investigation memory incidents
+  Source: kusto-queries/Investigation memory incidents.md
+  Prompts:
+  - MonWiQdsExecStats by query_id
+  - MonWiQdsExecStats query_id
+  - Investigate Investigation memory incidents
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: 'MonWiQdsExecStats
+
+      | where originalEventTimestamp > now(-3d)
+
+      | where AppName =~ "{AppName}"
+
+      | where query_id == 535'
+- id: MI-ASMI-QUERIES-15
+  Topic: Investigation memory incidents
+  Source: kusto-queries/Investigation memory incidents.md
+  Prompts:
+  - MonWiQdsExecStats by query_id
+  - MonWiQdsExecStats query_id
+  - Investigate Investigation memory incidents
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: 'MonWiQdsExecStats
+
+      | where TIMESTAMP > ago(1d)
+
+      | where AppName =~ "{AppName}"
+
+      | where query_id == 1033165'
+- id: MI-ASMI-QUERIES-16
+  Topic: Investigation memory incidents
+  Source: kusto-queries/Investigation memory incidents.md
+  Prompts:
+  - MonWiQdsExecStats by LogicalServerName, let
+  - MonWiQdsExecStats LogicalServerName let ServerName Interval
+  - Investigate Investigation memory incidents
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: 'let Interval = time(5m);
+
+      let startTime=ago(1h);
+
+      let endTime=now();
+
+      let ServerName = "";
+
+      let DatabaseName = "";
+
+      MonWiQdsExecStats
+
+      | where (LogicalServerName =~ ServerName or server_name =~ ServerName)'
+- id: MI-ASMI-QUERIES-17
+  Topic: Investigation memory incidents
+  Source: kusto-queries/Investigation memory incidents.md
+  Prompts:
+  - MonAttentions by database_name, event
+  - MonAttentions database_name event client_hostname CAZURED365POC
+  - Investigate Investigation memory incidents
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAttentions
+    ExecutedQuery: 'MonAttentions
+
+      | where AppName =~ "{AppName}"
+
+      | where client_hostname == "CAZURED365POC"
+
+      | project TIMESTAMP, NodeName, duration, database_name, client_app_name, session_id, client_hostname , event, sessionName'
+- id: MI-ASMI-QUERIES-18
+  Topic: Query Compile & Recompile - Parameterization
+  Source: kusto-queries/Query Compile & Recompile - Parameterization.md
+  Prompts:
+  - MonWiQueryParamData by LogicalServerName, logical_database_name
+  - MonWiQueryParamData LogicalServerName logical_database_name ServerName DatabaseName
+  - Investigate Query Compile & Recompile Parameterization
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQueryParamData
+    ExecutedQuery: 'MonWiQueryParamData
+
+      | where LogicalServerName =~ "{ServerName}" and logical_database_name =~ "{DatabaseName}"
+
+      | where query_hashin("0x4D16F5438ADD920A","0x42C764BACD861DB9")'
+- id: MI-ASMI-QUERIES-19
+  Topic: Query Compile & Recompile - Parameterization
+  Source: kusto-queries/Query Compile & Recompile - Parameterization.md
+  Prompts:
+  - MonWiQueryParamData by LogicalServerName, logical_database_name
+  - MonWiQueryParamData LogicalServerName logical_database_name ServerName DatabaseName
+  - Investigate Query Compile & Recompile Parameterization
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQueryParamData
+    ExecutedQuery: 'MonWiQueryParamData
+
+      | where LogicalServerName =~ "{ServerName}" and logical_database_name =~ "{DatabaseName}"
+
+      | where query_hash== "0x4D16F5438ADD920A"'
+- id: MI-ASMI-QUERIES-20
+  Topic: Query Compile & Recompile - Parameterization
+  Source: kusto-queries/Query Compile & Recompile - Parameterization.md
+  Prompts:
+  - MonWiQdsExecStats by LogicalServerName, let
+  - MonWiQdsExecStats LogicalServerName let ServerName DatabaseName
+  - Investigate Query Compile & Recompile Parameterization
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: 'let ServerName = "";
+
+      let DatabaseName = '''';
+
+      MonWiQdsExecStats
+
+      | where LogicalServerName =~ ServerName'
+- id: MI-ASMI-QUERIES-21
+  Topic: Replication
+  Source: kusto-queries/Replication.md
+  Prompts:
+  - MonWiQdsExecStats by let, endTime
+  - MonWiQdsExecStats let endTime timeRange startTime
+  - Investigate Replication
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: 'let endTime = now();
+
+      let timeRange = ago(7d);
+
+      MonWiQdsExecStats
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where TIMESTAMP >= startTime
+
+      | where TIMESTAMP <= endTime'
+- id: MI-ASMI-QUERIES-22
+  Topic: Wait DB level (MonDmCloudDatabaseWaitStats
+  Source: kusto-queries/Wait DB level (MonDmCloudDatabaseWaitStats.md
+  Prompts:
+  - MonDmCloudDatabaseWaitStats by LogicalServerName, database_name
+  - MonDmCloudDatabaseWaitStats LogicalServerName database_name ServerName DatabaseName
+  - Investigate Wait DB level (MonDmCloudDatabaseWaitStats
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmCloudDatabaseWaitStats
+    ExecutedQuery: 'MonDmCloudDatabaseWaitStats
+
+      | where LogicalServerName =~ "{ServerName}" and database_name =~ "{DatabaseName}"
+
+      | where end_utc_date > now(-1d)'
+- id: MI-ASMI-QUERIES-23
+  Topic: Wait DB level (MonDmCloudDatabaseWaitStats
+  Source: kusto-queries/Wait DB level (MonDmCloudDatabaseWaitStats.md
+  Prompts:
+  - MonDmCloudDatabaseWaitStats by LogicalServerName, database_name
+  - MonDmCloudDatabaseWaitStats LogicalServerName database_name ServerName DatabaseName
+  - Investigate Wait DB level (MonDmCloudDatabaseWaitStats
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmCloudDatabaseWaitStats
+    ExecutedQuery: 'MonDmCloudDatabaseWaitStats
+
+      | where LogicalServerName =~ "{ServerName}" and database_name =~ "{DatabaseName}"
+
+      | where end_utc_date > now(-2d)'
+- id: MI-ASMI-QUERIES-24
+  Topic: Wait DB level (MonDmCloudDatabaseWaitStats
+  Source: kusto-queries/Wait DB level (MonDmCloudDatabaseWaitStats.md
+  Prompts:
+  - MonDmCloudDatabaseWaitStats by LogicalServerName, database_name
+  - MonDmCloudDatabaseWaitStats LogicalServerName database_name ServerName DatabaseName
+  - Investigate Wait DB level (MonDmCloudDatabaseWaitStats
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmCloudDatabaseWaitStats
+    ExecutedQuery: 'MonDmCloudDatabaseWaitStats
+
+      | where LogicalServerName =~ "{ServerName}" and database_name =~ "{DatabaseName}"
+
+      | where end_utc_date> now(-12h)'
+- id: MI-ASMI-QUERIES-25
+  Topic: Wait DB level (MonDmCloudDatabaseWaitStats
+  Source: kusto-queries/Wait DB level (MonDmCloudDatabaseWaitStats.md
+  Prompts:
+  - MonDmCloudDatabaseWaitStats by let, endTime
+  - MonDmCloudDatabaseWaitStats let endTime clusterFilter nodeFilter
+  - Investigate Wait DB level (MonDmCloudDatabaseWaitStats
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmCloudDatabaseWaitStats
+    ExecutedQuery: 'let endTime= now() ;
+
+      MonDmCloudDatabaseWaitStats
+
+      | where ClusterName== clusterFilter and NodeName contains nodeFilter
+
+      | where AppName contains appName'
+- id: MI-ASMI-QUERIES-26
+  Topic: Wait Type (MonWiQdsWaitStats
+  Source: kusto-queries/Wait Type (MonWiQdsWaitStats.md
+  Prompts:
+  - MonWiQdsWaitStats by LogicalServerName, database_name
+  - MonWiQdsWaitStats LogicalServerName database_name ServerName DatabaseName
+  - Investigate Wait Type (MonWiQdsWaitStats
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsWaitStats
+    ExecutedQuery: 'MonWiQdsWaitStats
+
+      | where LogicalServerName =~ "{ServerName}" and database_name =~ "{DatabaseName}"'
+- id: MI-ASMI-QUERIES-27
+  Topic: Wait Type (MonWiQdsWaitStats
+  Source: kusto-queries/Wait Type (MonWiQdsWaitStats.md
+  Prompts:
+  - MonWiQdsWaitStats by whereLogicalServerName, ServerName
+  - MonWiQdsWaitStats whereLogicalServerName ServerName anddatabase_name DatabaseName
+  - Investigate Wait Type (MonWiQdsWaitStats
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsWaitStats
+    ExecutedQuery: 'MonWiQdsWaitStats
+
+      | where LogicalServerName =~ "{ServerName}"anddatabase_name =~ "{DatabaseName}"
+
+      | wherequery_hash== "0x763F8997F8880161"//LATCH//"0x8F6D35DC427A7D53"PARALLELISM//"0x06EEC8AFB05283A3" CPU'
+- id: MI-ASMI-QUERIES-28
+  Topic: Wait Type (MonWiQdsWaitStats
+  Source: kusto-queries/Wait Type (MonWiQdsWaitStats.md
+  Prompts:
+  - MonWiQdsWaitStats by LogicalServerName, database_name
+  - MonWiQdsWaitStats LogicalServerName database_name ServerName DatabaseName
+  - Investigate Wait Type (MonWiQdsWaitStats
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsWaitStats
+    ExecutedQuery: 'MonWiQdsWaitStats
+
+      | where LogicalServerName =~ "{ServerName}" and database_name =~ "{DatabaseName}"
+
+      | where query_hash== "0x763F8997F8880161"'
+- id: MI-ASMI-QUERIES-29
+  Topic: Wait Type (MonWiQdsWaitStats
+  Source: kusto-queries/Wait Type (MonWiQdsWaitStats.md
+  Prompts:
+  - MonWiQdsWaitStats by LogicalServerName, database_name
+  - MonWiQdsWaitStats LogicalServerName database_name ServerName DatabaseName
+  - Investigate Wait Type (MonWiQdsWaitStats
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsWaitStats
+    ExecutedQuery: 'MonWiQdsWaitStats
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where database_name =~ "{DatabaseName}"
+
+      | where query_hash== "0x025ECF4ECDDC3477"//"0x025ECF4ECDDC3477"'

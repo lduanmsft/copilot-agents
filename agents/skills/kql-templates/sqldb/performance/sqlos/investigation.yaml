@@ -1,0 +1,67 @@
+# ============================================================================
+# SQLLSinvest_perf_sqlos — SQLOS Investigation Workflow
+# ============================================================================
+# Source: SQLLivesiteAgents / Performance / sqlos / SKILL.md + references/
+# Distilled: 2026-04-30
+# Purpose: Layer 1 — 定义 SQLOS Non-Yielding 调查的执行顺序
+# KQL 模板引用: sqlos/kql-livesite.yaml (Layer 2)
+# ============================================================================
+
+Investigation:
+  id: perf-sqlos
+  name: "SQLOS Non-Yielding Investigation"
+  description: >
+    Detects non-yielding scheduler events and analyzes callstacks.
+    Non-yielding can cause query slowness, system task failure, DB hanging,
+    and worker thread exhaustion.
+  source: "SQLLivesiteAgents/Performance/sqlos"
+
+  RequiredParameters:
+    - LogicalServerName
+    - StartTime
+    - EndTime
+    - AppNamesNodeNamesWithOriginalEventTimeRange
+
+  Steps:
+    # ────────────────────────────────────────────────────
+    # Step 1: Non-Yielding Detection
+    # ────────────────────────────────────────────────────
+    - step: 1
+      name: "Non-Yielding Detection"
+      kql_ref: "sqlos/kql-livesite.yaml#LS-SQLOS-01"
+      description: "Count non-yielding scheduler events"
+      table: MonSqlRmRingBuffer
+      filter: "event == 'nonyield_copiedstack_ring_buffer_recorded'"
+      output_fields:
+        - Totalcount
+        - nonYieldingMessage
+      issue_detection: "Totalcount > 0"
+      branching:
+        on_issue:
+          - step: 2    # Callstack Analysis
+        on_normal: "No non-yielding detected"
+
+    # ────────────────────────────────────────────────────
+    # Step 2: Callstack Analysis
+    # ────────────────────────────────────────────────────
+    - step: 2
+      name: "Non-Yielding Callstack Analysis"
+      condition: "step-1.Totalcount > 0"
+      kql_ref: "sqlos/kql-livesite.yaml#LS-SQLOS-02"
+      description: "Group non-yielding events by callstack for root cause analysis"
+      table: MonSqlRmRingBuffer
+      output_fields:
+        - count_
+        - stack_frames
+        - StartTime
+        - EndTime
+        - duration_minutes
+        - dispatcher_pool_name
+        - scheduler_id
+        - session_id
+
+  ExecutionOrder:
+    always_run: [1]
+    conditional:
+      - steps: [2]
+        condition: "step-1.Totalcount > 0"

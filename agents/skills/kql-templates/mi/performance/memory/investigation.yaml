@@ -1,0 +1,111 @@
+# ============================================================================
+# Ported from SQLDB SQLLivesiteAgents, adapted for Managed Instance (MI)
+# MI_SQLLSinvest_perf_memory — Memory Investigation Workflow
+# ============================================================================
+# Source: SQLLivesiteAgents / Performance / memory / SKILL.md + references/
+# Distilled: 2026-04-30
+# Purpose: Layer 1 — 定义 Memory 调查的执行顺序、阈值判断、条件分支
+# KQL 模板引用: memory/kql-livesite.yaml (Layer 2)
+# ============================================================================
+
+Investigation:
+  id: perf-memory
+  name: "Memory Investigation"
+  description: >
+    Investigates memory issues from 3 angles: Memory Overbooking (MRG/DRG),
+    Out-of-Memory (OOM) events, and Buffer Pool size drops.
+    All 3 checks always run.
+  source: "SQLLivesiteAgents/Performance/memory"
+
+  RequiredParameters:
+    - ServerName           # MI uses ServerName
+    - DatabaseName         # MI uses DatabaseName
+    - AppName              # MI fallback when LogicalServerName is empty
+    - StartTime
+    - EndTime
+
+  # ────────────────────────────────────────────────────
+  # Step 1: Memory Overbooking (MRG/DRG) — always run
+  # ────────────────────────────────────────────────────
+  Steps:
+    - step: 1
+      name: "Memory Overbooking — MRG Detection"
+      kql_ref: "memory/kql-livesite.yaml#MI-LS-MEMORY-01"
+      description: "Check Multi-instance Resource Governor memory reclamation events"
+      table: MonRgManager
+      filter: "event == 'multi_instance_mem_rg_recliam_target'"
+      output_fields:
+        - count
+      issue_detection: "count > 0 → MRG overbooking detected"
+
+    - step: 1.1
+      name: "Memory Overbooking — DRG Detection"
+      kql_ref: "memory/kql-livesite.yaml#MI-LS-MEMORY-02"
+      description: "Check Dynamic Resource Governor memory cap changes"
+      table: MonRgManager
+      filter: "event == 'dynamic_rg_cap_change' and resource == 'MEMORY'"
+      output_fields:
+        - count
+      issue_detection: "count > 0 → DRG memory cap reduced"
+
+    # ────────────────────────────────────────────────────
+    # Step 2: OOM Summary — always run
+    # ────────────────────────────────────────────────────
+    - step: 2
+      name: "Out-of-Memory (OOM) Summary"
+      kql_ref: "memory/kql-livesite.yaml#MI-LS-MEMORY-03"
+      description: "Check for OOM events and classify by oomCause code"
+      table: MonSQLSystemHealth
+      filter: "event == 'summarized_oom_snapshot'"
+      oom_cause_codes:
+        1: "HEKATON_POOL_MEMORY_LOW"
+        2: "MEMORY_LOW"
+        3: "OS_MEMORY_PRESSURE"
+        4: "OS_MEMORY_PRESSURE_SQL"
+        5: "NON_SOS_MEMORY_LEAK"
+        6: "SERVERLESS_MEMORY_RECLAMATION"
+        7: "MEMORY_LEAK"
+        8: "SLOW_BUFFER_POOL_SHRINK"
+        9: "INTERNAL_POOL"
+        10: "SYSTEM_POOL"
+        11: "QUERY_MEMORY_GRANTS"
+        12: "REPLICAS_AND_AVAILABILITY"
+      output_fields:
+        - originalEventTimestamp
+        - oomCause
+        - current_job_cap_mb
+        - process_memory_usage_mb
+        - non_sos_usage_mb
+        - topClerks
+        - topPools
+
+    # ────────────────────────────────────────────────────
+    # Step 3: Buffer Pool Decrease — always run
+    # ────────────────────────────────────────────────────
+    - step: 3
+      name: "Buffer Pool Decrease Detection"
+      kql_ref: "memory/kql-livesite.yaml#MI-LS-MEMORY-04"
+      description: "Check if MEMORYCLERK_SQLBUFFERPOOL had a significant drop (>= 20%)"
+      table: MonSqlMemoryClerkStats
+      thresholds:
+        warning: 20    # percentage drop threshold
+      output_fields:
+        - count
+        - dropInMB
+        - percentage
+        - prevMemoryInMB
+        - MemoryInMB
+      issue_detection: "count > 0 → significant buffer pool drops detected"
+
+    - step: 3.1
+      name: "Buffer Pool Timechart (Verification)"
+      condition: "step-3.count > 0"
+      kql_ref: "memory/kql-livesite.yaml#MI-LS-MEMORY-05"
+      description: "Visual timechart of buffer pool size for verification"
+      table: MonSqlMemoryClerkStats
+
+  ExecutionOrder:
+    always_run: [1, 1.1, 2, 3]
+    conditional:
+      - steps: [3.1]
+        condition: "step-3 detects buffer pool drops"

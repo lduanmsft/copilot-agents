@@ -1,0 +1,383 @@
+SqlSkills:
+  - id: "67.5"
+    Prompts:
+      - "Successful compilation CPU Analysis"
+      - "CPU usage of successful compilation"
+      - "What's the CPU usage of successful compilation"
+      - "What's the CPU percentage of successful compilation"
+      - "Did successful compilation caused high CPU usage?"
+      - "Did successful compilation consume lots of CPU resouce?"
+    MessageForEmptyKustoResult: "We don't have data for this query, as it appears no successful recompile/compile happened."
+    KustoQueries:
+      - TableName: "CPU_MonWiQueryParamData"
+        ExecutedQuery: |
+          MonWiQueryParamData
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | extend compile_code=iff(compile_code =='Success','Compilation','Recompile')
+          | summarize compile_cpu_time_ms=sum(compile_cpu_time+auto_update_stats_cpu_time)/1000
+          | project CPU_Percent = round(100.0 * (compile_cpu_time_ms/{SumCpuMillisecondOfAllApp}), 1)
+        DisplayedQuery: |
+          MonWiQueryParamData
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | extend compile_code=iff(compile_code =='Success','Compilation','Recompile')
+          | summarize compile_cpu_time_ms=sum(compile_cpu_time+auto_update_stats_cpu_time)/1000
+          | project CPU_Percent = round(100.0 * (compile_cpu_time_ms/{SumCpuMillisecondOfAllApp}), 1)
+    QuestionToAI: |-
+      -  {{CPU_Percent}}, the data type is Float.
+
+      ### Rules
+      1. Store the value of CPU_Percent column in {{CPU_Percent}}.
+      2. If {{CPU_Percent}} is greater than or equal to 10, then set {{IssueDetected}} to 'True', else set {{IssueDetected}} to 'false'.
+      3. If {{IssueDetected}}  is 'true', set {{ResultMessage}} to "Successful compilation consumed a significant amount of CPU resources, accounting for {{CPU_Percent}}%. Identifying high CPU usage from query compilations."
+      4. If {{IssueDetected}}  is 'false', set {{ResultMessage}} to "Successful compilation did not consume a significant amount of CPU resources, with usage at {{CPU_Percent}}%"
+    SubSqlSkills:
+      - id: "67.52"
+        ExecutedWhenParentIssueDetected: true
+        IsKusto: true
+        Prompts:
+          - "Top Queries by compilation CPU"
+
+  - id: "67.51"
+    # #Description: 
+    #   This skill will check the successful recompile/compile of the specified query,
+    #   including compile count,max_compile_duration_sec,max_compile_cpu_time_sec,max_compile_memory_mb,
+    #   query_plan_hash,is_forced,is_recompiled.
+    #   Note,MonWiQueryParamData doesn't have query_id column
+    Prompts:
+      - "Compile statistics of query PLACEHOLDER"
+      - "Compile stats of query PLACEHOLDER"
+      - "Recompile statistics of query PLACEHOLDER"
+      - "Recompile stats of query PLACEHOLDER"
+      - "Query PLACEHOLDERCompile statistics"
+      - "Query PLACEHOLDERCompile stats"
+      - "Query PLACEHOLDERRecompile statistics"
+      - "Query PLACEHOLDERRecompile stats"
+      - "Compile statistics of query"
+      - "Compile stats of query"
+      - "Recompile statistics of query"
+      - "Recompile stats of query"
+      - "Query Compile statistics"
+      - "Query Compile stats"
+      - "Query Recompile statistics"
+      - "Query Recompile stats"
+    CustomizedParameters:
+      - "query_hash"
+      - "query_id"
+    MessageForEmptyKustoResult: "We don't have data for this query, as it appears no recompile/compile happened."
+    KustoQueries:
+      - TableName: "MonWiQueryParamDataOfSingleQuery"
+        ExecutedQuery: |
+          let queryHashes=(
+          MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | where {CustomizedParametersPlaceholder}
+          | distinct query_hash
+          );
+          MonWiQueryParamData
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | join kind=inner (queryHashes) on query_hash
+          | extend compileDuration_Sec=round(compile_duration/1000.0/1000,1)
+          | extend compileCpuTime_Sec=round(compile_cpu_time/1000.0/1000,1)
+          | extend compileMemory_mb=round(compile_memory/1024,1)
+          | summarize count=count(),maxcompileDuration_Sec=max(compileDuration_Sec),
+          maxcompileCpuTime_Sec=max(compileCpuTime_Sec),
+          maxCompileMemoryMb=max(compileMemory_mb)
+          by query_hash,query_plan_hash,is_forced, compile_code,is_recompiled
+          | order by count
+          | project count,compile_code,is_recompiled,is_forced,maxcompileCpuTime_Sec,maxcompileDuration_Sec,maxCompileMemoryMb, query_hash,query_plan_hash
+        DisplayedQuery: |
+          let queryHashes=(
+          MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | where {CustomizedParametersPlaceholder}
+          | distinct query_hash
+          );
+          MonWiQueryParamData
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | join kind=inner (queryHashes) on query_hash
+          | extend compileDuration_Sec=round(compile_duration/1000.0/1000,1)
+          | extend compileCpuTime_Sec=round(compile_cpu_time/1000.0/1000,1)
+          | extend compileMemory_mb=round(compile_memory/1024,1)
+          | summarize count=count(),maxcompileDuration_Sec=max(compileDuration_Sec),
+          maxcompileCpuTime_Sec=max(compileCpuTime_Sec),
+          maxCompileMemoryMb=max(compileMemory_mb)
+          by query_hash,query_plan_hash,is_forced, compile_code,is_recompiled
+          | order by count
+          | project count,compile_code,is_recompiled,is_forced,maxcompileCpuTime_Sec,maxcompileDuration_Sec,maxCompileMemoryMb, query_hash,query_plan_hash
+
+  - id: "67.52"
+    #Description: "This skill will display the top 5 queries that consumed the most CPU time."
+    Prompts:
+      - "Top Queries by compilation CPU"
+      - "Top Queries by compilation CPU Usage"
+      - "Top 5 Queries by compilation CPU Usage"
+    MessageForEmptyKustoResult: "We don't have data for this query, as it appears no recompile/compile happened."
+    KustoQueries:
+      - TableName: "LongCompilationTime_MonWiQueryParamData"
+        ExecutedQuery: |
+          let TopN=5;
+          MonWiQueryParamData
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | extend compile_duration_sec=round(compile_duration/1000.0/1000,1)
+          | extend compile_cpu_time_sec=round(compile_cpu_time/1000.0/1000,1)
+          | extend compile_memory_mb=round(compile_memory/1024,1)
+          | summarize count=count(),max_compile_duration_sec=max(compile_duration_sec),max_compile_cpu_time_sec=max(compile_cpu_time_sec) by query_hash
+          | project-reorder max_compile_cpu_time_sec,max_compile_duration_sec,count
+          | order by max_compile_cpu_time_sec desc
+          | take TopN
+        DisplayedQuery: |
+          let TopN=5;
+          MonWiQueryParamData
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | extend compile_duration_sec=round(compile_duration/1000.0/1000,1)
+          | extend compile_cpu_time_sec=round(compile_cpu_time/1000.0/1000,1)
+          | extend compile_memory_mb=round(compile_memory/1024,1)
+          | summarize count=count(),max_compile_duration_sec=max(compile_duration_sec),max_compile_cpu_time_sec=max(compile_cpu_time_sec) by query_hash
+          | project-reorder max_compile_cpu_time_sec,max_compile_duration_sec,count
+          | order by max_compile_cpu_time_sec desc
+          | take TopN
+
+  - id: "67.53"
+    #Description: "This skill will display the top 5 queries with the longest compilation durations."
+    Prompts:
+      - "Top Queries by Compilation Time"
+      - "Top 5 Queries by Compilation Time"
+    MessageForEmptyKustoResult: "We don't have data for this query, as it appears no recompile/compile happened."
+    KustoQueries:
+      - TableName: "LongCPUTime_MonWiQueryParamData"
+        ExecutedQuery: |
+          let TopN=5;
+          MonWiQueryParamData
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | extend compile_duration_sec=round(compile_duration/1000.0/1000,1)
+          | extend compile_cpu_time_sec=round(compile_cpu_time/1000.0/1000,1)
+          | extend compile_memory_mb=round(compile_memory/1024,1)
+          | summarize count=count(),max_compile_duration_sec=max(compile_duration_sec),max_compile_cpu_time_sec=max(compile_cpu_time_sec) by query_hash
+          | project-reorder max_compile_duration_sec,max_compile_cpu_time_sec,count
+          | order by max_compile_duration_sec desc
+          | take TopN
+        DisplayedQuery: |
+          let TopN=5;
+          MonWiQueryParamData
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | extend compile_duration_sec=round(compile_duration/1000.0/1000,1)
+          | extend compile_cpu_time_sec=round(compile_cpu_time/1000.0/1000,1)
+          | extend compile_memory_mb=round(compile_memory/1024,1)
+          | summarize count=count(),max_compile_duration_sec=max(compile_duration_sec),max_compile_cpu_time_sec=max(compile_cpu_time_sec) by query_hash
+          | project-reorder max_compile_duration_sec,max_compile_cpu_time_sec,count
+          | order by max_compile_duration_sec desc
+          | take TopN
+
+  - id: "67.6"
+    Prompts:
+      - "Failed compilation CPU Analysis"
+      - "CPU usage of failed compilation"
+      - "What's the CPU usage of failed compilation?"
+      - "Did failed compilation consume lots of cpu resouce?"
+      - "Did failed compilation cause high cpu usage?"
+    KustoQueries:
+      - TableName: "FailedCompilationTable_MonQueryProcessing"
+        ExecutedQuery: |
+          MonQueryProcessing
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | where event =~'failed_compilation'
+          | summarize compile_cpu_ms=sum(compile_cpu)
+          | project CPU_Percent = round(100.0 * (compile_cpu_ms/{SumCpuMillisecondOfAllApp}), 1)
+        DisplayedQuery: |
+          MonQueryProcessing
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | where event =~'failed_compilation'
+          | summarize compile_cpu_ms=sum(compile_cpu)
+          | project CPU_Percent = round(100.0 * (compile_cpu_ms/{SumCpuMillisecondOfAllApp}), 1)
+    QuestionToAI: |-
+      -  {{CPU_Percent}}, the data type is Float.
+
+      ### Rules
+      1. Store the value of CPU_Percent column in {{CPU_Percent}}.
+      2. If {{CPU_Percent}} is greater than or equal to 10, then set {{IssueDetected}} to 'True', else set {{IssueDetected}} to 'false'.
+      3. If {{IssueDetected}}  is 'true', set {{ResultMessage}} to "Failed compilation consumed a significant amount of CPU resources, accounting for {{CPU_Percent}}%. Identifying high CPU usage from failed query compilations"
+      4. If {{IssueDetected}}  is 'false', set {{ResultMessage}} to "Failed compilation didn't consume a significant amount of CPU resources, with usage at {{CPU_Percent}}%"
+    SubSqlSkills:
+      - id: "67.62"
+        ExecutedWhenParentIssueDetected: true
+        IsKusto: true
+        Prompts:
+          - "Top Failed Compilations by CPU"
+
+  - id: "67.61"
+    #Description: "This skill will check the failed recompile/compile of the specified query. Note,MonQueryProcessing doesn't have query_id column"
+    Prompts:
+      - "Failed compile statistics of query PLACEHOLDER"
+      - "Failed compile stats of query PLACEHOLDER"
+      - "Query PLACEHOLDER Failed compile statistics"
+      - "Failed compile statistics of query"
+      - "Failed compile stats of query"
+      - "Query Failed compile statistics"
+    CustomizedParameters:
+      - "query_hash"
+      - "query_id"
+    MessageForEmptyKustoResult: "This query didn't have failed compilation"
+    KustoQueries:
+      - TableName: "failed_compilation_MonQueryProcessing_SingleQuery"
+        ExecutedQuery: |
+          let queryHashes=(
+          MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | where {CustomizedParametersPlaceholder}
+          | distinct query_hash
+          );
+          let totalError=materialize(MonQueryProcessing
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | extend query_hash = strcat('0x', toupper(tohex(query_hash_signed, 16)))
+          | join kind=inner (queryHashes) on query_hash
+          | where event =~'failed_compilation'
+          | summarize count=count() by error_code
+          | extend joinedColumn=1);
+          let totalErrorStats=totalError|summarize totalCount=sum(count),dcount=dcount(error_code) by joinedColumn;
+          totalError
+          | join  kind=inner(totalErrorStats) on joinedColumn
+          | top 1 by count desc
+          | project error_code,totalCount,dcount,count
+        DisplayedQuery: |
+          let queryHashes=(
+          MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | where {CustomizedParametersPlaceholder}
+          | distinct query_hash
+          );
+          MonQueryProcessing
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | extend query_hash = strcat('0x', toupper(tohex(query_hash_signed, 16)))
+          | join kind=inner (queryHashes) on query_hash
+          | where event =~'failed_compilation'
+          | project originalEventTimestamp,error_code,compile_cpu,compile_duration,tasks_count,forced_plan_id
+          | summarize count() by error_code
+    QuestionToAI: |-
+      -  {{totalCount}}, the data type is Integer.
+      -  {{dcount}}, the data type is Integer.
+      -  {{count}}, the data type is Integer.
+      -  {{error_code}}, the data type is Integer.
+
+      ### Rules
+      1. Store the value of totalCount column in {{totalCount}}.
+      2. Store the value of dCount column in {{dCount}}.
+      3. Store the value of count column in {{count}}.
+      4. Store the value of error_code column in {{error_code}}.
+      5. Set {{IssueDetected}} to 'true'.
+      6. If {{dCount}} is equal to1, then set {{ResultMessage}} to "The query failed to compile {{totalCount}} time(s), all linked to a single error(error_code:{{error_code}})".
+      7. If {{dCount}} is greater than 1,  then set {{ResultMessage}} to "The query failed to compile {{totalCount}} time(s), caused by {{dcount}} distinct errors. The most frequent error was error_code {{error_code}}, occurring {{count}} times".
+
+  - id: "67.9"
+    #Description: "This skill will display the top 5 failed compilations that used the most CPU resources."
+    Prompts:
+      - "Top Failed Compilations by CPU"
+      - "Top Failed Compilations by CPU Usage"
+      - "Top 5 Failed Compilations by CPU Usage"
+    MessageForEmptyKustoResult: "We don't have data for this query, as it appears no recompile/compile happened."
+    KustoQueries:
+      - TableName: "LongCPUTimeMonQueryProcessing"
+        ExecutedQuery: |
+          let TopN=5;
+          MonQueryProcessing
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | extend query_hash = strcat('0x', toupper(tohex(query_hash_signed, 16)))
+          | where event =~'failed_compilation'
+          | summarize compile_cpu_ms=sum(compile_cpu),compile_duration_ms=sum(compile_duration) by query_hash
+          | order by compile_cpu_ms desc
+          | take TopN
+        DisplayedQuery: |
+          let TopN=5;
+          MonQueryProcessing
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | extend query_hash = strcat('0x', toupper(tohex(query_hash_signed, 16)))
+          | where event =~'failed_compilation'
+          | summarize compile_cpu_ms=sum(compile_cpu),compile_duration_ms=sum(compile_duration) by query_hash
+          | order by compile_cpu_ms desc
+          | take TopN
+
+  - id: "67.63"
+    #Description: "This skill will display top 5 failed compilations with the longest compilation durations."
+    Prompts:
+      - "Top Failed Compilations by Compilation Time"
+      - "Top 5 Failed Compilations by Compilation Time"
+    MessageForEmptyKustoResult: "We don't have data for this query, as it appears no recompile/compile happened."
+    KustoQueries:
+      - TableName: "LongCompilationTimeMonQueryProcessing"
+        ExecutedQuery: |
+          let TopN=5;
+          MonQueryProcessing
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | extend query_hash = strcat('0x', toupper(tohex(query_hash_signed, 16)))
+          | where event =~'failed_compilation'
+          | summarize compile_cpu_ms=sum(compile_cpu),compile_duration_ms=sum(compile_duration) by query_hash
+          | order by compile_duration_ms desc
+          | take TopN
+        DisplayedQuery: |
+          let TopN=5;
+          MonQueryProcessing
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | extend query_hash = strcat('0x', toupper(tohex(query_hash_signed, 16)))
+          | where event =~'failed_compilation'
+          | summarize compile_cpu_ms=sum(compile_cpu),compile_duration_ms=sum(compile_duration) by query_hash
+          | order by compile_duration_ms desc
+          | take TopN
+
+  - id: "67.64"
+    #Description: "This skill will display failed compilation queries"
+    Prompts:
+      - "Failed Compilation Summary"
+      - "Failed Compilation queries"
+      - "Failed to compile queries"
+    MessageForEmptyKustoResult: "No failed compilation detected"
+    KustoQueries:
+      - TableName: "LongCPUTimeMonQueryProcessing"
+        ExecutedQuery: |
+          MonQueryProcessing
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | extend query_hash = strcat('0x', toupper(tohex(query_hash_signed, 16)))
+          | where event =~'failed_compilation'
+          | summarize FailedCount=count()
+          | where FailedCount > 0
+        DisplayedQuery: |
+          // This query displays the failed compilation queries with error code
+          MonQueryProcessing
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | extend query_hash = strcat('0x', toupper(tohex(query_hash_signed, 16)))
+          | where event =~'failed_compilation'
+          | summarize FailedCount=count() by error_code;
+
+          //This query displays the failed compilation queries with compile_cpu and compile_duration
+          MonQueryProcessing
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndLogicalDatabaseName}
+          | extend query_hash = strcat('0x', toupper(tohex(query_hash_signed, 16)))
+          | where event =~'failed_compilation'
+          | summarize compile_cpu_ms=sum(compile_cpu),compile_duration_ms=sum(compile_duration),FailedCount=count() by query_hash
+    QuestionToAI: |-
+      -  {{FailedCount}}, the data type is Integer.
+
+      ### Rules
+      1. If {{FailedCount}} is greater than 0, then {{IssueDetected}} is 'true', else {{IssueDetected}} is 'false'.
+      2. If {{IssueDetected}} is 'true', then set {{ResultMessage}} to  "Compilation failed {{FailedCount}} time(s)".

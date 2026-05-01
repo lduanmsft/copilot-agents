@@ -1,0 +1,241 @@
+# ============================================================================
+# MI Performance Triage — Quick Scan Overview
+# ============================================================================
+# Purpose: 快速扫描 8 个性能维度，判断哪些有异常，引导深入调查
+# Usage: Performance 问题入口，先跑这里的查询，看总览结果再决定深入哪个子目录
+# ============================================================================
+
+Triage:
+  id: perf-triage
+  name: "MI Performance Quick Scan"
+  description: >
+    快速扫描 CPU、Blocking、Memory、Wait Stats、Disk/IO、Query Store、Errors、Failover
+    8 个维度，每个维度一个轻量查询，判断是否有异常。
+    结果用于引导用户选择需要深入调查的子类别。
+
+  RequiredParameters:
+    - ServerName
+    - AppName              # fallback when LogicalServerName is empty
+    - DatabaseName         # optional, some queries don't need it
+    - StartTime
+    - EndTime
+
+  # ════════════════════════════════════════════════════════
+  # 8 Quick Scan Queries — 并行执行，每个 < 5 秒
+  # ════════════════════════════════════════════════════════
+  Scans:
+
+    # ─── 1. CPU ─────────────────────────────────────────
+    - id: TRIAGE-CPU
+      name: "CPU Overview"
+      category: cpu
+      description: "检查 CPU 使用率是否有异常峰值"
+      threshold: "max_cpu > 80% → 异常"
+      deep_dive: "performance/cpu/"
+      KustoQuery:
+        TableName: MonDmRealTimeResourceStats
+        ExecutedQuery: |
+          MonDmRealTimeResourceStats
+          | where LogicalServerName =~ '{ServerName}'
+          | where TIMESTAMP between (datetime({StartTime})..datetime({EndTime}))
+          | summarize 
+              avg_cpu = round(avg(avg_cpu_percent), 1),
+              max_cpu = round(max(avg_cpu_percent), 1),
+              p95_cpu = round(percentile(avg_cpu_percent, 95), 1),
+              avg_io = round(avg(avg_data_io_percent), 1),
+              avg_log = round(avg(avg_log_write_percent), 1)
+          | extend CPU_Status = case(
+              max_cpu >= 80, "🔴 HIGH CPU",
+              max_cpu >= 50, "🟡 MODERATE",
+              "🟢 NORMAL")
+
+    # ─── 2. Blocking ───────────────────────────────────
+    - id: TRIAGE-BLOCKING
+      name: "Blocking Overview"
+      category: blocking
+      description: "检查是否存在 blocking 事件和 deadlock"
+      threshold: "blocking_count > 0 → 需关注"
+      deep_dive: "performance/blocking/"
+      KustoQuery:
+        TableName: MonBlockedProcessReportFiltered
+        ExecutedQuery: |
+          let blocking_count = toscalar(
+              MonBlockedProcessReportFiltered
+              | where LogicalServerName =~ '{ServerName}'
+              | where database_name =~ '{DatabaseName}'
+              | where originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+              | count);
+          let deadlock_count = toscalar(
+              MonDeadlockReportsFiltered
+              | where LogicalServerName =~ '{ServerName}'
+              | where database_name =~ '{DatabaseName}'
+              | where originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+              | where event =~ 'xml_deadlock_report_filtered'
+              | count);
+          print BlockingEvents = blocking_count, DeadlockEvents = deadlock_count,
+              Blocking_Status = case(
+                  blocking_count > 100, "🔴 SEVERE BLOCKING",
+                  blocking_count > 10, "🟡 MODERATE BLOCKING",
+                  blocking_count > 0, "🟡 MINOR BLOCKING",
+                  "🟢 NO BLOCKING"),
+              Deadlock_Status = iff(deadlock_count > 5, "🔴 DEADLOCKS DETECTED", "🟢 OK")
+
+    # ─── 3. Memory ──────────────────────────────────────
+    - id: TRIAGE-MEMORY
+      name: "Memory Overview"
+      category: memory
+      description: "检查 OOM 事件和内存压力"
+      threshold: "OOM count > 0 → 异常"
+      deep_dive: "performance/memory/"
+      KustoQuery:
+        TableName: MonSQLSystemHealth
+        ExecutedQuery: |
+          let oom_count = toscalar(
+              MonSQLSystemHealth
+              | where LogicalServerName =~ '{ServerName}'
+              | where TIMESTAMP between (datetime({StartTime})..datetime({EndTime}))
+              | where event == 'summarized_oom_snapshot'
+              | count);
+          let mrg_count = toscalar(
+              MonRgManager
+              | where LogicalServerName =~ '{ServerName}'
+              | where originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+              | where event == 'multi_instance_mem_rg_recliam_target'
+              | where reason != '' and reason != 'Healthy'
+              | count);
+          print OOM_Events = oom_count, MRG_Events = mrg_count,
+              Memory_Status = case(
+                  oom_count > 0, strcat("🔴 ", oom_count, " OOM snapshots"),
+                  mrg_count > 0, strcat("🟡 ", mrg_count, " MRG reclaim events"),
+                  "🟢 NO MEMORY ISSUES")
+
+    # ─── 4. Wait Stats ──────────────────────────────────
+    - id: TRIAGE-WAITS
+      name: "Top Wait Types"
+      category: queries
+      description: "查看主要 wait type 分布"
+      threshold: "informational — 看 wait 分布判断瓶颈"
+      deep_dive: "performance/queries/"
+      KustoQuery:
+        TableName: MonDmCloudDatabaseWaitStats
+        ExecutedQuery: |
+          MonDmCloudDatabaseWaitStats
+          | where LogicalServerName =~ '{ServerName}'
+          | where database_name =~ '{DatabaseName}'
+          | where TIMESTAMP between (datetime({StartTime})..datetime({EndTime}))
+          | summarize total_wait_ms = sum(wait_time_ms) by wait_type
+          | top 10 by total_wait_ms desc
+          | extend wait_seconds = round(total_wait_ms / 1000.0, 1)
+          | project wait_type, wait_seconds
+
+    # ─── 5. Disk / Storage ──────────────────────────────
+    - id: TRIAGE-DISK
+      name: "Storage Overview"
+      category: out-of-disk
+      description: "检查存储使用率和磁盘空间"
+      threshold: "usage > 90% → 告警"
+      deep_dive: "performance/out-of-disk/"
+      KustoQuery:
+        TableName: MonManagedInstanceResourceStats
+        ExecutedQuery: |
+          MonManagedInstanceResourceStats
+          | where LogicalServerName =~ '{ServerName}'
+          | where TIMESTAMP between (datetime({StartTime})..datetime({EndTime}))
+          | summarize arg_max(TIMESTAMP, *)
+          | project TIMESTAMP,
+              storage_used_mb = storage_space_used_mb,
+              storage_reserved_mb = reserved_storage_mb,
+              usage_pct = round(100.0 * storage_space_used_mb / reserved_storage_mb, 1)
+          | extend Disk_Status = case(
+              usage_pct >= 90, "🔴 CRITICAL - NEAR FULL",
+              usage_pct >= 80, "🟡 WARNING",
+              "🟢 NORMAL")
+
+    # ─── 6. Query Store ─────────────────────────────────
+    - id: TRIAGE-QDS
+      name: "Query Store Status"
+      category: query-store
+      description: "检查 QDS 是否 readonly 或有异常"
+      threshold: "readonly → 需调查"
+      deep_dive: "performance/query-store/"
+      KustoQuery:
+        TableName: MonQueryStoreInfo
+        ExecutedQuery: |
+          MonQueryStoreInfo
+          | where (LogicalServerName =~ '{ServerName}' or AppName =~ '{AppName}')
+          | where TIMESTAMP between (datetime({StartTime})..datetime({EndTime}))
+          | summarize arg_max(TIMESTAMP, *) by database_name
+          | project database_name, actual_state_desc, readonly_reason,
+              current_storage_size_mb, max_storage_size_mb,
+              usage_pct = round(100.0 * current_storage_size_mb / max_storage_size_mb, 1)
+          | extend QDS_Status = case(
+              actual_state_desc == 'READ_ONLY', "🔴 QDS READONLY",
+              usage_pct >= 90, "🟡 QDS NEAR FULL",
+              "🟢 NORMAL")
+
+    # ─── 7. SQL Errors ──────────────────────────────────
+    - id: TRIAGE-ERRORS
+      name: "Error Summary"
+      category: miscellaneous
+      description: "检查最近的 SQL 错误"
+      threshold: "severity >= 17 errors → 需关注"
+      deep_dive: "performance/miscellaneous/"
+      KustoQuery:
+        TableName: AlrSQLErrorsReported
+        ExecutedQuery: |
+          AlrSQLErrorsReported
+          | where LogicalServerName =~ '{ServerName}'
+          | where TIMESTAMP between (datetime({StartTime})..datetime({EndTime}))
+          | where severity >= 17
+          | summarize error_count = count() by error_number, severity
+          | top 10 by error_count desc
+          | extend Error_Status = iff(error_count > 0, 
+              strcat("🔴 ", error_count, " high-severity errors (error ", error_number, ")"),
+              "🟢 NO ERRORS")
+
+    # ─── 8. Failover / Restart ──────────────────────────
+    - id: TRIAGE-FAILOVER
+      name: "Failover & Restart"
+      category: miscellaneous
+      description: "检查是否有 failover 或 restart 事件"
+      threshold: "any failover → 需关注"
+      deep_dive: "performance/miscellaneous/"
+      KustoQuery:
+        TableName: MonManagementOperations
+        ExecutedQuery: |
+          MonManagementOperations
+          | where LogicalServerName =~ '{ServerName}' or managed_server_name =~ '{ServerName}'
+          | where TIMESTAMP between (datetime({StartTime})..datetime({EndTime}))
+          | where event in ('Failover', 'Restart', 'ReconfigurationDone', 'UserFailover')
+          | summarize event_count = count(), 
+              first_event = min(TIMESTAMP), 
+              last_event = max(TIMESTAMP) 
+              by event
+          | extend Failover_Status = iff(event_count > 0,
+              strcat("🟡 ", event_count, " ", event, " events"),
+              "🟢 NO EVENTS")
+
+  # ════════════════════════════════════════════════════════
+  # Triage 结果处理
+  # ════════════════════════════════════════════════════════
+  ResultHandling:
+    display_format: |
+      ## MI Performance Quick Scan Results
+      
+      | # | 维度 | 状态 | 关键指标 |
+      |---|------|------|----------|
+      | 1 | CPU | {TRIAGE-CPU.CPU_Status} | avg={avg_cpu}%, max={max_cpu}%, p95={p95_cpu}% |
+      | 2 | Blocking | {TRIAGE-BLOCKING.Blocking_Status} | {BlockingEvents} events, {DeadlockEvents} deadlocks |
+      | 3 | Memory | {TRIAGE-MEMORY.Memory_Status} | {OOM_Events} OOM events |
+      | 4 | Wait Stats | informational | top: {top_wait_type} |
+      | 5 | Disk | {TRIAGE-DISK.Disk_Status} | {usage_pct}% used |
+      | 6 | Query Store | {TRIAGE-QDS.QDS_Status} | {usage_pct}% QDS storage |
+      | 7 | Errors | {TRIAGE-ERRORS.Error_Status} | severity >= 17 |
+      | 8 | Failover | {TRIAGE-FAILOVER.Failover_Status} | |
+      
+      哪些维度需要深入调查？（输入编号，如 "1,2" 或 "全部"）
+
+    auto_deep_dive:
+      description: "自动深入所有标记为 🔴 的维度"
+      condition: "status contains '🔴'"
+      action: "加载对应子目录的 investigation.yaml 和 kql-livesite.yaml"

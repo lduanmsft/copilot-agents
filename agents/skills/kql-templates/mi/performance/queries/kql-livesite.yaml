@@ -1,0 +1,589 @@
+# ============================================================================
+# Ported from SQLDB SQLLivesiteAgents, adapted for Managed Instance (MI)
+# kql-livesite.yaml — Queries KQL Templates from SQLLivesiteAgents
+# ============================================================================
+# Priority: P1 (highest)
+# Source: SQLLivesiteAgents / Performance / Queries / references/
+# Distilled: 2026-04-30
+# ============================================================================
+
+SqlSkills:
+
+  # ──────────────────────────────────────────────────────
+  # 1. Query Execution CPU Analysis
+  # Source: Performance/Queries/references/query-execution-cpu-analysis.md
+  # Threshold: >=30% of capacity OR >=50% of utilized
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-QUERIES-01
+    name: "Query Execution CPU Analysis"
+    source: "SQLLivesiteAgents/Performance/Queries/references/query-execution-cpu-analysis.md"
+    table: MonWiQdsExecStats
+    thresholds:
+      high_capacity: 30
+      high_utilized: 50
+    KustoQueries:
+      - TableName: MonWiQdsExecStats
+        ExecutedQuery: |
+          MonWiQdsExecStats
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where database_name =~ '{DatabaseName}'
+          | summarize totalCPU_ms = sum(cpu_time) / 1000.0
+          | project cpu_percent_OverAllUserPoolCPU=round(100*totalCPU_ms/1 // MI: CPU capacity placeholder not available, raw values used,1),
+          cpu_percent_ConsumedUserPoolCPU=round(100*totalCPU_ms/1 // MI: actual CPU capacity placeholder not available, raw values used,1)
+          | extend IssueDetected=iff(cpu_percent_OverAllUserPoolCPU>=30 or cpu_percent_ConsumedUserPoolCPU>=50,'true','false')
+          | project IssueDetected,totalCPU_ms,cpu_percent_OverAllUserPoolCPU,cpu_percent_ConsumedUserPoolCPU
+    OutputFields: [totalCPU_ms, cpu_percent_OverAllUserPoolCPU, cpu_percent_ConsumedUserPoolCPU, IssueDetected]
+
+  # ──────────────────────────────────────────────────────
+  # 2. Top CPU Queries
+  # Source: Performance/Queries/references/top-cpu-queries.md
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-QUERIES-02
+    name: "Top CPU Queries"
+    source: "SQLLivesiteAgents/Performance/Queries/references/top-cpu-queries.md"
+    table: MonWiQdsExecStats
+    parameters:
+      TopN: 5
+    KustoQueries:
+      - TableName: MonWiQdsExecStats
+        ExecutedQuery: |
+          MonWiQdsExecStats
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where database_name =~ '{DatabaseName}'
+          | summarize TotalQueryCPU_ms = sum(cpu_time) / 1000.0,dcount(query_plan_hash) by query_hash
+          | project TotalQueryCPU_Percent_UserPoolCPUCapacity=round(100*TotalQueryCPU_ms/1 // MI: CPU capacity placeholder not available, raw values used,1),
+          TotalQueryCPU_Percent_UsedUserPoolCPU=round(100*TotalQueryCPU_ms/1 // MI: actual CPU capacity placeholder not available, raw values used,1),,dcount_query_plan_hash,query_hash
+          | order by TotalQueryCPU_ms desc
+          | take {TopN}
+    OutputFields: [query_hash, TotalQueryCPU_Percent_UserPoolCPUCapacity, TotalQueryCPU_Percent_UsedUserPoolCPU, dcount_query_plan_hash]
+
+  # ──────────────────────────────────────────────────────
+  # 3. Top CPU Queries Over Time
+  # Source: Performance/Queries/references/top-cpu-queries-over-time.md
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-QUERIES-03
+    name: "Top CPU Queries Over Time"
+    source: "SQLLivesiteAgents/Performance/Queries/references/top-cpu-queries-over-time.md"
+    tables: [MonWiQdsExecStats, MonDmRealTimeResourceStats]
+    parameters:
+      TopN: 5
+    KustoQueries:
+      - TableName: MonWiQdsExecStats
+        ExecutedQuery: |
+          let QDSAggIntervalInMin = time(15m);
+          let top_N = materialize(MonWiQdsExecStats
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where database_name =~ '{DatabaseName}'
+          | top-nested {TopN} of query_hash by sum(cpu_time) desc
+          | project-away  aggregated_query_hash
+          );
+          let cap_interval = materialize(MonDmRealTimeResourceStats
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where database_name =~ '{DatabaseName}'
+          | summarize min(cpu_cap_in_sec) by bin(originalEventTimestamp, QDSAggIntervalInMin));
+          let All_cpu_utilization = materialize(MonWiQdsExecStats
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where database_name =~ '{DatabaseName}'
+          | summarize cores_per_sec = sum(cpu_time) / (QDSAggIntervalInMin / time(1microsecond)) by bin(originalEventTimestamp, QDSAggIntervalInMin), query_hash
+          | lookup kind = inner ( cap_interval ) on originalEventTimestamp
+          | extend TotalQueryCPU_Pct = round(100.0 * cores_per_sec / min_cpu_cap_in_sec, 1)
+          | project originalEventTimestamp, query_hash, TotalQueryCPU_Pct);
+          let top_N_cpu_utilization = materialize(MonWiQdsExecStats
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where database_name =~ '{DatabaseName}'
+          | lookup kind = inner ( top_N ) on query_hash
+          | summarize cores_per_sec = sum(cpu_time) / (QDSAggIntervalInMin / time(1microsecond)) by bin(originalEventTimestamp, QDSAggIntervalInMin), query_hash
+          | lookup kind = inner ( cap_interval ) on originalEventTimestamp
+          | extend TotalQueryCPU_Pct = round(100.0 * cores_per_sec / min_cpu_cap_in_sec, 1)
+          | project originalEventTimestamp, query_hash, TotalQueryCPU_Pct
+          | union All_cpu_utilization);
+          let timestamps = range
+          originalEventTimestamp
+          from bin(toscalar(top_N_cpu_utilization | summarize min(originalEventTimestamp)), QDSAggIntervalInMin)
+          to bin(toscalar(top_N_cpu_utilization | summarize max(originalEventTimestamp)), QDSAggIntervalInMin)
+          step QDSAggIntervalInMin;
+          let top_N_with_timestamps = timestamps
+          | extend tmp_join_col = 1
+          | join kind = inner (
+          top_N
+          | project query_hash
+          | extend tmp_join_col = 1
+          ) on tmp_join_col
+          | project query_hash, originalEventTimestamp;
+          top_N_cpu_utilization
+          | join kind = rightouter(top_N_with_timestamps) on query_hash, originalEventTimestamp
+          | project originalEventTimestamp=originalEventTimestamp1, query_hash=query_hash1, TotalQueryCPU_Pct
+          | extend TotalQueryCPU_Pct = case(isnull(TotalQueryCPU_Pct), 0.0, TotalQueryCPU_Pct)
+          | sort by originalEventTimestamp asc
+
+  # ──────────────────────────────────────────────────────
+  # 4. Top Memory Queries
+  # Source: Performance/Queries/references/top-memory-queries.md
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-QUERIES-04
+    name: "Top Memory Queries"
+    source: "SQLLivesiteAgents/Performance/Queries/references/top-memory-queries.md"
+    table: MonWiQdsExecStats
+    parameters:
+      TopN: 5
+    KustoQueries:
+      - TableName: MonWiQdsExecStats
+        ExecutedQuery: |
+          MonWiQdsExecStats
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where database_name =~ '{DatabaseName}'
+          | summarize maxMemoryGrantOfSingleExecution_mb=max(max_max_query_memory_pages)*8/1024,TotalMemoryGrant_mb= sum(max_query_memory_pages)*8/1024,executionCount=sum(execution_count) by query_hash
+          | order by maxMemoryGrantOfSingleExecution_mb desc nulls first
+          | take {TopN}
+  # ──────────────────────────────────────────────────────
+  # 5. Top Wait Queries
+  # Source: Performance/Queries/references/top-wait-queries.md
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-QUERIES-05
+    name: "Top Wait Queries"
+    source: "SQLLivesiteAgents/Performance/Queries/references/top-wait-queries.md"
+    table: MonWiQdsWaitStats
+    parameters:
+      TopN: 5
+    KustoQueries:
+      - TableName: MonWiQdsWaitStats
+        ExecutedQuery: |
+          MonWiQdsWaitStats
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where database_name =~ '{DatabaseName}'
+          | summarize sum(total_query_wait_time_ms) by query_hash
+          | order by sum_total_query_wait_time_ms desc
+          | take {TopN}
+
+  # ──────────────────────────────────────────────────────
+  # 6. Top Reads Queries
+  # Source: Performance/Queries/references/top-reads-queries.md
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-QUERIES-06
+    name: "Top Logical Reads Queries"
+    source: "SQLLivesiteAgents/Performance/Queries/references/top-reads-queries.md"
+    table: MonWiQdsExecStats
+    parameters:
+      TopN: 5
+    KustoQueries:
+      - TableName: MonWiQdsExecStats
+        ExecutedQuery: |
+          MonWiQdsExecStats
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where database_name =~ '{DatabaseName}'
+          | summarize TotalLogical_reads = sum(logical_reads),totalPhysical_reads=sum(physical_reads),totalPhysical_io_reads=sum(physical_io_reads)  by query_hash
+          | order by TotalLogical_reads desc nulls first
+          | take {TopN}
+
+  # ──────────────────────────────────────────────────────
+  # 7. Top Writes Queries
+  # Source: Performance/Queries/references/top-writes-queries.md
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-QUERIES-07
+    name: "Top Logical Writes Queries"
+    source: "SQLLivesiteAgents/Performance/Queries/references/top-writes-queries.md"
+    table: MonWiQdsExecStats
+    parameters:
+      TopN: 5
+    KustoQueries:
+      - TableName: MonWiQdsExecStats
+        ExecutedQuery: |
+          MonWiQdsExecStats
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where database_name =~ '{DatabaseName}'
+          | summarize TotalLogical_writes = sum(logical_writes) by query_hash
+          | order by TotalLogical_writes desc nulls first
+          | take {TopN}
+
+  # ──────────────────────────────────────────────────────
+  # 8. Top Tempdb Usage Queries
+  # Source: Performance/Queries/references/top-tempdb-usage-queries.md
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-QUERIES-08
+    name: "Top Tempdb Usage Queries"
+    source: "SQLLivesiteAgents/Performance/Queries/references/top-tempdb-usage-queries.md"
+    table: MonWiQdsExecStats
+    parameters:
+      TopN: 5
+    KustoQueries:
+      - TableName: MonWiQdsExecStats
+        ExecutedQuery: |
+          MonWiQdsExecStats
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where database_name =~ '{DatabaseName}'
+          | summarize TotalTempdb_space_used_mb=round(sum(tempdb_space_used)*8/1024,1) by query_hash
+          | order by TotalTempdb_space_used_mb desc nulls first
+          | take {TopN}
+
+  # ──────────────────────────────────────────────────────
+  # 9. Top Log Usage Queries
+  # Source: Performance/Queries/references/top-log-queries.md
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-QUERIES-09
+    name: "Top Log Usage Queries"
+    source: "SQLLivesiteAgents/Performance/Queries/references/top-log-queries.md"
+    table: MonWiQdsExecStats
+    parameters:
+      TopN: 5
+    KustoQueries:
+      - TableName: MonWiQdsExecStats
+        ExecutedQuery: |
+          MonWiQdsExecStats
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | summarize TotalLogUsed_mb=round(sum(log_bytes_used)/1024.0/1024,1) by query_hash
+          | order by TotalLogUsed_mb desc nulls first
+          | take {TopN}
+
+  # ──────────────────────────────────────────────────────
+  # 10. Top Failed Queries
+  # Source: Performance/Queries/references/top-failed-queries.md
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-QUERIES-10
+    name: "Top Failed Queries"
+    source: "SQLLivesiteAgents/Performance/Queries/references/top-failed-queries.md"
+    table: MonWiQdsWaitStats
+    parameters:
+      TopN: 5
+    KustoQueries:
+      - TableName: MonWiQdsWaitStats
+        ExecutedQuery: |
+          MonWiQdsWaitStats
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where database_name =~ '{DatabaseName}'
+          | where exec_type !=0
+          | top-nested {TopN} of query_hash by failedCount=count(),
+          top-nested 2 of  wait_category by total_query_wait_time_ms=sum(total_query_wait_time_ms) desc
+
+  # ──────────────────────────────────────────────────────
+  # 11. Query CPU Over Time Analysis
+  # Source: Performance/Queries/references/query-cpu-over-time-analysis.md
+  # Threshold: HighCPUThreshold default 70
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-QUERIES-11
+    name: "Query CPU Over Time Analysis"
+    source: "SQLLivesiteAgents/Performance/Queries/references/query-cpu-over-time-analysis.md"
+    tables: [MonWiQdsExecStats, MonDmRealTimeResourceStats]
+    thresholds:
+      high_cpu: 70
+    KustoQueries:
+      - TableName: MonWiQdsExecStats
+        ExecutedQuery: |
+          let QDSAggIntervalInMin = time(15m);
+          let cap_interval = materialize(MonDmRealTimeResourceStats
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where database_name =~ '{DatabaseName}'
+          | summarize min(cpu_cap_in_sec) by bin(originalEventTimestamp, QDSAggIntervalInMin));
+          MonWiQdsExecStats
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where database_name =~ '{DatabaseName}'
+          | summarize cores_per_sec = sum(cpu_time) / (QDSAggIntervalInMin / time(1microsecond)) by bin(originalEventTimestamp, QDSAggIntervalInMin)
+          | lookup kind = inner ( cap_interval ) on originalEventTimestamp
+          | extend cpu_percent = round(100.0 * cores_per_sec / min_cpu_cap_in_sec, 1)
+          | where cpu_percent>{HighcpuWarningThreshold}
+          | project originalEventTimestamp,cpu_percent
+
+  # ──────────────────────────────────────────────────────
+  # 12. Failed Query Execution Summary
+  # Source: Performance/Queries/references/failed-query-execution-summary.md
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-QUERIES-12
+    name: "Failed Query Execution Summary"
+    source: "SQLLivesiteAgents/Performance/Queries/references/failed-query-execution-summary.md"
+    table: MonWiQdsExecStats
+    KustoQueries:
+      - TableName: MonWiQdsExecStats
+        ExecutedQuery: |
+          let FailureStatus = (failedPercentage: real,failedCount:long,totalExecCount:long)
+          {
+          case(
+          failedCount==0, strcat(totalExecCount," queries were executed and no failed query execution detected."),
+          strcat(failedCount, " of ",totalExecCount," queries failed, representing a failure rate of ",failedPercentage,"%.")
+          )
+          };
+          MonWiQdsExecStats
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where database_name =~ '{DatabaseName}'
+          | summarize totalExecCount = sum(execution_count), failedCount = sumif(execution_count, exec_type !=0)
+          | extend failedPercentage=case(totalExecCount == 0, 0, round(100.0*failedCount/totalExecCount,3))
+          | extend IssueDetected=failedCount>=1
+          | extend failureStatus=FailureStatus(failedPercentage,failedCount,totalExecCount)
+          | project IssueDetected,failureStatus
+    OutputFields: [totalExecCount, failedCount, failedPercentage, IssueDetected, failureStatus]
+
+  # ──────────────────────────────────────────────────────
+  # 13. Top Wait Types of Query Execution
+  # Source: Performance/Queries/references/top-wait-types-of-query-execution.md
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-QUERIES-13
+    name: "Top Wait Types of Query Execution"
+    source: "SQLLivesiteAgents/Performance/Queries/references/top-wait-types-of-query-execution.md"
+    table: MonWiQdsWaitStats
+    parameters:
+      TopN: 5
+    KustoQueries:
+      - TableName: MonWiQdsWaitStats
+        ExecutedQuery: |
+          let totalWaitTime_ms=toscalar(MonWiQdsWaitStats
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where database_name =~ '{DatabaseName}'
+          | summarize sum(total_query_wait_time_ms));
+          MonWiQdsWaitStats
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where database_name =~ '{DatabaseName}'
+          | summarize sumWaitTime_ms=sum(total_query_wait_time_ms) by wait_category
+          | project wait_category,sumWaitTime_ms, percentage=round(sumWaitTime_ms*100.0/totalWaitTime_ms,1)
+          | order by sumWaitTime_ms
+          | take {TopN}
+    OutputFields: [wait_category, sumWaitTime_ms, percentage]
+
+  # ──────────────────────────────────────────────────────
+  # 14. Specific Query Detail (Orchestrator)
+  # Source: Performance/Queries/references/specific-query-detail.md
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-QUERIES-14
+    name: "Specific Query Detail (Orchestrator)"
+    source: "SQLLivesiteAgents/Performance/Queries/references/specific-query-detail.md"
+    type: orchestrator
+    description: "Calls all specific-query sub-skills for a given query_hash"
+    parameters:
+      query_hash: "{user-provided}"
+    sub_skills:
+      - MI-LS-QUERIES-15   # Antipattern
+      - MI-LS-QUERIES-16   # Execution Summary
+      - MI-LS-QUERIES-17   # CPU Usage
+      - MI-LS-QUERIES-18   # CPU Over Time
+      - MI-LS-QUERIES-19   # Memory Usage
+      - MI-LS-QUERIES-20   # Execution Time vs Wait Time
+      - MI-LS-QUERIES-21   # Wait Type Analysis
+
+  # ──────────────────────────────────────────────────────
+  # 15. Specific Query Antipattern
+  # Source: Performance/Queries/references/specific-query-antipattern.md
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-QUERIES-15
+    name: "Specific Query Antipattern Detection"
+    source: "SQLLivesiteAgents/Performance/Queries/references/specific-query-antipattern.md"
+    table: MonQueryProcessing
+    parameters:
+      query_hash: "{query_hash}"
+    KustoQueries:
+      - TableName: MonQueryProcessing
+        ExecutedQuery: |
+          MonQueryProcessing
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where logical_database_name =~ '{DatabaseName}'
+          | where originalEventTimestamp between (datetime({StartTime}) .. datetime({EndTime}))
+          | where event =~ 'query_antipattern'
+          | extend query_hash = strcat('0x', toupper(tohex(query_hash_signed)))
+          | extend query_plan_hash = strcat('0x', toupper(tohex(query_plan_hash_signed)))
+          | where query_hash =~'{query_hash}'
+          | distinct antipattern_type,query_plan_hash,query_hash
+
+  # ──────────────────────────────────────────────────────
+  # 16. Specific Query Execution Summary
+  # Source: Performance/Queries/references/specific-query-execution-summary.md
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-QUERIES-16
+    name: "Specific Query Execution Summary"
+    source: "SQLLivesiteAgents/Performance/Queries/references/specific-query-execution-summary.md"
+    table: MonWiQdsExecStats
+    parameters:
+      query_hash: "{query_hash}"
+    KustoQueries:
+      - TableName: MonWiQdsExecStats
+        ExecutedQuery: |
+          let ExecSummary=(totalExecCount:long, errorCount:long, failedRatio:real)
+          {
+          case(totalExecCount==0,"The query execution count was 0",
+          errorCount==0,strcat("The query has been executed ",tostring(totalExecCount)," time(s) without any error."),
+          strcat("Please note, ",failedRatio,"% of query execution failed, here is the detail: ",errorCount," of ",totalExecCount," executions failed.")
+          )
+          };
+          MonWiQdsExecStats
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where database_name =~ '{DatabaseName}'
+          | where (isnotempty('{query_hash}') and query_hash =~ '{query_hash}') or (isnotempty('{query_id}') and query_id == {query_id})
+          | summarize totalExecCount = sum(execution_count), errorCount = sumif(execution_count, exec_type != 0)
+          | extend failedRatio=iff(totalExecCount > 0, round(errorCount*100.0/totalExecCount,1), 0.0)
+          | extend execSummary=ExecSummary( totalExecCount, errorCount, failedRatio)
+          | extend IssueDetected=errorCount >0
+          | project execSummary,IssueDetected
+
+  # ──────────────────────────────────────────────────────
+  # 17. Specific Query CPU Usage
+  # Source: Performance/Queries/references/specific-query-cpu-usage.md
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-QUERIES-17
+    name: "Specific Query CPU Usage"
+    source: "SQLLivesiteAgents/Performance/Queries/references/specific-query-cpu-usage.md"
+    table: MonWiQdsExecStats
+    parameters:
+      query_hash: "{query_hash}"
+    KustoQueries:
+      - TableName: MonWiQdsExecStats
+        ExecutedQuery: |
+          MonWiQdsExecStats
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where database_name =~ '{DatabaseName}'
+          | where (isnotempty('{query_hash}') and query_hash =~ '{query_hash}') or (isnotempty({query_id}) and query_id == {query_id})
+          | summarize totalCPU_ms = sum(cpu_time)/1000,max_cpuTime_ms=max(max_cpu_time)/1000,total_ExecutionCount=sum(execution_count) by query_hash, query_id
+          | project query_hash,query_id,total_ExecutionCount,totalCPU_ms,max_cpuTime_ms,cpu_percent=round(100*totalCPU_ms/1 // MI: CPU capacity placeholder not available, raw values used,3)
+          | extend executionStatus=strcat("The query was executed ",total_ExecutionCount," times, accounting for ",cpu_percent,"% of total User Pool CPU Capacity, with a maximum CPU time of ",max_cpuTime_ms,"ms for a single execution.")
+          | project executionStatus
+
+  # ──────────────────────────────────────────────────────
+  # 18. Specific Query CPU Usage Over Time
+  # Source: Performance/Queries/references/specific-query-cpu-usage-over-time.md
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-QUERIES-18
+    name: "Specific Query CPU Over Time"
+    source: "SQLLivesiteAgents/Performance/Queries/references/specific-query-cpu-usage-over-time.md"
+    tables: [MonWiQdsExecStats, MonDmRealTimeResourceStats]
+    parameters:
+      query_hash: "{query_hash}"
+    KustoQueries:
+      - TableName: MonWiQdsExecStats
+        ExecutedQuery: |
+          let QDSAggIntervalInMin = time(15m);
+          let cap_interval = materialize(MonDmRealTimeResourceStats
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where database_name =~ '{DatabaseName}'
+          | summarize min(cpu_cap_in_sec) by bin(originalEventTimestamp, QDSAggIntervalInMin));
+          MonWiQdsExecStats
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where database_name =~ '{DatabaseName}'
+          | where (isnotempty('{query_hash}') and query_hash =~ '{query_hash}') or (isnotempty({query_id}) and query_id == {query_id})
+          | summarize 
+              cpu_time_ms = sum(cpu_time)/1000,
+              execution_count = sum(execution_count),
+              avg_cpu_per_exec_ms = round(sum(cpu_time)/1000.0/sum(execution_count), 2),
+              query_plan_hashes = make_set(query_plan_hash)
+            by bin(originalEventTimestamp, QDSAggIntervalInMin)
+          | lookup kind = inner (cap_interval) on originalEventTimestamp
+          | extend cpu_cap_ms = min_cpu_cap_in_sec * 1000 * 15 * 60
+          | extend cpu_percent_of_capacity = round(100.0 * cpu_time_ms / cpu_cap_ms, 2)
+          | project 
+              TimeInterval = originalEventTimestamp,
+              ExecutionCount = execution_count,
+              TotalCPU_ms = cpu_time_ms,
+              AvgCPU_per_exec_ms = avg_cpu_per_exec_ms,
+              CPU_Percent_of_Capacity = cpu_percent_of_capacity,
+              QueryPlanHashes = query_plan_hashes,
+              CPU_Cap_in_sec = min_cpu_cap_in_sec
+          | order by TimeInterval asc
+
+  # ──────────────────────────────────────────────────────
+  # 19. Specific Query Memory Usage
+  # Source: Performance/Queries/references/specific-query-memory-usage.md
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-QUERIES-19
+    name: "Specific Query Memory Usage"
+    source: "SQLLivesiteAgents/Performance/Queries/references/specific-query-memory-usage.md"
+    table: MonWiQdsExecStats
+    parameters:
+      query_hash: "{query_hash}"
+    KustoQueries:
+      - TableName: MonWiQdsExecStats
+        ExecutedQuery: |
+          MonWiQdsExecStats
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where database_name =~ '{DatabaseName}'
+          | where (isnotempty('{query_hash}') and query_hash =~ '{query_hash}') or (isnotempty({query_id}) and query_id == {query_id})
+          | summarize maxMemoryGrantOfSingleExecution_mb=max(max_max_query_memory_pages)*8/1024,totalMemoryGrant_mb = sum(max_query_memory_pages)*8/1024,executionCount=sum(execution_count) by query_hash, query_id
+
+  # ──────────────────────────────────────────────────────
+  # 20. Specific Query Execution Time vs Wait Time
+  # Source: Performance/Queries/references/specific-query-execution-time-vs-wait-time-analysis.md
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-QUERIES-20
+    name: "Specific Query Execution Time vs Wait Time"
+    source: "SQLLivesiteAgents/Performance/Queries/references/specific-query-execution-time-vs-wait-time-analysis.md"
+    tables: [MonWiQdsExecStats, MonWiQdsWaitStats]
+    parameters:
+      query_hash: "{query_hash}"
+    KustoQueries:
+      - TableName: MonWiQdsExecStats
+        ExecutedQuery: |
+          let WaitSummary=(sum_ExecutionTime_ms:long,sum_CpuTime_ms:long,total_wait_time_ms:long,ratio:real)
+          {
+          let waitSummary=strcat("The query experienced",
+          case(ratio>=0.3," significant",ratio>=0.2," moderate"," minimal"),
+          " waits, with a wait time to CPU time ratio of ",ratio,", indicating that it spent ",round(ratio*100,1),"% of its execution time either waiting for resources or being blocked.");
+          let actionPlan=strcat(case(ratio>=0.3," That significantly impact the performance,",ratio>=0.2," If this is a concern,",""),   " please review and apply the suggested action plans outlined in the sub-items below to address this wait issue.");
+          let parallelMessage=case(sum_CpuTime_ms>sum_ExecutionTime_ms and total_wait_time_ms>sum_CpuTime_ms," (You may notice that execution time is less than the CPU time, this is because this query used parallel execution plan)","");
+          strcat(waitSummary,iff(0.1>=ratio,"",actionPlan),parallelMessage);
+          };
+          let total_wait_time_ms=toscalar(MonWiQdsWaitStats
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where database_name =~ '{DatabaseName}'
+          | where (isnotempty('{query_hash}') and query_hash =~ '{query_hash}') or (isnotempty('{query_id}') and query_id == '{query_id}')
+          | summarize sum(total_query_wait_time_ms)
+          );
+          MonWiQdsExecStats
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where database_name =~ '{DatabaseName}'
+          | where (isnotempty('{query_hash}') and query_hash =~ '{query_hash}') or (isnotempty('{query_id}') and query_id == '{query_id}')
+          | summarize sum_CpuTime_ms=sum(cpu_time)/1000,sum_ExecutionTime_ms=sum(elapsed_time)/1000,count=count()
+          | where count>0
+          | extend ratio=round(total_wait_time_ms*1.0/sum_CpuTime_ms,2)
+          | extend waitSummary=WaitSummary(sum_ExecutionTime_ms,sum_CpuTime_ms,total_wait_time_ms,ratio)
+          | extend IssueDetected=ratio>0.1
+          | project IssueDetected,waitSummary
+
+  # ──────────────────────────────────────────────────────
+  # 21. Specific Query Wait Type Analysis
+  # Source: Performance/Queries/references/specific-query-wait-type-analysis.md
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-QUERIES-21
+    name: "Specific Query Wait Type Analysis"
+    source: "SQLLivesiteAgents/Performance/Queries/references/specific-query-wait-type-analysis.md"
+    table: MonWiQdsWaitStats
+    parameters:
+      query_hash: "{query_hash}"
+      TopN: 2
+    KustoQueries:
+      - TableName: MonWiQdsWaitStats
+        ExecutedQuery: |
+          let WaitTypeSummary=(dcount_wait_category:int,TopWaitTypeNames:string,top1WaitTypeName:string,secondWaitTypeName:string,total_wait_time_ms:long,top1WaitType_wait_time_ms:long,secondWaitType_wait_time_ms:long)
+          {
+          let WaitTypeSummary_onlyOneWaitType=case(dcount_wait_category==1,strcat("The Top 1 Waitype of this query was ",top1WaitTypeName,", and this was the only waitType detected. The total wait time of ",total_wait_time_ms," milliseconds."),"");
+          let WaitTypeSummary_twoWaitType=case(dcount_wait_category==1,"",strcat("The top 2 wait types were:",TopWaitTypeNames,". The [",top1WaitTypeName,"] accounted ",top1WaitType_wait_time_ms, " milliseconds of wait time, representing ",round(top1WaitType_wait_time_ms*100.0/total_wait_time_ms,1),
+          "% of total; The second one [",secondWaitTypeName,"] account for ",round(secondWaitType_wait_time_ms*100.0/total_wait_time_ms,1),"% of the total wait time."));
+          strcat(WaitTypeSummary_onlyOneWaitType,WaitTypeSummary_twoWaitType)
+          };
+          let total_wait_time_ms=toscalar(MonWiQdsWaitStats
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where database_name =~ '{DatabaseName}'
+          | where (isnotempty('{query_hash}') and query_hash =~ '{query_hash}') or (isnotempty({query_id}) and query_id == {query_id})
+          | summarize sum(total_query_wait_time_ms)
+          );
+          MonWiQdsWaitStats
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where database_name =~ '{DatabaseName}'
+          | where (isnotempty('{query_hash}') and query_hash =~ '{query_hash}') or (isnotempty({query_id}) and query_id == {query_id})
+          | summarize individual_query_wait_time_ms=sum(total_query_wait_time_ms) by wait_category
+          | order by individual_query_wait_time_ms desc nulls first
+          | take {TopN}
+          | summarize dcount_wait_category=dcount(wait_category),TopWaitTypeNames=make_set(wait_category) ,(top1WaitType_wait_time_ms,top1WaitTypeName)=arg_max(individual_query_wait_time_ms,wait_category),(secondWaitType_wait_time_ms,secondWaitTypeName)=arg_min(individual_query_wait_time_ms,wait_category)
+          | extend waitTypeSummary=WaitTypeSummary(dcount_wait_category,TopWaitTypeNames,top1WaitTypeName,secondWaitTypeName,total_wait_time_ms,top1WaitType_wait_time_ms,secondWaitType_wait_time_ms)
+          | extend TopWaitTypeNames=strcat_array(TopWaitTypeNames, ";")
+          | project waitTypeSummary,TopWaitTypeNames
+    OutputFields: [waitTypeSummary, TopWaitTypeNames]
+
+  # ──────────────────────────────────────────────────────
+  # 22. Overall Top Queries (Orchestrator)
+  # Source: Performance/Queries/references/overall-top-queries.md
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-QUERIES-22
+    name: "Overall Top Queries (Orchestrator)"
+    source: "SQLLivesiteAgents/Performance/Queries/references/overall-top-queries.md"
+    type: orchestrator
+    description: "Runs all top-N ranking sub-skills for comprehensive query overview"
+    sub_skills:
+      - MI-LS-QUERIES-02   # Top CPU
+      - MI-LS-QUERIES-04   # Top Memory
+      - MI-LS-QUERIES-05   # Top Wait
+      - MI-LS-QUERIES-06   # Top Reads
+      - MI-LS-QUERIES-07   # Top Writes
+      - MI-LS-QUERIES-08   # Top Tempdb
+      - MI-LS-QUERIES-09   # Top Log

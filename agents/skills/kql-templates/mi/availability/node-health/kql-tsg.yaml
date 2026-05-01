@@ -1,0 +1,245 @@
+SqlSkills:
+- id: MI-node-health-1
+  Topic: TSGCLHE005-Stuck_Database_Drop_Hermes_Drive_Path_Mismatch
+  Source: content/Hermes/TSGCLHE005-Stuck_Database_Drop_Hermes_Drive_Path_Mismatch.md
+  Prompts:
+  - MI TSGCLHE005 Stuck_Database_Drop_Hermes_Drive_Path_Mismatch
+  - Managed Instance TSGCLHE005 Stuck_Database_Drop_Hermes_Drive_Path_Mismatch
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedInstanceInfo
+    ExecutedQuery: |-
+      MonManagedInstanceInfo
+      | where TIMESTAMP > ago(1d)
+      | where logical_server_name =~ '<ManagedServerName>'
+      | summarize arg_max(TIMESTAMP, ClusterName, NodeName, AppName) by logical_server_name
+- id: MI-node-health-2
+  Topic: TSGCLHE005-Stuck_Database_Drop_Hermes_Drive_Path_Mismatch
+  Source: content/Hermes/TSGCLHE005-Stuck_Database_Drop_Hermes_Drive_Path_Mismatch.md
+  Prompts:
+  - MI TSGCLHE005 Stuck_Database_Drop_Hermes_Drive_Path_Mismatch
+  - Managed Instance TSGCLHE005 Stuck_Database_Drop_Hermes_Drive_Path_Mismatch
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonNodeAgentEvents
+    ExecutedQuery: |-
+      MonNodeAgentEvents
+      | where TIMESTAMP > ago(1h)
+      | where NodeName == "<NodeName_from_Step1b>"
+      | where message has "<file_guid>"  // e.g. "ebb39c11" or "56b816d0"
+      | project TIMESTAMP, event, message
+      | order by TIMESTAMP desc
+- id: MI-node-health-3
+  Topic: TSGCLHE005-Stuck_Database_Drop_Hermes_Drive_Path_Mismatch
+  Source: content/Hermes/TSGCLHE005-Stuck_Database_Drop_Hermes_Drive_Path_Mismatch.md
+  Prompts:
+  - MI TSGCLHE005 Stuck_Database_Drop_Hermes_Drive_Path_Mismatch
+  - Managed Instance TSGCLHE005 Stuck_Database_Drop_Hermes_Drive_Path_Mismatch
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCounterOneMinute
+    ExecutedQuery: |-
+      let _ClusterName = "<tenant_ring_name>";
+      let _NodeName = "<NodeName_from_Step1b>";
+      let _DriveLetter = "N:";  // from Step 1 DriveLetter column
+      let _StartTime = datetime(<before_cleanup_time>);
+      let _EndTime = datetime(<after_cleanup_time>);
+      MonCounterOneMinute
+      | where TIMESTAMP between(_StartTime .. _EndTime)
+      | where ClusterName == _ClusterName
+      | where NodeName == _NodeName
+      | where CounterName in (
+          strcat("\\LogicalDisk(", _DriveLetter, ")\\% Free Space"),
+          strcat("\\LogicalDisk(", _DriveLetter, ")\\Free Megabytes")
+        )
+      | project TIMESTAMP, CounterName, CounterValue
+      | render timechart
+- id: MI-node-health-4
+  Topic: TSGCLHE005-Stuck_Database_Drop_Hermes_Drive_Path_Mismatch
+  Source: content/Hermes/TSGCLHE005-Stuck_Database_Drop_Hermes_Drive_Path_Mismatch.md
+  Prompts:
+  - MI TSGCLHE005 Stuck_Database_Drop_Hermes_Drive_Path_Mismatch
+  - Managed Instance TSGCLHE005 Stuck_Database_Drop_Hermes_Drive_Path_Mismatch
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCounterOneMinute
+    ExecutedQuery: |-
+      MonCounterOneMinute
+      | where TIMESTAMP between(_StartTime .. _EndTime)
+      | where ClusterName == _ClusterName
+      | where NodeName == _NodeName
+      | where CounterName in (
+- id: MI-node-health-5
+  Topic: TSG-Increase-SQL-MI-reserved-storage-on-the-fly
+  Source: content/sql_cloud_lifter_notebook/TSG-Increase-SQL-MI-reserved-storage-on-the-fly.md
+  Prompts:
+  - MI TSG Increase SQL MI reserved storage on the fly
+  - Managed Instance TSG Increase SQL MI reserved storage on the fly
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCounterOneMinute
+    ExecutedQuery: |-
+      MonCounterOneMinute
+      | where TIMESTAMP > ago(1d)
+      | where ClusterName == "{ClusterName}"
+      | where NodeName == "{PrimaryNodeName}"
+      | where CounterName == "\\LogicalDisk(M:)\\Free Megabytes"
+      | project TIMESTAMP, CounterValue
+      | render timechart
+- id: MI-node-health-6
+  Topic: TSG-Increase-SQL-MI-reserved-storage-on-the-fly
+  Source: content/sql_cloud_lifter_notebook/TSG-Increase-SQL-MI-reserved-storage-on-the-fly.md
+  Prompts:
+  - MI TSG Increase SQL MI reserved storage on the fly
+  - Managed Instance TSG Increase SQL MI reserved storage on the fly
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCounterOneMinute
+    ExecutedQuery: |-
+      MonCounterOneMinute
+      | where TIMESTAMP > ago(1d)
+      | where ClusterName == "{ClusterName}"
+      | where NodeName == "{PrimaryNodeName}"
+      | where CounterName == "\\LogicalDisk(<DriveLetterFromStepAbove>:)\\Free Megabytes"
+      | project TIMESTAMP, CounterValue
+      | render timechart
+- id: MI-node-health-7
+  Topic: TSGCL0279-Hermes-Managed-server-encountered-a-stuck-upsert-operation
+  Source: content/sql_cloud_lifter_notebook/TSGCL0279-Hermes-Managed-server-encountered-a-stuck-upsert-operation.md
+  Prompts:
+  - MI TSGCL0279 Hermes Managed server encountered a stuck upsert operation
+  - Managed Instance TSGCL0279 Hermes Managed server encountered a stuck upsert operation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonNodeAgentEvents
+    ExecutedQuery: |-
+      MonNodeAgentEvents
+      | where TIMESTAMP > ago(7d)
+      | where ClusterName == "{ClusterName}"
+      | where message contains "CheckIfDisksBecameLocallyVisible" and message contains "script output"
+      | summarize arg_max(TIMESTAMP, *) by NodeName
+      | project originalEventTimestamp, NodeName, message
+- id: MI-node-health-8
+  Topic: Transaction-log-usage-increases-during-failover
+  Source: Performance-and-Query-Execution/Managing-space-for-databases-and-pools/Transaction-log-usage-increases-during-failover.md
+  Prompts:
+  - MI Transaction log usage increases during failover
+  - Managed Instance Transaction log usage increases during failover
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: |-
+      MonSQLSystemHealth
+      | where TIMESTAMP  between (datetime(2023-03-07 12:00:00)..datetime(2023-03-07 17:00:00))
+      | where LogicalServerName =~ "{ServerName}"
+      | summarize min(PreciseTimeStamp), max(PreciseTimeStamp) by ClusterName, NodeName, process_id
+- id: MI-node-health-9
+  Topic: Transaction-log-usage-increases-during-failover
+  Source: Performance-and-Query-Execution/Managing-space-for-databases-and-pools/Transaction-log-usage-increases-during-failover.md
+  Prompts:
+  - MI Transaction log usage increases during failover
+  - Managed Instance Transaction log usage increases during failover
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonClusterLoad
+    ExecutedQuery: |-
+      MonClusterLoad
+      | where ClusterName contains "{cluster_name}"
+      | where TIMESTAMP  between (datetime(2023-03-07 12:00:00)..datetime(2023-03-07 17:00:00))
+      | where node_type == "DB"
+      | where event == "node_state_report"
+      | project SnapshotTimestamp, node_name, code_version, config_version, health_state, node_status, node_type, node_up_time, upgrade_domain
+      | summarize min(SnapshotTimestamp), max(SnapshotTimestamp) by  node_status, upgrade_domain, config_version, code_version, node_name, bin(SnapshotTimestamp,1h)
+- id: MI-node-health-10
+  Topic: OnePager_-Transaction-log-usage-increases-during-failover
+  Source: Performance-and-Query-Execution/Managing-space-for-databases-and-pools/[OnePager]-Transaction-log-usage-increases-during-failover.md
+  Prompts:
+  - MI [OnePager] Transaction log usage increases during failover
+  - Managed Instance [OnePager] Transaction log usage increases during failover
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: |-
+      MonSQLSystemHealth
+      | where TIMESTAMP between (datetime(2023-03-07 12:00:00)..datetime(2023-03-07 17:00:00))
+      | where LogicalServerName =~ '{ServerName}'
+      | summarize min(PreciseTimeStamp), max(PreciseTimeStamp) by ClusterName, NodeName, process_id
+- id: MI-node-health-11
+  Topic: OnePager_-Transaction-log-usage-increases-during-failover
+  Source: Performance-and-Query-Execution/Managing-space-for-databases-and-pools/[OnePager]-Transaction-log-usage-increases-during-failover.md
+  Prompts:
+  - MI [OnePager] Transaction log usage increases during failover
+  - Managed Instance [OnePager] Transaction log usage increases during failover
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonClusterLoad
+    ExecutedQuery: |-
+      MonClusterLoad
+      | where ClusterName contains '{cluster_name}'
+      | where TIMESTAMP between (datetime(2023-03-07 12:00:00)..datetime(2023-03-07 17:00:00))
+      | where node_type == 'DB'
+      | where event == 'node_state_report'
+      | project SnapshotTimestamp, node_name, code_version, config_version, health_state, node_status, node_type, node_up_time, upgrade_domain
+      | summarize min(SnapshotTimestamp), max(SnapshotTimestamp) by node_status, upgrade_domain, config_version, code_version, node_name, bin(SnapshotTimestamp,1h)
+- id: MI-node-health-12
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCounterOneMinute
+    ExecutedQuery: |-
+      MonCounterOneMinute
+      | where TIMESTAMP between(datetime(2024-10-01 20:00:00)..datetime(2024-10-02 05:00:00))
+      //
+      | where TIMESTAMP > ago(30d)
+      | where ClusterName == tenantRingName
+      | where NodeName == nodeName
+      | where CounterName endswith "Rejected Connections/sec"
+      | project TIMESTAMP, NodeName, CounterValue
+      | render timechart
+- id: MI-node-health-13
+  Topic: Useful-Kusto-queries
+  Source: Performance-and-Query-Execution/Reference/Useful-Kusto-queries.md
+  Prompts:
+  - MI Useful Kusto queries
+  - Managed Instance Useful Kusto queries
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlDump
+    ExecutedQuery: |-
+      MonSqlDump
+      | where LogicalServerName =~ ServerName
+      | where TIMESTAMP > ago(7d)
+      | where CompleteFileName endswith '.dmp'
+      | summarize TIMESTAMP = min(TIMESTAMP) by AppName, ClusterName, NodeName, CompleteFileName
+      | project TIMESTAMP, AppName, ClusterName, NodeName, CompleteFileName
+      | order by TIMESTAMP asc

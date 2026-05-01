@@ -1,0 +1,187 @@
+# ============================================================================
+# Ported from SQLDB SQLLivesiteAgents, adapted for Managed Instance (MI)
+# MI_SQLLSinvest_perf_queries — Query Execution Investigation Workflow
+# ============================================================================
+# Source: SQLLivesiteAgents / Performance / Queries / SKILL.md + references/
+# Distilled: 2026-04-30
+# Purpose: Layer 1 — 定义 Query 调查的执行顺序、阈值判断、条件分支
+# KQL 模板引用: queries/kql-livesite.yaml (Layer 2)
+# ============================================================================
+
+Investigation:
+  id: perf-queries
+  name: "Query Execution Investigation"
+  description: >
+    Analyzes T-SQL query execution from QDS. Checks overall CPU consumed by queries,
+    identifies top CPU-consuming queries, analyzes CPU over time, checks failed queries
+    and wait types, and drills into specific query details.
+  source: "SQLLivesiteAgents/Performance/Queries"
+
+  RequiredParameters:
+    - ServerName           # MI uses ServerName
+    - DatabaseName         # MI uses DatabaseName
+    - AppName              # MI fallback when LogicalServerName is empty
+    - StartTime
+    - EndTime
+    - isBusinessCritical
+
+  # ────────────────────────────────────────────────────
+  # Step 1: Query Execution CPU Analysis
+  # ────────────────────────────────────────────────────
+  Steps:
+    - step: 1
+      name: "Query Execution CPU Analysis"
+      kql_ref: "queries/kql-livesite.yaml#MI-LS-QUERIES-01"
+      description: "Check total QDS CPU as percentage of User Pool CPU capacity and utilized CPU"
+      table: MonWiQdsExecStats
+      thresholds:
+        high_capacity: 30     # cpu_percent_OverAllUserPoolCPU >= 30%
+        high_utilized: 50     # cpu_percent_ConsumedUserPoolCPU >= 50%
+      output_fields:
+        - totalCPU_ms
+        - cpu_percent_OverAllUserPoolCPU
+        - cpu_percent_ConsumedUserPoolCPU
+        - IssueDetected
+      branching:
+        on_issue:
+          - step: 2    # Top CPU Queries
+          - step: 3    # Query CPU Over Time Analysis
+        on_normal: "Report no significant query CPU, terminate"
+
+    # ────────────────────────────────────────────────────
+    # Step 2: Top CPU Queries
+    # ────────────────────────────────────────────────────
+    - step: 2
+      name: "Top CPU Queries"
+      condition: "step-1.IssueDetected == true"
+      kql_ref: "queries/kql-livesite.yaml#MI-LS-QUERIES-02"
+      description: "Identify top N CPU-consuming queries from QDS by total CPU"
+      table: MonWiQdsExecStats
+      parameters:
+        TopN: 5
+      output_fields:
+        - query_hash
+        - TotalQueryCPU_Percent_UserPoolCPUCapacity
+        - TotalQueryCPU_Percent_UsedUserPoolCPU
+        - dcount_query_plan_hash
+
+    # ────────────────────────────────────────────────────
+    # Step 3: Query CPU Over Time Analysis
+    # ────────────────────────────────────────────────────
+    - step: 3
+      name: "Query CPU Over Time Analysis"
+      condition: "step-1.IssueDetected == true"
+      kql_ref: "queries/kql-livesite.yaml#MI-LS-QUERIES-11"
+      description: "Check QDS CPU at 15-min intervals to find high-CPU windows"
+      tables: [MonWiQdsExecStats, MonDmRealTimeResourceStats]
+      thresholds:
+        high_cpu: 70    # HighCPUThreshold default
+      branching:
+        on_high_intervals:
+          - step: 3.1    # Top CPU Queries Over Time
+        on_normal: "No intervals exceed threshold"
+
+    - step: 3.1
+      name: "Top CPU Queries Over Time"
+      condition: "step-3 returns rows exceeding threshold"
+      kql_ref: "queries/kql-livesite.yaml#MI-LS-QUERIES-03"
+      description: "Time-series breakdown of top N query CPU at 15-min intervals"
+      tables: [MonWiQdsExecStats, MonDmRealTimeResourceStats]
+      parameters:
+        TopN: 5
+
+    # ────────────────────────────────────────────────────
+    # Step 4: Failed Query Summary
+    # ────────────────────────────────────────────────────
+    - step: 4
+      name: "Failed Query Execution Summary"
+      kql_ref: "queries/kql-livesite.yaml#MI-LS-QUERIES-12"
+      description: "Check total executions, failed count, and failure rate"
+      table: MonWiQdsExecStats
+      output_fields:
+        - totalExecCount
+        - failedCount
+        - failedPercentage
+        - IssueDetected
+      branching:
+        on_issue:
+          - step: 5    # Top Wait Types
+          - step: 4.1  # Top Failed Queries
+        on_normal: "No failed queries, skip"
+
+    - step: 4.1
+      name: "Top Failed Queries"
+      condition: "step-4.IssueDetected == true"
+      kql_ref: "queries/kql-livesite.yaml#MI-LS-QUERIES-10"
+      description: "Top N queries by failure count with top wait categories"
+      table: MonWiQdsWaitStats
+      parameters:
+        TopN: 5
+
+    # ────────────────────────────────────────────────────
+    # Step 5: Top Wait Types
+    # ────────────────────────────────────────────────────
+    - step: 5
+      name: "Top Wait Types of Query Execution"
+      condition: "step-4.IssueDetected == true"
+      kql_ref: "queries/kql-livesite.yaml#MI-LS-QUERIES-13"
+      description: "Overall wait category distribution across all queries"
+      table: MonWiQdsWaitStats
+      parameters:
+        TopN: 5
+      output_fields:
+        - wait_category
+        - sumWaitTime_ms
+        - percentage
+
+    # ────────────────────────────────────────────────────
+    # Step 6: Specific Query Deep-dive (orchestrator)
+    # ────────────────────────────────────────────────────
+    - step: 6
+      name: "Specific Query Detail"
+      condition: "user requests detail for a specific query_hash"
+      kql_ref: "queries/kql-livesite.yaml#MI-LS-QUERIES-14 (orchestrator)"
+      description: "Deep-dive into a specific query by query_hash"
+      parameters:
+        query_hash: "{user-provided}"
+      sub_skills:
+        - name: "Query Antipattern Detection"
+          kql_ref: "queries/kql-livesite.yaml#MI-LS-QUERIES-15"
+        - name: "Query Execution Summary"
+          kql_ref: "queries/kql-livesite.yaml#MI-LS-QUERIES-16"
+        - name: "Query CPU Usage"
+          kql_ref: "queries/kql-livesite.yaml#MI-LS-QUERIES-17"
+        - name: "Query CPU Over Time"
+          kql_ref: "queries/kql-livesite.yaml#MI-LS-QUERIES-18"
+        - name: "Query Memory Usage"
+          kql_ref: "queries/kql-livesite.yaml#MI-LS-QUERIES-19"
+        - name: "Execution Time vs Wait Time"
+          kql_ref: "queries/kql-livesite.yaml#MI-LS-QUERIES-20"
+        - name: "Query Wait Type Analysis"
+          kql_ref: "queries/kql-livesite.yaml#MI-LS-QUERIES-21"
+
+  ExecutionOrder:
+    always_run: [1, 4]
+    conditional:
+      - steps: [2, 3]
+        condition: "step-1.IssueDetected == true"
+      - steps: [3.1]
+        condition: "step-3 returns high-CPU intervals"
+      - steps: [4.1, 5]
+        condition: "step-4.IssueDetected == true"
+      - steps: [6]
+        condition: "user explicitly requests specific query detail"
+
+  AdditionalQueries:
+    - name: "Overall Top Queries (orchestrator)"
+      kql_ref: "queries/kql-livesite.yaml#MI-LS-QUERIES-22"
+      description: "Runs all top-N sub-skills (CPU, memory, waits, reads, writes, tempdb, log)"
+      condition: "user asks for comprehensive query overview"
+      sub_skills:
+        - "MI-LS-QUERIES-02 (Top CPU)"
+        - "MI-LS-QUERIES-04 (Top Memory)"
+        - "MI-LS-QUERIES-05 (Top Wait)"
+        - "MI-LS-QUERIES-06 (Top Reads)"
+        - "MI-LS-QUERIES-07 (Top Writes)"
+        - "MI-LS-QUERIES-08 (Top Tempdb)"
+        - "MI-LS-QUERIES-09 (Top Log)"

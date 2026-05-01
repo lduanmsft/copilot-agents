@@ -1,0 +1,357 @@
+SqlSkills:
+- id: MI-ASMI-MISCELLANEOUS-01
+  Topic: AAD authentication
+  Source: kusto-queries/AAD authentication.md
+  Prompts:
+  - MI login event telemetry by logical_server_name, database_name
+  - MonLogin logical_server_name database_name let starttime
+  - Investigate AAD authentication
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'let starttime= ago(1d);
+
+      let endtime= now();
+
+      let server= ''myazepmdb0011'';
+
+      let database= ''MerlotCADemo'';
+
+      MonLogin
+
+      | where originalEventTimestamp>= starttime and originalEventTimestamp<= endtime
+
+      | where logical_server_name=~ server //and database_name=~ database'
+- id: MI-ASMI-MISCELLANEOUS-02
+  Topic: AAD authentication
+  Source: kusto-queries/AAD authentication.md
+  Prompts:
+  - MonFedAuthTicketService for fedauth webtoken failure
+  - MonFedAuthTicketService event starttime endtime fedauth_webtoken_failure
+  - Investigate AAD authentication
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonFedAuthTicketService
+    ExecutedQuery: 'MonFedAuthTicketService
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where originalEventTimestamp>= starttime and originalEventTimestamp<= endtime
+
+      | where event== ''fedauth_webtoken_failure'''
+- id: MI-ASMI-MISCELLANEOUS-03
+  Topic: AAD authentication
+  Source: kusto-queries/AAD authentication.md
+  Prompts:
+  - MonAzureActivDirService by logical_server_name, database_name
+  - MonAzureActivDirService logical_server_name database_name databaseName startTime
+  - Investigate AAD authentication
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAzureActivDirService
+    ExecutedQuery: 'MonAzureActivDirService
+
+      | where originalEventTimestamp between(startTime..endTime)
+
+      | where logical_server_name =~ serverName and (isempty(databaseName) or database_name =~ databaseName)'
+- id: MI-ASMI-MISCELLANEOUS-04
+  Topic: Code Package Version & Primary Node history
+  Source: kusto-queries/Code Package Version & Primary Node history.md
+  Prompts:
+  - MonManagedServers by LogicalServerName, name
+  - MonManagedServers LogicalServerName name lulimi2 ServerName
+  - Investigate Code Package Version & Primary Node history
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'MonManagedServers
+
+      | where name =~ "lulimi2" or LogicalServerName =~ "{ServerName}"'
+- id: MI-ASMI-MISCELLANEOUS-05
+  Topic: Database Options (MonDatabaseMetadata
+  Source: kusto-queries/Database Options (MonDatabaseMetadata.md
+  Prompts:
+  - MI database metadata telemetry by LogicalServerName, ServerName
+  - MonDatabaseMetadata LogicalServerName ServerName let daysAgo
+  - Investigate Database Options (MonDatabaseMetadata
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDatabaseMetadata
+    ExecutedQuery: 'let ServerName = "{ServerName}" ;
+
+      let daysAgo=7d;
+
+      MonDatabaseMetadata
+
+      | where AppName !startswith ''b-'' and AppName !startswith ''v-''
+
+      | where TIMESTAMP > ago(daysAgo)
+
+      | where LogicalServerName =~ ServerName'
+- id: MI-ASMI-MISCELLANEOUS-06
+  Topic: Governance, Quota
+  Source: kusto-queries/Governance, Quota.md
+  Prompts:
+  - MonDmDbResourceGovernance by c94327dccd25
+  - MonDmDbResourceGovernance c94327dccd25
+  - Investigate Governance, Quota
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmDbResourceGovernance
+    ExecutedQuery: 'MonDmDbResourceGovernance
+
+      | where AppName in("c94327dccd25")'
+- id: MI-ASMI-MISCELLANEOUS-07
+  Topic: How to find MI located Subscription ID and attach in ASC_
+  Source: kusto-queries/How to find MI located Subscription ID and attach in ASC_.md
+  Prompts:
+  - MonManagedServers by managedInstanceName, let
+  - MonManagedServers managedInstanceName let misql data
+  - Investigate How to find MI located Subscription ID and attach in ASC
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'let managedInstanceName = ''misql-data-dev01'';//''dbs-azmssqlmi-intranetapps2-prdizdb-sharepoint'';
+
+      MonManagedServers
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where name == managedInstanceName'
+- id: MI-ASMI-MISCELLANEOUS-08
+  Topic: Open transaction (MonDmTranActiveTransactions
+  Source: kusto-queries/Open transaction (MonDmTranActiveTransactions.md
+  Prompts:
+  - MonDmTranActiveTransactions by let, endTime
+  - MonDmTranActiveTransactions let endTime b v
+  - Investigate Open transaction (MonDmTranActiveTransactions
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmTranActiveTransactions
+    ExecutedQuery: 'let endTime = now();
+
+      MonDmTranActiveTransactions
+
+      | where AppName !startswith ''b-'' and AppName !startswith ''v-''
+
+      | where AppName contains appname_name_input'
+- id: MI-ASMI-MISCELLANEOUS-09
+  Topic: Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  Source: kusto-queries/Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation.md
+  Prompts:
+  - MonPrivateClusterCapacityManagement by hkg, eas
+  - MonPrivateClusterCapacityManagement hkg eas npd shared
+  - Investigate Provisioning Telemetry (PCCM,Ring rollout, UpertTenantRing,DeploymentAutomation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonPrivateClusterCapacityManagement
+    ExecutedQuery: 'MonPrivateClusterCapacityManagement
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where subscription_id =~''820471c7-56ff-47e6-9d77-1ac11d9daa9b''
+
+      | where subnet_resource_id contains "/subscriptions/820471c7-56ff-47e6-9d77-1ac11d9daa9b/resourceGroups/rg-hkg-eas-npd-shared-02/providers/Microsoft.Network/virtualNetworks/vnet-hkg-eas-npd-shared-02/subnets/snet-vnet-hkg-eas-dev-nbs-01-db"
+
+      | where TIMESTAMP > ago (8d)'
+- id: MI-ASMI-MISCELLANEOUS-10
+  Topic: Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  Source: kusto-queries/Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation.md
+  Prompts:
+  - MonManagedServers by customer_subscription_id, name
+  - MonManagedServers customer_subscription_id name sql mi
+  - Investigate Provisioning Telemetry (PCCM,Ring rollout, UpertTenantRing,DeploymentAutomation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'MonManagedServers
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where customer_subscription_id =~''820471c7-56ff-47e6-9d77-1ac11d9daa9b''
+
+      | where name=~''sql-mi-eas-dev-nbs-01''
+
+      | where TIMESTAMP > ago (7d)'
+- id: MI-ASMI-MISCELLANEOUS-11
+  Topic: Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  Source: kusto-queries/Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation.md
+  Prompts:
+  - MonManagedServers by customer_subscription_id, name
+  - MonManagedServers customer_subscription_id name sql mi
+  - Investigate Provisioning Telemetry (PCCM,Ring rollout, UpertTenantRing,DeploymentAutomation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'MonManagedServers
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where customer_subscription_id =~''820471c7-56ff-47e6-9d77-1ac11d9daa9b''
+
+      | where name=~''sql-mi-eas-dev-nbs-01''
+
+      | where TIMESTAMP > ago (8d)'
+- id: MI-ASMI-MISCELLANEOUS-12
+  Topic: Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  Source: kusto-queries/Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation.md
+  Prompts:
+  - MonPrivateClusters by private_cluster_id, A73F
+  - MonPrivateClusters private_cluster_id A73F B5EC B54B2F6AC0EC
+  - Investigate Provisioning Telemetry (PCCM,Ring rollout, UpertTenantRing,DeploymentAutomation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonPrivateClusters
+    ExecutedQuery: 'MonPrivateClusters
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where private_cluster_id =~ ''9FC94FEB-A73F-42EA-B5EC-B54B2F6AC0EC''
+
+      | project-reorder private_cluster_id, TIMESTAMP, state, ring_buildout_id, tenant_ring_name
+
+      | where TIMESTAMP > ago (7d)'
+- id: MI-ASMI-MISCELLANEOUS-13
+  Topic: Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  Source: kusto-queries/Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation.md
+  Prompts:
+  - MonPrivateClusters by private_cluster_id, A73F
+  - MonPrivateClusters private_cluster_id A73F B5EC B54B2F6AC0EC
+  - Investigate Provisioning Telemetry (PCCM,Ring rollout, UpertTenantRing,DeploymentAutomation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonPrivateClusters
+    ExecutedQuery: 'MonPrivateClusters
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where private_cluster_id in( ''9FC94FEB-A73F-42EA-B5EC-B54B2F6AC0EC'',''A7D82BEB-01DA-48C2-950E-BA46888E6A33'')'
+- id: MI-ASMI-MISCELLANEOUS-14
+  Topic: Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  Source: kusto-queries/Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation.md
+  Prompts:
+  - MonUpsertTenantRingRequests by ring_buildout_id, A089
+  - MonUpsertTenantRingRequests ring_buildout_id A089 reorder tenant_ring_name
+  - Investigate Provisioning Telemetry (PCCM,Ring rollout, UpertTenantRing,DeploymentAutomation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonUpsertTenantRingRequests
+    ExecutedQuery: 'MonUpsertTenantRingRequests
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where ring_buildout_id =~ ''6ADB6873-4F1E-47CC-A089-81ADA0151513''
+
+      | where TIMESTAMP > ago (7d)
+
+      | project-reorder ring_buildout_id, TIMESTAMP, tenant_ring_name, build_fabric_cluster_da_instance_id, create_fabric_cluster_da_instance_id, initialize_fabric_cluster_da_instance_id,'
+- id: MI-ASMI-MISCELLANEOUS-15
+  Topic: Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  Source: kusto-queries/Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation.md
+  Prompts:
+  - MonUpsertTenantRingRequests by ring_buildout_id, ABE8
+  - MonUpsertTenantRingRequests ring_buildout_id ABE8 AFBB B675D476050A
+  - Investigate Provisioning Telemetry (PCCM,Ring rollout, UpertTenantRing,DeploymentAutomation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonUpsertTenantRingRequests
+    ExecutedQuery: 'MonUpsertTenantRingRequests
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where ring_buildout_id =~ ''2F36046B-ABE8-40D5-AFBB-B675D476050A''
+
+      | where TIMESTAMP > ago (8d)
+
+      | project-reorder ring_buildout_id, TIMESTAMP, tenant_ring_name, build_fabric_cluster_da_instance_id, create_fabric_cluster_da_instance_id, initialize_fabric_cluster_da_instance_id,'
+- id: MI-ASMI-MISCELLANEOUS-16
+  Topic: Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  Source: kusto-queries/Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation.md
+  Prompts:
+  - MonDeploymentAutomationInstances by instance_id, B4658E03
+  - MonDeploymentAutomationInstances instance_id B4658E03 B1CA A345
+  - Investigate Provisioning Telemetry (PCCM,Ring rollout, UpertTenantRing,DeploymentAutomation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDeploymentAutomationInstances
+    ExecutedQuery: 'MonDeploymentAutomationInstances
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where instance_id in( "B4658E03-B1CA-4835-A345-C9D59C948886","FBA14393-4BB6-4E59-8A6E-DB8F3800E9B2","1BD4A255-76C9-48DC-A46C-CFE9E75A0F77")'
+- id: MI-ASMI-MISCELLANEOUS-17
+  Topic: Replication
+  Source: kusto-queries/Replication.md
+  Prompts:
+  - MI SQL Agent job telemetry by let, endTime
+  - MonSqlAgent let endTime timeRange startTime
+  - Investigate Replication
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlAgent
+    ExecutedQuery: 'let endTime = now();
+
+      let timeRange = ago(7d);
+
+      MonSqlAgent
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where TIMESTAMP >= startTime
+
+      | where TIMESTAMP <= endTime'
+- id: MI-ASMI-MISCELLANEOUS-18
+  Topic: Tips with ARM team for failed operation
+  Source: kusto-queries/Tips with ARM team for failed operation.md
+  Prompts:
+  - MonManagementResourceProvider by let, subId
+  - MonManagementResourceProvider let subId filter request_url
+  - Investigate Tips with ARM team for failed operation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagementResourceProvider
+    ExecutedQuery: 'let subId = ''820471c7-56ff-47e6-9d77-1ac11d9daa9b'';
+
+      MonManagementResourceProvider
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      |filter request_url contains "/startManagedInstanceOperationResults/c5db2528-f7a8-477f-9ea8-162f16f76e48"
+
+      | where correlation_id == "c5af5cb3-d3cb-4a73-9fe2-fc5b65451c99"'

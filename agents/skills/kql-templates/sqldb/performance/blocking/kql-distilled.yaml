@@ -1,0 +1,277 @@
+SqlSkills:
+  - id: "79.0"
+    Prompts:
+      - "Blocking Detection"
+    EvaluationTrueMessage: "Blocking was detected, please type 'Blocking Analysis' to get more details."
+    EvaluationFalseMessage: "Worker Thread Exhaustion is not detected."
+    SuppressOutputOfDescendants: true
+    SubSqlSkills:
+      - Prompts:
+          - "Blocking Analysis"
+
+  - id: "66.0"
+    Prompts:
+      - "Blocking Analysis"
+      - "Blocking summary"
+      - "Blocking Issue"
+      - "Did server Have Blocking Issue"
+      - "Any Blocking"
+    # Description: |
+    #   This skill will check the blocking statistics, and call the skill 'Lead blocker summary' if more than moderate blocking is detected.
+    #   moderate blocking(less than or equal to 2% of session capacity is used)
+    #   massive blocking(greater than or equal to 5% of session capacity is used)
+    #   moderate blocking(greater than or equal to 30% of session capacity is used)
+    #   Please note, If MonDmDbResourceGovernance doesn't return anything, this skill will not deliver warning message!
+    #   (For example: If this is new created database, the MonDmDbResourceGovernance is empty)
+    MessageForEmptyKustoResult: "No blocking was detected."
+    KustoQueries:
+      - TableName: "MonBlockedProcessReportFiltered_Blockingsummary"
+        ExecutedQuery: |
+          let BlockingStatus = (blockeeSessionPercent: real) {
+          case(
+          blockeeSessionPercent <= 1, "Small blocking detected, and You may type 'Lead blocker summary' to get more details if the blocking is a concern.",
+          blockeeSessionPercent > 1 and blockeeSessionPercent <= 2, "Moderate blocking detected.",
+          blockeeSessionPercent > 2 and blockeeSessionPercent <= 10, "Massive blocking detected. Please note that this condition may lead to noticeable performance issues, including but not limited to query slowness, timeouts, and deadlocks.",
+          blockeeSessionPercent > 10 and blockeeSessionPercent <= 30, "Severe blocking detected! Please note that this condition may result in significant performance degradation, including but not limited to query slowness, timeouts, deadlocks and CPU usage decreasing.",
+          "Extremely severe blocking detected! Please note that this condition may lead to worker thread exhaustion, potentially impacting system stability."
+          )
+          };
+          let WorkersLimitPerDB=(MonDmDbResourceGovernance
+          | where PreciseTimeStamp>datetime_add('day',-2,datetime({StartTime})) and PreciseTimeStamp<datetime_add('day',2,datetime({EndTime}))
+          | where {LogicalServerAndDatabaseName}
+          | extend WorkersLimitPerDB = primary_group_max_workers
+          | extend WorkersLimitPerPool = primary_pool_max_workers
+          | summarize  WorkersLimitPerPool = take_any(WorkersLimitPerPool), WorkersLimitPerDB = take_any(WorkersLimitPerDB) by AppName
+          | project WorkersLimitPerDB  ,AppName);
+          MonBlockedProcessReportFiltered
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | extend monitorLoop = extract('monitorLoop=\x22([0-9]+)\x22',1,blocked_process_filtered, typeof(int))
+          | parse blocked_process_filtered with anystr3:string '<blocked-process>' blockee '</blocked-process>' discard1
+          | parse blocked_process_filtered with anystr4:string'<blocking-process>' blocker '</blocking-process>' discard2
+          | extend blockee_session_id = extract('spid=\x22([0-9]+)\x22', 1, blockee, typeof(int))
+          | extend blocker_session_id = extract('spid=\x22([0-9]+)\x22', 1, blocker, typeof(int))
+          | project originalEventTimestamp,monitorLoop,blockee_session_id,blocker_session_id,AppName
+          | summarize blockees = make_set(blockee_session_id), blockers = make_set(blocker_session_id),timestamp=format_datetime(min(originalEventTimestamp),'yyyy-MM-dd HH:mm:ss') by monitorLoop,AppName
+          | extend MergedList = array_concat(blockees, blockers)//This will remove duplicated entries
+          | summarize blockingSessionArray=make_set(MergedList),arg_min(timestamp,blockees) by monitorLoop,AppName
+          | extend  blockingChainSessionCount= array_length(blockingSessionArray)//the number of sessions involved in blocking, including both blockees and lead blockers
+          | extend  blockeeSessionCount= array_length(blockees)//the number of blockee session, excluding lead blockers
+          | where blockeeSessionCount>0//no blocking detected if it's 0.
+          | project-away blockingSessionArray
+          | order by blockeeSessionCount desc
+          | take 1
+          | join kind=leftouter (WorkersLimitPerDB) on AppName
+          | extend blockeeSessionPercent=round(100.0*blockeeSessionCount/WorkersLimitPerDB,1)
+          | extend IssueDetected=case(blockeeSessionPercent > 1, 'true','false')
+          | extend blockingStatus=BlockingStatus(blockeeSessionPercent)
+          | extend blockingStatus=strcat(blockingStatus," The peak BLOCKING occurred at ",timestamp,blockeeSessionCount," session(s) were blocked, accounting for ",blockeeSessionPercent,"% of the total capacity(",WorkersLimitPerDB,").")
+          | project blockingStatus,IssueDetected
+        DisplayedQuery: |
+          MonBlockedProcessReportFiltered
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | extend monitorLoop = extract('monitorLoop=\x22([0-9]+)\x22',1,blocked_process_filtered, typeof(int))
+          | parse blocked_process_filtered with anystr3:string '<blocked-process>' blockee '</blocked-process>' discard1
+          | parse blocked_process_filtered with anystr4:string'<blocking-process>' blocker '</blocking-process>' discard2
+          | extend blockee_session_id = extract('spid=\x22([0-9]+)\x22', 1, blockee, typeof(int))
+          | extend blocker_session_id = extract('spid=\x22([0-9]+)\x22', 1, blocker, typeof(int))
+          | project originalEventTimestamp,monitorLoop,blockee_session_id,blocker_session_id,AppName
+          | summarize blockees = make_set(blockee_session_id), blockers = make_set(blocker_session_id),timestamp=min(originalEventTimestamp) by monitorLoop,AppName
+          | extend MergedList = array_concat(blockees, blockers)//This will remove duplicated entries
+          | summarize blockingSessionArray=make_set(MergedList),arg_min(timestamp,blockees) by monitorLoop,AppName
+          | extend  blockingChainSessionCount= array_length(blockingSessionArray)//the number of sessions involved in blocking, including both blockees and lead blockers
+          | extend  blockeeSessionCount= array_length(blockees)//the number of blockee session, excluding lead blockers
+          | order by blockeeSessionCount desc
+          | take 1//please remove this line to see all result.
+    QuestionToAI: |-
+      -  {{blockingStatus}}, the data type is String.
+
+      ### Rules
+      1.  Store the value of blockingStatus column in {{blockingStatus}}.
+      2.  Store the value of IssueDetected column in {{IssueDetected}}.
+      3.  Set {{ResultMessage}} to {{blockingStatus}}.
+    SubSqlSkills:
+      - Prompts: 
+          - "Lead blocker summary"
+        ExecutedWhenParentIssueDetected: true
+        IsKusto: true
+        Reasoning: "Because the blocking may impact performance, we are going to check Lead blockers."
+        
+      - Prompts: 
+          - "Blocking Statsistics"
+        ExecutedWhenParentIssueDetected: true
+        IsKusto: true
+
+
+
+  - id: "66.1"
+    IsCacheable: false
+    Prompts:
+      - "Lead blocker summary"
+      - "Lead blocker analysis"
+      - "Blocking header summary"
+      - "Blocking header analysis"
+    MessageForEmptyKustoResult: "No blocking was detected."
+    # Description: "List all blocking by monitorLoop,blocker_session，blockee_session_id,summarized is used to remove duplicated entries(there are rare cases)"
+    KustoQueries:
+      - TableName: "MonBlockedProcessReportFiltered_Leadblocks"
+        ExecutedQuery: |
+          MonBlockedProcessReportFiltered
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | extend monitorLoop = extract('monitorLoop=\x22([0-9]+)\x22',1,blocked_process_filtered, typeof(int))
+          | parse blocked_process_filtered with anystr3:string '<blocked-process>' blockee '</blocked-process>' discard1
+          | parse blocked_process_filtered with anystr4:string'<blocking-process>' blocker '</blocking-process>' discard2
+          | extend blockee_session_id = extract('spid=\x22([0-9]+)\x22', 1, blockee, typeof(int))
+          | extend blockee_status = extract('status=\x22(.*?)\x22', 1, blockee, typeof(string))
+          | extend blockee_transactionid = extract('xactid=\x22([0-9]+)\x22', 1, blockee, typeof(long))
+          | extend blockee_frames = extract(@'\s*<stackFrames>\s*(.*?)\s*</stackFrames>\s*', 1, blockee, typeof(string))
+          | extend blockee_waittime_ms = extract('waittime=\x22([0-9]+)\x22', 1, blockee, typeof(int))
+          | extend blockee_transactionname = extract('transactionname=\x22(.*?)\x22', 1, blockee, typeof(string))
+          | extend blockee_clientapp = extract('clientapp=\x22(.*?)\x22', 1, blockee, typeof(string))
+          | extend blockee_trancount = extract('trancount=\x22([0-9]+)\x22', 1, blockee, typeof(int))
+          | extend blockee_lasttranstarted = extract('lasttranstarted=\x22(.*?)\x22', 1, blockee, typeof(datetime))
+          | extend blockee_queryhash = extract('queryhash=\x22(.*?)\x22', 1, blockee, typeof(string))
+          | extend blockee_isolationlevel = extract('isolationlevel=\x22(.*?)\x22', 1, blockee, typeof(string))
+          | extend blockee_lastbatchstarted = extract('lastbatchstarted=\x22(.*?)\x22', 1, blockee, typeof(datetime))
+          | extend blockee_lastbatchcompleted = extract('lastbatchcompleted=\x22(.*?)\x22', 1, blockee, typeof(datetime))
+          | extend blockee_waitresource = extract('waitresource=\x22(.*?)\x22', 1, blockee, typeof(string))
+          | extend blocker_session_id = extract('spid=\x22([0-9]+)\x22', 1, blocker, typeof(int))
+          | extend blocker_waitresource = extract('waitresource=\x22(.*?)\x22', 1, blocker, typeof(string))
+          | extend blocker_status = extract('status=\x22(.*?)\x22', 1, blocker, typeof(string))
+          | extend blocker_clientapp = extract('clientapp=\x22(.*?)\x22', 1, blocker, typeof(string))
+          | extend blocker_trancount = extract('trancount=\x22([0-9]+)\x22', 1, blocker, typeof(int))
+          | extend blocker_transactionid = extract('xactid=\x22([0-9]+)\x22', 1, blocker, typeof(long))
+          | extend blocker_frames = extract(@'\s*<stackFrames>\s*(.*?)\s*</stackFrames>\s*', 1, blocker, typeof(string))
+          | extend blocker_queryhash = extract('queryhash=\x22(.*?)\x22', 1, blocker, typeof(string))
+          | extend blocker_isolationlevel = extract('isolationlevel=\x22(.*?)\x22', 1, blocker, typeof(string))
+          | extend blocker_lastbatchstarted = extract('lastbatchstarted=\x22(.*?)\x22', 1, blocker, typeof(datetime))
+          | extend blocker_lastbatchcompleted = extract('lastbatchcompleted=\x22(.*?)\x22', 1, blocker, typeof(datetime))
+          | where isnotnull(blocker_session_id) and isnotnull(blockee_session_id)
+          | summarize arg_max(originalEventTimestamp, blockee_waittime_ms,blockee_transactionid,blockee_isolationlevel,blockee_clientapp,blockee_queryhash,blockee_waitresource,blockee_lastbatchstarted,
+          blockee_lastbatchcompleted,blocker_waitresource,blocker_transactionid,blocker_trancount, blocker_status,blocker_isolationlevel,blocker_clientapp,blocker_queryhash,blocker_waitresource,blocker_lastbatchstarted,blocker_lastbatchcompleted)
+          by monitorLoop,blocker_session_id,blockee_session_id
+        DisplayedQuery: |
+          MonBlockedProcessReportFiltered
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | extend monitorLoop = extract('monitorLoop=\x22([0-9]+)\x22',1,blocked_process_filtered, typeof(int))
+          | parse blocked_process_filtered with anystr3:string '<blocked-process>' blockee '</blocked-process>' discard1
+          | parse blocked_process_filtered with anystr4:string'<blocking-process>' blocker '</blocking-process>' discard2
+          | extend blockee_session_id = extract('spid=\x22([0-9]+)\x22', 1, blockee, typeof(int))
+          | extend blockee_status = extract('status=\x22(.*?)\x22', 1, blockee, typeof(string))
+          | extend blockee_transactionid = extract('xactid=\x22([0-9]+)\x22', 1, blockee, typeof(long))
+          | extend blockee_frames = extract(@'\s*<stackFrames>\s*(.*?)\s*</stackFrames>\s*', 1, blockee, typeof(string))
+          | extend blockee_waittime_ms = extract('waittime=\x22([0-9]+)\x22', 1, blockee, typeof(int))
+          | extend blockee_transactionname = extract('transactionname=\x22(.*?)\x22', 1, blockee, typeof(string))
+          | extend blockee_clientapp = extract('clientapp=\x22(.*?)\x22', 1, blockee, typeof(string))
+          | extend blockee_trancount = extract('trancount=\x22([0-9]+)\x22', 1, blockee, typeof(int))
+          | extend blockee_lasttranstarted = extract('lasttranstarted=\x22(.*?)\x22', 1, blockee, typeof(datetime))
+          | extend blockee_queryhash = extract('queryhash=\x22(.*?)\x22', 1, blockee, typeof(string))
+          | extend blockee_isolationlevel = extract('isolationlevel=\x22(.*?)\x22', 1, blockee, typeof(string))
+          | extend blockee_lastbatchstarted = extract('lastbatchstarted=\x22(.*?)\x22', 1, blockee, typeof(datetime))
+          | extend blockee_lastbatchcompleted = extract('lastbatchcompleted=\x22(.*?)\x22', 1, blockee, typeof(datetime))
+          | extend blockee_waitresource = extract('waitresource=\x22(.*?)\x22', 1, blockee, typeof(string))
+          | extend blocker_session_id = extract('spid=\x22([0-9]+)\x22', 1, blocker, typeof(int))
+          | extend blocker_waitresource = extract('waitresource=\x22(.*?)\x22', 1, blocker, typeof(string))
+          | extend blocker_status = extract('status=\x22(.*?)\x22', 1, blocker, typeof(string))
+          | extend blocker_clientapp = extract('clientapp=\x22(.*?)\x22', 1, blocker, typeof(string))
+          | extend blocker_trancount = extract('trancount=\x22([0-9]+)\x22', 1, blocker, typeof(int))
+          | extend blocker_transactionid = extract('xactid=\x22([0-9]+)\x22', 1, blocker, typeof(long))
+          | extend blocker_frames = extract(@'\s*<stackFrames>\s*(.*?)\s*</stackFrames>\s*', 1, blocker, typeof(string))
+          | extend blocker_queryhash = extract('queryhash=\x22(.*?)\x22', 1, blocker, typeof(string))
+          | extend blocker_isolationlevel = extract('isolationlevel=\x22(.*?)\x22', 1, blocker, typeof(string))
+          | extend blocker_lastbatchstarted = extract('lastbatchstarted=\x22(.*?)\x22', 1, blocker, typeof(datetime))
+          | extend blocker_lastbatchcompleted = extract('lastbatchcompleted=\x22(.*?)\x22', 1, blocker, typeof(datetime))
+          | where isnotnull(blocker_session_id) and isnotnull(blockee_session_id)
+          | summarize arg_max(originalEventTimestamp, blockee_waittime_ms,blockee_transactionid,blockee_isolationlevel,blockee_clientapp,blockee_queryhash,blockee_waitresource,blockee_lastbatchstarted,
+          blockee_lastbatchcompleted,blocker_waitresource,blocker_transactionid,blocker_trancount, blocker_status,blocker_isolationlevel,blocker_clientapp,blocker_queryhash,blocker_waitresource,blocker_lastbatchstarted,blocker_lastbatchcompleted)
+          by monitorLoop,blocker_session_id,blockee_session_id
+
+
+  - id: "66.2"
+    Prompts:
+      - "Blocking Statsistics"
+    IsDisplayKustoQueryResult: true
+    KustoQueries:
+      - TableName: "MonBlockedProcessReportFiltered_Blocking_Statsistics"
+        ExecutedQuery: |
+          MonBlockedProcessReportFiltered
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | extend monitorLoop = extract('monitorLoop=\x22([0-9]+)\x22',1,blocked_process_filtered, typeof(int))
+          | parse blocked_process_filtered with anystr3:string '<blocked-process>' blockee '</blocked-process>' discard1
+          | parse blocked_process_filtered with anystr4:string'<blocking-process>' blocker '</blocking-process>' discard2
+          | extend blockee_session_id = extract('spid=\x22([0-9]+)\x22', 1, blockee, typeof(int))
+          | extend blocker_session_id = extract('spid=\x22([0-9]+)\x22', 1, blocker, typeof(int))
+          | extend blockee_status = extract('status=\x22(.*?)\x22', 1, blockee, typeof(string))
+          | extend blockee_transactionid = extract('xactid=\x22([0-9]+)\x22', 1, blockee, typeof(long))
+          | extend blockee_frames = extract(@'\s*<stackFrames>\s*(.*?)\s*</stackFrames>\s*', 1, blockee, typeof(string))
+          | extend blockee_waittime_ms = extract('waittime=\x22([0-9]+)\x22', 1, blockee, typeof(int))
+          | extend blockee_tranName = extract('transactionname=\x22(.*?)\x22', 1, blockee, typeof(string))
+          | extend blockee_clientapp = extract('clientapp=\x22(.*?)\x22', 1, blockee, typeof(string))
+          | extend blockee_trancount = extract('trancount=\x22([0-9]+)\x22', 1, blockee, typeof(int))
+          | extend blockee_lasttranstarted = extract('lasttranstarted=\x22(.*?)\x22', 1, blockee, typeof(datetime))
+          | extend blockee_queryhash = extract('queryhash=\x22(.*?)\x22', 1, blockee, typeof(string))
+          | extend blockee_isolationlevel = extract('isolationlevel=\x22(.*?)\x22', 1, blockee, typeof(string))
+          | extend blockee_lastbatchstarted = extract('lastbatchstarted=\x22(.*?)\x22', 1, blockee, typeof(datetime))
+          | extend blockee_lastbatchcompleted = extract('lastbatchcompleted=\x22(.*?)\x22', 1, blockee, typeof(datetime))
+          | extend blockee_waitresource = extract('waitresource=\x22(.*?)\x22', 1, blockee, typeof(string))
+          | extend blocker_session_id = extract('spid=\x22([0-9]+)\x22', 1, blocker, typeof(int))
+          | extend blocker_waitresource = extract('waitresource=\x22(.*?)\x22', 1, blocker, typeof(string))
+          | extend blocker_status = extract('status=\x22(.*?)\x22', 1, blocker, typeof(string))
+          | extend blocker_tranName = extract('transactionname=\x22(.*?)\x22', 1, blocker, typeof(string))
+          | extend blocker_clientapp = extract('clientapp=\x22(.*?)\x22', 1, blocker, typeof(string))
+          | extend blocker_trancount = extract('trancount=\x22([0-9]+)\x22', 1, blocker, typeof(int))
+          | extend blocker_transactionid = extract('xactid=\x22([0-9]+)\x22', 1, blocker, typeof(long))
+          | extend blocker_frames = extract(@'\s*<stackFrames>\s*(.*?)\s*</stackFrames>\s*', 1, blocker, typeof(string))
+          | extend blocker_queryhash = extract('queryhash=\x22(.*?)\x22', 1, blocker, typeof(string))
+          | extend blocker_isolationlevel = extract('isolationlevel=\x22(.*?)\x22', 1, blocker, typeof(string))
+          | extend blocker_lastbatchstarted = extract('lastbatchstarted=\x22(.*?)\x22', 1, blocker, typeof(datetime))
+          | extend blocker_lastbatchcompleted = extract('lastbatchcompleted=\x22(.*?)\x22', 1, blocker, typeof(datetime))
+            //| summarize count() by object_id,blocker_tranName,blocker_clientapp,blocker_isolationlevel, blockee_clientapp,blockee_tranName,blockee_isolationlevel,lock_mode
+          | summarize count() by object_id,blocker_tranName,blocker_isolationlevel ,blockee_tranName,blockee_isolationlevel,lock_mode
+          | project-reorder  count_
+          | order by count_
+          | take 5
+       
+        DisplayedQuery: |
+          MonBlockedProcessReportFiltered
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where {LogicalServerAndDatabaseName}
+          | extend monitorLoop = extract('monitorLoop=\x22([0-9]+)\x22',1,blocked_process_filtered, typeof(int))
+          | parse blocked_process_filtered with anystr3:string '<blocked-process>' blockee '</blocked-process>' discard1
+          | parse blocked_process_filtered with anystr4:string'<blocking-process>' blocker '</blocking-process>' discard2
+          | extend blockee_session_id = extract('spid=\x22([0-9]+)\x22', 1, blockee, typeof(int))
+          | extend blocker_session_id = extract('spid=\x22([0-9]+)\x22', 1, blocker, typeof(int))
+          | extend blockee_status = extract('status=\x22(.*?)\x22', 1, blockee, typeof(string))
+          | extend blockee_transactionid = extract('xactid=\x22([0-9]+)\x22', 1, blockee, typeof(long))
+          | extend blockee_frames = extract(@'\s*<stackFrames>\s*(.*?)\s*</stackFrames>\s*', 1, blockee, typeof(string))
+          | extend blockee_waittime_ms = extract('waittime=\x22([0-9]+)\x22', 1, blockee, typeof(int))
+          | extend blockee_tranName = extract('transactionname=\x22(.*?)\x22', 1, blockee, typeof(string))
+          | extend blockee_clientapp = extract('clientapp=\x22(.*?)\x22', 1, blockee, typeof(string))
+          | extend blockee_trancount = extract('trancount=\x22([0-9]+)\x22', 1, blockee, typeof(int))
+          | extend blockee_lasttranstarted = extract('lasttranstarted=\x22(.*?)\x22', 1, blockee, typeof(datetime))
+          | extend blockee_queryhash = extract('queryhash=\x22(.*?)\x22', 1, blockee, typeof(string))
+          | extend blockee_isolationlevel = extract('isolationlevel=\x22(.*?)\x22', 1, blockee, typeof(string))
+          | extend blockee_lastbatchstarted = extract('lastbatchstarted=\x22(.*?)\x22', 1, blockee, typeof(datetime))
+          | extend blockee_lastbatchcompleted = extract('lastbatchcompleted=\x22(.*?)\x22', 1, blockee, typeof(datetime))
+          | extend blockee_waitresource = extract('waitresource=\x22(.*?)\x22', 1, blockee, typeof(string))
+          | extend blocker_session_id = extract('spid=\x22([0-9]+)\x22', 1, blocker, typeof(int))
+          | extend blocker_waitresource = extract('waitresource=\x22(.*?)\x22', 1, blocker, typeof(string))
+          | extend blocker_status = extract('status=\x22(.*?)\x22', 1, blocker, typeof(string))
+          | extend blocker_tranName = extract('transactionname=\x22(.*?)\x22', 1, blocker, typeof(string))
+          | extend blocker_clientapp = extract('clientapp=\x22(.*?)\x22', 1, blocker, typeof(string))
+          | extend blocker_trancount = extract('trancount=\x22([0-9]+)\x22', 1, blocker, typeof(int))
+          | extend blocker_transactionid = extract('xactid=\x22([0-9]+)\x22', 1, blocker, typeof(long))
+          | extend blocker_frames = extract(@'\s*<stackFrames>\s*(.*?)\s*</stackFrames>\s*', 1, blocker, typeof(string))
+          | extend blocker_queryhash = extract('queryhash=\x22(.*?)\x22', 1, blocker, typeof(string))
+          | extend blocker_isolationlevel = extract('isolationlevel=\x22(.*?)\x22', 1, blocker, typeof(string))
+          | extend blocker_lastbatchstarted = extract('lastbatchstarted=\x22(.*?)\x22', 1, blocker, typeof(datetime))
+          | extend blocker_lastbatchcompleted = extract('lastbatchcompleted=\x22(.*?)\x22', 1, blocker, typeof(datetime))
+          //| summarize count() by object_id,blocker_tranName,blocker_clientapp,blocker_isolationlevel, blockee_clientapp,blockee_tranName,blockee_isolationlevel,lock_mode
+          | summarize count() by object_id,blocker_tranName,blocker_isolationlevel ,blockee_tranName,blockee_isolationlevel,lock_mode
+          | project-reorder  count_
+          | order by count_
+          | take 5

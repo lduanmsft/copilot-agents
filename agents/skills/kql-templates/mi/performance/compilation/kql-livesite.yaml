@@ -1,0 +1,185 @@
+# ============================================================================
+# Ported from SQLDB SQLLivesiteAgents, adapted for Managed Instance (MI)
+# kql-livesite.yaml — Compilation KQL Templates from SQLLivesiteAgents
+# ============================================================================
+# Priority: P1 (highest)
+# Source: SQLLivesiteAgents / Performance / Compilation / references/
+# Distilled: 2026-04-30
+# ============================================================================
+
+SqlSkills:
+
+  # ──────────────────────────────────────────────────────
+  # 1. Failed Compilation CPU %
+  # Source: Performance/Compilation/references/cpu-usage-of-failed-compilation.md
+  # Threshold: CPU_Percent >= 10
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-COMPILE-01
+    name: "Failed Compilation CPU %"
+    source: "SQLLivesiteAgents/Performance/Compilation/references/cpu-usage-of-failed-compilation.md"
+    table: MonQueryProcessing
+    thresholds:
+      issue: "CPU_Percent >= 10"
+    KustoQueries:
+      - TableName: MonQueryProcessing
+        ExecutedQuery: |
+          MonQueryProcessing
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where logical_database_name =~ '{DatabaseName}'
+          | where event =~'failed_compilation'
+          | summarize compile_cpu_ms=sum(compile_cpu)
+          | project CPU_Percent = round(100.0 * (compile_cpu_ms/1 // MI: CPU capacity placeholder not available, raw values used), 1)
+          | extend IssueDetected=CPU_Percent>=10
+          | extend ResultMessage = iff(IssueDetected == 'True', 
+              strcat("Failed compilation consumed a significant amount of CPU resources, accounting for {CPU_Percent}%. Identifying high CPU usage from failed query compilations"),
+              strcat("Failed compilation didn't consume a significant amount of CPU resources, with usage at {CPU_Percent}%"))
+    OutputFields: [CPU_Percent, IssueDetected, ResultMessage]
+    IssueDetection:
+      issue: "CPU_Percent >= 10"
+      normal: "CPU_Percent < 10"
+
+  # ──────────────────────────────────────────────────────
+  # 2. Successful Compilation CPU %
+  # Source: Performance/Compilation/references/cpu-usage-of-successful-compilation.md
+  # Threshold: CPU_Percent >= 10
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-COMPILE-02
+    name: "Successful Compilation CPU %"
+    source: "SQLLivesiteAgents/Performance/Compilation/references/cpu-usage-of-successful-compilation.md"
+    table: MonWiQueryParamData
+    thresholds:
+      issue: "CPU_Percent >= 10"
+    KustoQueries:
+      - TableName: MonWiQueryParamData
+        ExecutedQuery: |
+          MonWiQueryParamData
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where logical_database_name =~ '{DatabaseName}'
+          | extend compile_code=iff(compile_code =='Success','Compilation','Recompile')
+          | summarize compile_cpu_time_ms=sum(compile_cpu_time+auto_update_stats_cpu_time)/1000
+          | project CPU_Percent = round(100.0 * (compile_cpu_time_ms/1 // MI: CPU capacity placeholder not available, raw values used), 1)
+          | extend IssueDetected = CPU_Percent >= 10
+          | extend ResultMessage = iff(IssueDetected == 'True', 
+              strcat("Successful compilation consumed a significant amount of CPU resources, accounting for ", CPU_Percent, "%. Identifying high CPU usage from query compilations."),
+              strcat("Successful compilation did not consume a significant amount of CPU resources, with usage at ", CPU_Percent, "%"))
+    OutputFields: [CPU_Percent, IssueDetected, ResultMessage]
+
+  # ──────────────────────────────────────────────────────
+  # 3. Failed Compilation Summary (Total + by Error Code)
+  # Source: Performance/Compilation/references/failed-compilation-summary.md
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-COMPILE-03
+    name: "Failed Compilation Summary"
+    source: "SQLLivesiteAgents/Performance/Compilation/references/failed-compilation-summary.md"
+    table: MonQueryProcessing
+    KustoQueries:
+      - TableName: MonQueryProcessing
+        ExecutedQuery: |
+          MonQueryProcessing
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where logical_database_name =~ '{DatabaseName}'
+          | extend query_hash = strcat('0x', toupper(tohex(query_hash_signed, 16)))
+          | where event =~'failed_compilation'
+          | summarize FailedCount=count()
+          | where FailedCount > 0
+      - TableName: MonQueryProcessing
+        ExecutedQuery: |
+          MonQueryProcessing
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where logical_database_name =~ '{DatabaseName}'
+          | extend query_hash = strcat('0x', toupper(tohex(query_hash_signed, 16)))
+          | where event =~'failed_compilation'
+          | summarize FailedCount=count() by error_code
+
+  # ──────────────────────────────────────────────────────
+  # 4. Failed Compilation by Query Hash with CPU/Duration
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-COMPILE-04
+    name: "Failed Compilation by Query Hash"
+    source: "SQLLivesiteAgents/Performance/Compilation/references/failed-compilation-summary.md"
+    table: MonQueryProcessing
+    KustoQueries:
+      - TableName: MonQueryProcessing
+        ExecutedQuery: |
+          MonQueryProcessing
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where logical_database_name =~ '{DatabaseName}'
+          | extend query_hash = strcat('0x', toupper(tohex(query_hash_signed, 16)))
+          | where event =~'failed_compilation'
+          | summarize compile_cpu_ms=sum(compile_cpu),compile_duration_ms=sum(compile_duration),FailedCount=count() by query_hash
+
+  # ──────────────────────────────────────────────────────
+  # 5. Compile Gateway Detection
+  # Source: Performance/Compilation/references/query-compile-gateway.md
+  # Severity: Minor (1-5), Moderate (6-20), Significant (21-50), Severe (>50)
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-COMPILE-05
+    name: "Compile Gateway Detection"
+    source: "SQLLivesiteAgents/Performance/Compilation/references/query-compile-gateway.md"
+    table: MonSQLSystemHealth
+    KustoQueries:
+      - TableName: MonSQLSystemHealth
+        ExecutedQuery: |
+          MonSQLSystemHealth
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where message has_cs 'Gateway' and message has_cs 'MSR-'
+          | extend name = extract('(.*)Value', 1, message, typeof(string))
+          | extend max_count = extract('Configured Units[ ]+([0-9]+)', 1, message, typeof(int))
+          | extend available_count = extract('Available Units[ ]+([0-9]+)', 1, message, typeof(int))
+          | extend active_count = extract('Acquires[ ]+([0-9]+)', 1, message, typeof(int))
+          | extend waiter_count = extract('Waiters[ ]+([0-9]+)', 1, message, typeof(int))
+          | extend threshold_mb = round(extract('Threshold[ ]+([0-9]+)', 1, message, typeof(long)) / 1024.0 / 1024, 1)
+          | where active_count > 0 and waiter_count > 0
+          | summarize max_max_count = max(max_count), max_waiter_count = max(waiter_count), max_active_count = max(active_count), min_originalEventTimestamp = min(originalEventTimestamp), max_originalEventTimestamp = max(originalEventTimestamp)
+           by CompileGatewayName = name, NodeName
+    OutputFields: [CompileGatewayName, max_waiter_count, max_active_count]
+    Severity:
+      minor: "max_waiter_count 1-5"
+      moderate: "max_waiter_count 6-20"
+      significant: "max_waiter_count 21-50"
+      severe: "max_waiter_count > 50"
+
+  # ──────────────────────────────────────────────────────
+  # 6. Top Failed Compilations by CPU
+  # Source: Performance/Compilation/references/top-failed-compilation-ranked-by-cpu-usage.md
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-COMPILE-06
+    name: "Top Failed Compilations by CPU"
+    source: "SQLLivesiteAgents/Performance/Compilation/references/top-failed-compilation-ranked-by-cpu-usage.md"
+    condition: "MI-LS-COMPILE-01.IssueDetected == true"
+    table: MonQueryProcessing
+    parameters:
+      TopN: 10
+    KustoQueries:
+      - TableName: MonQueryProcessing
+        ExecutedQuery: |
+          MonQueryProcessing
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where logical_database_name =~ '{DatabaseName}'
+          | extend query_hash = strcat('0x', toupper(tohex(query_hash_signed, 16)))
+          | where event =~'failed_compilation'
+          | summarize compile_cpu_ms=sum(compile_cpu),compile_duration_ms=sum(compile_duration) by query_hash
+          | order by compile_cpu_ms desc
+          | take {TopN}
+
+  # ──────────────────────────────────────────────────────
+  # 7. Top Successful Compilations by CPU
+  # Source: Performance/Compilation/references/top-successful-compilation-ranked-by-cpu-usage.md
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-COMPILE-07
+    name: "Top Successful Compilations by CPU"
+    source: "SQLLivesiteAgents/Performance/Compilation/references/top-successful-compilation-ranked-by-cpu-usage.md"
+    condition: "MI-LS-COMPILE-02.IssueDetected == true"
+    table: MonWiQueryParamData
+    KustoQueries:
+      - TableName: MonWiQueryParamData
+        ExecutedQuery: |
+          MonWiQueryParamData
+          | where LogicalServerName =~ '{ServerName}' and originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where logical_database_name =~ '{DatabaseName}'
+          | extend compile_duration_sec=round(compile_duration/1000.0/1000,1)
+          | extend compile_cpu_time_sec=round(compile_cpu_time/1000.0/1000,1)
+          | extend compile_memory_mb=round(compile_memory/1024,1)
+          | summarize count=count(),max_compile_duration_sec=max(compile_duration_sec),max_compile_cpu_time_sec=max(compile_cpu_time_sec) by query_hash
+          | project-reorder max_compile_cpu_time_sec,max_compile_duration_sec,count
+          | order by max_compile_cpu_time_sec desc

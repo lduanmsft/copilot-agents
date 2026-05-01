@@ -1,0 +1,171 @@
+# ============================================================================
+# SQLLSinvest_perf_querystore — Query Store Investigation Workflow
+# ============================================================================
+# Source: SQLLivesiteAgents / Performance / query-store / SKILL.md + references/
+# Distilled: 2026-04-30
+# Purpose: Layer 1 — 定义 QDS Readonly 调查的执行顺序、阈值判断、条件分支
+# KQL 模板引用: query-store/kql-livesite.yaml (Layer 2)
+# ============================================================================
+
+Investigation:
+  id: perf-query-store
+  name: "Query Store (QDS) Readonly Investigation"
+  description: >
+    Detects QDS readonly events, identifies root cause by reason code
+    (65536/131072/262144), analyzes QDS settings, size, capture mode,
+    and cleanup job health.
+  source: "SQLLivesiteAgents/Performance/query-store"
+
+  RequiredParameters:
+    - LogicalServerName
+    - LogicalDatabaseName
+    - StartTime
+    - EndTime
+    - AppNamesNodeNamesWithOriginalEventTimeRange
+    - isElasticPool
+
+  Steps:
+    # ────────────────────────────────────────────────────
+    # Step 1: QDS Readonly Detection
+    # ────────────────────────────────────────────────────
+    - step: 1
+      name: "QDS Readonly Detection (Singleton)"
+      condition: "isElasticPool == false"
+      kql_ref: "query-store/kql-livesite.yaml#LS-QDS-01"
+      description: "Detect QDS readonly events for singleton databases"
+      table: MonQueryStoreFailures
+      output_fields:
+        - finalMessage
+        - Keywords    # reason codes: 65536, 131072, 262144, 524288
+      branching:
+        on_65536: [step: 2]     # Max size reached
+        on_131072: [step: 3]    # StmtHashMap over memory
+        on_262144: [step: 4]    # BufferedItems over memory
+
+    - step: 1b
+      name: "QDS Readonly Detection (Elastic Pool)"
+      condition: "isElasticPool == true"
+      kql_ref: "query-store/kql-livesite.yaml#LS-QDS-02"
+      description: "Detect QDS readonly events across all databases in EP"
+      table: MonQueryStoreFailures
+      output_fields:
+        - readonlyMessage
+        - Keywords
+      branching:
+        same_as: "step-1"
+
+    # ────────────────────────────────────────────────────
+    # Step 2: RCA — Reason Code 65536 (Max Size)
+    # ────────────────────────────────────────────────────
+    - step: 2
+      name: "QDS Readonly RCA — 65536 (Max Size Reached)"
+      condition: "Keywords contains '65536'"
+      kql_ref: "query-store/kql-livesite.yaml#LS-QDS-03"
+      description: "Analyze QDS max size settings and provide mitigation"
+      table: MonQueryStoreFailures
+      time_range: "7-day lookback"
+      mitigation:
+        - "Increase max_storage_size_mb (limit 10240 MB)"
+        - "Implement query parameterization"
+        - "Decrease stale_query_threshold_days"
+        - "Remove specific entries in QDS"
+
+    # ────────────────────────────────────────────────────
+    # Step 3: RCA — Reason Code 131072 (StmtHashMap)
+    # ────────────────────────────────────────────────────
+    - step: 3
+      name: "QDS Readonly RCA — 131072 (StmtHashMap Over Memory)"
+      condition: "Keywords contains '131072'"
+      kql_ref: "query-store/kql-livesite.yaml#LS-QDS-04"
+      description: "StmtHashMap memory exceeded 5% of total DB memory"
+      table: MonQueryStoreFailures
+      mitigation:
+        - "Implement query parameterization"
+        - "Upgrade SLO to increase memory"
+        - "Decrease capture_policy_stale_threshold_hours"
+        - "Decrease stale_query_threshold_days"
+
+    # ────────────────────────────────────────────────────
+    # Step 4: RCA — Reason Code 262144 (BufferedItems)
+    # ────────────────────────────────────────────────────
+    - step: 4
+      name: "QDS Readonly RCA — 262144 (BufferedItems Over Memory)"
+      condition: "Keywords contains '262144'"
+      kql_ref: "query-store/kql-livesite.yaml#LS-QDS-05"
+      description: "BufferedItems memory exceeded 1% of total DB memory"
+      table: MonQueryStoreFailures
+      mitigation:
+        - "Implement query parameterization"
+        - "Upgrade SLO to increase memory"
+        - "Decrease flush_interval_seconds"
+
+    # ────────────────────────────────────────────────────
+    # Step 5-9: QDS Settings / Size / Cleanup Analysis
+    # ────────────────────────────────────────────────────
+    - step: 5
+      name: "StatementSqlHash to QueryHash Ratio"
+      kql_ref: "query-store/kql-livesite.yaml#LS-QDS-06"
+      description: "Detect ad-hoc query bloat — ratio > 3 indicates parameterization needed"
+      tables: [MonWiQdsExecStats, MonQueryStoreFailures]
+      time_range: "7-day lookback"
+      thresholds:
+        acceptable: "ratio <= 3"
+        moderate: "3 < ratio <= 6"
+        high: "ratio > 6"
+
+    - step: 6
+      name: "Capture Mode Analysis"
+      kql_ref: "query-store/kql-livesite.yaml#LS-QDS-07"
+      description: "Check if CaptureMode is set to 'All' (not recommended)"
+      table: MonQueryStoreInfo
+      time_range: "7-day lookback"
+
+    - step: 7
+      name: "QDS Current Settings"
+      kql_ref: "query-store/kql-livesite.yaml#LS-QDS-08"
+      description: "Review current QDS settings and detect configuration issues"
+      table: MonQueryStoreInfo
+
+    - step: 8
+      name: "QDS Setting Change History"
+      kql_ref: "query-store/kql-livesite.yaml#LS-QDS-10"
+      description: "Track QDS setting changes over time"
+      table: MonQueryStoreInfo
+
+    - step: 9
+      name: "QDS Size Over Time"
+      kql_ref: "query-store/kql-livesite.yaml#LS-QDS-11"
+      description: "Check if QDS size approached or exceeded its limit"
+      table: MonQueryStoreInfo
+      thresholds:
+        issue: "> 80% of max size"
+
+    - step: 10
+      name: "QDS Size-Based Cleanup Job Analysis"
+      kql_ref: "query-store/kql-livesite.yaml#LS-QDS-12"
+      description: "Check cleanup job execution, failures, and long-running jobs"
+      table: MonQueryStoreInfo
+      time_range: "7-day lookback"
+      thresholds:
+        long_duration: 60    # minutes
+
+    - step: 11
+      name: "QDS Cleanup Disabled Detection"
+      kql_ref: "query-store/kql-livesite.yaml#LS-QDS-13"
+      description: "Detect if size_based_cleanup_mode is disabled"
+      table: MonQueryStoreInfo
+      time_range: "7-day lookback"
+
+  ExecutionOrder:
+    always_run: [1, 7]
+    conditional:
+      - steps: [1b]
+        condition: "isElasticPool == true (replaces step 1)"
+      - steps: [2]
+        condition: "Keywords contains 65536"
+      - steps: [3]
+        condition: "Keywords contains 131072"
+      - steps: [4]
+        condition: "Keywords contains 262144"
+      - steps: [5, 6, 8, 9, 10, 11]
+        condition: "QDS readonly detected (any reason code)"
