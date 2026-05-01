@@ -144,16 +144,20 @@ Investigation:
     - step: 6
       name: "Determine Prevailing Error"
       description: "Screen prevailing errors in MonLogin, determine impact scope"
-      kql_ref: "connectivity-base/kql-livesite.yaml#LS-CONN-BASE-05"
+      kql_ref:
+        - "connectivity-base/kql-livesite.yaml#LS-CONN-BASE-05 (general screen)"
+        - "connectivity-base/kql-livesite.yaml#LS-CONN-BASE-06 (narrow by node)"
       condition: "route in ['login-failure']"
       analysis:
         - "Distinguish user errors (is_user_error=true) from system errors"
         - "Check avg_total_time_ms > 4000ms for delay patterns"
         - "Analyze error source: xdbgateway vs xdbhost vs sqlserver"
+        - "For error 33155: MUST check fedauth_token_wait_time_ms — if ≈ total_time_ms, client token acquisition is the bottleneck"
       branching:
         on_error_40613_state_22: "Continue to step 7 + step 8 (network analysis)"
         on_error_17900_state_25: "Route to session-disconnect (error-17900-state-25 skill)"
-        on_user_error_only: "Report as customer-side issue, no further infra investigation"
+        on_error_33155_state_1: "Continue to step 7 (error-33155-state-1 lookup) — even though is_user_error=true, need fedauth timing decomposition"
+        on_user_error_only: "Report as customer-side issue — EXCEPT error 33155 which needs fedauth analysis"
         on_system_error: "Continue to step 7"
 
     # ════════════════════════════════════════════════════
@@ -192,7 +196,8 @@ Investigation:
           description: "xdbhost metric check needed"
         - error: 33155
           state: 1
-          description: "Specific connectivity error"
+          description: "AAD Login Timeout — Gateway waiting for client fedauth token. Check fedauth_token_wait_time_ms vs total_time_ms. If ≈ equal, client is slow getting token (DefaultAzureCredential probe chain). TSG: ENTRA0010"
+          action: "Query MonLogin with fedauth_token_wait_time_ms, fedauth_token_process_time_ms, fedauth_library_type, fedauth_adal_workflow. Compare success vs failure timing."
         - error: 40532
           state: 150
           description: "Specific connectivity error"
