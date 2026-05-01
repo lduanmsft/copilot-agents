@@ -111,14 +111,14 @@ Investigation:
     - step: 2
       name: "Determine Login Target"
       description: "Identify target TR ring and DB node for login requests"
-      kql_ref: "login-triage/kql-livesite.yaml#LS-CONN-BASE-04"
+      kql_ref: "connectivity-base/kql-livesite.yaml#LS-CONN-BASE-04"
       condition: "route in ['login-failure', 'xdbhost-restart', 'brain-login-alert']"
       output: [TargetTRRing, TargetDBNode, instance_name]
 
     - step: 3
       name: "Determine Connectivity Ring"
       description: "Identify which CR(s) served the login requests"
-      kql_ref: "login-triage/kql-livesite.yaml#LS-CONN-BASE-03"
+      kql_ref: "connectivity-base/kql-livesite.yaml#LS-CONN-BASE-03"
       condition: "route in ['login-failure', 'brain-login-alert']"
       output: [ConnectivityRing]
       analysis:
@@ -128,13 +128,13 @@ Investigation:
     - step: 4
       name: "Check Login Outage Records"
       description: "Check if any outage is recorded for this server/database"
-      kql_ref: "login-triage/kql-livesite.yaml#LS-CONN-BASE-01"
+      kql_ref: "connectivity-base/kql-livesite.yaml#LS-CONN-BASE-01"
       condition: "route in ['login-failure']"
 
     - step: 5
       name: "Determine Connection Type"
       description: "Identify Proxy/Redirect, Public/Private/Service Endpoint"
-      kql_ref: "login-triage/kql-livesite.yaml#LS-CONN-BASE-07"
+      kql_ref: "connectivity-base/kql-livesite.yaml#LS-CONN-BASE-07"
       condition: "route in ['login-failure']"
       analysis:
         - "Check proxy_override vs actual result for mismatch"
@@ -144,7 +144,7 @@ Investigation:
     - step: 6
       name: "Determine Prevailing Error"
       description: "Screen prevailing errors in MonLogin, determine impact scope"
-      kql_ref: "login-triage/kql-livesite.yaml#LS-CONN-BASE-05"
+      kql_ref: "connectivity-base/kql-livesite.yaml#LS-CONN-BASE-05"
       condition: "route in ['login-failure']"
       analysis:
         - "Distinguish user errors (is_user_error=true) from system errors"
@@ -208,7 +208,7 @@ Investigation:
       description: >
         Run full CR health check: SNAT, GW process restarts, code version,
         deployments, AliasDB health, DNS errors, node health events
-      kql_ref: "gateway-ring-health/kql-livesite.yaml (GW1100-GW1130)"
+      kql_ref: "connectivity-base/connectivity-ring-health/kql-livesite.yaml (GW1100-GW1130)"
       condition: "route in ['login-failure', 'gateway-node-low-login', 'control-ring-unhealthy', 'brain-login-alert']"
       queries:
         - id: GW1100
@@ -277,7 +277,7 @@ Investigation:
     - step: 11
       name: "App Health Check (sqlservr)"
       description: "Check sqlservr process restarts, system health warnings"
-      kql_ref: "app-health/kql-livesite.yaml (AH100-AH305)"
+      kql_ref: "connectivity-utilities/app-health/kql-livesite.yaml (AH100-AH305)"
       condition: "route in ['login-failure']"
       queries:
         - id: AH100
@@ -316,7 +316,7 @@ Investigation:
         Investigate login failures caused by XdbHost process restarts.
         Error cascade: State 12 → State 44 → State 10 → State 13 → State 126 → State 22
       condition: "route == 'xdbhost-restart'"
-      kql_ref: "xdbhost-restart/kql-livesite.yaml (XR100-XR700)"
+      kql_ref: "connectivity-scenarios/xdbhost-restart/kql-livesite.yaml (XR100-XR700)"
       sub_steps:
         - name: "Confirm restart (XR100)"
           description: "Detect process_id change in MonXdbhost"
@@ -337,7 +337,7 @@ Investigation:
     - step: 30
       name: "Session Disconnect Investigation"
       condition: "route == 'session-disconnect'"
-      kql_ref: "session-disconnect/kql-livesite.yaml (SD-01, SD-02)"
+      kql_ref: "connectivity-scenarios/session-disconnect/kql-livesite.yaml (SD-01, SD-02)"
       description: >
         Analyze proxy_close_connection / process_close_connection events.
         If dominant error is 17900/25, route to error-17900-state-25 skill.
@@ -357,7 +357,7 @@ Investigation:
     - step: 40
       name: "Gateway Node Low Login Success Rate"
       condition: "route == 'gateway-node-low-login'"
-      kql_ref: "gateway-node-low-login/kql-livesite.yaml (GNLSR100-GNLSR900)"
+      kql_ref: "connectivity-scenarios/gateway-node-low-login-success-rate/kql-livesite.yaml (GNLSR100-GNLSR900)"
       description: >
         Diagnose node-level GatewayNodeLowLoginSuccessRate incidents.
         11-step workflow from scope assessment to mitigation.
@@ -390,7 +390,7 @@ Investigation:
     - step: 50
       name: "Control Ring Nodes Unhealthy (Cluster-Level)"
       condition: "route == 'control-ring-unhealthy'"
-      kql_ref: "control-ring-unhealthy/kql-livesite.yaml (CRNU100-CRNU500)"
+      kql_ref: "connectivity-scenarios/control-ring-nodes-unhealthy/kql-livesite.yaml (CRNU100-CRNU500)"
       description: >
         Cluster-level alert: ≥20% of GW nodes unhealthy.
         Identify breaching health signals per node, delegate to node-level skills.
@@ -414,7 +414,7 @@ Investigation:
     - step: 60
       name: "XdbHost High TCP Rejections"
       condition: "route == 'xdbhost-tcp-rejections'"
-      kql_ref: "xdbhost-tcp-rejections/kql-livesite.yaml (TR100-TR900)"
+      kql_ref: "connectivity-scenarios/xdbhost-high-tcp-rejections/kql-livesite.yaml (TR100-TR900)"
       description: >
         Diagnose TCP rejections on DB node, usually driven by LSASS stress
         causing IOCP thread stalls in XdbHost → crash-restart loop.
@@ -439,13 +439,13 @@ Investigation:
     - step: 70
       name: "BRAIN Low Login Success Rate Alert"
       condition: "route == 'brain-login-alert'"
-      kql_ref: "brain-login-alert/kql-livesite.yaml (BRAIN-01/02)"
+      kql_ref: "connectivity-scenarios/brain-low-login-success-rate/kql-livesite.yaml (BRAIN-01/02)"
       description: >
         Region-level BRAIN SLI alert. Identify CRs with high system error rate,
         then drill into error/state/TR distribution.
       sub_steps:
         - name: "Region to Kusto cluster (LS-CONN-BASE-08)"
-          kql_ref: "login-triage/kql-livesite.yaml#LS-CONN-BASE-08"
+          kql_ref: "connectivity-base/kql-livesite.yaml#LS-CONN-BASE-08"
         - name: "CR system error rate (BRAIN-01)"
           threshold: "SysErrRate > 1% = significant"
         - name: "Error/state with TR drill (BRAIN-02)"
@@ -466,19 +466,19 @@ Investigation:
       utilities:
         - id: UTIL-01
           name: "LoadBalancer VIP Availability"
-          kql_ref: "utilities/kql-livesite.yaml#LS-UTIL-01"
+          kql_ref: "connectivity-utilities/loadbalancer-health/kql-livesite.yaml#LS-UTIL-01"
           trigger: "LB health check requested or BRAIN alert"
         - id: UTIL-02
           name: "LoadBalancer Dashboard URLs"
-          kql_ref: "utilities/kql-livesite.yaml#LS-UTIL-02"
+          kql_ref: "connectivity-utilities/loadbalancer-health/kql-livesite.yaml#LS-UTIL-02"
           trigger: "LB problem detected (availability < 90)"
         - id: UTIL-03
           name: "DB Node CPU Usage (VM-level)"
-          kql_ref: "utilities/kql-livesite.yaml#LS-UTIL-03"
+          kql_ref: "connectivity-utilities/cpu-usage-check/kql-livesite.yaml#LS-UTIL-03"
           trigger: "Node CPU investigation"
         - id: UTIL-04
           name: "SQL Node to VM Mapping"
-          kql_ref: "utilities/kql-livesite.yaml#LS-UTIL-04"
+          kql_ref: "connectivity-utilities/determine-sql-node/kql-livesite.yaml#LS-UTIL-04"
           trigger: "Network analysis or EagleEye required"
 
   # ════════════════════════════════════════════════════
