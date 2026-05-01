@@ -1,0 +1,12 @@
+# Source: SQLLivesiteAgents/Connectivity/connectivity-errors/error-33155-state-1/SKILL.md
+# Error: 33155 State 1 — Login Timeout (FedAuth Token Wait)
+#
+# 33155 is usually a client side issue.
+# Clients failing Active Directory logins because the client is not able to
+# grab an authentication token from Active Directory (AD) or Azure Active Directory (AAD).
+# A disconnect event was raised when server is waiting for Federated Authentication token.
+# This could be due to client close or server timeout expired.
+#
+# No KQL templates in original skill.
+# Investigate using fedauth_* columns in MonLogin (fedauth_token_wait_time_ms, etc.)
+# TSG: ENTRA0010 (AAD0005-No-token-from-client.md)

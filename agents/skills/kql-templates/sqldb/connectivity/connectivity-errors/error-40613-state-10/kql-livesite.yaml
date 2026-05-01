@@ -1,0 +1,118 @@
+# Source: SQLLivesiteAgents/Connectivity/connectivity-errors/error-40613-state-10/SKILL.md
+# Distilled: 2026-05-01
+# Error: 40613 State 10 — CantFindRequestedInstance (GW → DB node routing)
+
+SqlSkills:
+
+  - id: LS-E40613S10-01
+    name: "Verify Error Time Range and Targeted DB Node"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-errors/error-40613-state-10"
+    table: MonLogin
+    RequiredParameters: [StartTime, EndTime, LogicalServerName, LogicalDatabaseName]
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          let startTime = datetime({StartTime});
+          let endTime = datetime({EndTime});
+          let server = '{LogicalServerName}';
+          let db = '{LogicalDatabaseName}';
+          MonLogin
+          | where originalEventTimestamp between ((startTime - 5m)..(endTime + 5m))
+          | where AppTypeName != "Gateway" and event == "process_login_finish"
+          | where logical_server_name =~ server and database_name =~ db
+          | extend instance_id = iif(instance_name has @"\", tostring(split(instance_name, @"\")[array_length(split(instance_name, @"\")) - 1]), tostring(split(instance_name, ".")[0]))
+          | summarize min(TIMESTAMP), max(TIMESTAMP), ['40613_10'] = countif(error == 40613 and state == 10) by DBNode = NodeName, instance_id
+
+  - id: LS-E40613S10-02
+    name: "Verify GW Nodes Switched to New DB Node"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-errors/error-40613-state-10"
+    table: MonLogin
+    RequiredParameters: [StartTime, EndTime, LogicalServerName, LogicalDatabaseName]
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          let startTime = datetime({StartTime});
+          let endTime = datetime({EndTime});
+          let server = '{LogicalServerName}';
+          let db = '{LogicalDatabaseName}';
+          MonLogin
+          | where originalEventTimestamp between ((startTime - 5m)..(endTime + 5m))
+          | where AppTypeName =~ "Gateway" and event == "process_login_finish"
+          | where logical_server_name =~ server and database_name =~ db
+          | summarize min(originalEventTimestamp), max(originalEventTimestamp), TotalGWNodes = dcount(strcat(ClusterName, "_", NodeName)) by fabric_node_name, bin(originalEventTimestamp, 3m)
+
+  - id: LS-E40613S10-03
+    name: "Check GW SF Notification Reception"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-errors/error-40613-state-10"
+    table: MonRedirector
+    RequiredParameters: [StartTime, EndTime, LogicalServerName, LogicalDatabaseName]
+    Note: "Run if no GW nodes found routing to old node in Q02 extended window"
+    KustoQueries:
+      - TableName: MonRedirector
+        ExecutedQuery: |
+          let startTime = datetime({StartTime});
+          let endTime = datetime({EndTime});
+          let server = '{LogicalServerName}';
+          let db = '{LogicalDatabaseName}';
+          let firstErrorTime = toscalar(MonLogin
+          | where originalEventTimestamp between (startTime..endTime)
+          | where LogicalServerName =~ server and database_name =~ db
+          | where event == "process_login_finish"
+          | where error == 40613 and state == 10 and is_success == 0
+          | summarize min(originalEventTimestamp));
+          let appNameList = MonLogin
+          | where originalEventTimestamp between (startTime..endTime)
+          | where logical_server_name =~ server and database_name =~ db
+          | where package == "sqlserver"
+          | where event == "process_login_finish"
+          | summarize by AppName;
+          let gwNodeList = MonLogin
+          | where originalEventTimestamp between (firstErrorTime - 2h..firstErrorTime + 1h)
+          | where AppTypeName =~ "Gateway" and event == "process_login_finish"
+          | where logical_server_name =~ server and database_name =~ db
+          | summarize by NodeName;
+          let monRedirectorCounts = MonRedirector
+          | where originalEventTimestamp between (firstErrorTime - 2h..firstErrorTime + 1h)
+          | where service_name has_any (appNameList)
+          | where NodeName in~ (gwNodeList)
+          | where event == "fabric_notify_resolve_change"
+          | summarize n = count() by NodeName;
+          gwNodeList
+          | join kind=leftouter monRedirectorCounts on NodeName
+          | extend n = coalesce(n, 0)
+          | project NodeName, n
+
+  - id: LS-E40613S10-04
+    name: "Verify instance_name Format"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-errors/error-40613-state-10"
+    table: MonLogin
+    RequiredParameters: [StartTime, EndTime, InstanceId]
+    Note: "InstanceId from Q01 output"
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          let startTime = datetime({StartTime});
+          let endTime = datetime({EndTime});
+          let instance_id = '{InstanceId}';
+          MonLogin
+          | where TIMESTAMP between (startTime..endTime)
+          | where instance_name contains instance_id
+          | summarize count() by instance_name, error, state
+
+  - id: LS-E40613S10-05
+    name: "Verify DB Node Health (Instance Lifecycle)"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-errors/error-40613-state-10"
+    table: MonSQLSystemHealth
+    RequiredParameters: [StartTime, EndTime, InstanceId, NodeName]
+    KustoQueries:
+      - TableName: MonSQLSystemHealth
+        ExecutedQuery: |
+          let startTime = datetime({StartTime});
+          let endTime = datetime({EndTime});
+          let instance_id = '{InstanceId}';
+          let Node = '{NodeName}';
+          MonSQLSystemHealth
+          | where originalEventTimestamp between ((startTime - 1h)..(endTime + 5m))
+          | where AppName =~ instance_id
+          | where NodeName =~ Node
+          | summarize count() by NodeName, bin(originalEventTimestamp, 1m)

@@ -1,0 +1,18 @@
+# Source: SQLLivesiteAgents/Connectivity/connectivity-errors/error-26078-state-15/SKILL.md
+# Error: 26078 State 15 — XDBHost Queue Timeout
+#
+# In XDBHost, when a login request is dequeued we try to ensure that the login
+# has not been in the queue for more than 10 seconds. If the login has remained
+# in the queue for 10 seconds, xdbhost forcibly closes the named pipe connection
+# with SQL and clears the socket duplication queue.
+#
+# Related errors: 40613/13, 40613/15
+#
+# Potential causes:
+#   1. Slow socket duplication
+#   2. High login volume (surge)
+#   3. High CPU for XDBHost and LSASS
+#   4. High CPU for SQL instances on the node
+#
+# Troubleshooting: Use connectivity-utilities/xdbhost-metric-check skill
+# TSG: https://eng.ms/docs/cloud-ai-platform/azure-data/azure-data-azure-databases/sql-/sql-connectivity/sql-db-connectivity/xdbhost/error-26078-state-15

@@ -1,0 +1,63 @@
+# Source: SQLLivesiteAgents/Connectivity/connectivity-errors/error-47073-state-172/SKILL.md
+# Distilled: 2026-05-01
+# Error: 47073 State 172 — Deny Public Network Access (DPNA)
+
+SqlSkills:
+
+  - id: LS-E47073S172-01
+    name: "DPNA Rejection Pattern (Public vs Service Endpoint)"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-errors/error-47073-state-172"
+    table: MonLogin
+    RequiredParameters: [StartTime, EndTime, LogicalServerName]
+    Note: "CRITICAL: Filter on NodeRole == 'DB' to avoid double-counting GW + DB events"
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          let TargetServer = '{LogicalServerName}';
+          MonLogin
+          | where originalEventTimestamp between (StartTime..EndTime)
+          | where logical_server_name =~ TargetServer
+          | where NodeRole == 'DB'
+          | where event == "process_login_finish" and is_success == false
+          | where error == 47073 and state == 172
+          | summarize ErrorCount = count() by is_vnet_address, is_vnet_private_access_address, logical_server_name, database_name
+          | order by ErrorCount desc
+
+  - id: LS-E47073S172-02
+    name: "Public/Private Endpoint Configuration"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-errors/error-47073-state-172"
+    table: MonConnectivityFeatureSnapshot
+    RequiredParameters: [LogicalServerName]
+    KustoQueries:
+      - TableName: MonConnectivityFeatureSnapshot
+        ExecutedQuery: |
+          let TargetServer = '{LogicalServerName}';
+          MonConnectivityFeatureSnapshot
+          | where logical_server_name =~ TargetServer
+          | order by TIMESTAMP desc
+          | summarize arg_max(TIMESTAMP, logical_server_name, proxy_override_value, public_data_endpoint_enabled, enforce_outbound_firewall_rules, minimal_tls_version, private_endpoint_count, outbound_firewall_rule_count, minimal_tls_version_name = case(minimal_tls_version == 769, 'TLS 1.0', minimal_tls_version == 770, 'TLS 1.1', minimal_tls_version == 771, 'TLS 1.2', '-'))
+          | project LogicalServerName = logical_server_name, PublicDataEndpointEnabled = public_data_endpoint_enabled, EnforceOutboundFirewallRules = enforce_outbound_firewall_rules, PrivateEndpointCount = private_endpoint_count, OutboundFirewallRuleCount = outbound_firewall_rule_count
+
+  - id: LS-E47073S172-03
+    name: "Intermittent Check by Peer Address"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-errors/error-47073-state-172"
+    table: MonLogin
+    RequiredParameters: [StartTime, EndTime, LogicalServerName]
+    Note: "Filter NodeRole == 'DB' to avoid inflated success counts from GW events"
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          let TargetServer = '{LogicalServerName}';
+          MonLogin
+          | where originalEventTimestamp between (StartTime..EndTime)
+          | where logical_server_name =~ TargetServer
+          | where NodeRole == 'DB'
+          | where event == "process_login_finish"
+          | extend connLoginType = iff(is_vnet_private_access_address == true, "PrivateLink", iff(is_vnet_address == true, "ServiceEndpoint", "PublicEndpoint"))
+          | summarize Total = count(), Fail = countif(is_success == false), DpnaFail = countif(is_success == false and error == 47073 and state == 172) by peer_address, connLoginType, logical_server_name
+          | where Total != Fail
+          | order by DpnaFail desc, Fail desc, Total, logical_server_name desc

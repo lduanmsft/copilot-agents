@@ -1,0 +1,71 @@
+# Source: SQLLivesiteAgents/Connectivity/connectivity-errors/error-40532-state-150/SKILL.md
+# Distilled: 2026-05-01
+# Error: 40532 State 150 — VNET Firewall Rule Rejected Login
+
+SqlSkills:
+
+  - id: LS-E40532S150-01
+    name: "VNET Firewall Rejection Pattern"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-errors/error-40532-state-150"
+    table: MonLogin
+    RequiredParameters: [StartTime, EndTime, LogicalServerName, LogicalDatabaseName]
+    KustoQueries:
+      - TableName: MonLogin
+        Note: "vnet_gre_key/vnet_subnet_id are internal IDs — do NOT share with customer"
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          let servername = '{LogicalServerName}';
+          let dbname = '{LogicalDatabaseName}';
+          MonLogin
+          | where TIMESTAMP between (StartTime..EndTime)
+          | where logical_server_name =~ servername
+          | where database_name =~ dbname
+          | where error == 40532 and state == 150
+          | where event == "process_login_finish"
+          | summarize ErrorCount = count(), min_time = min(TIMESTAMP), max_time = max(TIMESTAMP), sample_connection_id = take_any(connection_id) by database_name, vnet_gre_key, vnet_subnet_id, package
+          | order by ErrorCount desc
+
+  - id: LS-E40532S150-02
+    name: "VNET Rejection Timeline"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-errors/error-40532-state-150"
+    table: MonLogin
+    RequiredParameters: [StartTime, EndTime, LogicalServerName, LogicalDatabaseName]
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          let servername = '{LogicalServerName}';
+          let dbname = '{LogicalDatabaseName}';
+          MonLogin
+          | where TIMESTAMP between (StartTime..EndTime)
+          | where logical_server_name =~ servername
+          | where database_name =~ dbname
+          | where error == 40532 and state == 150
+          | where event == "process_login_finish"
+          | summarize FailedConnections = count() by bin(TIMESTAMP, 5m), vnet_gre_key, vnet_subnet_id
+          | order by TIMESTAMP asc
+
+  - id: LS-E40532S150-03
+    name: "Check Successful Connections from Same VNET"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-errors/error-40532-state-150"
+    table: MonLogin
+    RequiredParameters: [StartTime, EndTime, LogicalServerName, LogicalDatabaseName, ProblematicVNET]
+    Note: "ProblematicVNET = vnet_gre_key from Q01"
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          let servername = '{LogicalServerName}';
+          let dbname = '{LogicalDatabaseName}';
+          let ProblematicVNET = {ProblematicVNET};
+          MonLogin
+          | where TIMESTAMP between (StartTime..EndTime)
+          | where logical_server_name =~ servername
+          | where database_name =~ dbname
+          | where vnet_gre_key == ProblematicVNET
+          | where event == "process_login_finish"
+          | summarize SuccessfulLogins = countif(is_success == true), FailedLogins = countif(is_success == false) by vnet_subnet_id
+          | order by vnet_subnet_id asc

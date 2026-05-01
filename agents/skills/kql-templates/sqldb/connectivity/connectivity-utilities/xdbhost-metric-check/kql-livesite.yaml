@@ -1,0 +1,121 @@
+# Source: SQLLivesiteAgents/Connectivity/connectivity-utilities/xdbhost-metric-check/SKILL.md
+# Distilled: 2026-05-01
+# Used by: error-26078-state-15, error-40613-state-13, error-40613-state-15
+
+SqlSkills:
+
+  - id: LS-XDBHOST-CHK-01
+    name: "TCP Rejection on DB Node (XdbHost)"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-utilities/xdbhost-metric-check"
+    table: MonCounterOneMinute
+    RequiredParameters: [StartTime, EndTime, ClusterName, DBNodeName]
+    Note: "CounterValue > 80 = warning"
+    KustoQueries:
+      - TableName: MonCounterOneMinute
+        ExecutedQuery: |
+          let _ClusterNameVar = '{ClusterName}';
+          let _NodeNameVar = '{DBNodeName}';
+          let _endTime = datetime({EndTime});
+          let _startTime = datetime({StartTime});
+          MonCounterOneMinute
+          | where TIMESTAMP between (_startTime.._endTime)
+          | where ClusterName =~ _ClusterNameVar and NodeName =~ _NodeNameVar
+          | where CounterName == "\\Microsoft Winsock BSP\\Rejected Connections/sec"
+          | project TIMESTAMP, CounterName, CounterValue
+
+  - id: LS-XDBHOST-CHK-02
+    name: "Average SSL API Time on DB Node"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-utilities/xdbhost-metric-check"
+    table: MonLogin
+    RequiredParameters: [StartTime, EndTime, ClusterName, DBNodeName]
+    Note: "avg(ssl_secure_call_time_ms) > 500ms = warning"
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          let _ClusterNameVar = '{ClusterName}';
+          let _NodeNameVar = '{DBNodeName}';
+          let _endTime = datetime({EndTime});
+          let _startTime = datetime({StartTime});
+          MonLogin
+          | where originalEventTimestamp between (_startTime.._endTime)
+          | where ClusterName =~ _ClusterNameVar and NodeName =~ _NodeNameVar
+          | where event =~ 'process_login_finish' and AppName =~ 'worker'
+          | project originalEventTimestamp, ssl_secure_call_time_ms
+          | summarize avg(ssl_secure_call_time_ms) by bin(originalEventTimestamp, 1m)
+
+  - id: LS-XDBHOST-CHK-03
+    name: "Login Volume by Instance on Node"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-utilities/xdbhost-metric-check"
+    table: MonLogin
+    RequiredParameters: [StartTime, EndTime, ClusterName, DBNodeName]
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          let _ClusterNameVar = '{ClusterName}';
+          let _NodeNameVar = '{DBNodeName}';
+          let _endTime = datetime({EndTime});
+          let _startTime = datetime({StartTime});
+          MonLogin
+          | where originalEventTimestamp between (_startTime.._endTime)
+          | where ClusterName =~ _ClusterNameVar and NodeName =~ _NodeNameVar
+          | where event =~ 'process_login_finish' and AppName =~ 'worker'
+          | extend instance_id = iif(instance_name has @"\", tostring(split(instance_name, @"\")[array_length(split(instance_name, @"\")) - 1]), tostring(split(instance_name, ".")[0]))
+          | make-series count() default = 0 on originalEventTimestamp from bin(_startTime, 1m) to bin(_endTime, 1m) step 1m by instance_id
+
+  - id: LS-XDBHOST-CHK-04
+    name: "LSASS + XdbHost CPU Usage"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-utilities/xdbhost-metric-check"
+    table: MonCounterOneMinute
+    RequiredParameters: [StartTime, EndTime, ClusterName, DBNodeName]
+    Note: "LSASS > 100% for 3+ min = warning"
+    KustoQueries:
+      - TableName: MonCounterOneMinute
+        ExecutedQuery: |
+          let ClusterNameVar = '{ClusterName}';
+          let NodeNameVar = '{DBNodeName}';
+          let _startTime = datetime({StartTime});
+          let _endTime = datetime({EndTime});
+          MonCounterOneMinute
+          | where TIMESTAMP between (_startTime.._endTime)
+          | where ClusterName =~ ClusterNameVar
+          | where NodeName =~ NodeNameVar
+          | where CounterName contains "xdbhost" or CounterName contains "lsass"
+          | where CounterName contains "Processor Time"
+          | make-series MaxVal = max(MaxVal) on TIMESTAMP from bin(_startTime, 5m) to bin(_endTime, 5m) step 1m by CounterName = strcat(NodeName, CounterName)
+
+  - id: LS-XDBHOST-CHK-05
+    name: "XdbHost Process Restart Detection"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-utilities/xdbhost-metric-check"
+    table: MonXdbhost
+    RequiredParameters: [StartTime, EndTime, ClusterName, DBNodeName]
+    KustoQueries:
+      - TableName: MonXdbhost
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          let _ClusterNameVar = '{ClusterName}';
+          let _NodeNameVar = '{DBNodeName}';
+          MonXdbhost
+          | where TIMESTAMP between (StartTime..EndTime)
+          | where ClusterName =~ _ClusterNameVar and NodeName =~ _NodeNameVar
+          | summarize min_time = min(TIMESTAMP), max_time = max(TIMESTAMP) by process_id
+          | order by min_time asc
+
+  - id: LS-XDBHOST-CHK-06
+    name: "Automation Actions on Node (XdbHost)"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-utilities/xdbhost-metric-check"
+    table: MonNonPiiAudit
+    RequiredParameters: [StartTime, EndTime, ClusterName, DBNodeName]
+    KustoQueries:
+      - TableName: MonNonPiiAudit
+        ExecutedQuery: |
+          let _startTime = datetime({StartTime});
+          let _endTime = datetime({EndTime});
+          let _ClusterNameVar = '{ClusterName}';
+          let _NodeNameVar = '{DBNodeName}';
+          MonNonPiiAudit
+          | where TIMESTAMP between (_startTime.._endTime)
+          | where * contains _ClusterNameVar and * contains _NodeNameVar
+          | where request_action !in~ ("ExecuteCMSQuery", "FabricClusters()", "FabricNodes()", "ExecuteCMSQueryJSON", "ExecuteQuery") and request_action !startswith "Get"
+          | project time_created, username, request_action, request, parameters
+          | order by time_created asc

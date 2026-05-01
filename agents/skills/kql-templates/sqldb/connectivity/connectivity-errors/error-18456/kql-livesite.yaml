@@ -1,0 +1,106 @@
+# Source: SQLLivesiteAgents/Connectivity/connectivity-errors/error-18456/SKILL.md
+# Distilled: 2026-05-01
+# Error: 18456 — Login Failed for User (multi-state)
+
+SqlSkills:
+
+  - id: LS-E18456-01
+    name: "Error 18456 Pattern and State Distribution"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-errors/error-18456"
+    table: MonLogin
+    RequiredParameters: [StartTime, EndTime, LogicalServerName, LogicalDatabaseName, ConnectivityRingNames]
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          let ConnectivityRings = dynamic([{ConnectivityRingNames}]);
+          MonLogin
+          | where TIMESTAMP between (StartTime..EndTime)
+          | where ClusterName in~ (ConnectivityRings)
+          | where error == 18456
+          | where event == "process_login_finish"
+          | where logical_server_name =~ '{LogicalServerName}' and database_name =~ '{LogicalDatabaseName}'
+          | summarize ErrorCount = count(), min_time = min(TIMESTAMP), max_time = max(TIMESTAMP), SampleConnectionId = take_any(connection_id) by package, state, is_user_error, error_message
+          | order by ErrorCount desc
+
+  - id: LS-E18456-02
+    name: "State 5 — Check DB Health (HADR Replica States)"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-errors/error-18456"
+    table: MonDmDbHadrReplicaStates
+    RequiredParameters: [StartTime, EndTime, AppName]
+    KustoQueries:
+      - TableName: MonDmDbHadrReplicaStates
+        ExecutedQuery: |
+          let AppName = '{AppName}';
+          MonDmDbHadrReplicaStates
+          | where AppName == AppName
+          | where TIMESTAMP between (datetime({StartTime})..datetime({EndTime}))
+          | project TIMESTAMP, AppName, synchronization_health_desc, database_state_desc
+          | order by TIMESTAMP asc
+
+  - id: LS-E18456-03
+    name: "State 5 — Check Login DROP Operations"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-errors/error-18456"
+    table: MonLoginUserDDL
+    RequiredParameters: [StartTime, EndTime, LogicalServerName]
+    KustoQueries:
+      - TableName: MonLoginUserDDL
+        ExecutedQuery: |
+          MonLoginUserDDL
+          | where TIMESTAMP between (datetime({StartTime}) - 1d..datetime({EndTime}))
+          | where logical_server_name =~ '{LogicalServerName}'
+          | where operation_type =~ "DROP"
+          | project TIMESTAMP, logical_server_name, login_name, operation_type, initiated_by
+
+  - id: LS-E18456-04
+    name: "State 38/46 — Check login_substep_failure"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-errors/error-18456"
+    table: MonLogin
+    RequiredParameters: [StartTime, EndTime, LogicalServerName, LogicalDatabaseName]
+    KustoQueries:
+      - TableName: MonLogin
+        Note: "Look for error_code 916 = user cannot access DB under current security context"
+        ExecutedQuery: |
+          let ConnectionIds = MonLogin
+          | where TIMESTAMP between (datetime({StartTime})..datetime({EndTime}))
+          | where logical_server_name =~ '{LogicalServerName}' and database_name =~ '{LogicalDatabaseName}'
+          | where error == 18456 and state in (38, 46)
+          | where event == "process_login_finish"
+          | distinct connection_id;
+          MonLogin
+          | where TIMESTAMP between (datetime({StartTime})..datetime({EndTime}))
+          | where connection_id in (ConnectionIds)
+          | where event == "login_substep_failure"
+          | project TIMESTAMP, connection_id, error_code, error_message, database_name
+
+  - id: LS-E18456-05
+    name: "State 62/132 — FedAuth AAD Failure Details"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-errors/error-18456"
+    table: MonFedAuthTicketService
+    RequiredParameters: [StartTime, EndTime]
+    KustoQueries:
+      - TableName: MonFedAuthTicketService
+        ExecutedQuery: |
+          MonFedAuthTicketService
+          | where TIMESTAMP between (datetime({StartTime})..datetime({EndTime}))
+          | where error_state in (62, 132)
+          | where event in ("fedauth_ticket_service_failure", "fedauth_webtoken_failure")
+          | summarize count() by event, error_code, bin(TIMESTAMP, 5m)
+          | render timechart
+
+  - id: LS-E18456-06
+    name: "State 113 — DosGuard Quick Check"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-errors/error-18456"
+    table: MonLogin
+    RequiredParameters: [StartTime, EndTime, LogicalServerName]
+    Note: "If confirmed, use error-18456-state-113 skill for full investigation"
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          MonLogin
+          | where TIMESTAMP between (datetime({StartTime})..datetime({EndTime}))
+          | where logical_server_name =~ '{LogicalServerName}'
+          | where error == 18456 and state == 113
+          | summarize ConnectionAttempts = count() by bin(TIMESTAMP, 1m), database_name
+          | render timechart

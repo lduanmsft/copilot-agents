@@ -1,0 +1,112 @@
+# Source: SQLLivesiteAgents/Connectivity/connectivity-errors/error-18456-state-113/SKILL.md
+# Distilled: 2026-05-01
+# Error: 18456 State 113 — DosGuard Rejected Connection
+
+SqlSkills:
+
+  - id: LS-DOSGUARD-01
+    name: "Confirm DosGuard Active (18456/113)"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-errors/error-18456-state-113"
+    table: MonLogin
+    RequiredParameters: [StartTime, EndTime, LogicalServerName, LogicalDatabaseName]
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          MonLogin
+          | where originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where logical_server_name =~ '{LogicalServerName}' and database_name =~ '{LogicalDatabaseName}'
+          | where event == "process_login_finish"
+          | where is_success == 0
+          | where error == 18456 and state == 113
+          | summarize DosGuardCount = count(), FirstSeen = min(originalEventTimestamp), LastSeen = max(originalEventTimestamp) by state_desc
+
+  - id: LS-DOSGUARD-02
+    name: "DosGuard vs Other Errors Timeline"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-errors/error-18456-state-113"
+    table: MonLogin
+    RequiredParameters: [StartTime, EndTime, LogicalServerName, LogicalDatabaseName]
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          MonLogin
+          | where originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where logical_server_name =~ '{LogicalServerName}' and database_name =~ '{LogicalDatabaseName}'
+          | where event == "process_login_finish"
+          | where is_success == 0
+          | extend ErrorType = case(state == 113, "DosGuard_113", state == 5, "SecGetLogin2_5", state == 8, "IncorrectPassword_8", strcat("Other_", state))
+          | summarize count() by ErrorType, bin(originalEventTimestamp, 15m)
+
+  - id: LS-DOSGUARD-03
+    name: "Root Cause Error (What Triggered DosGuard)"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-errors/error-18456-state-113"
+    table: MonLogin
+    RequiredParameters: [StartTime, EndTime, LogicalServerName, LogicalDatabaseName]
+    KustoQueries:
+      - TableName: MonLogin
+        Note: "Look 15min before StartTime to catch the trigger"
+        ExecutedQuery: |
+          MonLogin
+          | where originalEventTimestamp between (datetime({StartTime}) - 15m..datetime({EndTime}))
+          | where logical_server_name =~ '{LogicalServerName}' and database_name =~ '{LogicalDatabaseName}'
+          | where event == "process_login_finish"
+          | where is_success == 0 and is_user_error == 1
+          | where state != 113
+          | summarize ErrorCount = count(), FirstSeen = min(originalEventTimestamp), SamplePeerAddress = take_any(peer_address) by error, state, state_desc
+          | order by ErrorCount desc
+
+  - id: LS-DOSGUARD-04
+    name: "Affected Applications by Auth Type"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-errors/error-18456-state-113"
+    table: MonLogin
+    RequiredParameters: [StartTime, EndTime, LogicalServerName, LogicalDatabaseName]
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          MonLogin
+          | where originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where logical_server_name =~ '{LogicalServerName}' and database_name =~ '{LogicalDatabaseName}'
+          | where event == "process_login_finish"
+          | where error == 18456
+          | extend authentication = case(fedauth_library_type == 0 and fedauth_adal_workflow == 0, "SQL Auth", fedauth_library_type == 2 and fedauth_adal_workflow == 0, "Token Auth", fedauth_library_type == 3, "AAD Auth", "Other")
+          | summarize DosGuardErrors = countif(state == 113), OtherErrors = countif(state != 113), TotalErrors = count() by application_name, authentication, peer_address
+          | order by TotalErrors desc
+          | take 20
+
+  - id: LS-DOSGUARD-05
+    name: "FedAuth Correlation (if AAD Auth detected)"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-errors/error-18456-state-113"
+    table: MonFedAuthTicketService
+    RequiredParameters: [StartTime, EndTime, LogicalServerName, LogicalDatabaseName]
+    KustoQueries:
+      - TableName: MonFedAuthTicketService
+        Note: "Only run if Step 4 shows AAD/Token Auth"
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          let dosguard_connections = MonLogin
+          | where originalEventTimestamp between (StartTime..EndTime)
+          | where logical_server_name =~ '{LogicalServerName}' and database_name =~ '{LogicalDatabaseName}'
+          | where error == 18456 and state == 113
+          | distinct connection_id;
+          MonFedAuthTicketService
+          | where TIMESTAMP between (StartTime..EndTime)
+          | where sql_connection_id in (dosguard_connections)
+          | summarize count() by event, error_code, error_state
+          | order by count_ desc
+
+  - id: LS-DOSGUARD-06
+    name: "Detailed Event Timeline with Network Context"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-errors/error-18456-state-113"
+    table: MonLogin
+    RequiredParameters: [StartTime, EndTime, LogicalServerName, LogicalDatabaseName]
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          MonLogin
+          | where originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where logical_server_name =~ '{LogicalServerName}' and database_name =~ '{LogicalDatabaseName}'
+          | where event == "process_login_finish"
+          | where is_success == 0
+          | project originalEventTimestamp, error, state, state_desc, application_name, peer_address, is_vnet_address, is_azure_ip, is_targeted_rule
+          | order by originalEventTimestamp asc
+          | take 100

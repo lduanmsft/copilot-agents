@@ -1,0 +1,70 @@
+# Source: SQLLivesiteAgents/Connectivity/connectivity-errors/error-40613-state-81/references/queries.md
+# Distilled: 2026-05-01
+# Error: 40613 State 81 — IPv6 Prefix Mismatch on PaaSv2 Clusters
+
+SqlSkills:
+
+  - id: LS-CONN81-100
+    name: "Error 40613 State 81 — Volume and Scope"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-errors/error-40613-state-81"
+    table: MonLogin
+    RequiredParameters: [StartTime, EndTime, LogicalServerName, LogicalDatabaseName]
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          let ServerName = '{LogicalServerName}';
+          let DbName = '{LogicalDatabaseName}';
+          MonLogin
+          | where TIMESTAMP between (StartTime..EndTime)
+          | where logical_server_name =~ ServerName
+          | where database_name =~ DbName
+          | where error == 40613 and state == 81
+          | where event == "process_login_finish"
+          | extend TargetTRRing = substring(instance_name, indexof(instance_name, ".") + 1)
+          | extend instance = tostring(split(instance_name, ".")[0])
+          | extend DBNode = tostring(split(fabric_node_name, "\\")[1])
+          | summarize ErrorCount = count(), min_time = min(TIMESTAMP), max_time = max(TIMESTAMP), dcount_peer = dcount(peer_address) by TargetTRRing, DBNode, instance
+          | order by ErrorCount desc
+
+  - id: LS-CONN81-200
+    name: "Error 40613 State 81 — Timeline"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-errors/error-40613-state-81"
+    table: MonLogin
+    RequiredParameters: [StartTime, EndTime, LogicalServerName, LogicalDatabaseName]
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          let ServerName = '{LogicalServerName}';
+          let DbName = '{LogicalDatabaseName}';
+          MonLogin
+          | where TIMESTAMP between (StartTime..EndTime)
+          | where logical_server_name =~ ServerName
+          | where database_name =~ DbName
+          | where error == 40613 and state == 81
+          | where event == "process_login_finish"
+          | summarize ErrorCount = count(), dcount_connections = dcount(connection_id) by bin(TIMESTAMP, 3m)
+          | order by TIMESTAMP asc
+
+  - id: LS-CONN81-300
+    name: "Error 40613 State 81 — Post-Mitigation Verification"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-errors/error-40613-state-81"
+    table: MonLogin
+    RequiredParameters: [StartTime, EndTime, LogicalServerName, LogicalDatabaseName]
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          let ServerName = '{LogicalServerName}';
+          let DbName = '{LogicalDatabaseName}';
+          MonLogin
+          | where TIMESTAMP between (StartTime..EndTime)
+          | where logical_server_name =~ ServerName
+          | where database_name =~ DbName
+          | where event == "process_login_finish"
+          | summarize SuccessCount = countif(is_success == true), Error_40613_81 = countif(error == 40613 and state == 81), OtherErrors = countif(is_success == false and not(error == 40613 and state == 81)) by bin(TIMESTAMP, 5m)
+          | order by TIMESTAMP asc

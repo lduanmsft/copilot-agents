@@ -1,0 +1,12 @@
+# Source: SQLLivesiteAgents/Connectivity/connectivity-errors/error-40613-state-15/SKILL.md
+# Error: 40613 State 15 — XDBHost Queue Timeout (System Error)
+#
+# When a login request is dequeued and has been in the queue for more than 10 seconds,
+# xdbhost closes the named pipe + clears the socket duplication queue.
+# All logins in queue fail with 40613/15, new incoming logins fail with 40613/13.
+#
+# Related errors: 40613/13, 26078/15
+#
+# Potential causes: Same as error-26078-state-15
+# Troubleshooting: Use connectivity-utilities/xdbhost-metric-check skill
+# TSG: https://eng.ms/docs/cloud-ai-platform/azure-data/azure-data-azure-databases/sql-/sql-connectivity/sql-db-connectivity/xdbhost/error-40613-state-15

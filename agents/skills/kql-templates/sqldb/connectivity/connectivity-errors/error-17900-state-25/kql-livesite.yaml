@@ -1,0 +1,32 @@
+# Source: SQLLivesiteAgents/Connectivity/connectivity-errors/error-17900-state-25/SKILL.md
+# Distilled: 2026-05-01
+# Error: 17900 State 25 — TDS Protocol Error (Session Disconnect)
+
+SqlSkills:
+
+  - id: LS-E17900S25-01
+    name: "Error 17900 State 25 — Connection Trace (Top 3 Peers)"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-errors/error-17900-state-25"
+    table: MonLogin
+    RequiredParameters: [StartTime, EndTime, LogicalServerName, LogicalDatabaseName]
+    Note: "Traces top 3 connection_peer_ids for 17900/25 end-to-end"
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          let startDT = datetime({StartTime});
+          let endDT = datetime({EndTime});
+          let serverName = '{LogicalServerName}';
+          let dbName = '{LogicalDatabaseName}';
+          let frequentCxPeerId = MonLogin
+          | where originalEventTimestamp between (startDT..endDT)
+          | where logical_server_name =~ serverName and database_name =~ dbName
+          | where error == 17900 and state == 25
+          | summarize n=count() by connection_peer_id
+          | sort by n
+          | take 3
+          | project connection_peer_id;
+          MonLogin
+          | where originalEventTimestamp between (startDT - 30m..endDT + 30m)
+          | where connection_peer_id in (frequentCxPeerId)
+          | project originalEventTimestamp, AppName, package, event, is_success, is_user_error, is_mars, error, state, kill_reason, connection_id, connection_peer_id, total_time_ms, message, extra_info
+          | order by connection_peer_id asc, originalEventTimestamp asc

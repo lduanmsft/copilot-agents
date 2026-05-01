@@ -1,0 +1,19 @@
+# Source: SQLLivesiteAgents/Connectivity/connectivity-utilities
+# Distilled: 2026-05-01
+
+SqlSkills:
+- id: LS-UTIL-04
+  name: SQL Node to VM Mapping
+  source: SQLLivesiteAgents/Connectivity/connectivity-utilities/determine-sql-node/SKILL.md
+  table: MonSQLNodeSnapshot
+  RequiredParameters:
+  - ClusterName
+  - NodeName
+  KustoQueries:
+  - TableName: MonSQLNodeSnapshot
+    Note: 'Always on sqlstage.kusto.windows.net. Key outputs: VirtualMachineUniqueId, ContainerId, NodeId, ComputeMDM, VfpAccount.'
+    ExecutedQuery: 'cluster(''sqlstage.kusto.windows.net'').database(''sqlazure1'').MonSQLNodeSnapshot
+
+      | where ClusterName =~ ''{ClusterName}'' and NodeName =~ ''{NodeName}''
+
+      '

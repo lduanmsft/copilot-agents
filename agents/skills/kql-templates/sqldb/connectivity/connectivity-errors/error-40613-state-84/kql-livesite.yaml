@@ -1,0 +1,157 @@
+# Source: SQLLivesiteAgents/Connectivity/connectivity-errors/error-40613-state-84/references/kusto-queries/
+# Distilled: 2026-05-01
+# Error: 40613 State 84 — Proxy Connect Timeout (SNIOpen failure)
+
+SqlSkills:
+
+  - id: LS-E40613S84-Q100
+    name: "Find TR Ring + DB Node for Target Server"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-errors/error-40613-state-84"
+    table: MonLogin
+    RequiredParameters: [StartTime, EndTime, LogicalServerName, LogicalDatabaseName]
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          let servername = '{LogicalServerName}';
+          let dbname = '{LogicalDatabaseName}';
+          let masterdbname = "master";
+          let startTime = datetime({StartTime});
+          let endTime = datetime({EndTime});
+          MonLogin
+          | where TIMESTAMP >= (startTime - 5h)
+          | where TIMESTAMP <= endTime
+          | where logical_server_name =~ servername
+          | where database_name =~ dbname or database_name =~ masterdbname
+          | where package =~ "xdbgateway"
+          | summarize count(), min(TIMESTAMP), max(TIMESTAMP) by database_name, instance_name, fabric_node_name
+          | where isnotempty(instance_name)
+          | extend TargetTRRing = substring(instance_name, indexof(instance_name, ".") + 1)
+          | extend instance = tostring(split(instance_name, ".")[0])
+          | where TargetTRRing != ""
+          | extend DBNode = tostring(split(fabric_node_name, "\\")[1])
+          | project database_name, min_TIMESTAMP, max_TIMESTAMP, instance, TargetTRRing, DBNode, count_
+
+  - id: LS-E40613S84-Q200
+    name: "Error 40613 State 84 Events with Connection Details"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-errors/error-40613-state-84"
+    table: MonLogin
+    RequiredParameters: [StartTime, EndTime, LogicalServerName, LogicalDatabaseName]
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          let servername = '{LogicalServerName}';
+          let dbname = '{LogicalDatabaseName}';
+          let startTime = datetime({StartTime});
+          let endTime = datetime({EndTime});
+          MonLogin
+          | where TIMESTAMP >= startTime
+          | where TIMESTAMP <= endTime
+          | where logical_server_name =~ servername
+          | where database_name =~ dbname
+          | where error == 40613 and state == 84
+          | summarize arg_max(total_time_ms, *) by bin(TIMESTAMP, 3m)
+          | project TIMESTAMP, logical_server_name, database_name, error, state, is_contained_user, lookup_state, peer_address, xodbc_authentication_time_ms, connection_id, application_name, message, total_time_ms
+          | order by total_time_ms desc
+
+  - id: LS-E40613S84-Q300
+    name: "XODBC Wrapper Trace (connection_id → CR connection)"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-errors/error-40613-state-84"
+    table: MonXOdbcWrapper
+    RequiredParameters: [StartTime, EndTime, ConnectionIDs]
+    Note: "ConnectionIDs = dynamic array from Q200 output"
+    KustoQueries:
+      - TableName: MonXOdbcWrapper
+        ExecutedQuery: |
+          let startTime = datetime({StartTime});
+          let endTime = datetime({EndTime});
+          let ConnectionID = dynamic([{ConnectionIDs}]);
+          MonXOdbcWrapper
+          | where PreciseTimeStamp between (startTime..endTime)
+          | where sql_connection_id in~ (ConnectionID)
+          | project originalEventTimestamp, error_code, odbc_cr_connection_id, message, logical_server_name, logical_database_name
+
+  - id: LS-E40613S84-Q400
+    name: "Backend Events via CR Connection IDs"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-errors/error-40613-state-84"
+    table: MonLogin
+    RequiredParameters: [StartTime, EndTime, CrConnectionIDs]
+    Note: "CrConnectionIDs = dynamic array from Q300 output (odbc_cr_connection_id)"
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          let startTime = datetime({StartTime});
+          let endTime = datetime({EndTime});
+          let Cr_Connection_ID = dynamic([{CrConnectionIDs}]);
+          MonLogin
+          | where TIMESTAMP >= startTime
+          | where TIMESTAMP <= endTime
+          | where connection_peer_id in (Cr_Connection_ID) or odbc_connection_id in (Cr_Connection_ID)
+          | project ClusterName, NodeName, event, error, state, extra_info, tds_flags
+
+  - id: LS-E40613S84-Q500
+    name: "CPU Hotspot Cores on DB Node (>=90%)"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-errors/error-40613-state-84"
+    table: MonCounterOneMinute
+    RequiredParameters: [StartTime, EndTime, TenantRingName, DBNodeName]
+    KustoQueries:
+      - TableName: MonCounterOneMinute
+        ExecutedQuery: |
+          let startTime = datetime({StartTime});
+          let endTime = datetime({EndTime});
+          let TenantRing = '{TenantRingName}';
+          let DBNode = '{DBNodeName}';
+          MonCounterOneMinute
+          | where PreciseTimeStamp between (startTime..endTime)
+          | where ClusterName =~ TenantRing
+          | where NodeName =~ DBNode
+          | where CounterName startswith "\\Processor Information" and CounterName endswith "Processor Time"
+          | where MaxVal >= 90
+          | summarize avg(MaxVal) by CounterName, bin(TIMESTAMP, 3m)
+
+  - id: LS-E40613S84-Q600
+    name: "Map Hot CPU Cores to SQL Instances (Resource Governor)"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-errors/error-40613-state-84"
+    table: MonRgLoad
+    RequiredParameters: [StartTime, EndTime, TenantRingName, DBNodeName, InterestedCores]
+    Note: "InterestedCores = dynamic array from Q500 output"
+    KustoQueries:
+      - TableName: MonRgLoad
+        ExecutedQuery: |
+          let _clustername = '{TenantRingName}';
+          let _nodename = '{DBNodeName}';
+          let _startTime = datetime({StartTime});
+          let _endTime = datetime({EndTime});
+          let _interested_cores = dynamic([{InterestedCores}]);
+          MonRgLoad
+          | where ClusterName =~ _clustername and NodeName =~ _nodename
+          | where TIMESTAMP between (_startTime - 3h.._endTime)
+          | where event == "instance_load"
+          | where service_manifest_name == "SQL"
+          | where code_package_name == "Code"
+          | summarize min(TIMESTAMP), max(TIMESTAMP) by application_name, allocated_cpus, event, cpu_count, rg_instance_process_id
+          | extend allocated_cpus = parse_json(allocated_cpus)
+          | extend group0Cpus = tostring(allocated_cpus.Group0), group1Cpus = tostring(allocated_cpus.Group1)
+          | extend cpuGroup0Mask = iff(isnotempty(group0Cpus), group0Cpus, "0")
+          | extend cpuGroup1Mask = iff(isnotempty(group1Cpus), group1Cpus, "0")
+          | mv-apply with_itemindex=hexPos hexChar = array_reverse(extract_all("(.)", tostring(split(cpuGroup0Mask, '0x')[-1]))) on (
+              extend hexVal = indexof("0123456789abcdef", tolower(tostring(hexChar)))
+              | extend b0 = hexVal % 2 >= 1, b1 = (hexVal / 2) % 2 >= 1, b2 = (hexVal / 4) % 2 >= 1, b3 = (hexVal / 8) % 2 >= 1
+              | summarize cpuFilters0 = array_concat(
+                  make_list_if(strcat('Processor Information(0,', hexPos * 4, ')'), b0),
+                  make_list_if(strcat('Processor Information(0,', hexPos * 4 + 1, ')'), b1),
+                  make_list_if(strcat('Processor Information(0,', hexPos * 4 + 2, ')'), b2),
+                  make_list_if(strcat('Processor Information(0,', hexPos * 4 + 3, ')'), b3))
+          )
+          | mv-apply with_itemindex=hexPos hexChar = array_reverse(extract_all("(.)", tostring(split(cpuGroup1Mask, '0x')[-1]))) on (
+              extend hexVal = indexof("0123456789abcdef", tolower(tostring(hexChar)))
+              | extend b0 = hexVal % 2 >= 1, b1 = (hexVal / 2) % 2 >= 1, b2 = (hexVal / 4) % 2 >= 1, b3 = (hexVal / 8) % 2 >= 1
+              | summarize cpuFilters1 = array_concat(
+                  make_list_if(strcat('Processor Information(1,', hexPos * 4, ')'), b0),
+                  make_list_if(strcat('Processor Information(1,', hexPos * 4 + 1, ')'), b1),
+                  make_list_if(strcat('Processor Information(1,', hexPos * 4 + 2, ')'), b2),
+                  make_list_if(strcat('Processor Information(1,', hexPos * 4 + 3, ')'), b3))
+          )
+          | extend cpuFilters = array_concat(cpuFilters0, cpuFilters1)
+          | project application_name, allocated_cpus, event, cpu_count, cpuGroup0Mask, cpuGroup1Mask, cpuFilters, min_TIMESTAMP, max_TIMESTAMP, rg_instance_process_id
+          | extend IsOfInterest = iff(cpuFilters has_any (_interested_cores), 1, 0)
+          | where IsOfInterest == 1

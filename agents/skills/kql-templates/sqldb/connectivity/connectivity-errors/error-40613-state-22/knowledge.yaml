@@ -1,0 +1,9 @@
+# Source: SQLLivesiteAgents/Connectivity/connectivity-errors/error-40613-state-22/SKILL.md
+# Error: 40613 State 22 — DueToProxyConnextThrottle
+#
+# Gateway proxy throttling. Usually related to SNAT exhaustion or network issues.
+# See connectivity-base/connectivity-ring-health (GW1100 SNAT check).
+# If SNAT found → network analysis required (determine-sql-node + access-eagleeye).
+#
+# No standalone KQL — uses CR health check queries.
+# TSG: Check connectivity-ring-health GW1100 + network analysis trigger in login-failure SKILL.md
