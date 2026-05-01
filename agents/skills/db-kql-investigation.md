@@ -119,7 +119,7 @@ MonAnalyticsDBSnapshot
 - `availability/auto_investigation.md` — 11 routes (failover, quorum-loss, node-health, error-40613, ...)
 - `connectivity/investigation.md` — 7 routes (login-failure, session-disconnect, xdbhost-restart, ...)
 
-**如果用户选择 YES → 执行 auto_investigation.md，完成后不再走 Step 3-7。**
+**如果用户选择 YES → 执行 auto_investigation.md，完成后询问: "自动调查已完成，是否还需要继续搜索 KQL/TSG 补充调查？(Step 3-7)"**
 **如果用户选择 NO → 继续正常的 Step 3 (搜 KQL + TSG) 流程。**
 **如果用户直接描述问题 → 分析关键字 → 等同 auto_investigation 的 Triage → 自动执行。**
 
