@@ -109,25 +109,50 @@ MonAnalyticsDBSnapshot
 
 请选择:
 A. 🤖 自动调查 — 自动 triage + 执行诊断流程 + RCA 输出
-B. 📂 手动选择子类别 — 直接选择要调查的子问题 (列表见下)
-C. 💬 描述问题 / 直接提供问题 — 我来判断走哪条路径
-D. ⏭️ 跳过 — 继续手动搜 KQL + TSG (Step 3)
+B. 📂 手动选择子类别 — 直接选择要调查的子问题 (跳过 triage, 直接执行选定的 SKILL.md)
+C. ⏭️ 跳过 — 继续手动搜 KQL + TSG (Step 3)
 ```
 
-**子类别列表 (选 B 时展示):**
+**子类别列表 (选 B 时展示，含执行的 SKILL 路径):**
 
-| 类别 | 子类别 |
-|------|--------|
-| Availability | failover, quorum-loss, node-health, error-40613, high-sync-commit(BC only), seeding-rca, long-reconfig, update-slo, login-failure |
-| Connectivity | login-failure, session-disconnect, xdbhost-restart, gateway-node-low-login, control-ring-unhealthy, xdbhost-tcp-rejections, brain-login-alert |
+**Availability** 子类别:
+
+| # | 子类别 | 执行的 Skill | KQL 数 |
+|---|--------|-------------|--------|
+| 1 | failover | `availability/failover/SKILL.md` | 25 |
+| 2 | quorum-loss | `availability/quorum-loss/SKILL.md` | 20 |
+| 3 | node-health | `availability/node-health/SKILL.md` | 8 |
+| 4 | error-40613 | `availability/error-40613/SKILL.md` (含 state-126/127/129) | 20 |
+| 5 | high-sync-commit-wait | `availability/high-sync-commit-wait/SKILL.md` (BC/Premium only) | 11 |
+| 6 | seeding-rca | `availability/seeding-rca/SKILL.md` | 11 |
+| 7 | long-reconfig | `availability/long-reconfig/SKILL.md` | 21 |
+| 8 | update-slo | `availability/update-slo/SKILL.md` | 10 |
+| 9 | login-failure | `availability/login-failure/SKILL.md` | 6 |
+
+**Connectivity** 子类别:
+
+| # | 子类别 | 执行的 Skill | KQL 数 |
+|---|--------|-------------|--------|
+| 1 | login-failure | `auto_investigation.md` Phase 2 (Steps 2-12) | 118 |
+| 2 | session-disconnect | `auto_investigation.md` Branch B (Step 30) | 2 |
+| 3 | xdbhost-restart | `auto_investigation.md` Branch A (Step 20) | 7 |
+| 4 | gateway-node-low-login | `auto_investigation.md` Branch C (Step 40) | 18 |
+| 5 | control-ring-unhealthy | `auto_investigation.md` Branch D (Step 50) | 10 |
+| 6 | xdbhost-tcp-rejections | `auto_investigation.md` Branch E (Step 60) | 8 |
+| 7 | brain-login-alert | `auto_investigation.md` Branch F (Step 70) | 2 |
+
+> **注意**: Availability 每个子类别有独立的 SKILL.md；Connectivity 的调查流程内联在 auto_investigation.md 的各 Branch 中。
+
+**用户选定后，告知用户**: "将执行 `{skill路径}`，包含 N 步 workflow / N 条 KQL。"
 
 **当前有 auto_investigation.md 的类别：**
-- `availability/auto_investigation.md` — 11 routes
-- `connectivity/auto_investigation.md` — 7 routes
+- `availability/auto_investigation.md` — 11 routes (路由到独立 SKILL.md)
+- `connectivity/auto_investigation.md` — 7 routes (流程内联在各 Branch)
 
-**选择 A/B/C → 执行 auto_investigation.md (A=自动triage, B=跳过triage直接选skill, C=分析关键字)**
-**完成后询问: "自动调查已完成，是否还需要继续搜索 KQL/TSG 补充调查？(Step 3-7)"**
-**选择 D → 继续正常的 Step 3 (搜 KQL + TSG) 流程。**
+**选择 A → 执行 auto_investigation.md 的完整流程 (Phase 0 → Phase 1 Triage → 自动选 Route → 执行对应 SKILL.md/Branch → RCA)**
+**选择 B → 展示子类别列表，用户选定后告知将执行哪个 SKILL.md/Branch，跳过 Phase 1 Triage 直接执行 (仍需 Phase 0 Prerequisites)**
+**选择 A/B 完成后询问: "自动调查已完成，是否还需要继续搜索 KQL/TSG 补充调查？(Step 3-7)"**
+**选择 C → 继续正常的 Step 3 (搜 KQL + TSG) 流程。**
 
 ## Step 3: Find KQL + Search TSG（并行两条线）
 
