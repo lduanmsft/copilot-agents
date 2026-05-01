@@ -12,33 +12,6 @@ distilled: 2026-05-01
 > - **CR** = Connectivity Ring (Gateway 集群, 如 `cr11.eastasia1-a.control.database.windows.net`)
 > - **TR** = Tenant Ring (数据库所在集群, 如 `tr9591.southcentralus1-a.worker.database.windows.net`)
 
-## 入口: 选择调查模式
-
-进入 Connectivity 调查后，询问用户:
-
-```
-🏥 SQLDB Connectivity 调查
-
-请选择模式:
-
-A. 🤖 自动调查 — 输入 Server/DB/时间窗口，自动 triage + 执行诊断流程
-B. 📂 手动选择子类别 — 直接选择要调查的问题类型
-C. 💬 描述问题 — 直接描述你的问题，我来判断走哪条路径
-
-选择 B 后请选择子类别:
- 1. login-failure         — 登录失败 (完整 12 步调查)
- 2. session-disconnect    — 会话断开
- 3. xdbhost-restart       — XdbHost 进程重启
- 4. gateway-node-low-login — Gateway 节点低登录成功率 (ICM alert)
- 5. control-ring-unhealthy — Control Ring 节点不健康 (ICM alert)
- 6. xdbhost-tcp-rejections — XdbHost TCP 拒绝
- 7. brain-login-alert     — BRAIN 登录成功率告警 (ICM alert)
-```
-
-**模式 A**: → 收集参数 → Phase 0 → Phase 1 (Triage) → Phase 2 (自动选择 skill) → Phase 3/4
-**模式 B**: → 收集参数 → Phase 0 → 跳过 Phase 1 → 直接执行用户选择的 skill
-**模式 C**: → 分析用户描述中的关键字 → 等同于 Phase 1 Triage → 继续 Phase 2
-
 ## Required Inputs
 
 | Parameter | Source | Example |

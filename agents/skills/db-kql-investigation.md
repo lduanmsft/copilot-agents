@@ -105,23 +105,29 @@ MonAnalyticsDBSnapshot
 **在选择问题类型后，如果该类别有 `auto_investigation.md`，询问用户：**
 
 ```
-检测到 {category} 类别有自动调查模板 (auto_investigation.md)。
+检测到 {category} 类别有自动调查模板。
 
-🤖 是否执行自动调查流程？
-   → YES: 按照 auto_investigation.md 的完整流程自动执行
-          (Phase 0 → Triage → 选择 Skill → 执行诊断 → RCA 输出)
-   → NO:  继续手动模式 (Step 3 搜 KQL + TSG)
-
-或者直接描述你的问题，我会自动判断走哪条路径。
+请选择:
+A. 🤖 自动调查 — 自动 triage + 执行诊断流程 + RCA 输出
+B. 📂 手动选择子类别 — 直接选择要调查的子问题 (列表见下)
+C. 💬 描述问题 / 直接提供问题 — 我来判断走哪条路径
+D. ⏭️ 跳过 — 继续手动搜 KQL + TSG (Step 3)
 ```
 
-**当前有 auto_investigation.md 的类别：**
-- `availability/auto_investigation.md` — 11 routes (failover, quorum-loss, node-health, error-40613, ...)
-- `connectivity/auto_investigation.md` — 7 routes (login-failure, session-disconnect, xdbhost-restart, ...)
+**子类别列表 (选 B 时展示):**
 
-**如果用户选择 YES → 执行 auto_investigation.md，完成后询问: "自动调查已完成，是否还需要继续搜索 KQL/TSG 补充调查？(Step 3-7)"**
-**如果用户选择 NO → 继续正常的 Step 3 (搜 KQL + TSG) 流程。**
-**如果用户直接描述问题 → 分析关键字 → 等同 auto_investigation 的 Triage → 自动执行。**
+| 类别 | 子类别 |
+|------|--------|
+| Availability | failover, quorum-loss, node-health, error-40613, high-sync-commit(BC only), seeding-rca, long-reconfig, update-slo, login-failure |
+| Connectivity | login-failure, session-disconnect, xdbhost-restart, gateway-node-low-login, control-ring-unhealthy, xdbhost-tcp-rejections, brain-login-alert |
+
+**当前有 auto_investigation.md 的类别：**
+- `availability/auto_investigation.md` — 11 routes
+- `connectivity/auto_investigation.md` — 7 routes
+
+**选择 A/B/C → 执行 auto_investigation.md (A=自动triage, B=跳过triage直接选skill, C=分析关键字)**
+**完成后询问: "自动调查已完成，是否还需要继续搜索 KQL/TSG 补充调查？(Step 3-7)"**
+**选择 D → 继续正常的 Step 3 (搜 KQL + TSG) 流程。**
 
 ## Step 3: Find KQL + Search TSG（并行两条线）
 
