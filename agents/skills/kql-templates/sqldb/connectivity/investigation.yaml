@@ -1,0 +1,508 @@
+# ============================================================================
+# investigation.yaml — SQLDB Connectivity Investigation Workflow
+# ============================================================================
+# Source: SQLLivesiteAgents / Connectivity / Connectivity.agent.md + triage + scenarios
+# Distilled: 2026-05-01
+# Purpose: Layer 1 — 定义 Connectivity 调查的执行顺序、条件分支、KQL 引用
+# KQL 模板引用: sqldb/connectivity/*/kql-livesite.yaml (Layer 2)
+# ============================================================================
+#
+# 架构说明:
+#   SQLDB Connectivity 的架构与 Performance/Availability 不同:
+#   - Performance: 以指标维度分类 (CPU/blocking/memory...)
+#   - Availability: 以故障类型分类 (failover/quorum-loss/error-40613...)
+#   - Connectivity: 以**调查阶段**分类 — 先 triage 确定方向，再深入场景
+#
+#   登录流: Client → xdbgateway(CR/GW Node) → xdbhost(TR/DB Node) → sqlservr(TR/DB Node)
+#
+#   关键概念:
+#   - CR = Connectivity Ring (Gateway 集群, 如 cr11.eastasia1-a.control.database.windows.net)
+#   - TR = Tenant Ring (数据库所在集群, 如 tr9591.southcentralus1-a.worker.database.windows.net)
+#   - GW Node = Gateway 节点 (如 _GW_10)
+#   - DB Node = 数据库节点 (如 _DB_31)
+#
+# ============================================================================
+
+Investigation:
+  id: conn-investigation
+  name: "SQLDB Connectivity Investigation"
+  description: >
+    Diagnoses Azure SQL Database connectivity issues including login failures,
+    session disconnects, gateway health, XdbHost restarts, and network problems.
+    Uses a triage-first approach: determine issue type, then route to specialized workflow.
+  source: "SQLLivesiteAgents/Connectivity"
+
+  # ════════════════════════════════════════════════════
+  # Required Inputs
+  # ════════════════════════════════════════════════════
+  RequiredParameters:
+    - LogicalServerName       # e.g. my-server
+    - LogicalDatabaseName     # e.g. my-db (optional for CR-level incidents)
+    - StartTime               # UTC yyyy-MM-dd HH:mm
+    - EndTime                 # UTC yyyy-MM-dd HH:mm
+    # 以下由 execute-kusto-query / get-db-info 获取:
+    - KustoClusterUri         # from execute-kusto-query
+    - KustoDatabase           # from execute-kusto-query
+    - AppName                 # from get-db-info (sql_instance_name)
+    - ClusterName             # from get-db-info (tenant_ring_name)
+    - NodeName                # from get-db-info (DB node)
+    - deployment_type         # from get-db-info (GP/BC, ZR)
+
+  # ════════════════════════════════════════════════════
+  # Phase 0: Prerequisites (Common Skills)
+  # ════════════════════════════════════════════════════
+  Prerequisites:
+    - skill: "Common/execute-kusto-query"
+      description: "Resolve DNS → region → Kusto cluster URI + database"
+      output: [KustoClusterUri, KustoDatabase, region]
+      note: "NEVER hardcode cluster URIs"
+
+    - skill: "Common/get-db-info"
+      description: "Retrieve AppName, ClusterName, partition IDs, SLO, deployment type"
+      output: [AppName, ClusterName, NodeName, physical_database_id, fabric_partition_id, deployment_type]
+
+  # ════════════════════════════════════════════════════
+  # Phase 1: Triage — 确定问题类型并选择调查分支
+  # ════════════════════════════════════════════════════
+  Steps:
+    - step: 1
+      name: "Triage — Determine Issue Type"
+      description: >
+        Analyze user keywords, ICM title/description, and AI summary tags
+        to determine the connectivity issue type and select diagnostic branches.
+      source: "connectivity-triage/SKILL.md"
+
+      # 输入来源优先级: ICM > 用户关键字 > 遥测数据
+      keyword_routing:
+        - keywords: ["login failure", "connectivity", "login error", "authentication"]
+          route: "login-failure"
+          confidence: high
+        - keywords: ["session disconnect", "timeout", "connection lost", "dropped connection"]
+          route: "session-disconnect"
+          confidence: high
+        - keywords: ["GatewayNodeLowLoginSuccessRate", "gateway node low"]
+          route: "gateway-node-low-login"
+          confidence: high
+        - keywords: ["Control Ring Nodes Unhealthy", "20% of Gateway nodes"]
+          route: "control-ring-unhealthy"
+          confidence: high
+        - keywords: ["HasXdbHostRestarts", "xdbhost restart"]
+          route: "xdbhost-restart"
+          confidence: high
+        - keywords: ["BRAIN detected", "Login Success-Rate"]
+          route: "brain-login-alert"
+          confidence: high
+        - keywords: ["TCP rejection", "high tcp"]
+          route: "xdbhost-tcp-rejections"
+          confidence: high
+
+      default_route: "login-failure"
+      default_confidence: low
+
+      output:
+        - selected_skills    # Array of skill names
+        - triage_reason      # Brief explanation
+        - triage_evidence    # Key keywords/patterns found
+        - confidence         # high / medium / low
+
+    # ════════════════════════════════════════════════════
+    # Phase 2: Login Base — 所有 login 相关调查的公共步骤
+    # ════════════════════════════════════════════════════
+    - step: 2
+      name: "Determine Login Target"
+      description: "Identify target TR ring and DB node for login requests"
+      kql_ref: "login-triage/kql-livesite.yaml#LS-CONN-BASE-04"
+      condition: "route in ['login-failure', 'xdbhost-restart', 'brain-login-alert']"
+      output: [TargetTRRing, TargetDBNode, instance_name]
+
+    - step: 3
+      name: "Determine Connectivity Ring"
+      description: "Identify which CR(s) served the login requests"
+      kql_ref: "login-triage/kql-livesite.yaml#LS-CONN-BASE-03"
+      condition: "route in ['login-failure', 'brain-login-alert']"
+      output: [ConnectivityRing]
+      analysis:
+        - "Typically 2 CRs per data slice; >2 suggests slice migration"
+        - "Compare TotalLogins vs LoginWithError between CRs"
+
+    - step: 4
+      name: "Check Login Outage Records"
+      description: "Check if any outage is recorded for this server/database"
+      kql_ref: "login-triage/kql-livesite.yaml#LS-CONN-BASE-01"
+      condition: "route in ['login-failure']"
+
+    - step: 5
+      name: "Determine Connection Type"
+      description: "Identify Proxy/Redirect, Public/Private/Service Endpoint"
+      kql_ref: "login-triage/kql-livesite.yaml#LS-CONN-BASE-07"
+      condition: "route in ['login-failure']"
+      analysis:
+        - "Check proxy_override vs actual result for mismatch"
+        - "Private Endpoint + Default policy + Redirect = legacy redirection_map_id"
+        - "Outdated drivers may force Proxy even when Redirect is configured"
+
+    - step: 6
+      name: "Determine Prevailing Error"
+      description: "Screen prevailing errors in MonLogin, determine impact scope"
+      kql_ref: "login-triage/kql-livesite.yaml#LS-CONN-BASE-05"
+      condition: "route in ['login-failure']"
+      analysis:
+        - "Distinguish user errors (is_user_error=true) from system errors"
+        - "Check avg_total_time_ms > 4000ms for delay patterns"
+        - "Analyze error source: xdbgateway vs xdbhost vs sqlserver"
+      branching:
+        on_error_40613_state_22: "Continue to step 7 + step 8 (network analysis)"
+        on_error_17900_state_25: "Route to session-disconnect (error-17900-state-25 skill)"
+        on_user_error_only: "Report as customer-side issue, no further infra investigation"
+        on_system_error: "Continue to step 7"
+
+    # ════════════════════════════════════════════════════
+    # Phase 3: Error-Specific Deep Dive
+    # ════════════════════════════════════════════════════
+    - step: 7
+      name: "Error-Specific Skill Lookup"
+      description: >
+        For each distinct non-user error code and state from step 6,
+        look up error-specific skills under connectivity-errors/.
+        Skill lookup convention:
+        1. Exact: error-{code}-state-{state}/SKILL.md
+        2. Fallback: error-{code}/SKILL.md
+        3. Not found: Document and proceed
+      condition: "route in ['login-failure'] AND system errors found"
+      known_error_skills:
+        - error: 40613
+          state: 22
+          description: "DueToProxyConnextThrottle — gateway proxy throttling"
+          action: "Check SNAT (step 8), network analysis"
+        - error: 40613
+          state: 81
+          description: "IPv6 prefix mismatch on PaaSv2 clusters"
+        - error: 40613
+          state: 84
+          description: "Proxy connect timeout — SNIOpen failure"
+          action: "Network analysis mandatory"
+        - error: 18456
+          state: 113
+          description: "AAD login specific state"
+        - error: 17900
+          state: 25
+          description: "TDS protocol error — session disconnect"
+        - error: 26078
+          state: 15
+          description: "xdbhost metric check needed"
+        - error: 33155
+          state: 1
+          description: "Specific connectivity error"
+        - error: 40532
+          state: 150
+          description: "Specific connectivity error"
+        - error: 47073
+          state: 172
+          description: "Specific connectivity error"
+
+    # ════════════════════════════════════════════════════
+    # Phase 4: Gateway & Network Health
+    # ════════════════════════════════════════════════════
+    - step: 8
+      name: "Connectivity Ring Health Check"
+      description: >
+        Run full CR health check: SNAT, GW process restarts, code version,
+        deployments, AliasDB health, DNS errors, node health events
+      kql_ref: "gateway-ring-health/kql-livesite.yaml (GW1100-GW1130)"
+      condition: "route in ['login-failure', 'gateway-node-low-login', 'control-ring-unhealthy', 'brain-login-alert']"
+      queries:
+        - id: GW1100
+          name: "SNAT Port Exhaustion"
+          trigger: "Always for CR health; mandatory if 40613/22 found"
+          note: "Requires azslb.kusto.windows.net access"
+        - id: GW1110
+          name: "GW Process Restart Detection"
+        - id: GW1111
+          name: "GW Code Package Version"
+        - id: GW1112
+          name: "GW Deployment Traces"
+        - id: GW1114
+          name: "GW Process Restart Event (XE Session)"
+        - id: GW1116
+          name: "GW Process Restart Duration"
+        - id: GW1117
+          name: "Node Repair Tasks"
+        - id: GW1120
+          name: "AliasDB SF App Health"
+        - id: GW1121
+          name: "AliasDB Partition Event"
+        - id: GW1122
+          name: "Node Health Events"
+        - id: GW1123
+          name: "Alias Cache Refresh Latency"
+          threshold: "P90 > 1000ms warrants attention"
+        - id: GW1130
+          name: "DNS Cache Errors"
+      network_analysis_trigger:
+        - "Error 40613 State 22 (DueToProxyConnextThrottle)"
+        - "Error 40613 State 84"
+        - "Error 26078"
+        - "lookup_state 10060 (TCP timeout)"
+        - "SNAT port exhaustion (GW1100)"
+        - "ProxyOpen timeouts > 5000ms"
+      network_analysis_actions:
+        - "Run determine-sql-node skill (map nodes to VMs)"
+        - "Run access-eagleeye skill (generate network analysis links)"
+
+    # ════════════════════════════════════════════════════
+    # Phase 5: DB Node Health
+    # ════════════════════════════════════════════════════
+    - step: 9
+      name: "DB Node Health Check"
+      description: "Check infrastructure health on the DB node(s)"
+      condition: "route in ['login-failure']"
+      source: "NodeHealth/node-health/SKILL.md"
+      mandatory_queries:
+        - NH100: "Locate database node(s)"
+        - NH200: "Check SF node state changes"
+        - NH210: "Check node health issues"
+        - NH300: "Check MonSQLInfraHealthEvents (extended: -12h to +24h)"
+        - NH400: "Check for bugcheck events"
+        - NH500: "Check node up/down in WinFabLogs"
+        - NH600: "Check node repair tasks"
+        - NH700: "Check RestartCodePackage actions"
+      note: "ALL 8 queries are MANDATORY. Empty results still required."
+
+    - step: 10
+      name: "XDBHOST Health Check"
+      description: "Check XDBHOST metrics on tenant ring"
+      condition: "route in ['login-failure']"
+      source: "connectivity-utilities/xdbhost-metric-check/SKILL.md"
+
+    - step: 11
+      name: "App Health Check (sqlservr)"
+      description: "Check sqlservr process restarts, system health warnings"
+      kql_ref: "app-health/kql-livesite.yaml (AH100-AH305)"
+      condition: "route in ['login-failure']"
+      queries:
+        - id: AH100
+          name: "Process ID Change Detection"
+        - id: AH200
+          name: "LoginOutages Audit"
+        - id: AH210
+          name: "MonNonPiiAudit Trail"
+        - id: AH305
+          name: "Known Warning Pattern Aggregation"
+          note: "Run FIRST. 8 pattern categories: I/O_slow, Memory_pressure, Deadlock, StackDump, Crash, IO_error, Long_recovery, Connectivity_issue"
+        - id: AH305-pre
+          name: "Pre-Window Check (chronic vs acute)"
+        - id: AH300
+          name: "Raw Messages (drill-down only after AH305)"
+
+    # ════════════════════════════════════════════════════
+    # Phase 6: Failover/Availability Cross-Check
+    # ════════════════════════════════════════════════════
+    - step: 12
+      name: "Check Failover / Availability Events"
+      description: >
+        Cross-check if login failures are a consequence of failover/availability events.
+        If failover found, treat login failure as secondary symptom.
+      condition: "route in ['login-failure']"
+      source: "Availability/failover/SKILL.md"
+
+    # ════════════════════════════════════════════════════
+    # Scenario-Specific Branches (选择性执行)
+    # ════════════════════════════════════════════════════
+
+    # ── Branch A: XdbHost Restart ──
+    - step: 20
+      name: "XdbHost Restart Diagnosis"
+      description: >
+        Investigate login failures caused by XdbHost process restarts.
+        Error cascade: State 12 → State 44 → State 10 → State 13 → State 126 → State 22
+      condition: "route == 'xdbhost-restart'"
+      kql_ref: "xdbhost-restart/kql-livesite.yaml (XR100-XR700)"
+      sub_steps:
+        - name: "Confirm restart (XR100)"
+          description: "Detect process_id change in MonXdbhost"
+          decision: "No change → reroute to login-failure"
+        - name: "Classify trigger (XR200)"
+          description: "Check MonXdbhost logs for fail/stuck patterns"
+        - name: "Check automation (XR300)"
+          description: "MonNonPiiAudit for KillProcess/DumpProcess actions"
+        - name: "Error distribution (XR400/XR410)"
+          description: "Separate user errors (pre-restart) from restart errors"
+          key_insight: "If user errors >> system errors before restart → customer error flood triggered automation"
+        - name: "Login volume (XR600)"
+          description: "> 2500 logins/min = extremely high, amplifies restart impact"
+        - name: "Self-mitigation (XR700)"
+          description: "Verify SuccessCount resumes, RestartErrors drop to 0"
+
+    # ── Branch B: Session Disconnect ──
+    - step: 30
+      name: "Session Disconnect Investigation"
+      condition: "route == 'session-disconnect'"
+      kql_ref: "session-disconnect/kql-livesite.yaml (SD-01, SD-02)"
+      description: >
+        Analyze proxy_close_connection / process_close_connection events.
+        If dominant error is 17900/25, route to error-17900-state-25 skill.
+      sub_steps:
+        - name: "Disconnect events summary (SD-01)"
+          description: "Top error/state by count"
+        - name: "Connection trace (SD-02)"
+          description: "Trace top 3 connection_peer_ids end-to-end"
+      correlation:
+        gateway_to_backend: "peer_activity_id + peer_activity_seq (backend = gateway + 1)"
+        xdbhost_to_sqlserver: "connection_peer_id"
+      output_requirements:
+        - "Suggest client-side networking trace (MUST output)"
+        - "Suggest verify end-to-end network path (MUST output)"
+
+    # ── Branch C: Gateway Node Low Login Success Rate ──
+    - step: 40
+      name: "Gateway Node Low Login Success Rate"
+      condition: "route == 'gateway-node-low-login'"
+      kql_ref: "gateway-node-low-login/kql-livesite.yaml (GNLSR100-GNLSR900)"
+      description: >
+        Diagnose node-level GatewayNodeLowLoginSuccessRate incidents.
+        11-step workflow from scope assessment to mitigation.
+      sub_steps:
+        - name: "Scope assessment (GNLSR100/110)"
+          description: "Per-node login success rate; isolated vs multi-node"
+        - name: "Known issues (GNLSR200/210/220/230)"
+          description: "Check Trident, AliasDB cache backoff, SF behavior change"
+        - name: "Error distribution (GNLSR300/310/320)"
+          description: "Top errors, server-level breakdown, most impacted servers"
+        - name: "Error-specific skills (per login-failure Task 7)"
+        - name: "SNAT check (GNLSR400)"
+          condition: "40613/22 found"
+        - name: "Redirector & AliasDB health (GNLSR600-640)"
+          description: "ODBC failures, cache refresh, fabric resolution, lookup retries"
+        - name: "GW process health (GNLSR700-730)"
+          description: "Process restarts, restart events/duration, resource usage"
+        - name: "Deployment check (GNLSR800/810)"
+        - name: "Impact assessment (GNLSR900)"
+      mitigation_tree:
+        trident_testing: "Transfer to Synapse DW / Client Experiences"
+        aliasdb_cache_backoff: "Kill/restart GW process on affected node"
+        sf_behavior_change: "Wait for deployment to complete"
+        snat_exhaustion: "Identify traffic source; restart GW process"
+        aliasdb_odbc_failures: "Check replicas from SFE; restart GW process"
+        gw_instability: "Investigate dumps; restart GW process"
+        no_clear_cause: "Kill GW process on affected node; monitor recovery"
+
+    # ── Branch D: Control Ring Nodes Unhealthy ──
+    - step: 50
+      name: "Control Ring Nodes Unhealthy (Cluster-Level)"
+      condition: "route == 'control-ring-unhealthy'"
+      kql_ref: "control-ring-unhealthy/kql-livesite.yaml (CRNU100-CRNU500)"
+      description: >
+        Cluster-level alert: ≥20% of GW nodes unhealthy.
+        Identify breaching health signals per node, delegate to node-level skills.
+      sub_steps:
+        - name: "Scope (CRNU100/110)"
+          description: "Count unhealthy nodes, confirm threshold"
+        - name: "Common patterns (CRNU200/210)"
+          description: "Deployment, GW process restarts, DR drill"
+        - name: "Health signals per node (CRNU300/310)"
+          description: "LSASS CPU >50%, TCP rejections >150/sec + handles >600K"
+        - name: "Auto-mitigation (CRNU400)"
+          description: "Check healthmanagesvc/SqlRunner actions"
+        - name: "Impact (CRNU500)"
+      delegation_matrix:
+        login_success_rate: "gateway-node-low-login (step 40)"
+        lsass_stress: "Performance/LSASS"
+        tcp_rejections: "xdbhost-tcp-rejections (step 60)"
+        gw_process_instability: "gateway-health-and-rollout"
+
+    # ── Branch E: XdbHost High TCP Rejections ──
+    - step: 60
+      name: "XdbHost High TCP Rejections"
+      condition: "route == 'xdbhost-tcp-rejections'"
+      kql_ref: "xdbhost-tcp-rejections/kql-livesite.yaml (TR100-TR900)"
+      description: >
+        Diagnose TCP rejections on DB node, usually driven by LSASS stress
+        causing IOCP thread stalls in XdbHost → crash-restart loop.
+      sub_steps:
+        - name: "Confirm TCP rejections (TR100)"
+          threshold: ">50/sec = significant"
+        - name: "LSASS stress (TR200)"
+          threshold: ">50% = stress, >100% = severe"
+        - name: "Crash loop (TR300)"
+          threshold: ">10 process IDs in 2h = severe"
+        - name: "Dump activity (TR400)"
+          description: "Stalled IOCP Listener → SqlDumpExceptionHandler cycle"
+        - name: "Automation actions (TR500)"
+        - name: "Login volume by instance (TR600/610)"
+          threshold: ">100K logins from single instance in 2h = very high"
+        - name: "Instance resource stats (TR700)"
+          threshold: "max_worker_percent=100% or max_session_percent=100%"
+        - name: "TCP port stats (TR800)"
+          threshold: "AvailableDynamicPortsPercentage < 95%"
+
+    # ── Branch F: BRAIN Login Alert ──
+    - step: 70
+      name: "BRAIN Low Login Success Rate Alert"
+      condition: "route == 'brain-login-alert'"
+      kql_ref: "brain-login-alert/kql-livesite.yaml (BRAIN-01/02)"
+      description: >
+        Region-level BRAIN SLI alert. Identify CRs with high system error rate,
+        then drill into error/state/TR distribution.
+      sub_steps:
+        - name: "Region to Kusto cluster (LS-CONN-BASE-08)"
+          kql_ref: "login-triage/kql-livesite.yaml#LS-CONN-BASE-08"
+        - name: "CR system error rate (BRAIN-01)"
+          threshold: "SysErrRate > 1% = significant"
+        - name: "Error/state with TR drill (BRAIN-02)"
+          description: "Top errors, impacted CR nodes, target TR rings"
+        - name: "Continue with login-failure Task 6+ for top errors"
+      mandatory_outputs:
+        - "Drill Calendar: https://global.azure.com/drillmanager/calendarView"
+        - "Service Health Dashboard"
+        - "Top 2 LoadBalancer health metrics (utilities/loadbalancer-health)"
+        - "Top 2 EagleEye links (utilities/access-eagleeye)"
+
+    # ════════════════════════════════════════════════════
+    # Phase 7: Utilities (按需调用)
+    # ════════════════════════════════════════════════════
+    - step: 80
+      name: "Utility Skills (on-demand)"
+      description: "Called by other steps as needed, not executed independently"
+      utilities:
+        - id: UTIL-01
+          name: "LoadBalancer VIP Availability"
+          kql_ref: "utilities/kql-livesite.yaml#LS-UTIL-01"
+          trigger: "LB health check requested or BRAIN alert"
+        - id: UTIL-02
+          name: "LoadBalancer Dashboard URLs"
+          kql_ref: "utilities/kql-livesite.yaml#LS-UTIL-02"
+          trigger: "LB problem detected (availability < 90)"
+        - id: UTIL-03
+          name: "DB Node CPU Usage (VM-level)"
+          kql_ref: "utilities/kql-livesite.yaml#LS-UTIL-03"
+          trigger: "Node CPU investigation"
+        - id: UTIL-04
+          name: "SQL Node to VM Mapping"
+          kql_ref: "utilities/kql-livesite.yaml#LS-UTIL-04"
+          trigger: "Network analysis or EagleEye required"
+
+  # ════════════════════════════════════════════════════
+  # Summary: Route → Steps Mapping
+  # ════════════════════════════════════════════════════
+  RouteMap:
+    login-failure:
+      steps: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+      description: "Full login failure investigation (12 steps)"
+    session-disconnect:
+      steps: [2, 30]
+      description: "Session disconnect analysis"
+    xdbhost-restart:
+      steps: [2, 20]
+      description: "XdbHost restart diagnosis"
+    gateway-node-low-login:
+      steps: [40]
+      description: "GW node low login success rate (self-contained 11-step workflow)"
+    control-ring-unhealthy:
+      steps: [50]
+      description: "Cluster-level unhealthy nodes (delegates to node-level skills)"
+    xdbhost-tcp-rejections:
+      steps: [60]
+      description: "TCP rejections on DB node"
+    brain-login-alert:
+      steps: [2, 3, 70, 8]
+      description: "Region-level BRAIN SLI alert"
