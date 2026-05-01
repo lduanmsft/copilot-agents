@@ -23,7 +23,7 @@ Step 2: Issue classification
     E. Backup & Restore
     F. General
   ↓
-Step 3: Find KQL + search TSG (parallel)
+huoStep 3: Find KQL + search TSG (parallel)
   → Line 1: Local YAML → P1(livesite/sqldri) → P2(distilled) → get executable KQL
   → Line 2: msdata TSG repo (per topic) + CSS Wiki → get investigation guide / latest KQL
   → Merge: local KQL as primary, TSG supplements investigation context
@@ -100,6 +100,29 @@ MonAnalyticsDBSnapshot
 
 → 选择后路由到对应子目录搜 KQL 模板（见 Step 3）
 
+## Step 2b: 是否执行自动调查流程 (Optional)
+
+**在选择问题类型后，如果该类别有 `auto_investigation.md`，询问用户：**
+
+```
+检测到 {category} 类别有自动调查模板 (auto_investigation.md)。
+
+🤖 是否执行自动调查流程？
+   → YES: 按照 auto_investigation.md 的完整流程自动执行
+          (Phase 0 → Triage → 选择 Skill → 执行诊断 → RCA 输出)
+   → NO:  继续手动模式 (Step 3 搜 KQL + TSG)
+
+或者直接描述你的问题，我会自动判断走哪条路径。
+```
+
+**当前有 auto_investigation.md 的类别：**
+- `availability/auto_investigation.md` — 11 routes (failover, quorum-loss, node-health, error-40613, ...)
+- `connectivity/investigation.md` — 7 routes (login-failure, session-disconnect, xdbhost-restart, ...)
+
+**如果用户选择 YES → 执行 auto_investigation.md，完成后不再走 Step 3-7。**
+**如果用户选择 NO → 继续正常的 Step 3 (搜 KQL + TSG) 流程。**
+**如果用户直接描述问题 → 分析关键字 → 等同 auto_investigation 的 Triage → 自动执行。**
+
 ## Step 3: Find KQL + Search TSG（并行两条线）
 
 **并行执行两条线路：**
@@ -123,18 +146,25 @@ Use local YAML / extracted skills first because they are fastest and usually alr
 │   ├── out-of-disk/                      ...
 │   ├── miscellaneous/                    ...
 │   └── sqlos/                            ...
-├── availability/                         ← Availability (9 子目录, 132 livesite skills)
-│   ├── failover/                         (kql-livesite.yaml — 25 skills)
-│   ├── quorum-loss/                      (kql-livesite.yaml — 20 skills)
-│   ├── error-40613/                      (kql-livesite.yaml — 20 skills, state 126/127/129)
-│   ├── long-reconfig/                    (kql-livesite.yaml — 21 skills)
-│   ├── high-sync-commit-wait/            (kql-livesite.yaml — 11 skills, BC/Premium only)
-│   ├── seeding-rca/                      (kql-livesite.yaml — 11 skills)
-│   ├── update-slo/                       (kql-livesite.yaml — 10 skills)
-│   ├── node-health/                      (kql-livesite.yaml — 8 skills)
-│   └── login-failure/                    (kql-livesite.yaml — 6 skills)
+├── availability/                         ← Availability (10 子目录, 132 livesite skills)
+│   ├── auto_investigation.md             ← 🤖 自动调查入口 (11 routes)
+│   ├── triage/                           (SKILL.md — 路由层)
+│   ├── failover/                         (SKILL.md + kql-livesite.yaml + references/)
+│   ├── quorum-loss/                      (SKILL.md + kql-livesite.yaml + references/)
+│   ├── error-40613/                      (3 SKILL.md + kql-livesite.yaml + references/)
+│   ├── long-reconfig/                    (SKILL.md + kql-livesite.yaml + references/)
+│   ├── high-sync-commit-wait/            (SKILL.md + kql-livesite.yaml + references/, BC/Premium only)
+│   ├── seeding-rca/                      (SKILL.md + kql-livesite.yaml + references/)
+│   ├── update-slo/                       (SKILL.md + kql-livesite.yaml + references/)
+│   ├── node-health/                      (SKILL.md + kql-livesite.yaml + references/)
+│   └── login-failure/                    (SKILL.md + kql-livesite.yaml + references/)
+├── connectivity/                         ← Connectivity (118 livesite skills)
+│   ├── investigation.md                  ← 🤖 自动调查入口 (7 routes)
+│   ├── connectivity-base/                (kql-livesite.yaml — 8 skills + ring-health 12 skills)
+│   ├── connectivity-errors/              (12 error dirs, 33 KQL + 5 knowledge)
+│   ├── connectivity-scenarios/           (6 scenarios, 49 KQL)
+│   └── connectivity-utilities/           (5 utilities, 16 KQL)
 ├── config/                               ← Dashboard config
-├── Dump.yaml                             ← Dump analysis
 └── (root-level legacy yaml files)
 ```
 
