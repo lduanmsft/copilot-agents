@@ -13,14 +13,23 @@ Step 1: Gather parameters
   → ServerName, DatabaseName, Region, TimeRange
   → If region is unknown, discover it from telemetry
   ↓
-Step 2: Find KQL template
-  → Local YAML → TSG / wiki / code → AI generate as fallback
+Step 2: Issue classification
+  → If user already specified (e.g. "failover", "high CPU") → route directly
+  → Otherwise ask:
+    A. Performance (CPU/memory/blocking/queries/QDS/compilation/disk)
+    B. Availability (failover/quorum loss/error 40613/SLO change/seeding)
+    C. Connectivity (login failure/AAD/gateway)
+    D. GeoDR / FOG
+    E. Backup & Restore
+    F. General
   ↓
-Step 3: Determine cluster endpoint
-  → Use SQLClusterMappings.csv / Followers mapping
+Step 3: Find KQL + search TSG (parallel)
+  → Line 1: Local YAML → P1(livesite/sqldri) → P2(distilled) → get executable KQL
+  → Line 2: msdata TSG repo (per topic) + CSS Wiki → get investigation guide / latest KQL
+  → Merge: local KQL as primary, TSG supplements investigation context
   ↓
 Step 4: Present query for review ⚠️ never execute without confirmation
-  → Show cluster + database + complete KQL with parameters filled in
+  → Show complete KQL with parameters filled in
   ↓
 Step 5: Execute after confirmation
   ↓
@@ -53,8 +62,20 @@ MonAnalyticsDBSnapshot
 | where logical_database_name =~ "{DatabaseName}"
 | summarize arg_max(TIMESTAMP, *)
 | project logical_server_name, logical_database_name, region_name, state,
-    edition, service_level_objective, failover_group_id, logical_resource_pool_id
+    edition, service_level_objective, zone_resilient,
+    sql_instance_name, tenant_ring_name, fabric_partition_id,
+    physical_database_id, sql_database_id, logical_database_id,
+    failover_group_id, logical_resource_pool_id
 ```
+
+**从结果中提取并保存（后续步骤会用到）：**
+- `sql_instance_name` → **AppName**（用于 KQL filter，如 `AppName =~ '{AppName}'`）
+- `tenant_ring_name` → **ClusterName**（用于 WinFabLogs 等表的 filter）
+- `edition` + `service_level_objective` → 判断 Singleton/Elastic Pool/Hyperscale/Serverless，影响调查路径
+- `zone_resilient` → 影响 failover 调查（GP ZR vs non-ZR）
+- `fabric_partition_id` → 用于 availability 子目录的 WinFabLogs/MonFabricApi filter
+- `physical_database_id` → 用于 MonFabricApi/MonSQLSystemHealth filter
+- `sql_database_id` → 用于 MonSQLSystemHealth recovery message filter（`database ID {N}`）
 
 If `DatabaseName` is unknown but the user knows the server, list databases first:
 ```kql
@@ -65,24 +86,62 @@ MonAnalyticsDBSnapshot
 | order by logical_database_name asc
 ```
 
-## Step 2: Find KQL Template
+## Step 2: Issue Classification
+
+**如果用户已明确说了问题类型**（如 "failover", "high CPU", "login failure"）→ 直接路由到对应子目录。
+
+**否则问用户选择：**
+- **A. Performance** — CPU/memory/blocking/queries/QDS/compilation/disk
+- **B. Availability** — failover/quorum loss/error 40613/SLO change/seeding/long reconfig
+- **C. Connectivity** — login failure/AAD/gateway
+- **D. GeoDR / FOG** — failover group/seeding/geo-replication
+- **E. Backup & Restore** — backup/restore/PITR
+- **F. General** — management operations/security/other
+
+→ 选择后路由到对应子目录搜 KQL 模板（见 Step 3）
+
+## Step 3: Find KQL + Search TSG（并行两条线）
+
+**并行执行两条线路：**
+
+#### 线路 1: 搜本地 YAML Templates（得到可执行 KQL）
+
+按 Step 2 的分类定位目录，在对应目录下搜 KQL 模板：
 
 ### 2a. Search local templates first
 Use local YAML / extracted skills first because they are fastest and usually already parameterized.
 
 ```text
 ~/.copilot/agents/skills/kql-templates/sqldb/
-├── availability/              (771 skills)
-├── connectivity/              (306 skills)
-├── data-integration/          (471 skills)
-├── geodr/                     (109 skills)
-├── native/                    (173 skills)
-├── performance/               (914 skills)
-├── query-store/               (29 skills)
-├── resource-governance/       (95 skills)
-├── telemetry/                 (317 skills)
-└── css-wiki/                  (728 skills)
+├── performance/                          ← Performance (9 子目录, 200+ skills)
+│   ├── cpu/                              (kql-livesite, kql-sqldri, kql-distilled, kql-tsg, investigation)
+│   ├── blocking/                         (同上)
+│   ├── memory/                           ...
+│   ├── queries/                          ...
+│   ├── query-store/                      ...
+│   ├── compilation/                      ...
+│   ├── out-of-disk/                      ...
+│   ├── miscellaneous/                    ...
+│   └── sqlos/                            ...
+├── availability/                         ← Availability (9 子目录, 132 livesite skills)
+│   ├── failover/                         (kql-livesite.yaml — 25 skills)
+│   ├── quorum-loss/                      (kql-livesite.yaml — 20 skills)
+│   ├── error-40613/                      (kql-livesite.yaml — 20 skills, state 126/127/129)
+│   ├── long-reconfig/                    (kql-livesite.yaml — 21 skills)
+│   ├── high-sync-commit-wait/            (kql-livesite.yaml — 11 skills, BC/Premium only)
+│   ├── seeding-rca/                      (kql-livesite.yaml — 11 skills)
+│   ├── update-slo/                       (kql-livesite.yaml — 10 skills)
+│   ├── node-health/                      (kql-livesite.yaml — 8 skills)
+│   └── login-failure/                    (kql-livesite.yaml — 6 skills)
+├── config/                               ← Dashboard config
+├── Dump.yaml                             ← Dump analysis
+└── (root-level legacy yaml files)
 ```
+
+**搜索优先级：**
+- **P1**: `kql-livesite.yaml` — SQLLivesiteAgents 工程团队模板
+- **P1**: `kql-sqldri-*.yaml` — SQLDRI Copilot Perf Workflow 模板
+- **P2**: `kql-distilled.yaml` — 手工蒸馏的 KQL
 
 Recommended search order:
 1. Local YAML / extracted skill by topic and keyword
@@ -90,25 +149,32 @@ Recommended search order:
 3. CSS Wiki / msdata / EngHub
 4. AI-generated KQL using table schema references
 
-### 2b. DB document scope (Mode D equivalent)
+### 3b. Search msdata TSG Repos + CSS Wiki（并行线路 2）
 
-| Source | Tool | Scope |
-|--------|------|-------|
-| CSS Wiki: AzureSQLDB | `csswiki-search_wiki` | `project=["AzureSQLDB"]` |
-| msdata: TSG-SQL-DB-* repos | `msdata-search_wiki` / `msdata-search_code` | DB engineering TSGs and KQL source |
-| EngHub | `enghub-search` | `"Azure SQL Database {topic}"` |
+**与线路 1（本地 YAML）并行执行。**按 Step 2 分类**只搜对应的** msdata TSG repo：
 
-Typical msdata repo families to search:
-- `TSG-SQL-DB-Availability`
-- `TSG-SQL-DB-Connectivity`
-- `TSG-SQL-DB-GeoDr`
-- `TSG-SQL-DB-Performance`
-- `TSG-SQL-DB-QueryStore`
-- `TSG-SQL-DB-ResourceGovernance`
-- `TSG-SQL-DB-BackupRestore`
-- `TSG-SQL-DB-DataIntegration`
+| Step 2 分类 | 只搜这个 msdata TSG Repo | 搜索工具 |
+|-------------|-------------------------|----------|
+| **A. Performance** | [TSG-SQL-DB-Performance](https://msdata.visualstudio.com/Database%20Systems/_git/TSG-SQL-DB-Performance) | `msdata-search_code` / `msdata-search_wiki` |
+| **B. Availability** | [TSG-SQL-DB-Availability](https://msdata.visualstudio.com/Database%20Systems/_git/TSG-SQL-DB-Availability) | `msdata-search_code` / `msdata-search_wiki` |
+| **C. Connectivity** | [TSG-SQL-DB-Connectivity](https://msdata.visualstudio.com/Database%20Systems/_git/TSG-SQL-DB-Connectivity) | `msdata-search_code` / `msdata-search_wiki` |
+| **D. GeoDR / FOG** | [TSG-SQL-DB-GeoDr](https://msdata.visualstudio.com/Database%20Systems/_git/TSG-SQL-DB-GeoDr) | `msdata-search_code` / `msdata-search_wiki` |
+| **E. Backup & Restore** | [TSG-SQL-DB-BackupRestore](https://msdata.visualstudio.com/Database%20Systems/_git/TSG-SQL-DB-BackupRestore) | `msdata-search_code` / `msdata-search_wiki` |
+| **F. General** | [Database Systems Wiki](https://msdata.visualstudio.com/Database%20Systems/_wiki) | `msdata-search_wiki` |
+| Query Store | [TSG-SQL-DB-QueryStore](https://msdata.visualstudio.com/Database%20Systems/_git/TSG-SQL-DB-QueryStore) | `msdata-search_code` |
+| Resource Governance | [TSG-SQL-DB-ResourceGovernance](https://msdata.visualstudio.com/Database%20Systems/_git/TSG-SQL-DB-ResourceGovernance) | `msdata-search_code` |
+| Data Integration | [TSG-SQL-DB-DataIntegration](https://msdata.visualstudio.com/Database%20Systems/_git/TSG-SQL-DB-DataIntegration) | `msdata-search_code` |
 
-### 2c. Last resort: AI-generate KQL
+**同时搜 CSS Wiki**（所有分类都搜，不受 Step 2 限制）：
+- `csswiki-search_wiki` project=["AzureSQLDB"] — CSS 支持团队的 SQLDB TSG 和 case 经验
+
+**合并两条线路的结果：**
+- 本地 KQL 为主 → 填充参数后直接用
+- TSG 补充：调查思路、结果解读、阈值判断、下一步建议
+- 如果 TSG 里有更新的 KQL → 优先用 TSG 版本
+- 如果本地没有匹配 → 用 TSG 里的 KQL
+
+### 3c. 兜底: AI Generate with Schema Reference
 If no suitable template exists, generate KQL using:
 - `~/.copilot/agents/skills/kql-templates/sqldb/db-tables-reference.md`
 - `~/.copilot/agents/skills/kql-templates/sqldb/db-tables-list.txt`
@@ -116,25 +182,12 @@ If no suitable template exists, generate KQL using:
 
 Always verify actual column names before execution.
 
-## Step 3: Determine Cluster Endpoint
-Use the same cluster mapping source as MI:
-
-```text
-~/.copilot/agents/skills/kql-templates/shared/SQLClusterMappings.Followers.csv
-```
-
-Guidance:
-- Prefer **Follower** clusters first for read-only investigations.
-- Use **Primary** clusters only if the follower has no data or you need the freshest telemetry.
-- Use database **`sqlazure1`**.
-- The cluster choice is driven by **Region**.
-
 ## Step 4: Present Query for User Review
 **Do not execute immediately.** Show the user:
-1. Cluster endpoint
-2. Database name (`sqlazure1`)
-3. Complete KQL with parameters filled in
-4. A clear confirmation question
+1. Complete KQL with parameters filled in
+2. A clear confirmation question
+
+**Note:** SQLDB 不需要手动确定集群 URL — `execute-kusto-query` skill 会根据 ServerName 自动 DNS 解析 region 并定位正确的 Kusto 集群。
 
 ### Parameter substitution (runtime)
 When filling parameters into YAML templates, replace **all** of these placeholders with the user-provided value:
@@ -152,9 +205,6 @@ Note: Different Kusto tables use different **column names** for the same concept
 Example format:
 
 ````text
-Cluster: {cluster_url}
-Database: sqlazure1
-
 Query:
 ```kql
 {complete KQL with ServerName / DatabaseName / TimeRange filled in}
@@ -495,3 +545,189 @@ MonManagement
 - 先看 fedauth_* 列确定根因，再用 message 补充
 
 **⚠️ 关键：fedauth_token_wait_time_ms 不是 "SQL 去 AAD 拿 token"。在 AAD Password 模式下，是客户端先从 AAD 拿 token，然后发给 SQL。SQL 只是在等客户端把 token 发过来。**
+
+---
+
+### Availability Investigation
+
+**当问题分类为 Availability 时的完整流程（failover/outage/quorum loss/error 40613/SLO change 等）：**
+
+**模板目录**: `~/.copilot/agents/skills/kql-templates/sqldb/availability/`
+**来源**: SQLLivesiteAgents 工程团队 P1 模板 (132 skills, 26 Kusto 表)
+
+```
+Availability 问题
+  ↓
+Step 3a: Triage — 并行跑 4 个快速扫描
+  → 查询 1: SqlFailovers (有无 failover?)
+  → 查询 2: LoginOutages (有无 outage?)
+  → 查询 3: MonLogin error 40613 (state 126/127/129?)
+  → 查询 4: MonSQLSystemHealth 高严重度错误
+  → 展示结果 + 自动路由到子场景
+  ↓
+Step 3a-result: 展示 triage 总览 + 选择深入方向
+  | 维度 | 状态 | 关键指标 |
+  |------|------|----------|
+  | Failover | 🔴 | 2 failovers detected |
+  | LoginOutages | 🔴 | 45s outage |
+  | Error 40613 | 🟡 | state 127, 30s |
+  | SQL Errors | 🟢 | no sev>=17 |
+  → 自动推荐深入方向（基于 triage 结果）
+  → 用户也可手动选择:
+    1. failover/          — Failover 调试 (25 skills)
+    2. quorum-loss/       — 仲裁丢失 (20 skills)
+    3. error-40613/       — Error 40613 state 126/127/129 (20 skills)
+    4. long-reconfig/     — 长重配置 (21 skills)
+    5. high-sync-commit-wait/ — HADR 同步提交延迟 (11 skills, BC/Premium only)
+    6. seeding-rca/       — Geo-Replication seeding 失败 (11 skills)
+    7. update-slo/        — SLO 变更调试 (10 skills)
+    8. node-health/       — 节点基础设施 (8 skills)
+    9. login-failure/     — 登录失败分类 (6 skills)
+  ↓
+Step 3b: 深入调查
+  → 加载用户选择的子目录的 kql-livesite.yaml
+  → 填充参数 → 展示 KQL
+  ↓
+同时 线路 2 搜 TSG-SQL-DB-Availability repo（并行）
+```
+
+#### Triage 快速扫描查询
+
+**查询 1: SqlFailovers — 有无 failover?**
+```kql
+SqlFailovers
+| where FailoverStartTime between (datetime({StartTime})..datetime({EndTime}))
+| where logical_server_name =~ '{ServerName}' and logical_database_name =~ '{DatabaseName}'
+| project FailoverStartTime, FailoverEndTime, ReconfigurationType, CRMAction, OldPrimary, NewPrimary
+| order by FailoverStartTime asc
+```
+→ 有结果 → 路由 `failover/` (🔴) 或 `quorum-loss/`
+
+**查询 2: LoginOutages — 有无 outage?**
+```kql
+LoginOutages
+| where outageStartTime between (datetime({StartTime})..datetime({EndTime}))
+| where logical_server_name =~ '{ServerName}' and database_name =~ '{DatabaseName}'
+| project outageStartTime, outageEndTime, durationSeconds, OutageType, OutageReasonLevel1, OutageReasonLevel2, OwningTeam
+| order by outageStartTime asc
+```
+→ `OutageType == "CustomerInitiated"` → 路由 `update-slo/`
+→ `OutageReasonLevel1` contains "Failover" → 路由 `failover/`
+
+**查询 3: MonLogin error 40613 — 有无 40613 错误?**
+```kql
+MonLogin
+| where originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+| where logical_server_name =~ '{ServerName}' and database_name =~ '{DatabaseName}'
+| where error == 40613
+| summarize count() by state
+| order by count_ desc
+```
+→ state 126 → 路由 `error-40613/` (STATE126 分支)
+→ state 127 → 路由 `error-40613/` (STATE127 分支)
+→ state 129 → 路由 `error-40613/` (STATE129 分支)
+
+**查询 4: MonSQLSystemHealth — 高严重度错误?**
+```kql
+MonSQLSystemHealth
+| where PreciseTimeStamp between (datetime({StartTime})..datetime({EndTime}))
+| where AppName =~ '{AppName}'
+| where error_id in (17883, 17884, 17888, 701, 802, 833, 837)
+| summarize count() by error_id, NodeName
+| order by count_ desc
+```
+→ 有结果 → 路由 `node-health/` 或 `long-reconfig/`
+
+#### 自动路由逻辑
+
+| Triage 结果 | 自动路由到 | 原因 |
+|-------------|-----------|------|
+| Failover found + duration > 60s | `failover/` | 长 failover 需要完整时间线分析 |
+| Failover found + duration < 30s | `error-40613/` | 短 failover，关注 recovery/warmup |
+| QuorumLoss in LoginOutages | `quorum-loss/` | 仲裁丢失 |
+| OutageType = CustomerInitiated | `update-slo/` | SLO 变更引起的 outage |
+| Error 40613 state 126 > 120s | `error-40613/` | 卡角色转换 |
+| Error 40613 state 127 > 300s | `error-40613/` | 卡预热 |
+| Error 40613 state 129 > 300s | `error-40613/` | HADR 不可用 |
+| Non-yielding / OOM / I/O stalls | `long-reconfig/` | 性能压力导致的可用性问题 |
+| Login failures without failover | `login-failure/` | 非 failover 原因的登录失败 |
+| No clear signal | `node-health/` | 基础设施层排查 |
+
+#### 深入调查时的 KQL 文件
+
+每个子目录下只有一个文件 `kql-livesite.yaml`，所有 KQL 来自 SQLLivesiteAgents P1 模板：
+
+| 子目录 | Skills | 核心表 |
+|--------|--------|--------|
+| `failover/` | 25 | WinFabLogs, MonFabricApi, MonSQLSystemHealth, SqlFailovers, MonNodeTraceETW |
+| `quorum-loss/` | 20 | WinFabLogs, MonFabricDebug, MonRecoveryTrace, MonDmDbHadrReplicaStates |
+| `error-40613/` | 20 | MonLogin, MonFabricApi, MonSQLSystemHealth, SqlFailovers, LoginOutages |
+| `long-reconfig/` | 21 | MonFabricApi, MonFabricDebug, MonSQLSystemHealth, MonDmDbHadrReplicaStates |
+| `high-sync-commit-wait/` | 11 | MonDmDbHadrReplicaStates, MonDmOsWaitStats, MonFabricApi |
+| `seeding-rca/` | 11 | MonDbSeedTraces, MonFabricDebug, MonRgLoad, MonAnalyticsDBSnapshot |
+| `update-slo/` | 10 | MonManagement, MonManagementOperations, MonAnalyticsDBSnapshot |
+| `node-health/` | 8 | MonClusterLoad, WinFabLogs, MonSQLInfraHealthEvents |
+| `login-failure/` | 6 | MonLogin, MonDmDbHadrReplicaStates, SqlFailovers |
+
+### Performance Investigation
+
+**当 Step 2 分类为 A. Performance 时的完整流程：**
+
+**来源**: SQLLivesiteAgents / Performance / triage / SKILL.md
+
+```
+Performance 问题
+  ↓
+Step 3a: Triage — 关键词路由或默认全扫
+  → 有用户关键词 ("high CPU", "memory", "blocking"...) → 直接路由到对应子目录
+  → 无关键词 → 默认跑 5 个: CPU, memory, out-of-disk, query-store, miscellaneous
+  ↓
+Step 3b: 按选定子目录，加载对应的 kql-livesite.yaml 第一个 skill
+  → 每个子目录的 *-01 skill 就是该维度的入口查询：
+    LS-CPU-01    → cpu/kql-livesite.yaml         (User Pool CPU Summary)
+    LS-BLOCKING-01 → blocking/kql-livesite.yaml   (Peak Blocking Detection)
+    LS-MEMORY-01  → memory/kql-livesite.yaml      (Memory Overbooking — MRG Detection)
+    LS-QUERIES-01 → queries/kql-livesite.yaml     (Query Execution CPU Analysis)
+    LS-QDS-01    → query-store/kql-livesite.yaml  (QDS Readonly Detection)
+    LS-COMPILE-01 → compilation/kql-livesite.yaml (Failed Compilation CPU %)
+    LS-OOD-01    → out-of-disk/kql-livesite.yaml  (Drive Out of Space)
+    LS-MISC-01   → miscellaneous/kql-livesite.yaml (Worker Thread Exhaustion)
+    LS-SQLOS-01  → sqlos/kql-livesite.yaml        (Non-Yielding Detection)
+  → 填充参数 → 展示 KQL
+  ↓
+Step 3c: 根据入口查询结果，按 investigation.yaml 的分支逻辑深入
+  → 例: LS-CPU-01 发现 max_cpu > 80% → 跑 LS-CPU-01b (hourly pattern)
+    → 再跑 LS-CPU-03 (discrepancy) → LS-CPU-04 (top queries)
+  ↓
+同时 线路 2 搜 TSG-SQL-DB-Performance repo（并行）
+```
+
+**关键词 → 子目录路由表** (来自 SQLLivesiteAgents triage SKILL.md):
+
+| 用户关键词 | 路由到子目录 | 入口 KQL |
+|-----------|------------|---------|
+| "high CPU", "CPU spike", "CPU usage" | `cpu/` | LS-CPU-01 |
+| "memory", "OOM", "overbooking", "buffer pool" | `memory/` | LS-MEMORY-01 |
+| "blocking", "deadlock" | `blocking/` | LS-BLOCKING-01 |
+| "slow query", "query performance", "failed queries" | `queries/` | LS-QUERIES-01 |
+| "QDS", "Query Store", "readonly" | `query-store/` | LS-QDS-01 |
+| "compilation", "compile error" | `compilation/` | LS-COMPILE-01 |
+| "disk space", "disk full", "tempdb full", "quota" | `out-of-disk/` | LS-OOD-01 |
+| "worker thread", "corruption", "AKV" | `miscellaneous/` | LS-MISC-01 |
+| "non-yielding", "scheduler", "dump" | `sqlos/` | LS-SQLOS-01 |
+| (无关键词 — 默认) | CPU + memory + out-of-disk + query-store + miscellaneous | 5 个入口并行 |
+
+**执行顺序** (多 skill 时): CPU → memory → out-of-disk → QDS → Queries → Compilation → miscellaneous → SQLOS
+
+**深入调查时的 KQL 文件优先级**:
+- **P1**: `kql-livesite.yaml` — SQLLivesiteAgents 工程团队模板
+- **P1**: `kql-sqldri-*.yaml` — SQLDRI Copilot Perf Workflow 模板
+- **P2**: `kql-distilled.yaml` — 手工蒸馏的 KQL
+
+### Backup Investigation
+
+**TODO**: Record after testing
+
+### Connectivity Investigation
+
+**TODO**: Record after testing

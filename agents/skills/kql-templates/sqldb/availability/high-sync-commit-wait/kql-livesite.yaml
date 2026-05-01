@@ -1,0 +1,186 @@
+# ============================================================================
+# kql-livesite.yaml — HADR Sync Commit Wait KQL Templates
+# ============================================================================
+# Priority: P1 (highest)
+# Source: SQLLivesiteAgents / Availability / high-sync-commit-wait / references/queries.md
+# Distilled: 2026-05-01
+# Applicable: Business Critical (vCore) / Premium (DTU) only
+# ============================================================================
+
+SqlSkills:
+
+  - id: LS-HSC050
+    name: "HADR_SYNC_COMMIT Wait Statistics"
+    source: "SQLLivesiteAgents/Availability/high-sync-commit-wait/references/queries.md"
+    table: MonDmOsWaitStats
+    RequiredParameters: [StartTime, EndTime, AppName]
+    KustoQueries:
+      - TableName: MonDmOsWaitStats
+        ExecutedQuery: |
+          MonDmOsWaitStats
+          | where TIMESTAMP between (datetime({StartTime})..datetime({EndTime}))
+          | where AppName =~ '{AppName}'
+          | where wait_type == 'HADR_SYNC_COMMIT'
+          | summarize AvgWaitMs = avg(wait_time_ms), MaxWaitMs = max(wait_time_ms), TotalWaits = sum(waiting_tasks_count) by bin(TIMESTAMP, 1m)
+          | order by TIMESTAMP asc
+
+  - id: LS-HSC100
+    name: "HADR Replica States Timeline"
+    source: "SQLLivesiteAgents/Availability/high-sync-commit-wait/references/queries.md"
+    table: MonDmDbHadrReplicaStates
+    RequiredParameters: [StartTime, EndTime, LogicalServerName, LogicalDatabaseName]
+    KustoQueries:
+      - TableName: MonDmDbHadrReplicaStates
+        ExecutedQuery: |
+          MonDmDbHadrReplicaStates
+          | where TIMESTAMP between (datetime({StartTime})..datetime({EndTime}))
+          | where LogicalServerName =~ '{LogicalServerName}' and logical_database_name =~ '{LogicalDatabaseName}'
+          | project TIMESTAMP, NodeName, is_primary_replica, is_local, redo_queue_size, redo_rate, log_send_queue_size, log_send_rate, synchronization_health_desc, synchronization_state_desc, is_commit_participant, internal_state_desc, is_forwarder, AppName
+          | order by TIMESTAMP asc
+
+  - id: LS-HSC110
+    name: "Primary Node Timeline"
+    source: "SQLLivesiteAgents/Availability/high-sync-commit-wait/references/queries.md"
+    table: MonDmDbHadrReplicaStates
+    RequiredParameters: [StartTime, EndTime, LogicalServerName, LogicalDatabaseName]
+    KustoQueries:
+      - TableName: MonDmDbHadrReplicaStates
+        ExecutedQuery: |
+          MonDmDbHadrReplicaStates
+          | where PreciseTimeStamp between (datetime({StartTime})..datetime({EndTime}))
+          | where LogicalServerName =~ '{LogicalServerName}' and logical_database_name =~ '{LogicalDatabaseName}'
+          | where internal_state_desc in ('GLOBAL_PRIMARY', 'PRIMARY', 'FORWARDER')
+          | where is_local == 1
+          | summarize dcount(logical_database_name) by bin(PreciseTimeStamp, 1m), ClusterName, NodeName, internal_state_desc
+          | order by PreciseTimeStamp asc
+
+  - id: LS-HSC120
+    name: "Synchronization Health Summary"
+    source: "SQLLivesiteAgents/Availability/high-sync-commit-wait/references/queries.md"
+    table: MonDmDbHadrReplicaStates
+    RequiredParameters: [StartTime, EndTime, LogicalServerName, LogicalDatabaseName]
+    KustoQueries:
+      - TableName: MonDmDbHadrReplicaStates
+        ExecutedQuery: |
+          MonDmDbHadrReplicaStates
+          | where TIMESTAMP between (datetime({StartTime})..datetime({EndTime}))
+          | where LogicalServerName =~ '{LogicalServerName}' and logical_database_name =~ '{LogicalDatabaseName}'
+          | summarize HealthyCount = countif(synchronization_health_desc == 'HEALTHY'), UnhealthyCount = countif(synchronization_health_desc != 'HEALTHY'), AvgRedoQueueSize = avg(redo_queue_size), MaxRedoQueueSize = max(redo_queue_size), AvgLogSendQueueSize = avg(log_send_queue_size), MaxLogSendQueueSize = max(log_send_queue_size) by NodeName, internal_state_desc
+          | order by UnhealthyCount desc
+
+  - id: LS-HSC130
+    name: "Redo Queue and Rate Analysis"
+    source: "SQLLivesiteAgents/Availability/high-sync-commit-wait/references/queries.md"
+    table: MonDmDbHadrReplicaStates
+    RequiredParameters: [StartTime, EndTime, LogicalServerName, LogicalDatabaseName]
+    KustoQueries:
+      - TableName: MonDmDbHadrReplicaStates
+        ExecutedQuery: |
+          MonDmDbHadrReplicaStates
+          | where TIMESTAMP between (datetime({StartTime})..datetime({EndTime}))
+          | where LogicalServerName =~ '{LogicalServerName}' and logical_database_name =~ '{LogicalDatabaseName}'
+          | where is_primary_replica == false
+          | summarize AvgRedoQueue = avg(redo_queue_size), MaxRedoQueue = max(redo_queue_size), AvgRedoRate = avg(redo_rate), MinRedoRate = min(redo_rate), SampleCount = count() by bin(TIMESTAMP, 1m), NodeName
+          | order by TIMESTAMP asc, NodeName asc
+
+  - id: LS-HSC140
+    name: "Log Send Queue Analysis"
+    source: "SQLLivesiteAgents/Availability/high-sync-commit-wait/references/queries.md"
+    table: MonDmDbHadrReplicaStates
+    notes: "On GP tier, log_send_queue_size/rate may return -1 (not available)"
+    RequiredParameters: [StartTime, EndTime, LogicalServerName, LogicalDatabaseName]
+    KustoQueries:
+      - TableName: MonDmDbHadrReplicaStates
+        ExecutedQuery: |
+          MonDmDbHadrReplicaStates
+          | where TIMESTAMP between (datetime({StartTime})..datetime({EndTime}))
+          | where LogicalServerName =~ '{LogicalServerName}' and logical_database_name =~ '{LogicalDatabaseName}'
+          | where is_primary_replica == true
+          | summarize AvgLogSendQueue = avg(log_send_queue_size), MaxLogSendQueue = max(log_send_queue_size), AvgLogSendRate = avg(log_send_rate), MinLogSendRate = min(log_send_rate) by bin(TIMESTAMP, 15m), NodeName
+          | order by TIMESTAMP asc
+
+  - id: LS-HSC160
+    name: "Quorum Catchup Detection"
+    source: "SQLLivesiteAgents/Availability/high-sync-commit-wait/references/queries.md"
+    table: MonDmDbHadrReplicaStates
+    notes: "Related to BUG 3546900"
+    RequiredParameters: [StartTime, EndTime, LogicalServerName, LogicalDatabaseName]
+    KustoQueries:
+      - TableName: MonDmDbHadrReplicaStates
+        ExecutedQuery: |
+          MonDmDbHadrReplicaStates
+          | where PreciseTimeStamp between (datetime({StartTime})..datetime({EndTime}))
+          | where LogicalServerName =~ '{LogicalServerName}' and logical_database_name =~ '{LogicalDatabaseName}'
+          | where is_local == 1
+          | project PreciseTimeStamp, NodeName, internal_state_desc, is_primary_replica, synchronization_state_desc, synchronization_health_desc, redo_queue_size, log_send_queue_size, is_commit_participant
+          | order by PreciseTimeStamp asc, NodeName asc
+
+  - id: LS-HSC170
+    name: "Identify Lagging Catchup Replica"
+    source: "SQLLivesiteAgents/Availability/high-sync-commit-wait/references/queries.md"
+    table: MonDmDbHadrReplicaStates
+    condition: "HSC160 confirms quorum catchup pattern"
+    RequiredParameters: [StartTime, EndTime, LogicalServerName, LogicalDatabaseName]
+    KustoQueries:
+      - TableName: MonDmDbHadrReplicaStates
+        ExecutedQuery: |
+          MonDmDbHadrReplicaStates
+          | where PreciseTimeStamp between (datetime({StartTime})..datetime({EndTime}))
+          | where LogicalServerName =~ '{LogicalServerName}' and logical_database_name =~ '{LogicalDatabaseName}'
+          | where is_local == 1
+          | where is_primary_replica == false
+          | summarize MaxRedoQueue_KB = max(redo_queue_size), AvgRedoQueue_KB = avg(redo_queue_size), MinRedoRate = min(redo_rate), MaxLogSendQueue_KB = max(log_send_queue_size), AvgLogSendQueue_KB = avg(log_send_queue_size), SynchronizingSamples = countif(synchronization_state_desc == 'SYNCHRONIZING'), NotSynchronizedSamples = countif(synchronization_state_desc != 'SYNCHRONIZED'), IsCommitParticipantSamples = countif(is_commit_participant == true), TotalSamples = count(), FirstSeen = min(PreciseTimeStamp), LastSeen = max(PreciseTimeStamp) by NodeName, internal_state_desc
+          | extend LaggingScore = MaxRedoQueue_KB + MaxLogSendQueue_KB + (SynchronizingSamples * 1000)
+          | order by LaggingScore desc
+
+  - id: LS-HSC180
+    name: "MustCatchup Replica Detection (FabricApi)"
+    source: "SQLLivesiteAgents/Availability/high-sync-commit-wait/references/queries.md"
+    table: MonFabricApi
+    RequiredParameters: [StartTime, EndTime, physical_database_id]
+    KustoQueries:
+      - TableName: MonFabricApi
+        ExecutedQuery: |
+          MonFabricApi
+          | where TIMESTAMP between (datetime({StartTime})..datetime({EndTime}))
+          | where physical_database_id =~ '{physical_database_id}'
+          | where event in (
+              'hadr_fabric_api_replicator_update_catchup_replica_set_configuration',
+              'hadr_fabric_api_replicator_begin_wait_for_quorum_catchup',
+              'hadr_fabric_api_replicator_end_wait_for_quorum_catchup',
+              'hadr_fabric_api_replicator_wait_for_quorum_catchup_all_timeout'
+            )
+          | project TIMESTAMP, event, fabric_replica_id, must_catchup_replica_count, must_catch_up_replica_count, catch_up_mode, replica_count_current, write_quorum_current, result, result_desc, replica_infos_mustcatchup, replica_infos_current, NodeName
+          | order by TIMESTAMP asc
+
+  - id: LS-HSC300
+    name: "Database Recovery State Check"
+    source: "SQLLivesiteAgents/Availability/high-sync-commit-wait/references/queries.md"
+    table: MonDmDbHadrReplicaStates
+    RequiredParameters: [StartTime, EndTime, LogicalServerName, LogicalDatabaseName]
+    KustoQueries:
+      - TableName: MonDmDbHadrReplicaStates
+        ExecutedQuery: |
+          MonDmDbHadrReplicaStates
+          | where PreciseTimeStamp between (datetime({StartTime})..datetime({EndTime}))
+          | where LogicalServerName =~ '{LogicalServerName}' and logical_database_name =~ '{LogicalDatabaseName}'
+          | where database_state_desc == 'RECOVERING' or synchronization_state_desc == 'REVERTING'
+          | project PreciseTimeStamp, NodeName, synchronization_state_desc, database_state_desc, internal_state_desc
+          | order by PreciseTimeStamp asc
+          | take 1000
+
+  - id: LS-HSC400
+    name: "XEvent System Health Data (HADR)"
+    source: "SQLLivesiteAgents/Availability/high-sync-commit-wait/references/queries.md"
+    table: MonSQLSystemHealth
+    RequiredParameters: [StartTime, EndTime, AppName]
+    KustoQueries:
+      - TableName: MonSQLSystemHealth
+        ExecutedQuery: |
+          MonSQLSystemHealth
+          | where TIMESTAMP between (datetime({StartTime})..datetime({EndTime}))
+          | where AppName =~ '{AppName}'
+          | where message has 'hadr' or message has 'log_flush'
+          | project TIMESTAMP, process_id, NodeName, message
+          | order by TIMESTAMP asc
+          | take 500

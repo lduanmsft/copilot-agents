@@ -1,0 +1,188 @@
+# ============================================================================
+# kql-livesite.yaml — Seeding RCA KQL Templates from SQLLivesiteAgents
+# ============================================================================
+# Priority: P1 (highest)
+# Source: SQLLivesiteAgents / Availability / seeding-rca / references/queries.md
+# Distilled: 2026-05-01
+# ============================================================================
+
+SqlSkills:
+
+  - id: LS-RCA100
+    name: "Database Context"
+    source: "SQLLivesiteAgents/Availability/seeding-rca/references/queries.md"
+    table: MonAnalyticsDBSnapshot
+    RequiredParameters: [Timestamp, ClusterName, LogicalServerName, LogicalDatabaseName]
+    KustoQueries:
+      - TableName: MonAnalyticsDBSnapshot
+        ExecutedQuery: |
+          let st = datetime({Timestamp}) - 2h;
+          let et = datetime({Timestamp}) + 5h;
+          MonAnalyticsDBSnapshot
+          | where TIMESTAMP between (st .. et)
+          | where ClusterName has "{ClusterName}"
+          | where logical_server_name =~ "{LogicalServerName}"
+          | where logical_database_name =~ "{LogicalDatabaseName}"
+          | project TIMESTAMP, AppName, sql_instance_name, state, service_level_objective, logical_database_id, physical_database_id, fabric_partition_id, tenant_ring_name, logical_resource_pool_id, logical_server_name, logical_database_name, ClusterName, sql_database_id, zone_resilient
+
+  - id: LS-RCA110
+    name: "Geo-Replication Detection"
+    source: "SQLLivesiteAgents/Availability/seeding-rca/references/queries.md"
+    table: MonDmContinuousCopyStatus
+    RequiredParameters: [StartTime, EndTime, AppName]
+    KustoQueries:
+      - TableName: MonDmContinuousCopyStatus
+        ExecutedQuery: |
+          MonDmContinuousCopyStatus
+          | where PreciseTimeStamp between(datetime({StartTime}) .. datetime({EndTime}))
+          | where AppName =~ "{AppName}"
+          | where link_type == "LAG_REPLICA_LINK_TYPE_CONTINUOUS_COPY"
+          | summarize arg_max(PreciseTimeStamp, *) by partner_server
+          | project PreciseTimeStamp, LogicalServerName, partner_server, partner_database, replication_state_desc, replication_lag_sec, is_target_role, link_type
+
+  - id: LS-RCA120
+    name: "Replica State"
+    source: "SQLLivesiteAgents/Availability/seeding-rca/references/queries.md"
+    table: MonDmDbHadrReplicaStates
+    RequiredParameters: [StartTime, EndTime, AppName, LogicalDatabaseName]
+    KustoQueries:
+      - TableName: MonDmDbHadrReplicaStates
+        ExecutedQuery: |
+          MonDmDbHadrReplicaStates
+          | where PreciseTimeStamp between(datetime({StartTime}) .. datetime({EndTime}))
+          | where AppName =~ "{AppName}"
+          | where logical_database_name =~ "{LogicalDatabaseName}"
+          | where is_local == 1 or is_forwarder == 1
+          | project PreciseTimeStamp, NodeName, is_primary_replica, is_local, synchronization_state_desc, internal_state_desc, database_state_desc, is_forwarder, redo_queue_size, quorum_commit_time, is_seeding_in_progress, logical_database_name, last_hardened_lsn, truncation_lsn, end_of_log_lsn, database_id, replica_id
+          | order by PreciseTimeStamp asc
+
+  - id: LS-RCA198
+    name: "Seeding Activity Check"
+    source: "SQLLivesiteAgents/Availability/seeding-rca/references/queries.md"
+    table: MonDbSeedTraces
+    RequiredParameters: [StartTime, EndTime, AppName]
+    KustoQueries:
+      - TableName: MonDbSeedTraces
+        ExecutedQuery: |
+          MonDbSeedTraces
+          | where TIMESTAMP between(datetime({StartTime}) .. datetime({EndTime}))
+          | where AppName == "{AppName}"
+          | summarize TotalEvents = count(), FailEvents = countif(failure_code != 0), DistinctDBs = dcount(database_name), DistinctGuids = dcount(local_seeding_guid), FirstEvent = min(TIMESTAMP), LastEvent = max(TIMESTAMP)
+
+  - id: LS-RCA199
+    name: "Multi-DB Failure Summary"
+    source: "SQLLivesiteAgents/Availability/seeding-rca/references/queries.md"
+    table: MonDbSeedTraces
+    RequiredParameters: [StartTime, EndTime, AppName]
+    KustoQueries:
+      - TableName: MonDbSeedTraces
+        ExecutedQuery: |
+          MonDbSeedTraces
+          | where TIMESTAMP between(datetime({StartTime}) .. datetime({EndTime}))
+          | where AppName == "{AppName}"
+          | summarize FailCount = countif(failure_code != 0), AllCount = count(), FailCodes = make_set(failure_code), FirstFail = minif(TIMESTAMP, failure_code != 0), LastFail = maxif(TIMESTAMP, failure_code != 0) by database_name
+          | order by FailCount desc
+
+  - id: LS-RCA200
+    name: "Seeding Failure History"
+    source: "SQLLivesiteAgents/Availability/seeding-rca/references/queries.md"
+    table: MonDbSeedTraces
+    RequiredParameters: [StartTime, EndTime, AppName, PhysicalDatabaseId]
+    KustoQueries:
+      - TableName: MonDbSeedTraces
+        ExecutedQuery: |
+          MonDbSeedTraces
+          | where TIMESTAMP between(datetime({StartTime}) .. datetime({EndTime}))
+          | where AppName == "{AppName}"
+          | where database_name =~ "{PhysicalDatabaseId}"
+          | where failure_code != 0
+          | project TIMESTAMP, event, role_desc, internal_state_desc, failure_code, failure_message, local_seeding_guid, remote_seeding_guid, database_size_bytes, transferred_size_bytes, database_name, LogicalServerName, ClusterName
+          | order by TIMESTAMP asc
+
+  - id: LS-RCA210
+    name: "Source / Destination Correlation"
+    source: "SQLLivesiteAgents/Availability/seeding-rca/references/queries.md"
+    table: MonDbSeedTraces
+    RequiredParameters: [StartTime, EndTime, AppName, PhysicalDatabaseId]
+    KustoQueries:
+      - TableName: MonDbSeedTraces
+        ExecutedQuery: |
+          let my_guids =
+              MonDbSeedTraces
+              | where TIMESTAMP between(datetime({StartTime}) .. datetime({EndTime}))
+              | where AppName == "{AppName}"
+              | where database_name =~ "{PhysicalDatabaseId}"
+              | where failure_code != 0
+              | distinct local_seeding_guid;
+          MonDbSeedTraces
+          | where TIMESTAMP between(datetime({StartTime}) .. datetime({EndTime}))
+          | where remote_seeding_guid in (my_guids) or local_seeding_guid in (my_guids)
+          | where failure_code != 0
+          | project TIMESTAMP, event, role_desc, failure_code, failure_message, AppName, ClusterName, LogicalServerName, local_seeding_guid, remote_seeding_guid, internal_state_desc
+          | order by local_seeding_guid, TIMESTAMP asc
+
+  - id: LS-RCA250
+    name: "Check for Management Operations"
+    source: "SQLLivesiteAgents/Availability/seeding-rca/references/queries.md"
+    table: MonManagementOperations
+    RequiredParameters: [StartTime, EndTime, LogicalServerName, LogicalDatabaseName]
+    KustoQueries:
+      - TableName: MonManagementOperations
+        ExecutedQuery: |
+          MonManagementOperations
+          | where TIMESTAMP between(datetime({StartTime}) .. datetime({EndTime}))
+          | where logical_server_name =~ "{LogicalServerName}"
+          | where logical_database_name =~ "{LogicalDatabaseName}"
+          | where operation in ("ALTER", "UPDATE", "SCALE", "SLO_CHANGE") or operation_friendly_name has_any ("UpdateSlo", "ScaleDatabase", "UpdateDatabase", "AlterDatabase")
+          | project TIMESTAMP, operation, operation_friendly_name, state, start_time, end_time, error_code, error_message, error_severity, old_slo = old_service_level_objective, new_slo = new_service_level_objective, logical_server_name, logical_database_name
+          | order by TIMESTAMP asc
+
+  - id: LS-RCA300
+    name: "Engine Error Log — Full Timeline"
+    source: "SQLLivesiteAgents/Availability/seeding-rca/references/queries.md"
+    table: MonSQLSystemHealth
+    RequiredParameters: [FailStart, FailEnd, AppName]
+    KustoQueries:
+      - TableName: MonSQLSystemHealth
+        ExecutedQuery: |
+          MonSQLSystemHealth
+          | where TIMESTAMP between(datetime({FailStart}) .. datetime({FailEnd}))
+          | where AppName == "{AppName}"
+          | where event in ("errorlog_written", "systemmetadata_written")
+          | extend MsgTime = extract(@"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+)", 1, message)
+          | extend ErrorCode = toint(extract(@"Error:\s*(\d+)", 1, message))
+          | extend Severity = toint(extract(@"Severity:\s*(\d+)", 1, message))
+          | extend IsError = message has "Error:" or message has "Severity:" or message has "exception" or message has "fail" or message has "abort"
+          | extend IsSeeding = message has "seeding" or message has "Build replica" or message has "BACKUP" or message has "RESTORE" or message has "streaming" or message has "VDI" or message has "DbCopy"
+          | extend MsgShort = substring(message, 0, 400)
+          | project MsgTime, ErrorCode, Severity, IsError, IsSeeding, MsgShort
+          | order by MsgTime asc
+
+  - id: LS-RCA320
+    name: "Build Replica FSM"
+    source: "SQLLivesiteAgents/Availability/seeding-rca/references/queries.md"
+    table: MonFabricDebug
+    RequiredParameters: [FailStart, FailEnd, AppName, PhysicalDatabaseId]
+    KustoQueries:
+      - TableName: MonFabricDebug
+        ExecutedQuery: |
+          MonFabricDebug
+          | where TIMESTAMP between(datetime({FailStart}) .. datetime({FailEnd}))
+          | where AppName == "{AppName}" and physical_database_id =~ "{PhysicalDatabaseId}"
+          | where event == "hadr_fabric_build_replica_operation_state_change"
+          | project TIMESTAMP, old_state_desc, new_state_desc, trigger_desc, is_primary, replica_id, operation_id, physical_database_id
+          | order by TIMESTAMP asc
+
+  - id: LS-RCA400
+    name: "Resource Pressure"
+    source: "SQLLivesiteAgents/Availability/seeding-rca/references/queries.md"
+    table: MonRgLoad
+    RequiredParameters: [FailStart, FailEnd, AppName]
+    KustoQueries:
+      - TableName: MonRgLoad
+        ExecutedQuery: |
+          MonRgLoad
+          | where TIMESTAMP between(datetime({FailStart}) .. datetime({FailEnd}))
+          | where AppName == "{AppName}"
+          | project TIMESTAMP, cpu_pct = round(app_cpu_load_normalized, 1), mem_pct = round(app_memory_load_normalized, 1), iops = app_iops_load, iops_cap = app_iops_load_cap, node_cpu = round(cpu_load, 1)
+          | order by TIMESTAMP asc

@@ -1,0 +1,513 @@
+# ============================================================================
+# kql-livesite.yaml — Quorum Loss KQL Templates from SQLLivesiteAgents
+# ============================================================================
+# Priority: P1 (highest)
+# Source: SQLLivesiteAgents / Availability / quorum-loss / references/queries.md
+# Distilled: 2026-05-01
+# ============================================================================
+# Covers: FTQuorumLoss events, partition state, replica health, infrastructure,
+#         reconfiguration, unplaced replicas, FabricApi events, write status
+# ============================================================================
+
+SqlSkills:
+
+  # ──────────────────────────────────────────────────────
+  # QL100 - FTQuorumLoss Events
+  # ──────────────────────────────────────────────────────
+  - id: LS-QL100
+    name: "FTQuorumLoss Events"
+    source: "SQLLivesiteAgents/Availability/quorum-loss/references/queries.md"
+    table: WinFabLogs
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - fabric_partition_id
+    KustoQueries:
+      - TableName: WinFabLogs
+        ExecutedQuery: |
+          WinFabLogs
+          | where ETWTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where Id =~ "{fabric_partition_id}" or Text contains "{fabric_partition_id}"
+          | where EventType in ('FTQuorumLoss', 'FTQuorumRestored')
+          | project ETWTimestamp, NodeName, TaskName, EventType, Text
+          | order by ETWTimestamp asc
+          | take 5555
+
+  # ──────────────────────────────────────────────────────
+  # QL110 - Quorum Loss Time Ranges
+  # ──────────────────────────────────────────────────────
+  - id: LS-QL110
+    name: "Quorum Loss Time Ranges"
+    source: "SQLLivesiteAgents/Availability/quorum-loss/references/queries.md"
+    table: WinFabLogs
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - fabric_partition_id
+    KustoQueries:
+      - TableName: WinFabLogs
+        ExecutedQuery: |
+          let START_TIME = datetime({StartTime});
+          let END_TIME = datetime({EndTime});
+          let PARTITION_ID = "{fabric_partition_id}";
+          WinFabLogs
+          | where TIMESTAMP >= START_TIME and TIMESTAMP <= END_TIME
+          | where EventType =~ 'FTQuorumLoss'
+          | where Text has PARTITION_ID
+          | summarize by TimeBucket = bin(PreciseTimeStamp, 1m)
+          | order by TimeBucket asc
+          | serialize
+          | extend PrevBucket = prev(TimeBucket)
+          | extend IsNewRange = isnull(PrevBucket) or (TimeBucket - PrevBucket) > 1m
+          | extend RangeId = row_cumsum(toint(IsNewRange))
+          | summarize RangeStart = min(TimeBucket), RangeEnd = max(TimeBucket) by RangeId
+          | extend RangeEnd = RangeEnd + 1m
+          | extend DurationMinutes = datetime_diff('minute', RangeEnd, RangeStart)
+          | project RangeStart, RangeEnd, DurationMinutes
+          | order by RangeStart asc
+
+  # ──────────────────────────────────────────────────────
+  # QL200 - Partition Service Lifecycle
+  # ──────────────────────────────────────────────────────
+  - id: LS-QL200
+    name: "Partition Service Lifecycle"
+    source: "SQLLivesiteAgents/Availability/quorum-loss/references/queries.md"
+    table: BindableFabricServiceLifeCyle
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - ServiceName
+    KustoQueries:
+      - TableName: BindableFabricServiceLifeCyle
+        ExecutedQuery: |
+          BindableFabricServiceLifeCyle
+          | where TIMESTAMP between (datetime({StartTime})..datetime({EndTime}))
+          | where Service == "{ServiceName}"
+          | project-reorder TIMESTAMP, Service, LifecycleState, Details
+          | order by TIMESTAMP asc
+
+  # ──────────────────────────────────────────────────────
+  # QL210 - WinFab Event Timeline
+  # ──────────────────────────────────────────────────────
+  - id: LS-QL210
+    name: "WinFab Event Timeline"
+    source: "SQLLivesiteAgents/Availability/quorum-loss/references/queries.md"
+    table: WinFabLogs
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - fabric_partition_id
+    KustoQueries:
+      - TableName: WinFabLogs
+        ExecutedQuery: |
+          let WinFabEvent=datatable(EventType:string)
+          [
+              "FTUpdate",
+              "UpdateFailoverUnit",
+              "ReconfigurationSlow",
+              'UnplacedReplica',
+              'FTQuorumLoss',
+              'FTQuorumRestored',
+              'FTDataLoss'
+          ];
+          WinFabEvent
+          | join kind=leftouter
+          (WinFabLogs
+          | where ETWTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where Id =~ "{fabric_partition_id}"
+          ) on EventType
+          | summarize EventCount=countif(isempty(ETWTimestamp)==false), Min_ETWTimestamp=min(ETWTimestamp), Max_ETWTimestamp=max(ETWTimestamp) by EventType
+          | order by Min_ETWTimestamp asc
+
+  # ──────────────────────────────────────────────────────
+  # QL300 - Replica Health from MonDmDbHadrReplicaStates
+  # ──────────────────────────────────────────────────────
+  - id: LS-QL300
+    name: "Replica Health (Primary Timeline)"
+    source: "SQLLivesiteAgents/Availability/quorum-loss/references/queries.md"
+    table: MonDmDbHadrReplicaStates
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - LogicalServerName
+      - LogicalDatabaseName
+    KustoQueries:
+      - TableName: MonDmDbHadrReplicaStates
+        ExecutedQuery: |
+          MonDmDbHadrReplicaStates
+          | where PreciseTimeStamp between (datetime({StartTime})..datetime({EndTime}))
+          | where LogicalServerName =~'{LogicalServerName}' and logical_database_name =~'{LogicalDatabaseName}'
+          | where internal_state_desc in ('GLOBAL_PRIMARY', 'PRIMARY', 'FORWARDER')
+          | where is_local == 1
+          | summarize dcount(logical_database_name) by bin(PreciseTimeStamp, 5min), ClusterName, NodeName, internal_state_desc
+          | order by PreciseTimeStamp asc
+
+  # ──────────────────────────────────────────────────────
+  # QL310 - SQL Process Exits
+  # ──────────────────────────────────────────────────────
+  - id: LS-QL310
+    name: "SQL Process Exits"
+    source: "SQLLivesiteAgents/Availability/quorum-loss/references/queries.md"
+    table: WinFabLogs
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - AppName
+    KustoQueries:
+      - TableName: WinFabLogs
+        ExecutedQuery: |
+          WinFabLogs
+          | where ETWTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where EventType == 'ProcessExitedOperational' and Text contains 'sqlservr.exe' and Text contains '{AppName}'
+          | project ETWTimestamp, ClusterName, ProcessId, ThreadId, TaskName, EventType, Text
+          | order by ETWTimestamp asc
+          | take 5555
+
+  # ──────────────────────────────────────────────────────
+  # QL320 - Database Recovery State
+  # ──────────────────────────────────────────────────────
+  - id: LS-QL320
+    name: "Database Recovery State"
+    source: "SQLLivesiteAgents/Availability/quorum-loss/references/queries.md"
+    table: MonDmDbHadrReplicaStates
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - LogicalServerName
+      - LogicalDatabaseName
+    KustoQueries:
+      - TableName: MonDmDbHadrReplicaStates
+        ExecutedQuery: |
+          MonDmDbHadrReplicaStates
+          | where PreciseTimeStamp between (datetime({StartTime})..datetime({EndTime}))
+          | where LogicalServerName =~'{LogicalServerName}' and logical_database_name =~'{LogicalDatabaseName}'
+          | where database_state_desc == 'RECOVERING'
+          | project PreciseTimeStamp, NodeName, synchronization_state_desc, database_state_desc
+          | take 5555
+
+  # ──────────────────────────────────────────────────────
+  # QL330 - Replica Build State Change Stuck
+  # ──────────────────────────────────────────────────────
+  - id: LS-QL330
+    name: "Replica Build State Change Stuck"
+    source: "SQLLivesiteAgents/Availability/quorum-loss/references/queries.md"
+    table: MonFabricDebug
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - AppName
+      - physical_database_id
+      - PrimaryNodeName
+    KustoQueries:
+      - TableName: MonFabricDebug
+        ExecutedQuery: |
+          MonFabricDebug
+          | where TIMESTAMP between (datetime({StartTime})..datetime({EndTime}))
+          | where AppName =~'{AppName}'
+          | where event in ('hadr_fabric_build_replica_operation_state_change')
+          | where physical_database_id =~'{physical_database_id}'
+          | where NodeName =~'{PrimaryNodeName}'
+          | project originalEventTimestamp, event, old_state_desc, new_state_desc, is_primary, NodeName, trigger_desc, remote_endpoint_url
+
+  # ──────────────────────────────────────────────────────
+  # QL340 - Database Recovery Trace
+  # ──────────────────────────────────────────────────────
+  - id: LS-QL340
+    name: "Database Recovery Trace"
+    source: "SQLLivesiteAgents/Availability/quorum-loss/references/queries.md"
+    table: MonRecoveryTrace
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - AppName
+      - physical_database_id
+      - LogicalDatabaseName
+    KustoQueries:
+      - TableName: MonRecoveryTrace
+        ExecutedQuery: |
+          MonRecoveryTrace
+          | where originalEventTimestamp between (datetime({StartTime})-1h..datetime({EndTime}))
+          | where AppName =~ '{AppName}' and (database_name =~ '{physical_database_id}' or database_name =~ '{LogicalDatabaseName}')
+          | where event == "database_recovery_trace" and trace_message has "Recovery"
+          | project originalEventTimestamp, process_id, NodeName, database_name, database_id, trace_message
+          | order by originalEventTimestamp asc, process_id
+          | limit 5555
+
+  # ──────────────────────────────────────────────────────
+  # QL350 - Long Recovery Detection
+  # ──────────────────────────────────────────────────────
+  - id: LS-QL350
+    name: "Long Recovery Detection"
+    source: "SQLLivesiteAgents/Availability/quorum-loss/references/queries.md"
+    table: MonRecoveryTrace
+    thresholds:
+      long_recovery_seconds: 600
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - LogicalServerName
+      - physical_database_id
+      - LogicalDatabaseName
+    KustoQueries:
+      - TableName: MonRecoveryTrace
+        ExecutedQuery: |
+          MonRecoveryTrace
+          | where PreciseTimeStamp between (datetime({StartTime})..datetime({EndTime}))
+          | where LogicalServerName =~ '{LogicalServerName}'
+          | where database_name =~ '{physical_database_id}' or database_name =~ '{LogicalDatabaseName}'
+          | where event in ('database_recovery_complete')
+          | project originalEventTimestamp, event, ClusterName, NodeName, process_id, total_elapsed_time_sec
+
+  # ──────────────────────────────────────────────────────
+  # QL400 - Infrastructure Health Events
+  # ──────────────────────────────────────────────────────
+  - id: LS-QL400
+    name: "Infrastructure Health Events"
+    source: "SQLLivesiteAgents/Availability/quorum-loss/references/queries.md"
+    table: MonSQLInfraHealthEvents
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - ClusterName
+      - PrimaryNodeName
+    KustoQueries:
+      - TableName: MonSQLInfraHealthEvents
+        ExecutedQuery: |
+          MonSQLInfraHealthEvents
+          | where FaultTime between (datetime({StartTime})-12h..datetime({EndTime})+24h)
+          | where ClusterName =~ '{ClusterName}'
+          | where NodeName in ('{PrimaryNodeName}')
+          | project-away IngestionTime
+          | distinct *
+
+  # ──────────────────────────────────────────────────────
+  # QL410 - SQL Process Start Events
+  # ──────────────────────────────────────────────────────
+  - id: LS-QL410
+    name: "SQL Process Start Events"
+    source: "SQLLivesiteAgents/Availability/quorum-loss/references/queries.md"
+    table: MonNodeTraceETW
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - ClusterName
+      - AppName
+    KustoQueries:
+      - TableName: MonNodeTraceETW
+        ExecutedQuery: |
+          MonNodeTraceETW
+          | where PreciseTimeStamp between (datetime({StartTime})-1h..datetime({EndTime})+1h)
+          | where ClusterName =~'{ClusterName}'
+          | where Message has '{AppName}'
+          | where Message contains 'ServiceManifest Name' and Message contains 'SQL' and Message contains '[InitFabric] Started InitFabric'
+          | where isnotnull(Pid) and Pid > 0
+          | summarize arg_max(PreciseTimeStamp, *) by NodeName, Pid
+          | project PreciseTimeStamp, EventType='SQLProcessStarted', NodeName, Pid, Message
+          | order by PreciseTimeStamp asc
+
+  # ──────────────────────────────────────────────────────
+  # QL500 - Reconfiguration Status
+  # ──────────────────────────────────────────────────────
+  - id: LS-QL500
+    name: "Reconfiguration Status"
+    source: "SQLLivesiteAgents/Availability/quorum-loss/references/queries.md"
+    table: WinFabLogs
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - fabric_partition_id
+    KustoQueries:
+      - TableName: WinFabLogs
+        ExecutedQuery: |
+          WinFabLogs
+          | where ETWTimestamp between (datetime({StartTime})..datetime({EndTime})+1h)
+          | where Text contains "{fabric_partition_id}" or Id =~ "{fabric_partition_id}"
+          | where TaskName =~'FM'
+          | where EventType in ('ReconfigurationStartedOperational', 'ReconfigurationStarted', 'ReconfigurationCompleted')
+          | extend activity_id = extract('ActivityId: ([a-zA-Z0-9-]+)', 1, Text)
+          | extend OldPrimaryNodeName = extract(@"OldPrimaryNodeName:\s*(\S+)", 1, Text), NewPrimaryNodeName = extract(@"NewPrimaryNodeName:\s*(\S+)", 1, Text)
+          | project ETWTimestamp, TaskName, EventType, OldPrimaryNodeName, NewPrimaryNodeName, Id, activity_id, Text
+          | order by ETWTimestamp asc
+
+  # ──────────────────────────────────────────────────────
+  # QL510 - Reconfiguration Slow Events
+  # ──────────────────────────────────────────────────────
+  - id: LS-QL510
+    name: "Reconfiguration Slow Events"
+    source: "SQLLivesiteAgents/Availability/quorum-loss/references/queries.md"
+    table: WinFabLogs
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - ClusterName
+      - fabric_partition_id
+    KustoQueries:
+      - TableName: WinFabLogs
+        ExecutedQuery: |
+          WinFabLogs
+          | where ETWTimestamp between (datetime({StartTime})-2h..datetime({EndTime})+4h)
+          | where ClusterName =~'{ClusterName}'
+          | where EventType in ('ReconfigurationSlow')
+          | where Id =~ "{fabric_partition_id}" or Text contains "{fabric_partition_id}"
+          | extend ReconfigPhaseStartTime= todatetime(extract(@"Reconfiguration phase start time:\s*(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})", 1, Text))
+          | summarize min(ETWTimestamp), max(ETWTimestamp), count(), any(Text) by ReconfigPhaseStartTime
+
+  # ──────────────────────────────────────────────────────
+  # QL520 - Reconfiguration Duration Summary
+  # ──────────────────────────────────────────────────────
+  - id: LS-QL520
+    name: "Reconfiguration Duration Summary"
+    source: "SQLLivesiteAgents/Availability/quorum-loss/references/queries.md"
+    table: WinFabLogs
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - fabric_partition_id
+    KustoQueries:
+      - TableName: WinFabLogs
+        ExecutedQuery: |
+          WinFabLogs
+          | where ETWTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where Id contains "{fabric_partition_id}" or Text contains "{fabric_partition_id}"
+          | extend ReconfigType = extract("ReconfigurationType = ([a-zA-Z]+)", 1, Text)
+          | where ReconfigType == "Failover"
+          | extend CatchupDuration = extract("Phase2Duration: ([0-9.]+)", 1, Text), DeactivateDuration = extract("Phase3Duration: ([0-9.]+)", 1, Text), TotalDuration = extract("TotalDuration: ([0-9.]+)", 1, Text)
+          | project ETWTimestamp, ClusterName, NodeName, EventType, TaskName, ReconfigType, CatchupDuration, DeactivateDuration, TotalDuration
+
+  # ──────────────────────────────────────────────────────
+  # QL600 - Unplaced Replica with Data Loss
+  # ──────────────────────────────────────────────────────
+  - id: LS-QL600
+    name: "Unplaced Replica with Data Loss"
+    source: "SQLLivesiteAgents/Availability/quorum-loss/references/queries.md"
+    table: WinFabLogs
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - AppName
+    KustoQueries:
+      - TableName: WinFabLogs
+        ExecutedQuery: |
+          WinFabLogs
+          | where TIMESTAMP between (datetime({StartTime})-1h..datetime({EndTime})+1h)
+          | where EventType =~ 'UnplacedReplica' and Text contains '{AppName}'
+          | project TIMESTAMP, Id, Text
+          | top 1 by TIMESTAMP
+          | join kind = inner(
+              WinFabLogs
+              | where EventType =~ 'FTDataLoss'
+          ) on $left.Id == $right.Id
+          | take 1
+          | project Text, TIMESTAMP, NodeName, ClusterName
+
+  # ──────────────────────────────────────────────────────
+  # QL610 - Node Deactivation Events
+  # ──────────────────────────────────────────────────────
+  - id: LS-QL610
+    name: "Node Deactivation Events"
+    source: "SQLLivesiteAgents/Availability/quorum-loss/references/queries.md"
+    table: WinFabLogs
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - ClusterName
+      - fabric_partition_id
+    KustoQueries:
+      - TableName: WinFabLogs
+        ExecutedQuery: |
+          WinFabLogs
+          | where ETWTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where ClusterName =~ '{ClusterName}'
+          | where Text contains '{fabric_partition_id}' or Id =~ '{fabric_partition_id}'
+          | where EventType == 'DeactivateNode' and TaskName == 'FM'
+          | extend DBNodeName = extract(@"NodeName=\s*([\d\w_]+)", 1, Text), Phase = extract(@"Phase=\s*(\S+)", 1, Text), SafetyCheck = extract(@"SafetyCheck=\s*(\S+),", 1, Text)
+          | project ETWTimestamp, TaskName, EventType, DBNodeName, Phase, SafetyCheck, Text
+          | take 5555
+
+  # ──────────────────────────────────────────────────────
+  # QL700 - LoginOutages Impact
+  # ──────────────────────────────────────────────────────
+  - id: LS-QL700
+    name: "LoginOutages Impact"
+    source: "SQLLivesiteAgents/Availability/quorum-loss/references/queries.md"
+    table: LoginOutages
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - LogicalServerName
+      - LogicalDatabaseName
+    KustoQueries:
+      - TableName: LoginOutages
+        ExecutedQuery: |
+          LoginOutages
+          | where outageStartTime between (datetime({StartTime})..datetime({EndTime}))
+          | where logical_server_name =~ "{LogicalServerName}" and database_name =~ "{LogicalDatabaseName}"
+          | project outageStartTime, outageEndTime, durationSeconds, OutageType, OutageReasonLevel1, OutageReasonLevel2, OutageReasonLevel3, OwningTeam
+          | order by outageStartTime asc
+
+  # ──────────────────────────────────────────────────────
+  # QL800 - FabricApi Event Timeline
+  # ──────────────────────────────────────────────────────
+  - id: LS-QL800
+    name: "FabricApi Event Timeline"
+    source: "SQLLivesiteAgents/Availability/quorum-loss/references/queries.md"
+    table: MonFabricApi
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - AppName
+      - physical_database_id
+    KustoQueries:
+      - TableName: MonFabricApi
+        ExecutedQuery: |
+          let FabricApiEvent=datatable(event:string)
+          [
+              'hadr_fabric_api_replicator_begin_change_role',
+              'hadr_fabric_api_replicator_end_change_role',
+              'hadr_fabric_api_partition_write_status',
+              'hadr_fabric_api_replica_begin_change_role',
+              'hadr_fabric_api_replica_end_change_role',
+              'hadr_fabric_api_replicator_begin_build_replica',
+              'hadr_fabric_api_replicator_end_build_replica',
+              'hadr_fabric_api_replicator_begin_wait_for_quorum_catchup',
+              'hadr_fabric_api_replicator_end_wait_for_quorum_catchup',
+              'NotExistEvent'
+          ];
+          FabricApiEvent
+          | join kind=leftouter
+          (
+          MonFabricApi
+          | where originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where AppName =~ '{AppName}'
+          | where physical_database_id =~ '{physical_database_id}'
+          ) on event
+          | summarize EventCount=countif(isempty(originalEventTimestamp)==false),
+              NodesInvolved=tostring(makeset(NodeName)),
+              Min_EventTimeStamp=min(originalEventTimestamp), Max_EventTimeStamp=max(originalEventTimestamp),
+              Result_desc_set=tostring(makeset(result_desc)), New_role_desc_set=tostring(makeset(new_role_desc)), current_write_status_desc_set=tostring(makeset(current_write_status_desc)),
+              role_other_desc=tostring(makeset(role_other_desc)), catch_up_mode_desc_set=tostring(makeset(catch_up_mode_desc))
+              by event
+          | order by Min_EventTimeStamp asc
+
+  # ──────────────────────────────────────────────────────
+  # QL810 - Write Status Granted
+  # ──────────────────────────────────────────────────────
+  - id: LS-QL810
+    name: "Write Status Granted"
+    source: "SQLLivesiteAgents/Availability/quorum-loss/references/queries.md"
+    table: MonFabricApi
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - AppName
+      - physical_database_id
+    KustoQueries:
+      - TableName: MonFabricApi
+        ExecutedQuery: |
+          MonFabricApi
+          | where originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where AppName =~ '{AppName}'
+          | where physical_database_id =~ '{physical_database_id}'
+          | where event =~ 'hadr_fabric_api_partition_write_status'
+          | project originalEventTimestamp, previous_write_status_desc, current_write_status_desc, NodeName, event, process_id, physical_database_id, fabric_replica_id
+          | order by originalEventTimestamp asc

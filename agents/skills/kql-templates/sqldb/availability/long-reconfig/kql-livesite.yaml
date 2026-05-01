@@ -1,0 +1,334 @@
+# ============================================================================
+# kql-livesite.yaml — Long Reconfiguration KQL Templates
+# ============================================================================
+# Priority: P1 (highest)
+# Source: SQLLivesiteAgents / Availability / long-reconfig-database / references/queries.md
+# Distilled: 2026-05-01
+# ============================================================================
+# Note: Some queries are MI-specific (LR260-LR268 container/networking).
+# This file includes both SQLDB and MI-applicable queries.
+# ============================================================================
+
+SqlSkills:
+
+  - id: LS-LR100
+    name: "Check Active Long Reconfiguration Alert"
+    source: "SQLLivesiteAgents/Availability/long-reconfig-database/references/queries.md"
+    table: AlrWinFabHealthPartitionEvent
+    RequiredParameters: [AppName]
+    KustoQueries:
+      - TableName: AlrWinFabHealthPartitionEvent
+        ExecutedQuery: |
+          AlrWinFabHealthPartitionEvent
+          | where ServiceName contains "{AppName}"
+          | where Description contains "Partition reconfiguration is taking longer than expected."
+          | project TIMESTAMP, ClusterName, ApplicationName, ServiceName, PartitionId, Description
+          | summarize max(TIMESTAMP) by ClusterName, ApplicationName, ServiceName, PartitionId, Description
+
+  - id: LS-LR200
+    name: "Case 1: Error 41614 State 27 (GP Only)"
+    source: "SQLLivesiteAgents/Availability/long-reconfig-database/references/queries.md"
+    deployment: "GP"
+    table: MonFabricApi
+    RequiredParameters: [StartTime, EndTime, AppName]
+    KustoQueries:
+      - TableName: MonFabricApi
+        ExecutedQuery: |
+          MonFabricApi
+          | where originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where AppName =~ "{AppName}"
+          | where error_code == long(41614)
+          | where error_state == long(27)
+          | summarize count() by NodeName
+
+  - id: LS-LR210
+    name: "Case 2: Inconsistent Remote Replicas (Error 5120)"
+    source: "SQLLivesiteAgents/Availability/long-reconfig-database/references/queries.md"
+    table: MonSQLSystemHealth
+    RequiredParameters: [StartTime, EndTime, AppName]
+    KustoQueries:
+      - TableName: MonSQLSystemHealth
+        ExecutedQuery: |
+          MonSQLSystemHealth
+          | where originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where AppName =~ "{AppName}"
+          | where error_id == 5120
+          | summarize count(), min(TIMESTAMP), max(TIMESTAMP), any(message)
+
+  - id: LS-LR220
+    name: "Case 3: Error 5173 — File Metadata Mismatch"
+    source: "SQLLivesiteAgents/Availability/long-reconfig-database/references/queries.md"
+    table: MonSQLSystemHealth
+    RequiredParameters: [StartTime, EndTime, AppName]
+    KustoQueries:
+      - TableName: MonSQLSystemHealth
+        ExecutedQuery: |
+          MonSQLSystemHealth
+          | where originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where AppName =~ "{AppName}"
+          | where error_id == 5173
+          | summarize count(), min(TIMESTAMP), max(TIMESTAMP), any(message)
+
+  - id: LS-LR230
+    name: "Case 4: Long Running Checkpoint (Start)"
+    source: "SQLLivesiteAgents/Availability/long-reconfig-database/references/queries.md"
+    table: MonFabricDebug
+    RequiredParameters: [StartTime, EndTime, AppName, PartitionId]
+    KustoQueries:
+      - TableName: MonFabricDebug
+        ExecutedQuery: |
+          MonFabricDebug
+          | where TIMESTAMP between (datetime({StartTime})..datetime({EndTime}))
+          | where AppName =~ "{AppName}"
+          | where partition_id =~ "{PartitionId}"
+          | where debug_trace has "HaDrDbMgr::CheckpointDBInternal: Starting checkpoint"
+          | project TIMESTAMP, debug_trace, NodeName
+
+  - id: LS-LR231
+    name: "Case 4: Long Running Checkpoint (Finish)"
+    source: "SQLLivesiteAgents/Availability/long-reconfig-database/references/queries.md"
+    table: MonFabricDebug
+    RequiredParameters: [StartTime, EndTime, AppName, PartitionId]
+    KustoQueries:
+      - TableName: MonFabricDebug
+        ExecutedQuery: |
+          MonFabricDebug
+          | where TIMESTAMP between (datetime({StartTime})..datetime({EndTime}))
+          | where AppName =~ "{AppName}"
+          | where partition_id =~ "{PartitionId}"
+          | where debug_trace has "HaDrDbMgr::CheckpointDBInternal: Finished checkpoint"
+          | project TIMESTAMP, debug_trace, NodeName
+
+  - id: LS-LR240
+    name: "Case 5: Instance Boot Deadlock"
+    source: "SQLLivesiteAgents/Availability/long-reconfig-database/references/queries.md"
+    table: MonSQLSystemHealth
+    RequiredParameters: [AppName]
+    KustoQueries:
+      - TableName: MonSQLSystemHealth
+        ExecutedQuery: |
+          MonSQLSystemHealth
+          | where TIMESTAMP > ago(1d)
+          | where AppTypeName =~ "Worker.CL"
+          | where AppName =~ "{AppName}"
+          | where message contains "HaDrDbMgr::DelayKillingSessionsHoldingReplMasterLocks -"
+          | summarize arg_max(TIMESTAMP, message) by ClusterName, NodeName, process_id
+          | where message contains "HaDrDbMgr::DelayKillingSessionsHoldingReplMasterLocks - Waiting"
+
+  - id: LS-LR250
+    name: "CPU and I/O Pressure"
+    source: "SQLLivesiteAgents/Availability/long-reconfig-database/references/queries.md"
+    table: MonResourceStats
+    RequiredParameters: [StartTime, EndTime, AppName]
+    KustoQueries:
+      - TableName: MonResourceStats
+        ExecutedQuery: |
+          MonResourceStats
+          | where originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where AppName =~ "{AppName}"
+          | project originalEventTimestamp, NodeName, avg_cpu_percent, avg_data_io_percent, avg_log_write_percent, max_worker_percent, max_session_percent
+          | order by originalEventTimestamp asc
+
+  - id: LS-LR256
+    name: "Wait Stats Analysis"
+    source: "SQLLivesiteAgents/Availability/long-reconfig-database/references/queries.md"
+    table: MonDmCloudDatabaseWaitStats
+    RequiredParameters: [StartTime, EndTime, AppName]
+    KustoQueries:
+      - TableName: MonDmCloudDatabaseWaitStats
+        ExecutedQuery: |
+          MonDmCloudDatabaseWaitStats
+          | where TIMESTAMP between (datetime({StartTime})..datetime({EndTime}))
+          | where AppName =~ "{AppName}"
+          | where delta_is_valid == 1
+          | where wait_type in ('SOS_SCHEDULER_YIELD', 'THREADPOOL', 'RESOURCE_SEMAPHORE', 'RESOURCE_SEMAPHORE_QUERY_COMPILE', 'WRITELOG', 'PAGEIOLATCH_SH', 'PAGEIOLATCH_EX', 'PAGEIOLATCH_UP', 'IO_COMPLETION', 'HADR_LOGCAPTURE_WAIT', 'HADR_SYNC_COMMIT', 'HADR_FILESTREAM_IOMGR_IOCOMPLETION', 'PARALLEL_REDO_DRAIN_WORKER', 'PARALLEL_REDO_WORKER_SYNC', 'PARALLEL_REDO_LOG_CACHE')
+          | summarize total_waiting_tasks = sum(delta_waiting_tasks_count), total_wait_time_ms = sum(delta_wait_time_ms), max_wait_time_ms = max(delta_max_wait_time_ms) by NodeName, wait_type
+          | where total_wait_time_ms > 10000
+          | order by total_wait_time_ms desc
+
+  - id: LS-LR258
+    name: "Performance Error Indicators"
+    source: "SQLLivesiteAgents/Availability/long-reconfig-database/references/queries.md"
+    table: MonSQLSystemHealth
+    notes: "Error 17883/17884 (non-yielding), 701/802 (OOM), 833/837 (I/O stalls)"
+    RequiredParameters: [StartTime, EndTime, AppName]
+    KustoQueries:
+      - TableName: MonSQLSystemHealth
+        ExecutedQuery: |
+          MonSQLSystemHealth
+          | where originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where AppName =~ "{AppName}"
+          | where error_id in (17883, 17884, 17888, 701, 802, 8645, 8651, 833, 837, 855, 856)
+          | summarize count(), min(originalEventTimestamp), max(originalEventTimestamp), any(message) by error_id, NodeName
+          | order by count_ desc
+
+  - id: LS-LR300
+    name: "General Error Survey"
+    source: "SQLLivesiteAgents/Availability/long-reconfig-database/references/queries.md"
+    table: MonSQLSystemHealth
+    RequiredParameters: [StartTime, EndTime, AppName]
+    KustoQueries:
+      - TableName: MonSQLSystemHealth
+        ExecutedQuery: |
+          MonSQLSystemHealth
+          | where originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where AppName =~ "{AppName}"
+          | where message contains "Error:"
+          | summarize count(), min(TIMESTAMP), max(TIMESTAMP), any(message) by error_id, NodeName
+
+  - id: LS-LR305
+    name: "Case 10: msdb Upgrade Script Stuck"
+    source: "SQLLivesiteAgents/Availability/long-reconfig-database/references/queries.md"
+    notes: "Known issue PBI 4448193"
+    table: MonSQLSystemHealth
+    RequiredParameters: [StartTime, EndTime, AppName]
+    KustoQueries:
+      - TableName: MonSQLSystemHealth
+        ExecutedQuery: |
+          MonSQLSystemHealth
+          | where originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where AppName =~ "{AppName}"
+          | where message contains "Checking the size of MSDB..."
+          | project originalEventTimestamp, message, NodeName, process_id, collect_current_thread_id
+          | join kind=leftouter
+          (
+              MonSQLSystemHealth
+              | where originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+              | where AppName =~ "{AppName}"
+              | where message contains "Setting database option TRUSTWORTHY to ON for database 'msdb'."
+              | project originalEventTimestamp, message, NodeName, process_id, collect_current_thread_id
+          ) on process_id, collect_current_thread_id
+          | extend duration = originalEventTimestamp1 - originalEventTimestamp
+          | order by duration
+
+  - id: LS-LR310
+    name: "Case 7: XEvent Dispatcher Deadlock"
+    source: "SQLLivesiteAgents/Availability/long-reconfig-database/references/queries.md"
+    table: MonSQLSystemHealth
+    RequiredParameters: [StartTime, EndTime, AppName]
+    KustoQueries:
+      - TableName: MonSQLSystemHealth
+        ExecutedQuery: |
+          MonSQLSystemHealth
+          | where originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where AppName =~ "{AppName}"
+          | where message contains "XE Engine dispatcher pool for sessions that has long running targets"
+          | project originalEventTimestamp, NodeName, message
+
+  - id: LS-LR320
+    name: "SQL Process Lifetime Analysis"
+    source: "SQLLivesiteAgents/Availability/long-reconfig-database/references/queries.md"
+    table: MonSQLSystemHealth
+    RequiredParameters: [StartTime, EndTime, AppName]
+    KustoQueries:
+      - TableName: MonSQLSystemHealth
+        ExecutedQuery: |
+          MonSQLSystemHealth
+          | where originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where AppName =~ "{AppName}"
+          | summarize min(TIMESTAMP), max(TIMESTAMP) by process_id, NodeName
+          | order by min_TIMESTAMP asc
+
+  - id: LS-LR330
+    name: "Forwarder Redo Queue Size"
+    source: "SQLLivesiteAgents/Availability/long-reconfig-database/references/queries.md"
+    table: MonDmDbHadrReplicaStates
+    RequiredParameters: [StartTime, EndTime, AppName]
+    KustoQueries:
+      - TableName: MonDmDbHadrReplicaStates
+        ExecutedQuery: |
+          MonDmDbHadrReplicaStates
+          | where TIMESTAMP between (datetime({StartTime})..datetime({EndTime}))
+          | where AppName =~ "{AppName}"
+          | where internal_state_desc == "FORWARDER"
+          | summarize max_redo_queue_size_kb = max(redo_queue_size) by NodeName, logical_database_name
+          | extend max_redo_queue_size_gb = max_redo_queue_size_kb * 1.0 / 1000.0 / 1000.0
+          | order by max_redo_queue_size_gb desc
+
+  - id: LS-LR340
+    name: "Database Recovery Time"
+    source: "SQLLivesiteAgents/Availability/long-reconfig-database/references/queries.md"
+    table: MonSQLSystemHealth
+    RequiredParameters: [StartTime, EndTime, AppName]
+    KustoQueries:
+      - TableName: MonSQLSystemHealth
+        ExecutedQuery: |
+          MonSQLSystemHealth
+          | where originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where AppName =~ "{AppName}"
+          | where message contains "Recovery completed for database"
+          | project originalEventTimestamp, NodeName, message
+          | order by originalEventTimestamp desc
+
+  - id: LS-LR360
+    name: "Replica Sync State Timeline"
+    source: "SQLLivesiteAgents/Availability/long-reconfig-database/references/queries.md"
+    table: MonDmDbHadrReplicaStates
+    RequiredParameters: [StartTime, EndTime, AppName]
+    KustoQueries:
+      - TableName: MonDmDbHadrReplicaStates
+        ExecutedQuery: |
+          MonDmDbHadrReplicaStates
+          | where TIMESTAMP between (datetime({StartTime})..datetime({EndTime}))
+          | where AppName =~ "{AppName}"
+          | project TIMESTAMP, NodeName, internal_state_desc, synchronization_state_desc, synchronization_health_desc, last_hardened_lsn, end_of_log_lsn, log_send_queue_size
+          | order by TIMESTAMP asc
+
+  - id: LS-LR380
+    name: "Backup on Secondary Activity"
+    source: "SQLLivesiteAgents/Availability/long-reconfig-database/references/queries.md"
+    table: MonSQLSystemHealth
+    RequiredParameters: [StartTime, EndTime, AppName]
+    KustoQueries:
+      - TableName: MonSQLSystemHealth
+        ExecutedQuery: |
+          MonSQLSystemHealth
+          | where originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where AppName =~ "{AppName}"
+          | where message has_any ('ProcessBackupCmd', 'Backup Succeeded', 'BACKUP LOG started', 'BACKUP LOG finished', 'SendBackupBmsUpdate')
+          | project PreciseTimeStamp, NodeName, message
+          | order by PreciseTimeStamp asc
+
+  - id: LS-LR390
+    name: "HADR Transport Timeouts"
+    source: "SQLLivesiteAgents/Availability/long-reconfig-database/references/queries.md"
+    table: MonSQLSystemHealth
+    RequiredParameters: [StartTime, EndTime, AppName]
+    KustoQueries:
+      - TableName: MonSQLSystemHealth
+        ExecutedQuery: |
+          MonSQLSystemHealth
+          | where originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where AppName =~ "{AppName}"
+          | where message has 'HADR TRANSPORT' and message has_any ('Timeout', 'timeout')
+          | project PreciseTimeStamp, NodeName, message
+          | order by PreciseTimeStamp asc
+
+  - id: LS-LR395
+    name: "HADR Timeout Scope Analysis"
+    source: "SQLLivesiteAgents/Availability/long-reconfig-database/references/queries.md"
+    table: MonSQLSystemHealth
+    RequiredParameters: [StartTime, EndTime, AppName]
+    KustoQueries:
+      - TableName: MonSQLSystemHealth
+        ExecutedQuery: |
+          MonSQLSystemHealth
+          | where originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where AppName =~ "{AppName}"
+          | where message has 'HADR TRANSPORT' and message has_any ('Timeout', 'timeout')
+          | summarize timeout_count = count(), first_timeout = min(PreciseTimeStamp), last_timeout = max(PreciseTimeStamp) by NodeName
+          | order by first_timeout asc
+
+  - id: LS-LR400
+    name: "Verify Issue Resolved"
+    source: "SQLLivesiteAgents/Availability/long-reconfig-database/references/queries.md"
+    table: AlrWinFabHealthPartitionEvent
+    RequiredParameters: [AppName]
+    KustoQueries:
+      - TableName: AlrWinFabHealthPartitionEvent
+        ExecutedQuery: |
+          AlrWinFabHealthPartitionEvent
+          | where ServiceName contains "{AppName}"
+          | where Description contains "Partition reconfiguration is taking longer than expected."
+          | project TIMESTAMP, ClusterName, ApplicationName, ServiceName, PartitionId, Description
+          | summarize max(TIMESTAMP) by ClusterName, ApplicationName, ServiceName, PartitionId, Description

@@ -1,0 +1,164 @@
+# ============================================================================
+# kql-livesite.yaml — Update SLO KQL Templates from SQLLivesiteAgents
+# ============================================================================
+# Priority: P1 (highest)
+# Source: SQLLivesiteAgents / Availability / update-slo / references/queries.md
+# Distilled: 2026-05-01
+# ============================================================================
+
+SqlSkills:
+
+  - id: LS-USLO200
+    name: "Management Operations Overview"
+    source: "SQLLivesiteAgents/Availability/update-slo/references/queries.md"
+    table: MonManagementOperations
+    RequiredParameters: [StartTime, EndTime, LogicalServerName, LogicalDatabaseName]
+    KustoQueries:
+      - TableName: MonManagementOperations
+        ExecutedQuery: |
+          MonManagementOperations
+          | where originalEventTimestamp between (datetime({StartTime}) .. datetime({EndTime}))
+          | where operation_parameters has '{LogicalServerName}' and operation_parameters has '{LogicalDatabaseName}'
+          | project request_id, operation_type, operation_category, originalEventTimestamp, operation_owner_alias, event, process_id, elapsed_time, elapsed_time_milliseconds, error_code, error_message, operation_parameters
+          | order by originalEventTimestamp asc
+
+  - id: LS-USLO100
+    name: "Database Info with Source/Target Detection"
+    source: "SQLLivesiteAgents/Availability/update-slo/references/queries.md"
+    table: MonAnalyticsDBSnapshot
+    RequiredParameters: [StartTime, EndTime, LogicalServerName, LogicalDatabaseName]
+    KustoQueries:
+      - TableName: MonAnalyticsDBSnapshot
+        ExecutedQuery: |
+          MonAnalyticsDBSnapshot
+          | where PreciseTimeStamp between (datetime({StartTime}) .. datetime({EndTime}))
+          | where logical_server_name =~ '{LogicalServerName}' and logical_database_name =~ '{LogicalDatabaseName}'
+          | where fabric_application_uri !contains 'fabric:/Worker.Vldb.Storage/' and fabric_application_uri !contains 'fabric:/Worker.Vldb.LogReplica/'
+          | project-reorder PreciseTimeStamp, fabric_application_uri, fabric_partition_id, physical_database_id, sql_database_id, state, database_usage_status, physical_database_state, service_level_objective, edition, zone_resilient, tenant_ring_name, logical_server_name, logical_database_name
+          | order by PreciseTimeStamp asc
+
+  - id: LS-USLO210
+    name: "FSM State Transitions"
+    source: "SQLLivesiteAgents/Availability/update-slo/references/queries.md"
+    table: MonManagement
+    RequiredParameters: [StartTime, EndTime, request_id]
+    KustoQueries:
+      - TableName: MonManagement
+        ExecutedQuery: |
+          MonManagement
+          | where originalEventTimestamp between (datetime({StartTime}) .. datetime({EndTime}))
+          | where request_id =~ '{request_id}'
+          | where event =~ "fsm_changed_state"
+          | order by originalEventTimestamp asc
+          | extend prev_ts = prev(originalEventTimestamp, 1)
+          | extend duration_s = (originalEventTimestamp - prev_ts) / 1s
+          | project originalEventTimestamp, state_machine_type, old_state, new_state, round(duration_s), duration_m = round(duration_s/60, 1), duration_h = round(duration_s/3600, 1)
+
+  - id: LS-USLO215
+    name: "FSM State Duration Summary"
+    source: "SQLLivesiteAgents/Availability/update-slo/references/queries.md"
+    table: MonManagement
+    RequiredParameters: [StartTime, EndTime, request_id]
+    KustoQueries:
+      - TableName: MonManagement
+        ExecutedQuery: |
+          MonManagement
+          | where originalEventTimestamp between (datetime({StartTime}) .. datetime({EndTime}))
+          | where request_id =~ '{request_id}'
+          | where isnotempty(action) and isnotempty(old_state)
+          | summarize min(originalEventTimestamp), max(originalEventTimestamp), count() by state_machine_type, old_state, new_state
+          | extend duration_s = (max_originalEventTimestamp - min_originalEventTimestamp) / 1s
+          | extend duration_m = round(duration_s / 60, 1), duration_h = round(duration_s / 3600, 1)
+          | order by min_originalEventTimestamp asc
+
+  - id: LS-USLO300
+    name: "Management Exceptions"
+    source: "SQLLivesiteAgents/Availability/update-slo/references/queries.md"
+    table: MonManagement
+    RequiredParameters: [StartTime, EndTime, request_id]
+    KustoQueries:
+      - TableName: MonManagement
+        ExecutedQuery: |
+          MonManagement
+          | where originalEventTimestamp between (datetime({StartTime}) .. datetime({EndTime}))
+          | where request_id =~ '{request_id}'
+          | where strlen(stack_trace) > 0 or strlen(message) > 0 or strlen(exception_type) > 0
+          | project originalEventTimestamp, request_id, event, fsm_event, action, state_machine_type, elapsed_time, keys, old_state, new_state, operation_parameters, exception_type, stack_trace, location, service_name, cluster_name, message
+          | order by originalEventTimestamp asc
+
+  - id: LS-USLO400
+    name: "Replication Status (ContinuousCopyV2)"
+    source: "SQLLivesiteAgents/Availability/update-slo/references/queries.md"
+    table: MonDmContinuousCopyStatus
+    RequiredParameters: [StartTime, EndTime, SourceAppName, TargetAppName]
+    KustoQueries:
+      - TableName: MonDmContinuousCopyStatus
+        ExecutedQuery: |
+          MonDmContinuousCopyStatus
+          | where originalEventTimestamp between (datetime({StartTime}) .. datetime({EndTime}))
+          | where AppName in (tolower('{SourceAppName}'), tolower('{TargetAppName}'))
+          | project originalEventTimestamp, AppName, partner_server, partner_database, replication_state, replication_lag_sec, last_replication, percent_complete
+          | order by originalEventTimestamp asc
+
+  - id: LS-USLO500
+    name: "SQL System Health Errors"
+    source: "SQLLivesiteAgents/Availability/update-slo/references/queries.md"
+    table: MonSQLSystemHealth
+    RequiredParameters: [StartTime, EndTime, SourceAppName, TargetAppName]
+    KustoQueries:
+      - TableName: MonSQLSystemHealth
+        ExecutedQuery: |
+          MonSQLSystemHealth
+          | where originalEventTimestamp between (datetime({StartTime}) .. datetime({EndTime}))
+          | where AppName in (tolower('{SourceAppName}'), tolower('{TargetAppName}'))
+          | where severity >= 14
+          | summarize count(), FirstSeen=min(originalEventTimestamp), LastSeen=max(originalEventTimestamp) by error_number, severity, message=substring(message, 0, 200), AppName
+          | order by count_ desc
+
+  - id: LS-USLO600
+    name: "SLO Transition History"
+    source: "SQLLivesiteAgents/Availability/update-slo/references/queries.md"
+    table: MonAnalyticsDBSnapshot
+    RequiredParameters: [StartTime, EndTime, LogicalServerName, LogicalDatabaseName]
+    KustoQueries:
+      - TableName: MonAnalyticsDBSnapshot
+        ExecutedQuery: |
+          MonAnalyticsDBSnapshot
+          | where PreciseTimeStamp between (datetime({StartTime}) .. datetime({EndTime}))
+          | where logical_server_name =~ '{LogicalServerName}' and logical_database_name =~ '{LogicalDatabaseName}'
+          | summarize min(PreciseTimeStamp), max(PreciseTimeStamp) by tenant_ring_name, sql_instance_name, logical_server_name, logical_database_name, state, edition, service_level_objective
+          | order by min_PreciseTimeStamp asc, max_PreciseTimeStamp asc
+
+  - id: LS-USLO700
+    name: "Fabric Service Drop Status (GEODR0004.1)"
+    source: "SQLLivesiteAgents/Availability/update-slo/references/queries.md"
+    condition: "Stuck in WaitingForSourcePhysicalDatabaseDrop or WaitingForLinkAndPhysicalDatabaseDrop"
+    table: MonManagement
+    RequiredParameters: [StartTime, EndTime, request_id]
+    KustoQueries:
+      - TableName: MonManagement
+        ExecutedQuery: |
+          MonManagement
+          | where originalEventTimestamp between (datetime({StartTime}) .. datetime({EndTime}))
+          | where request_id =~ '{request_id}'
+          | where state_machine_type == "FabricServiceStateMachine" and event == "fsm_executed_action_failed" and action == "TransitionDrop"
+          | summarize argmax(originalEventTimestamp, stack_trace, keys), request_id = any(request_id)
+          | where max_originalEventTimestamp_stack_trace contains "System.TimeoutException: Operation timed out"
+          | extend pdbid = split(split(max_originalEventTimestamp_keys, ",")[1], "/")[4]
+          | project TSG = 'GEODR0004.1', Details = strcat('Fabric service for physical database ID ', pdbid, ' is stuck in dropping state')
+
+  - id: LS-USLO800
+    name: "FSM Execution Delays (Control Plane Overload)"
+    source: "SQLLivesiteAgents/Availability/update-slo/references/queries.md"
+    table: MonManagement
+    RequiredParameters: [StartTime, EndTime]
+    KustoQueries:
+      - TableName: MonManagement
+        ExecutedQuery: |
+          MonManagement
+          | where originalEventTimestamp between (datetime({StartTime}) .. datetime({EndTime}))
+          | where event == "fsm_executed_action" or event == "fsm_executed_action_failed"
+          | extend SM = strcat(NodeName, "|", state_machine_type)
+          | summarize et = sum(elapsed_time_milliseconds) by SM, bin(originalEventTimestamp, 1h)
+          | where et > 30000
+          | order by et desc

@@ -1,0 +1,357 @@
+# ============================================================================
+# kql-livesite.yaml — Unhealthy Worker.CL KQL Templates (MI Only)
+# ============================================================================
+# Priority: P1 (highest)
+# Source: SQLLivesiteAgents / Availability / unhealthy-worker-cl / references/queries.md
+# Distilled: 2026-05-01
+# ============================================================================
+# MI-only: Worker.CL is the Managed Instance Service Fabric application type.
+# SQLDB uses Worker/Worker.ISO and does not have these tables or scenarios.
+# ============================================================================
+
+SqlSkills:
+
+  # ──────────────────────────────────────────────────────
+  # Step 0: Parameter Resolution
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-WCL-000a
+    name: "Parameter Resolution (by AppName)"
+    source: "SQLLivesiteAgents/Availability/unhealthy-worker-cl/references/queries.md"
+    table: MonAnalyticsDBSnapshot
+    RequiredParameters: [AppName]
+    KustoQueries:
+      - TableName: MonAnalyticsDBSnapshot
+        ExecutedQuery: |
+          MonAnalyticsDBSnapshot
+          | where sql_instance_name =~ "{AppName}"
+          | summarize arg_max(TIMESTAMP, logical_server_name, tenant_ring_name) by sql_instance_name
+          | project AppName = sql_instance_name, LogicalServerName = logical_server_name, ClusterName = tenant_ring_name, TIMESTAMP
+
+  - id: MI-LS-WCL-000b
+    name: "Parameter Resolution (by LogicalServerName)"
+    source: "SQLLivesiteAgents/Availability/unhealthy-worker-cl/references/queries.md"
+    table: MonAnalyticsDBSnapshot
+    RequiredParameters: [LogicalServerName]
+    KustoQueries:
+      - TableName: MonAnalyticsDBSnapshot
+        ExecutedQuery: |
+          MonAnalyticsDBSnapshot
+          | where logical_server_name =~ "{LogicalServerName}"
+          | summarize arg_max(TIMESTAMP, sql_instance_name, tenant_ring_name) by logical_server_name
+          | project AppName = sql_instance_name, LogicalServerName = logical_server_name, ClusterName = tenant_ring_name, TIMESTAMP
+
+  # ──────────────────────────────────────────────────────
+  # Step 1: Verify Unhealthy State
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-WCL-100
+    name: "Application Health State Timeline"
+    source: "SQLLivesiteAgents/Availability/unhealthy-worker-cl/references/queries.md"
+    table: AlrWinFabHealthApplicationState
+    RequiredParameters: [StartTime, EndTime, ClusterName, AppName]
+    KustoQueries:
+      - TableName: AlrWinFabHealthApplicationState
+        ExecutedQuery: |
+          AlrWinFabHealthApplicationState
+          | where PreciseTimeStamp > datetime({StartTime})
+          | where PreciseTimeStamp < datetime({EndTime})
+          | where ClusterName =~ '{ClusterName}'
+          | where ApplicationName contains "Worker.CL"
+          | where ApplicationName contains "{AppName}"
+          | order by PreciseTimeStamp desc
+          | extend state = iff(HealthState =~ "Ok", 2, iff(HealthState =~ "Warning", 1, 0))
+          | project PreciseTimeStamp, state
+          | render timechart
+
+  # ──────────────────────────────────────────────────────
+  # Step 2: Check Exclusions — Update SLO
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-WCL-200
+    name: "Check Update SLO Target Status"
+    source: "SQLLivesiteAgents/Availability/unhealthy-worker-cl/references/queries.md"
+    table: MonManagedServers
+    RequiredParameters: [AppName]
+    KustoQueries:
+      - TableName: MonManagedServers
+        ExecutedQuery: |
+          let app_name = "{AppName}";
+          MonManagedServers
+          | summarize arg_max(PreciseTimeStamp, state) by name, managed_server_id
+          | where state =~ "UpdatingPricingTier"
+          | join kind=inner (
+              MonChangeManagedServerInstanceReqs
+              | summarize arg_max(PreciseTimeStamp, target_sql_instance_name) by managed_server_id
+              ) on managed_server_id
+          | where target_sql_instance_name =~ app_name
+          | project name, state, PreciseTimeStamp, target_sql_instance_name
+
+  # ──────────────────────────────────────────────────────
+  # Step 3: TDE Certificate / Key Vault Issues
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-WCL-300
+    name: "TDE Certificate and Key Vault Issues"
+    source: "SQLLivesiteAgents/Availability/unhealthy-worker-cl/references/queries.md"
+    table: MonSQLSystemHealth
+    RequiredParameters: [StartTime, EndTime, AppName]
+    KustoQueries:
+      - TableName: MonSQLSystemHealth
+        ExecutedQuery: |
+          MonSQLSystemHealth
+          | where PreciseTimeStamp > datetime({StartTime})
+          | where PreciseTimeStamp < datetime({EndTime})
+          | where AppTypeName contains "Worker.CL"
+          | where AppName =~ "{AppName}"
+          | where (message has "Azure Key Vault" or message has "Cannot find server asymmetric key with thumbprint" or error_id == 15507)
+          | where not (message has "Triggering deny external connections db due to Azure Key Vault Client Error")
+          | summarize arg_max(PreciseTimeStamp, message) by AppName, message
+          | project PreciseTimeStamp, AppName, message
+
+  # ──────────────────────────────────────────────────────
+  # Step 4: CodePackage Launch Failures
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-WCL-400
+    name: "CodePackage Launch Failures"
+    source: "SQLLivesiteAgents/Availability/unhealthy-worker-cl/references/queries.md"
+    table: WinFabLogs
+    RequiredParameters: [StartTime, EndTime, ClusterName, AppName]
+    KustoQueries:
+      - TableName: WinFabLogs
+        ExecutedQuery: |
+          let app_name = "{AppName}";
+          let cluster_name = "{ClusterName}";
+          let app_start_time = datetime({StartTime});
+          let app_end_time = datetime({EndTime});
+          WinFabLogs
+          | where ETWTimestamp > app_start_time
+          | where ETWTimestamp < app_end_time
+          | where ClusterName =~ cluster_name
+          | where Level in ("Warning", "Error")
+          | extend isLauncherSetupIssue = EventType =~ "ProcessUnexpectedTermination" and Text has "XdbPackageLauncherSetup"
+          | extend isLaunchingIssue = EventType =~ "CodePackageInstance" and Text has "Program = XdbPackageLauncher.exe" and Text has "failed to start"
+          | where isLauncherSetupIssue or isLaunchingIssue
+          | parse Text with * "Program = " programName ", " *
+          | parse Text with * "ApplicationId " applicationId " " *
+          | summarize min_time=min(ETWTimestamp), max_time=max(ETWTimestamp), failure_count=count() by isLauncherSetupIssue, programName, ClusterName, Id, EventType, applicationId
+          | extend transfer_queue = iff(programName has "MDS", "Telemetry", iff(isLauncherSetupIssue or programName has "XdbPackageLauncher", "Perf", ""))
+          | join kind=leftsemi (
+              WinFabLogs
+              | where ETWTimestamp > app_start_time
+              | where ETWTimestamp < app_end_time
+              | where ClusterName =~ cluster_name
+              | where EventType =~ "EventDispatcher"
+              | where Text contains app_name
+              | parse Text with * "ApplicationName=fabric:/Worker.CL" * "/" detected_app_name ", " *
+              | where detected_app_name =~ app_name
+              | project app_id_from_dispatcher=Id
+              ) on $left.applicationId == $right.app_id_from_dispatcher
+          | project min_time, max_time, failure_count, programName, transfer_queue, EventType
+
+  # ──────────────────────────────────────────────────────
+  # Step 5: Storage Limit Hits
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-WCL-500
+    name: "Instance Storage Utilization"
+    source: "SQLLivesiteAgents/Availability/unhealthy-worker-cl/references/queries.md"
+    table: MonManagedInstanceResourceStats
+    RequiredParameters: [StartTime, EndTime, LogicalServerName]
+    KustoQueries:
+      - TableName: MonManagedInstanceResourceStats
+        ExecutedQuery: |
+          MonManagedInstanceResourceStats
+          | where TIMESTAMP > datetime({StartTime})
+          | where TIMESTAMP < datetime({EndTime})
+          | where LogicalServerName =~ "{LogicalServerName}"
+          | project TIMESTAMP, LogicalServerName, storage_space_used_mb, reserved_storage_mb
+          | where storage_space_used_mb >= reserved_storage_mb
+          | order by TIMESTAMP desc
+
+  - id: MI-LS-WCL-501
+    name: "Storage Account Quota Exceeded"
+    source: "SQLLivesiteAgents/Availability/unhealthy-worker-cl/references/queries.md"
+    table: MonSQLXStore
+    RequiredParameters: [StartTime, EndTime, LogicalServerName]
+    KustoQueries:
+      - TableName: MonSQLXStore
+        ExecutedQuery: |
+          MonSQLXStore
+          | where TIMESTAMP > datetime({StartTime})
+          | where TIMESTAMP < datetime({EndTime})
+          | where LogicalServerName =~ "{LogicalServerName}"
+          | where event =~ "xio_failed_request"
+          | where errorcode =~ "AccountQuotaExceeded"
+          | summarize blocked_action_count=count() by LogicalServerName, TIMESTAMP
+          | order by TIMESTAMP desc
+
+  # ──────────────────────────────────────────────────────
+  # Step 6: Remote Storage Connectivity Issues
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-WCL-600
+    name: "Remote Storage Request Failures"
+    source: "SQLLivesiteAgents/Availability/unhealthy-worker-cl/references/queries.md"
+    table: MonSQLXStore
+    RequiredParameters: [StartTime, EndTime, AppName]
+    KustoQueries:
+      - TableName: MonSQLXStore
+        ExecutedQuery: |
+          let app_name = "{AppName}";
+          let query_start = datetime({StartTime});
+          let query_end = datetime({EndTime});
+          MonSQLXStore
+          | where TIMESTAMP > query_start
+          | where TIMESTAMP < query_end
+          | where AppName =~ app_name
+          | where event =~ "xio_failed_request"
+          | where isnotempty(file_path)
+          | where retry_count > 10
+          | where mapped_errorcode in (87, 12002, 12030, 12007, 12017, 12175)
+          | extend account=extract("https://([a-z0-9]*)[.*]", 1, file_path, typeof(string))
+          | extend is_zero_request=iff((request_id =~ "00000000-0000-0000-0000-000000000000"), 1, 0)
+          | summarize failure_count=count(), unique_accounts=dcount(account), first_error=min(TIMESTAMP), last_error=max(TIMESTAMP) by NodeName, ClusterName, account, AppName, mapped_errorcode, is_zero_request, SubscriptionId
+          | order by last_error desc
+
+  # ──────────────────────────────────────────────────────
+  # Step 7: Database InCreate/InCopy/InRestore Mode
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-WCL-700
+    name: "Database Create/Copy/Restore Mode Status"
+    source: "SQLLivesiteAgents/Availability/unhealthy-worker-cl/references/queries.md"
+    table: MonManagement
+    RequiredParameters: [StartTime, EndTime, AppName]
+    KustoQueries:
+      - TableName: MonManagement
+        ExecutedQuery: |
+          let app_name = "{AppName}";
+          let query_start = datetime({StartTime});
+          let query_end = datetime({EndTime});
+          MonManagement
+          | where keys contains "Worker.CL"
+          | where keys contains app_name
+          | where property_name =~ "IsInCreate"
+          | summarize arg_max(TIMESTAMP, event) by keys
+          | parse keys with * "Worker.CL" * "/" sql_instance_name "/SQL.ManagedUserDb/" database_id
+          | extend database_id=toupper(database_id)
+          | join kind=inner (
+              MonAnalyticsDBSnapshot
+              | where TIMESTAMP > query_start
+              | where TIMESTAMP < query_end
+              | summarize arg_max(TIMESTAMP, create_mode) by logical_database_id, physical_database_id, logical_server_name, sql_instance_name
+              ) on $left.sql_instance_name == $right.sql_instance_name and $left.database_id == $right.logical_database_id
+          | where event =~ "fabric_property_updating"
+          | extend transfer_queue=iff(create_mode =~ "Copy", "GeoDR", iff(create_mode =~ "Normal", "DB CRUD", "Backup and Restore"))
+          | project TIMESTAMP, sql_instance_name, logical_server_name, logical_database_id, create_mode, transfer_queue
+          | order by TIMESTAMP desc
+
+  # ──────────────────────────────────────────────────────
+  # Step 8: GeoDR Connectivity Issues
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-WCL-800
+    name: "GeoDR/Mirrored DR Connectivity Status"
+    source: "SQLLivesiteAgents/Availability/unhealthy-worker-cl/references/queries.md"
+    table: MonMIGeoDRFailoverGroupsConnectivity
+    notes: "MUST run on NorthEurope cluster: https://sqlazureneu2.kusto.windows.net:443 / sqlazure1"
+    RequiredParameters: [StartTime, EndTime, LogicalServerName]
+    KustoQueries:
+      - TableName: MonMIGeoDRFailoverGroupsConnectivity
+        ExecutedQuery: |
+          let server_name = "{LogicalServerName}";
+          MonMIGeoDRFailoverGroupsConnectivity
+          | where TIMESTAMP > datetime({StartTime})
+          | where TIMESTAMP < datetime({EndTime})
+          | where (ManagedServerName == server_name or PartnerServerName == server_name)
+          | order by TIMESTAMP desc
+
+  # ──────────────────────────────────────────────────────
+  # Step 9: SQL Process Container Issues
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-WCL-901
+    name: "SQL Process Container Startup Check"
+    source: "SQLLivesiteAgents/Availability/unhealthy-worker-cl/references/queries.md"
+    table: MonNodeTraceETW
+    notes: "No rows = SQL process NOT running in container"
+    RequiredParameters: [StartTime, EndTime, AppName]
+    KustoQueries:
+      - TableName: MonNodeTraceETW
+        ExecutedQuery: |
+          let app_name = "{AppName}";
+          MonNodeTraceETW
+          | where TIMESTAMP > datetime({StartTime})
+          | where TIMESTAMP < datetime({EndTime})
+          | where Message contains app_name
+          | where NodeName contains "DB"
+          | where Message contains "Worker.CL.WCOW"
+          | where Message contains "\" CodePackageName \""
+          | parse Message with * "\" CodePackageName \"" packageName "\"" *
+          | where packageName =~ "Code"
+          | summarize row_count=count(), first_seen=min(TIMESTAMP), last_seen=max(TIMESTAMP) by ClusterName, NodeName
+
+  - id: MI-LS-WCL-902
+    name: "Container and Network Provider Events"
+    source: "SQLLivesiteAgents/Availability/unhealthy-worker-cl/references/queries.md"
+    table: WinFabLogs
+    RequiredParameters: [StartTime, EndTime, ClusterName]
+    KustoQueries:
+      - TableName: WinFabLogs
+        ExecutedQuery: |
+          let cluster_name = "{ClusterName}";
+          WinFabLogs
+          | where ClusterName =~ cluster_name
+          | where ETWTimestamp > datetime({StartTime})
+          | where ETWTimestamp < datetime({EndTime})
+          | where TaskName contains "Hosting"
+          | where Level !contains "info"
+          | where (EventType contains "container" or EventType =~ "ByoVnetProvider")
+          | project ETWTimestamp, NodeName, EventType, Level, Id, Text
+
+  # ──────────────────────────────────────────────────────
+  # Step 10: Managed Instance State
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-WCL-903
+    name: "Managed Instance State"
+    source: "SQLLivesiteAgents/Availability/unhealthy-worker-cl/references/queries.md"
+    table: MonManagedServers
+    RequiredParameters: [LogicalServerName]
+    KustoQueries:
+      - TableName: MonManagedServers
+        ExecutedQuery: |
+          let server_name = "{LogicalServerName}";
+          MonManagedServers
+          | where name =~ server_name
+          | summarize arg_max(PreciseTimeStamp, state) by name
+          | project name, state, PreciseTimeStamp
+
+  # ──────────────────────────────────────────────────────
+  # Step 11: Node Telemetry
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-WCL-904
+    name: "Node Telemetry Emission Check"
+    source: "SQLLivesiteAgents/Availability/unhealthy-worker-cl/references/queries.md"
+    table: MonNodeTraceETW
+    RequiredParameters: [StartTime, EndTime, ClusterName]
+    KustoQueries:
+      - TableName: MonNodeTraceETW
+        ExecutedQuery: |
+          MonNodeTraceETW
+          | where TIMESTAMP > datetime({StartTime})
+          | where TIMESTAMP < datetime({EndTime})
+          | where ClusterName =~ "{ClusterName}"
+          | summarize first_telemetry=min(TIMESTAMP), last_telemetry=max(TIMESTAMP), event_count=count() by NodeName
+
+  # ──────────────────────────────────────────────────────
+  # Step 12: Database Services Health
+  # ──────────────────────────────────────────────────────
+  - id: MI-LS-WCL-905
+    name: "Database Services Health State"
+    source: "SQLLivesiteAgents/Availability/unhealthy-worker-cl/references/queries.md"
+    table: AlrWinFabHealthServiceState
+    RequiredParameters: [StartTime, EndTime, AppName]
+    KustoQueries:
+      - TableName: AlrWinFabHealthServiceState
+        ExecutedQuery: |
+          AlrWinFabHealthServiceState
+          | where PreciseTimeStamp > datetime({StartTime})
+          | where PreciseTimeStamp < datetime({EndTime})
+          | where ApplicationName contains "Worker.CL"
+          | where ApplicationName contains "{AppName}"
+          | order by PreciseTimeStamp desc
+          | extend state = iff(HealthState =~ "Ok", 2, iff(HealthState =~ "Warning", 1, 0))
+          | project PreciseTimeStamp, state
+          | render timechart

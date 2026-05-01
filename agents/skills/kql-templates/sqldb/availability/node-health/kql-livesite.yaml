@@ -1,0 +1,145 @@
+# ============================================================================
+# kql-livesite.yaml — Node Health KQL Templates from SQLLivesiteAgents
+# ============================================================================
+# Priority: P1 (highest)
+# Source: SQLLivesiteAgents / NodeHealth / node-health / references/queries.md
+# Distilled: 2026-05-01
+# ============================================================================
+
+SqlSkills:
+
+  - id: LS-NH100
+    name: "Locate Database Node"
+    source: "SQLLivesiteAgents/NodeHealth/node-health/references/queries.md"
+    table: MonLogin
+    RequiredParameters: [StartTime, EndTime, LogicalServerName, LogicalDatabaseName]
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          MonLogin
+          | where originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where logical_server_name =~ '{LogicalServerName}' and database_name =~ '{LogicalDatabaseName}'
+          | where event =~ "process_login_finish"
+          | where AppTypeName =~ "Worker" or AppTypeName startswith "Worker.ISO"
+          | distinct ClusterName, NodeName
+
+  - id: LS-NH200
+    name: "SF Node State Changes"
+    source: "SQLLivesiteAgents/NodeHealth/node-health/references/queries.md"
+    table: MonClusterLoad
+    RequiredParameters: [StartTime, EndTime, ClusterName, DBNodeName]
+    KustoQueries:
+      - TableName: MonClusterLoad
+        ExecutedQuery: |
+          MonClusterLoad
+          | where originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where event contains "node_state_report"
+          | where ClusterName =~ '{ClusterName}'
+          | where node_name =~ '{DBNodeName}'
+          | project originalEventTimestamp, health_state, node_status
+          | sort by originalEventTimestamp asc
+          | extend PrevTime = prev(originalEventTimestamp)
+          | extend NextTime = next(originalEventTimestamp)
+          | extend PrevHealthstate = prev(health_state)
+          | extend PrevNodestate = prev(node_status)
+          | where isnull(PrevTime) or isnull(NextTime) or (health_state != PrevHealthstate) or (node_status != PrevNodestate)
+          | project originalEventTimestamp, health_state, node_status
+          | sort by originalEventTimestamp asc
+
+  - id: LS-NH210
+    name: "Node Health Issues"
+    source: "SQLLivesiteAgents/NodeHealth/node-health/references/queries.md"
+    table: MonClusterLoad
+    RequiredParameters: [StartTime, Duration, ClusterName, DBNodeName]
+    KustoQueries:
+      - TableName: MonClusterLoad
+        ExecutedQuery: |
+          MonClusterLoad
+          | where TIMESTAMP between (datetime({StartTime})..{Duration})
+          | where event =~ "node_state_report"
+          | where ClusterName =~ '{ClusterName}'
+          | where node_name =~ '{DBNodeName}'
+          | where health_state != 'Ok' or node_status != 'Up'
+          | project node_name, TIMESTAMP, health_state, node_status, node_up_time
+          | order by node_name, TIMESTAMP asc
+
+  - id: LS-NH300
+    name: "Infrastructure Health Events"
+    source: "SQLLivesiteAgents/NodeHealth/node-health/references/queries.md"
+    table: MonSQLInfraHealthEvents
+    notes: "Uses extended time window (12h before to 24h after). May need cross-cluster query."
+    RequiredParameters: [OutageStartTime, OutageEndTime, ClusterName, DBNodeName]
+    KustoQueries:
+      - TableName: MonSQLInfraHealthEvents
+        ExecutedQuery: |
+          cluster('sqlstage.kusto.windows.net').database('sqlazure1').MonSQLInfraHealthEvents
+          | where FaultTime between (datetime({OutageStartTime})-12h..datetime({OutageEndTime})+24h)
+          | where ClusterName =~ '{ClusterName}'
+          | where NodeName =~ '{DBNodeName}'
+          | project-away IngestionTime, L2, L3
+          | distinct *
+
+  - id: LS-NH400
+    name: "Bugcheck Events"
+    source: "SQLLivesiteAgents/NodeHealth/node-health/references/queries.md"
+    table: MonSystemEventLogErrors
+    RequiredParameters: [StartTime, EndTime, ClusterName, DBNodeName]
+    KustoQueries:
+      - TableName: MonSystemEventLogErrors
+        ExecutedQuery: |
+          MonSystemEventLogErrors
+          | where TIMESTAMP between (datetime({StartTime})..datetime({EndTime}))
+          | where ClusterName =~ '{ClusterName}'
+          | where NodeName =~ '{DBNodeName}'
+          | where EventDescription startswith "The computer has rebooted from a bugcheck"
+          | extend bugcheck = extract(@"0x[0-9a-fA-F]+", 0, EventDescription)
+
+  - id: LS-NH500
+    name: "Node Up/Down Events"
+    source: "SQLLivesiteAgents/NodeHealth/node-health/references/queries.md"
+    table: WinFabLogs
+    RequiredParameters: [StartTime, EndTime, ClusterName, DBNodeName]
+    KustoQueries:
+      - TableName: WinFabLogs
+        ExecutedQuery: |
+          WinFabLogs
+          | where ETWTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where ClusterName =~ '{ClusterName}'
+          | where Text contains "NodeUp " or Text contains "NodeDown " or Text contains "NodeUp:" or Text contains "NodeDown:"
+          | where Text contains '{DBNodeName}'
+          | project ETWTimestamp, NodeName, TaskName, EventType, Text
+          | sort by ETWTimestamp asc
+
+  - id: LS-NH600
+    name: "Node Repair Tasks"
+    source: "SQLLivesiteAgents/NodeHealth/node-health/references/queries.md"
+    table: WinFabLogs
+    notes: "Uses extended window (+3 days) to capture long-running tasks."
+    RequiredParameters: [OutageStartTime, OutageEndTime, ClusterName, DBNodeName]
+    KustoQueries:
+      - TableName: WinFabLogs
+        ExecutedQuery: |
+          WinFabLogs
+          | where ETWTimestamp between (datetime({OutageStartTime})..datetime({OutageEndTime})+3d)
+          | where ClusterName =~ '{ClusterName}'
+          | where Text contains "RepairTask[scope=ClusterRepairScopeIdentifier, taskId="
+          | parse kind = regex Text with * "taskId=" TaskId ", version" * "state=" State ", flags" * "target=NodeRepairTargetDescription\\[nodeList = \\(" Node "\\)\\], executor" *
+          | where Node =~ '{DBNodeName}'
+          | project ClusterName, ETWTimestamp, TaskId, State, Node
+          | evaluate pivot(State, min(ETWTimestamp))
+
+  - id: LS-NH700
+    name: "RestartCodePackage Actions"
+    source: "SQLLivesiteAgents/NodeHealth/node-health/references/queries.md"
+    table: MonRingWatchdogs
+    RequiredParameters: [StartTime, Duration, ClusterName, AppName]
+    KustoQueries:
+      - TableName: MonRingWatchdogs
+        ExecutedQuery: |
+          MonRingWatchdogs
+          | where originalEventTimestamp between (datetime({StartTime})..{Duration})
+          | where event contains 'action' and event != 'unsafe_bot_action' and event !contains 'throttled'
+          | where ClusterName =~ '{ClusterName}'
+          | where bot_action =~ 'RestartCodePackage'
+          | where application_name contains '{AppName}'
+          | project originalEventTimestamp, ClusterName, node_name, event, bot_action, reason, application_type_name, application_name, service_name, partition_id

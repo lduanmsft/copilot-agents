@@ -1,0 +1,146 @@
+# ============================================================================
+# kql-livesite.yaml — Login Failure Triage KQL Templates
+# ============================================================================
+# Priority: P1 (highest)
+# Source: SQLLivesiteAgents / Availability / login-failure-triage / references/queries.md
+# Distilled: 2026-05-01
+# ============================================================================
+
+SqlSkills:
+
+  - id: LS-LF100
+    name: "Login Failure Volume and Timeline"
+    source: "SQLLivesiteAgents/Availability/login-failure-triage/references/queries.md"
+    table: MonLogin
+    RequiredParameters: [StartTime, EndTime, LogicalServerName, LogicalDatabaseName]
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          MonLogin
+          | where originalEventTimestamp between (StartTime .. EndTime)
+          | where logical_server_name =~ "{LogicalServerName}"
+          | where database_name =~ "{LogicalDatabaseName}"
+          | where event == "process_login_finish"
+          | where is_success == 0
+          | where is_user_error == 0
+          | extend ReadOnlyIntent = (login_flags / 2097152) % 2
+          | summarize FailureCount = count(), ReadOnlyIntentFailureCount = countif(ReadOnlyIntent == 1), Errors = make_set(error, 100), States = make_set(state, 100), Packages = make_set(package, 100), MachineNames = make_set(MachineName, 10), HostNames = make_set(host_name, 10) by TimeBucket = bin(originalEventTimestamp, 1m), NodeName
+          | order by TimeBucket asc, NodeName asc
+          | limit 500
+
+  - id: LS-LF300
+    name: "Correlate with SqlFailovers"
+    source: "SQLLivesiteAgents/Availability/login-failure-triage/references/queries.md"
+    table: SqlFailovers
+    RequiredParameters: [StartTime, EndTime, LogicalServerName, LogicalDatabaseName]
+    KustoQueries:
+      - TableName: SqlFailovers
+        ExecutedQuery: |
+          SqlFailovers
+          | where FailoverStartTime between (datetime({StartTime}) .. datetime({EndTime}))
+          | where logical_server_name =~ "{LogicalServerName}"
+          | where logical_database_name =~ "{LogicalDatabaseName}"
+          | project FailoverStartTime, FailoverEndTime, FailoverDurationSeconds = datetime_diff('second', FailoverEndTime, FailoverStartTime), ReconfigurationType, CRMAction, PLBConstraintType, ExitCode, OldPrimary, NewPrimary, PartitionId, ApiFaultReason
+          | order by FailoverStartTime asc
+
+  - id: LS-LF400
+    name: "Replica States and Transitions"
+    source: "SQLLivesiteAgents/Availability/login-failure-triage/references/queries.md"
+    table: MonDmDbHadrReplicaStates
+    RequiredParameters: [StartTime, EndTime, AppName]
+    KustoQueries:
+      - TableName: MonDmDbHadrReplicaStates
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          MonDmDbHadrReplicaStates
+          | where TIMESTAMP between (StartTime .. EndTime)
+          | where AppName =~ "{AppName}"
+          | sort by replica_id, NodeName, PreciseTimeStamp asc
+          | extend prev_internal_state = prev(internal_state_desc, 1, "")
+          | extend prev_replica = prev(replica_id), prev_node = prev(NodeName)
+          | extend prev_sync_state = prev(synchronization_state_desc, 1, "")
+          | extend prev_db_state = prev(database_state_desc, 1, "")
+          | extend is_first_record = (replica_id != prev_replica or NodeName != prev_node)
+          | extend next_replica = next(replica_id), next_node = next(NodeName)
+          | extend is_last_record = (replica_id != next_replica or NodeName != next_node or isnull(next_replica))
+          | extend internal_state_changed = (not(is_first_record) and internal_state_desc != prev_internal_state)
+          | extend sync_state_changed = (not(is_first_record) and synchronization_state_desc != prev_sync_state)
+          | extend db_state_changed = (not(is_first_record) and database_state_desc != prev_db_state)
+          | where is_first_record or is_last_record or internal_state_changed or sync_state_changed or db_state_changed
+          | project PreciseTimeStamp, replica_id, NodeName, is_primary_replica, internal_state_desc, synchronization_state_desc, synchronization_health_desc, database_state_desc, is_suspended, suspend_reason_desc, is_first_record, is_last_record, internal_state_changed, sync_state_changed, db_state_changed
+          | order by replica_id, NodeName, PreciseTimeStamp asc
+
+  - id: LS-LF500
+    name: "SQL Error Log Messages"
+    source: "SQLLivesiteAgents/Availability/login-failure-triage/references/queries.md"
+    table: MonSQLSystemHealth
+    RequiredParameters: [StartTime, EndTime, AppName, LogicalServerName]
+    KustoQueries:
+      - TableName: MonSQLSystemHealth
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          let IsRelevantMessage = (s: string)
+          {
+              s !has "accepting vlf header" and
+              s !has "CHadrTransportReplica" and
+              s !has "CFabricCommonUtils" and
+              s !has "HADR TRANSPOR" and
+              s !has "DbMgrPartnerCommitPolicy" and
+              s !has "AlwaysOn Availability Groups" and
+              s !has "Querying Property Manager" and
+              s has "error:"
+          };
+          MonSQLSystemHealth
+          | where TIMESTAMP between (StartTime .. EndTime)
+          | where event == "systemmetadata_written"
+          | where AppName =~ "{AppName}"
+          | where LogicalServerName =~ "{LogicalServerName}"
+          | where IsRelevantMessage(message)
+          | extend ErrorCode = extract('Error: [0-9]*, Severity: [0-9]*, State: [0-9]*', 0, message)
+          | extend DisplayMessage = replace('[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] [0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9]+ [a-zA-Z0-9]* ', '', message)
+          | extend DisplayMessage = extract(@'Error: [0-9]+, Severity: [0-9]+, State: [0-9]+\.\s*([^\r\n]+?)(?:\.|\n|\n|$)', 1, DisplayMessage)
+          | extend DisplayMessage = trim(@'[\t\n\f\r ]+', DisplayMessage)
+          | summarize Count = count(), MinTime = min(TIMESTAMP), MaxTime = max(TIMESTAMP) by ErrorCode, NodeName, DisplayMessage
+          | extend ErrorCode = iff(ErrorCode != '', ErrorCode, '(No specific error code)')
+          | project Count, NodeName, MinTime, MaxTime, ErrorCode, DisplayMessage
+          | order by Count desc
+          | limit 500
+
+  - id: LS-LF600
+    name: "Unplaced Replica Events"
+    source: "SQLLivesiteAgents/Availability/login-failure-triage/references/queries.md"
+    table: WinFabLogs
+    RequiredParameters: [StartTime, EndTime, fabric_partition_id]
+    KustoQueries:
+      - TableName: WinFabLogs
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          WinFabLogs
+          | where TIMESTAMP between (StartTime .. EndTime)
+          | where Id =~ "{fabric_partition_id}"
+          | where EventType == "UnplacedReplica"
+          | summarize FirstEvent = min(ETWTimestamp), LastEvent = max(ETWTimestamp), EventCount = count()
+
+  - id: LS-LF700
+    name: "Management Operations"
+    source: "SQLLivesiteAgents/Availability/login-failure-triage/references/queries.md"
+    table: MonManagementOperations
+    RequiredParameters: [StartTime, EndTime, LogicalServerName, LogicalDatabaseName]
+    KustoQueries:
+      - TableName: MonManagementOperations
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          MonManagementOperations
+          | where originalEventTimestamp between (StartTime .. EndTime)
+          | where operation_parameters has "{LogicalServerName}" and operation_parameters has "{LogicalDatabaseName}"
+          | sort by request_id, originalEventTimestamp asc
+          | summarize operation_type = take_any(operation_type), TIMESTAMP = min(originalEventTimestamp), events_timeline = make_list(bag_pack("timestamp", originalEventTimestamp, "event", event)) by request_id
+          | project request_id, operation_type, TIMESTAMP, events_timeline
+          | order by TIMESTAMP asc
+          | take 500

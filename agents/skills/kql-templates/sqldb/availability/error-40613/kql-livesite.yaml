@@ -1,0 +1,396 @@
+# ============================================================================
+# kql-livesite.yaml — Error 40613 KQL Templates from SQLLivesiteAgents
+# ============================================================================
+# Priority: P1 (highest)
+# Source: SQLLivesiteAgents / Availability / error-40613-state-{126,127,129}
+# Distilled: 2026-05-01
+# ============================================================================
+# State 126: Stuck role transition (database being transitioned)
+# State 127: Stuck warmup/recovery (database warming up after failover)
+# State 129: HADR subsystem unavailable
+# ============================================================================
+
+SqlSkills:
+
+  # ════════════════════════════════════════════════════
+  # STATE 126 — Stuck Role Transition
+  # ════════════════════════════════════════════════════
+
+  - id: LS-STATE126-100
+    name: "State 126 — Error Volume and Duration"
+    source: "SQLLivesiteAgents/Availability/error-40613-state-126/references/queries.md"
+    table: MonLogin
+    RequiredParameters: [StartTime, EndTime, LogicalServerName, LogicalDatabaseName]
+    IssueDetection:
+      transient: "OverallDurationSeconds < 30 → expected transient"
+      stuck: "OverallDurationSeconds > 120 → stuck transition"
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          MonLogin
+          | where originalEventTimestamp between (StartTime .. EndTime)
+          | where logical_server_name =~ "{LogicalServerName}"
+          | where database_name =~ "{LogicalDatabaseName}"
+          | where error == 40613 and state == 126
+          | where package =~ "sqlserver" or package =~ "xdbhost"
+          | summarize ErrorCount = count(), FirstError = min(originalEventTimestamp), LastError = max(originalEventTimestamp) by bin(originalEventTimestamp, 1m), NodeName, logical_server_name, database_name, package, instance_name, error, state, AppName, ClusterName
+          | summarize TotalErrorCount = sum(ErrorCount), OverallFirstError = min(FirstError), OverallLastError = max(LastError), AppName = any(AppName), ClusterName = any(ClusterName) by logical_server_name, database_name, NodeName, error, state
+          | extend OverallDurationSeconds = datetime_diff('second', OverallLastError, OverallFirstError)
+          | order by OverallFirstError asc
+
+  - id: LS-STATE126-110
+    name: "State 126 — Error Summary by Time Window"
+    source: "SQLLivesiteAgents/Availability/error-40613-state-126/references/queries.md"
+    table: MonLogin
+    RequiredParameters: [StartTime, EndTime, LogicalServerName, LogicalDatabaseName]
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          MonLogin
+          | where originalEventTimestamp between (StartTime .. EndTime)
+          | where logical_server_name =~ "{LogicalServerName}"
+          | where database_name =~ "{LogicalDatabaseName}"
+          | where error == 40613 and state == 126
+          | where package =~ "sqlserver" or package =~ "xdbhost"
+          | summarize ErrorCount = count(), MinTime = min(originalEventTimestamp), MaxTime = max(originalEventTimestamp) by bin(originalEventTimestamp, 1m)
+          | order by MinTime asc
+          | serialize
+          | extend GapToPrevious = MinTime - prev(MaxTime)
+          | project originalEventTimestamp, ErrorCount, MinTime, MaxTime, GapToPrevious
+
+  - id: LS-STATE126-200
+    name: "State 126 — Correlate with SqlFailovers"
+    source: "SQLLivesiteAgents/Availability/error-40613-state-126/references/queries.md"
+    table: SqlFailovers
+    RequiredParameters: [StartTime, EndTime, LogicalServerName, LogicalDatabaseName]
+    KustoQueries:
+      - TableName: SqlFailovers
+        ExecutedQuery: |
+          SqlFailovers
+          | where FailoverStartTime between (datetime({StartTime}) .. datetime({EndTime}))
+          | where logical_server_name =~ "{LogicalServerName}"
+          | where logical_database_name =~ "{LogicalDatabaseName}"
+          | project FailoverStartTime, FailoverEndTime, FailoverDurationSeconds = datetime_diff('second', FailoverEndTime, FailoverStartTime), ReconfigurationType, CRMAction, OldPrimary, NewPrimary, PartitionId
+          | order by FailoverStartTime asc
+
+  - id: LS-STATE126-300
+    name: "State 126 — Role Change XEvents"
+    source: "SQLLivesiteAgents/Availability/error-40613-state-126/references/queries.md"
+    table: MonFabricApi
+    RequiredParameters: [StartTime, EndTime, AppName, fabric_partition_id]
+    KustoQueries:
+      - TableName: MonFabricApi
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          MonFabricApi
+          | where TIMESTAMP between (StartTime .. EndTime)
+          | where AppName =~ "{AppName}" and partition_id =~ "{fabric_partition_id}"
+          | where event in ("hadr_fabric_api_replicator_begin_change_role", "hadr_fabric_api_replicator_end_change_role")
+          | project PreciseTimeStamp, NodeName, event, new_role_desc, current_state_desc, result_desc, work_id, process_id, partition_id
+          | order by PreciseTimeStamp asc
+
+  - id: LS-STATE126-400
+    name: "State 126 — Database Recovery Status"
+    source: "SQLLivesiteAgents/Availability/error-40613-state-126/references/queries.md"
+    table: MonSQLSystemHealth
+    RequiredParameters: [StartTime, EndTime, AppName, DatabaseId]
+    KustoQueries:
+      - TableName: MonSQLSystemHealth
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          MonSQLSystemHealth
+          | where PreciseTimeStamp between (StartTime .. EndTime)
+          | where AppName =~ "{AppName}"
+          | where logical_database_guid != '00000000-0000-0000-0000-000000000000'
+          | where message contains "Recovery completed" or message contains "recovery completed"
+          | extend DatabaseID = toint(extract(@"database ID (\d+)", 1, message))
+          | where DatabaseID == {DatabaseId}
+          | project RecoveryTime = PreciseTimeStamp, NodeName, message, process_id, logical_database_guid, DatabaseID
+          | order by RecoveryTime asc
+
+  - id: LS-STATE126-410
+    name: "State 126 — Recovery Progress Messages"
+    source: "SQLLivesiteAgents/Availability/error-40613-state-126/references/queries.md"
+    table: MonSQLSystemHealth
+    RequiredParameters: [StartTime, EndTime, AppName, DatabaseId]
+    KustoQueries:
+      - TableName: MonSQLSystemHealth
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          MonSQLSystemHealth
+          | where PreciseTimeStamp between (StartTime .. EndTime)
+          | where AppName =~ "{AppName}"
+          | where logical_database_guid != '00000000-0000-0000-0000-000000000000'
+          | where message has_any ("Starting up database", "Recovery", "redo", "undo", "Parallel redo")
+          | extend DatabaseID = toint(extract(@"database ID (\d+)", 1, message))
+          | where DatabaseID == {DatabaseId}
+          | project PreciseTimeStamp, NodeName, message, process_id, logical_database_guid, DatabaseID
+          | order by PreciseTimeStamp asc
+
+  - id: LS-STATE126-500
+    name: "State 126 — LoginOutages Impact"
+    source: "SQLLivesiteAgents/Availability/error-40613-state-126/references/queries.md"
+    table: LoginOutages
+    RequiredParameters: [StartTime, EndTime, LogicalServerName, LogicalDatabaseName]
+    KustoQueries:
+      - TableName: LoginOutages
+        ExecutedQuery: |
+          LoginOutages
+          | where outageStartTime between (datetime({StartTime}) - 5m .. datetime({EndTime}) + 5m)
+          | where logical_server_name =~ "{LogicalServerName}"
+          | where database_name =~ "{LogicalDatabaseName}"
+          | project outageStartTime, outageEndTime, durationSeconds, OutageType, OutageReasonLevel1, OutageReasonLevel2, OutageReasonLevel3, OwningTeam
+          | order by outageStartTime asc
+
+  # ════════════════════════════════════════════════════
+  # STATE 127 — Stuck Warmup / Recovery
+  # ════════════════════════════════════════════════════
+
+  - id: LS-STATE127-100
+    name: "State 127 — Error Volume and Duration"
+    source: "SQLLivesiteAgents/Availability/error-40613-state-127/references/queries.md"
+    table: MonLogin
+    RequiredParameters: [StartTime, EndTime, LogicalServerName, LogicalDatabaseName]
+    IssueDetection:
+      transient: "OverallDurationSeconds < 60 → expected transient warmup"
+      stuck: "OverallDurationSeconds > 300 → stuck warmup"
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          MonLogin
+          | where originalEventTimestamp between (StartTime .. EndTime)
+          | where logical_server_name =~ "{LogicalServerName}"
+          | where database_name =~ "{LogicalDatabaseName}"
+          | where error == 40613 and state == 127
+          | where package =~ "sqlserver" or package =~ "xdbhost"
+          | where event == 'process_login_finish'
+          | summarize ErrorCount = count(), FirstError = min(originalEventTimestamp), LastError = max(originalEventTimestamp) by bin(originalEventTimestamp, 1m), NodeName, logical_server_name, database_name, package, instance_name, error, state, AppName, ClusterName
+          | summarize TotalErrorCount = sum(ErrorCount), OverallFirstError = min(FirstError), OverallLastError = max(LastError), AppName = any(AppName), ClusterName = any(ClusterName) by logical_server_name, database_name, NodeName, error, state
+          | extend OverallDurationSeconds = datetime_diff('second', OverallLastError, OverallFirstError)
+          | order by OverallFirstError asc
+
+  - id: LS-STATE127-200
+    name: "State 127 — Correlate with SqlFailovers"
+    source: "SQLLivesiteAgents/Availability/error-40613-state-127/references/queries.md"
+    table: SqlFailovers
+    RequiredParameters: [StartTime, EndTime, LogicalServerName, LogicalDatabaseName]
+    KustoQueries:
+      - TableName: SqlFailovers
+        ExecutedQuery: |
+          SqlFailovers
+          | where (FailoverStartTime <= datetime({EndTime}) and FailoverEndTime >= datetime({StartTime}))
+          | where logical_server_name =~ "{LogicalServerName}"
+          | where logical_database_name =~ "{LogicalDatabaseName}"
+          | project FailoverStartTime, FailoverEndTime, FailoverDurationSeconds = datetime_diff('second', FailoverEndTime, FailoverStartTime), ReconfigurationType, CRMAction, OldPrimary, NewPrimary, PartitionId
+          | order by FailoverStartTime asc
+
+  - id: LS-STATE127-300
+    name: "State 127 — Role Change End Events"
+    source: "SQLLivesiteAgents/Availability/error-40613-state-127/references/queries.md"
+    table: MonFabricApi
+    RequiredParameters: [StartTime, EndTime, AppName, physical_database_id]
+    KustoQueries:
+      - TableName: MonFabricApi
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          MonFabricApi
+          | where originalEventTimestamp between (StartTime .. EndTime)
+          | where AppName =~ "{AppName}" and physical_database_id =~ "{physical_database_id}"
+          | where event in ("hadr_fabric_api_replicator_begin_change_role", "hadr_fabric_api_replicator_end_change_role")
+          | project originalEventTimestamp, NodeName, event, new_role_desc, current_state_desc, result_desc, work_id, process_id, partition_id, physical_database_id
+          | order by originalEventTimestamp asc
+
+  - id: LS-STATE127-400
+    name: "State 127 — Database Recovery Messages"
+    source: "SQLLivesiteAgents/Availability/error-40613-state-127/references/queries.md"
+    table: MonSQLSystemHealth
+    RequiredParameters: [StartTime, EndTime, AppName, physical_database_id, sql_database_id]
+    KustoQueries:
+      - TableName: MonSQLSystemHealth
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          MonSQLSystemHealth
+          | where PreciseTimeStamp between (StartTime .. EndTime)
+          | where AppName =~ "{AppName}"
+          | where logical_database_guid != '00000000-0000-0000-0000-000000000000'
+          | where message contains "{physical_database_id}"
+          | where message has_any ("Starting up database", "Recovery completed", "recovery completed", "Parallel redo")
+          | extend DatabaseID = toint(extract(@"database ID (\d+)", 1, message))
+          | where DatabaseID == {sql_database_id}
+          | project originalEventTimestamp = PreciseTimeStamp, NodeName, message, process_id, logical_database_guid, DatabaseID
+          | order by originalEventTimestamp asc
+
+  - id: LS-STATE127-500
+    name: "State 127 — SQL Error Log Messages"
+    source: "SQLLivesiteAgents/Availability/error-40613-state-127/references/queries.md"
+    table: MonSQLSystemHealth
+    RequiredParameters: [StartTime, EndTime, AppName, physical_database_id]
+    KustoQueries:
+      - TableName: MonSQLSystemHealth
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          MonSQLSystemHealth
+          | where PreciseTimeStamp between (StartTime .. EndTime)
+          | where AppName =~ "{AppName}"
+          | where message contains "{physical_database_id}" or message contains "Error:"
+          | where message has_any ("Error:", "error", "failed", "timeout", "cannot", "unable", "exception")
+          | project originalEventTimestamp = PreciseTimeStamp, NodeName, message, process_id
+          | order by originalEventTimestamp asc
+
+  - id: LS-STATE127-510
+    name: "State 127 — Tempdb Recovery"
+    source: "SQLLivesiteAgents/Availability/error-40613-state-127/references/queries.md"
+    table: MonSQLSystemHealth
+    RequiredParameters: [StartTime, EndTime, AppName, DBNodeName]
+    KustoQueries:
+      - TableName: MonSQLSystemHealth
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          MonSQLSystemHealth
+          | where PreciseTimeStamp between (StartTime .. EndTime)
+          | where AppName =~ "{AppName}"
+          | where NodeName =~ "{DBNodeName}"
+          | where message contains "tempdb"
+          | where message has_any ("Recovery completed for database tempdb", "Starting up database tempdb", "DropTempObjects")
+          | project originalEventTimestamp = PreciseTimeStamp, NodeName, message, process_id
+          | order by originalEventTimestamp asc
+
+  - id: LS-STATE127-600
+    name: "State 127 — LoginOutages Impact"
+    source: "SQLLivesiteAgents/Availability/error-40613-state-127/references/queries.md"
+    table: LoginOutages
+    RequiredParameters: [StartTime, EndTime, LogicalServerName, LogicalDatabaseName]
+    KustoQueries:
+      - TableName: LoginOutages
+        ExecutedQuery: |
+          LoginOutages
+          | where outageStartTime between (datetime({StartTime}) - 5m .. datetime({EndTime}) + 5m)
+          | where logical_server_name =~ "{LogicalServerName}"
+          | where database_name =~ "{LogicalDatabaseName}"
+          | project outageStartTime, outageEndTime, durationSeconds, OutageType, OutageReasonLevel1, OutageReasonLevel2, OutageReasonLevel3, OwningTeam
+          | order by outageStartTime asc
+
+  # ════════════════════════════════════════════════════
+  # STATE 129 — HADR Unavailable
+  # ════════════════════════════════════════════════════
+
+  - id: LS-STATE129-100
+    name: "State 129 — Error Volume and Duration"
+    source: "SQLLivesiteAgents/Availability/error-40613-state-129/references/queries.md"
+    table: MonLogin
+    RequiredParameters: [StartTime, EndTime, LogicalServerName, LogicalDatabaseName]
+    IssueDetection:
+      transient: "OverallDurationSeconds < 30 → brief HADR disruption"
+      critical: "OverallDurationSeconds > 300 → persistent HADR failure, escalate"
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          MonLogin
+          | where originalEventTimestamp between (StartTime .. EndTime)
+          | where logical_server_name =~ "{LogicalServerName}"
+          | where database_name =~ "{LogicalDatabaseName}"
+          | where error == 40613 and state == 129
+          | where package =~ "sqlserver" or package =~ "xdbhost"
+          | where event == 'process_login_finish'
+          | summarize ErrorCount = count(), FirstError = min(originalEventTimestamp), LastError = max(originalEventTimestamp) by bin(originalEventTimestamp, 1m), logical_server_name, database_name, package, instance_name, error, state, AppName, ClusterName
+          | summarize TotalErrorCount = sum(ErrorCount), OverallFirstError = min(FirstError), OverallLastError = max(LastError), AppName = any(AppName), ClusterName = any(ClusterName) by logical_server_name, database_name, error, state
+          | extend OverallDurationSeconds = datetime_diff('second', OverallLastError, OverallFirstError)
+          | order by OverallFirstError asc
+
+  - id: LS-STATE129-200
+    name: "State 129 — Correlate with SqlFailovers"
+    source: "SQLLivesiteAgents/Availability/error-40613-state-129/references/queries.md"
+    table: SqlFailovers
+    RequiredParameters: [StartTime, EndTime, LogicalServerName, LogicalDatabaseName]
+    KustoQueries:
+      - TableName: SqlFailovers
+        ExecutedQuery: |
+          SqlFailovers
+          | where (FailoverStartTime <= datetime({EndTime}) and FailoverEndTime >= datetime({StartTime}))
+          | where logical_server_name =~ "{LogicalServerName}"
+          | where logical_database_name =~ "{LogicalDatabaseName}"
+          | project FailoverStartTime, FailoverEndTime, FailoverDurationSeconds = datetime_diff('second', FailoverEndTime, FailoverStartTime), ReconfigurationType, CRMAction, OldPrimary, NewPrimary, PartitionId
+          | order by FailoverStartTime asc
+
+  - id: LS-STATE129-300
+    name: "State 129 — Role Change Events"
+    source: "SQLLivesiteAgents/Availability/error-40613-state-129/references/queries.md"
+    table: MonFabricApi
+    RequiredParameters: [StartTime, EndTime, AppName, physical_database_id]
+    KustoQueries:
+      - TableName: MonFabricApi
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          MonFabricApi
+          | where originalEventTimestamp between (StartTime .. EndTime)
+          | where AppName =~ "{AppName}" and physical_database_id =~ "{physical_database_id}"
+          | where event in ("hadr_fabric_api_replicator_begin_change_role", "hadr_fabric_api_replicator_end_change_role")
+          | project originalEventTimestamp, NodeName, event, new_role_desc, current_state_desc, result_desc, work_id, process_id, partition_id, physical_database_id
+          | order by originalEventTimestamp asc
+
+  - id: LS-STATE129-400
+    name: "State 129 — SQL Error Log Messages"
+    source: "SQLLivesiteAgents/Availability/error-40613-state-129/references/queries.md"
+    table: MonSQLSystemHealth
+    RequiredParameters: [StartTime, EndTime, AppName, physical_database_id]
+    KustoQueries:
+      - TableName: MonSQLSystemHealth
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          MonSQLSystemHealth
+          | where PreciseTimeStamp between (StartTime .. EndTime)
+          | where AppName =~ "{AppName}"
+          | where message contains "{physical_database_id}" or message contains "Error:"
+          | where message has_any ("Error:", "error", "failed", "timeout", "cannot", "unable", "exception", "HADR", "availability", "replica")
+          | project originalEventTimestamp = PreciseTimeStamp, NodeName, message, process_id
+          | order by originalEventTimestamp asc
+
+  - id: LS-STATE129-500
+    name: "State 129 — LoginOutages Impact"
+    source: "SQLLivesiteAgents/Availability/error-40613-state-129/references/queries.md"
+    table: LoginOutages
+    RequiredParameters: [StartTime, EndTime, LogicalServerName, LogicalDatabaseName]
+    KustoQueries:
+      - TableName: LoginOutages
+        ExecutedQuery: |
+          LoginOutages
+          | where outageStartTime between (datetime({StartTime}) - 5m .. datetime({EndTime}) + 5m)
+          | where logical_server_name =~ "{LogicalServerName}"
+          | where database_name =~ "{LogicalDatabaseName}"
+          | project outageStartTime, outageEndTime, durationSeconds, OutageType, OutageReasonLevel1, OutageReasonLevel2, OutageReasonLevel3, OwningTeam
+          | order by outageStartTime asc
+
+  - id: LS-STATE129-600
+    name: "State 129 — Write Status"
+    source: "SQLLivesiteAgents/Availability/error-40613-state-129/references/queries.md"
+    table: MonFabricApi
+    RequiredParameters: [StartTime, EndTime, AppName, physical_database_id]
+    KustoQueries:
+      - TableName: MonFabricApi
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime}) + 1m;
+          MonFabricApi
+          | where originalEventTimestamp between (StartTime .. EndTime)
+          | where AppName =~ "{AppName}"
+          | where physical_database_id =~ "{physical_database_id}"
+          | where event =~ "hadr_fabric_api_partition_write_status"
+          | project originalEventTimestamp, NodeName, previous_write_status_desc, current_write_status_desc
+          | order by originalEventTimestamp asc

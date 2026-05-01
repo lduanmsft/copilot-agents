@@ -1,0 +1,742 @@
+# ============================================================================
+# kql-livesite.yaml — Failover KQL Templates from SQLLivesiteAgents
+# ============================================================================
+# Priority: P1 (highest)
+# Source: SQLLivesiteAgents / Availability / failover / references/queries.md
+# Distilled: 2026-05-01
+# ============================================================================
+# Covers: GP ZR/non-ZR failover, BC failover, replica transitions,
+#         SQL process lifecycle, image download, write status, error log gaps
+# ============================================================================
+
+SqlSkills:
+
+  # ──────────────────────────────────────────────────────
+  # HA106 - Identify Delete Primary Replica (GP without ZR)
+  # ──────────────────────────────────────────────────────
+  - id: LS-HA106
+    name: "Identify Delete Primary Replica (GP without ZR)"
+    source: "SQLLivesiteAgents/Availability/failover/references/queries.md"
+    deployment: "GP without ZR"
+    table: WinFabLogs
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - ClusterName
+      - physical_database_id
+    KustoQueries:
+      - TableName: WinFabLogs
+        ExecutedQuery: |
+          let StartTimeExt=datetime({StartTime}) -1h;
+          let DurationExt={Duration}+2h;
+          let NodeMapping=materialize (
+          WinFabLogs
+          | where ETWTimestamp between (StartTimeExt..DurationExt)
+          | where EventType =~ 'NodeLoads'
+          | where ClusterName =~ '{ClusterName}'
+          | project Text
+          | extend lines = split(Text, ')\r\t')
+          | mv-expand lines
+          | project lines
+          | where lines matches regex  '_DB|_MN|_WF|_GW'
+          | parse lines with SFNodeId:string ' ' NodeName:string ' ' *
+          | distinct NodeName, SFNodeId
+          );
+          WinFabLogs
+          | where ETWTimestamp between (StartTimeExt..DurationExt)
+          | where ClusterName =~ '{ClusterName}'
+          | where EventType =~ 'FTUpdate'
+          | where Text contains '{physical_database_id}'
+          | where Text contains 'DeleteReplica'
+          | extend NodeIdToDelete=extract(@'DeleteReplica->([0-9a-f]{32})', 1, Text)
+          | project ETWTimestamp, TaskName, EventType,NodeIdToDelete, Text
+          | join kind=inner 
+          (NodeMapping)
+          on $left.NodeIdToDelete==$right.SFNodeId
+          | project ETWTimestamp, NodeNameToDelete=NodeName, NodeIdToDelete
+
+  # ──────────────────────────────────────────────────────
+  # HA107 - Identify New Primary (GP without ZR)
+  # ──────────────────────────────────────────────────────
+  - id: LS-HA107
+    name: "Identify New Primary (GP without ZR)"
+    source: "SQLLivesiteAgents/Availability/failover/references/queries.md"
+    deployment: "GP without ZR"
+    table: WinFabLogs
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - ClusterName
+      - physical_database_id
+    KustoQueries:
+      - TableName: WinFabLogs
+        ExecutedQuery: |
+          let StartTime=datetime({StartTime});
+          let StartTimeExt=StartTime - 1h;
+          let EndTimeExt=(StartTime + {Duration}) + 2h;
+          let NodeMapping=materialize (
+          WinFabLogs
+          | where ETWTimestamp between (StartTimeExt..EndTimeExt)
+          | where EventType =~ 'NodeLoads'
+          | where ClusterName =~ '{ClusterName}'
+          | project Text
+          | extend lines = split(Text, ')\r\t')
+          | mv-expand lines
+          | project lines
+          | where lines matches regex  '_DB|_MN|_WF|_GW'
+          | parse lines with SFNodeId:string ' ' NodeName:string ' ' *
+          | distinct NodeName, SFNodeId
+          );
+          WinFabLogs
+          | where ETWTimestamp between (StartTimeExt..EndTimeExt)
+          | where ClusterName =~ '{ClusterName}'
+          | where EventType in ('OperationOperational', 'FTUpdate', 'Operation')
+          | where Text contains '{physical_database_id}'
+          | where Text contains "AddPrimary"
+          | extend activity_id = extract('ActivityId: ([a-zA-Z0-9-]+)', 1, Text)
+          | extend activity_id = iff(isnotempty(activity_id), activity_id, extract('ActivityDescription=([a-zA-Z0-9-]+)', 1, Text))
+          | extend activity_id = iif(isnotempty(activity_id), activity_id, extract('DecisionId: ([a-zA-Z0-9-]+)\r', 1, Text))
+          | extend activity_id = iif(isnotempty(activity_id), activity_id, extract('EventInstanceId: ([a-zA-Z0-9-]+)\r', 1, Text))
+          | extend activity_id = iif(isnotempty(activity_id), activity_id, extract('EventInstanceId ([a-zA-Z0-9-]+)', 1, Text))
+          | extend activity_id = iif(isnotempty(activity_id), activity_id, extract('Actions: ([a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12})', 1, Text))
+          | extend TargetNodeIdFromOperationOrOperationOperational = extract(@'TargetNode: ([^\s\r\n]+)', 1, Text)
+          | where isnotempty(activity_id)
+          | extend TargetNodeIdFromFTUpdate = extract(@'AddPrimary.*?=>([0-9a-f]{32})', 1, Text)
+          | extend TargetNodeId = case (isnotempty(TargetNodeIdFromFTUpdate), TargetNodeIdFromFTUpdate, isnotempty(TargetNodeIdFromOperationOrOperationOperational), TargetNodeIdFromOperationOrOperationOperational, 'Other')
+          | where TargetNodeId != 'Other'
+          | summarize ETWTimestamp=min(ETWTimestamp) by activity_id, NewPrimaryNodeId=TargetNodeId
+          | join kind=inner (NodeMapping) on $left.NewPrimaryNodeId == $right.SFNodeId
+          | project ETWTimestamp, NewPrimaryNodeId, NewPrimaryNodeName=NodeName
+
+  # ──────────────────────────────────────────────────────
+  # HA108 - Find Old & New Primary (GP with ZR and BC)
+  # ──────────────────────────────────────────────────────
+  - id: LS-HA108
+    name: "Find Old & New Primary (GP with ZR and BC)"
+    source: "SQLLivesiteAgents/Availability/failover/references/queries.md"
+    deployment: "GP with ZR / BC"
+    table: WinFabLogs
+    RequiredParameters:
+      - StartTime
+      - Duration
+      - ClusterName
+      - fabric_partition_id
+    KustoQueries:
+      - TableName: WinFabLogs
+        ExecutedQuery: |
+          WinFabLogs
+          | where ETWTimestamp between (datetime({StartTime})..(datetime({StartTime}) + {Duration}))
+          | where ClusterName =~ '{ClusterName}'
+          | where Text contains '{fabric_partition_id}'
+          | where TaskName =~'FM'
+          | where EventType in ('ReconfigurationStartedOperational')
+          | extend activity_id = extract('ActivityId: ([a-zA-Z0-9-]+)', 1, Text)
+          | extend OldPrimaryNodeName = extract(@'OldPrimaryNodeName:\s*(\S+)', 1, Text)
+          | extend NewPrimaryNodeName = extract(@'NewPrimaryNodeName:\s*(\S+)', 1, Text)
+          | where NewPrimaryNodeName != OldPrimaryNodeName
+          | project ETWTimestamp, TaskName, EventType, OldPrimaryNodeName, NewPrimaryNodeName
+          | order by ETWTimestamp asc
+
+  # ──────────────────────────────────────────────────────
+  # HA140 - SqlFailovers (Completed Failovers)
+  # ──────────────────────────────────────────────────────
+  - id: LS-HA140
+    name: "Failover Events (Completed)"
+    source: "SQLLivesiteAgents/Availability/failover/references/queries.md"
+    table: SqlFailovers
+    RequiredParameters:
+      - StartTime
+      - Duration
+      - LogicalServerName
+      - LogicalDatabaseName
+    KustoQueries:
+      - TableName: SqlFailovers
+        ExecutedQuery: |
+          SqlFailovers
+          | where FailoverStartTime between (datetime({StartTime})..{Duration})
+          | where logical_server_name =~ '{LogicalServerName}' and logical_database_name =~ "{LogicalDatabaseName}"
+          | project FailoverStartTime, FailoverEndTime, ReconfigurationType, CRMAction, OldPrimary, NewPrimary
+
+  # ──────────────────────────────────────────────────────
+  # HA200 - LoginOutages Impact Assessment
+  # ──────────────────────────────────────────────────────
+  - id: LS-HA200
+    name: "LoginOutages Impact Assessment"
+    source: "SQLLivesiteAgents/Availability/failover/references/queries.md"
+    table: LoginOutages
+    RequiredParameters:
+      - StartTime
+      - Duration
+      - LogicalServerName
+      - LogicalDatabaseName
+    KustoQueries:
+      - TableName: LoginOutages
+        ExecutedQuery: |
+          LoginOutages
+          | where outageStartTime between (datetime({StartTime})..{Duration})
+          | where logical_server_name =~ "{LogicalServerName}" and database_name =~ "{LogicalDatabaseName}"
+          | project outageStartTime, outageEndTime, durationSeconds, OutageType, OutageReasonLevel1, OutageReasonLevel2, OutageReasonLevel3, OwningTeam
+          | order by outageStartTime asc
+
+  # ──────────────────────────────────────────────────────
+  # HA210 - Management Operation Actual Timing
+  # Condition: LoginOutages shows OutageType = "CustomerInitiated"
+  # ──────────────────────────────────────────────────────
+  - id: LS-HA210
+    name: "Management Operation Actual Timing"
+    source: "SQLLivesiteAgents/Availability/failover/references/queries.md"
+    condition: "LS-HA200.OutageType == 'CustomerInitiated'"
+    table: MonManagementOperations
+    RequiredParameters:
+      - StartTime
+      - Duration
+      - RequestIds
+    KustoQueries:
+      - TableName: MonManagementOperations
+        ExecutedQuery: |
+          MonManagementOperations
+          | where originalEventTimestamp between (datetime({StartTime})-2h..{Duration}+4h)
+          | where request_id in~ ({RequestIds})
+          | where event in ('management_operation_start', 'management_operation_success', 'management_operation_failure')
+          | summarize
+              op_start = minif(originalEventTimestamp, event == 'management_operation_start'),
+              op_end = minif(originalEventTimestamp, event in ('management_operation_success', 'management_operation_failure')),
+              has_success = countif(event == 'management_operation_success') > 0,
+              has_failure = countif(event == 'management_operation_failure') > 0,
+              elapsed_ms = maxif(tolong(elapsed_time_milliseconds), event in ('management_operation_success', 'management_operation_failure'))
+              by operation_type, request_id
+          | extend duration_sec = iff(isnotempty(op_start) and isnotempty(op_end), datetime_diff('second', op_end, op_start), toint(elapsed_ms / 1000))
+          | extend Duration = case(
+              isempty(op_end), "In progress",
+              duration_sec >= 3600, strcat(duration_sec / 3600, "h ", (duration_sec % 3600) / 60, "m"),
+              duration_sec >= 60, strcat(duration_sec / 60, "m ", duration_sec % 60, "s"),
+              strcat(duration_sec, "s"))
+          | extend StartTime = iff(isnotempty(op_start), format_datetime(op_start, 'yyyy-MM-dd HH:mm:ss'), "—")
+          | extend EndTime = iff(isnotempty(op_end), format_datetime(op_end, 'yyyy-MM-dd HH:mm:ss'), "—")
+          | extend Status = case(has_success, "Success", has_failure, "Failed", "In progress")
+          | project OperationType = operation_type, RequestId = request_id, StartTime, EndTime, Duration, Status
+          | order by StartTime asc
+
+  # ──────────────────────────────────────────────────────
+  # HA1020 - DeactivateNode
+  # ──────────────────────────────────────────────────────
+  - id: LS-HA1020
+    name: "DeactivateNode Events"
+    source: "SQLLivesiteAgents/Availability/failover/references/queries.md"
+    table: WinFabLogs
+    RequiredParameters:
+      - StartTime
+      - Duration
+      - ClusterName
+      - fabric_partition_id
+    KustoQueries:
+      - TableName: WinFabLogs
+        ExecutedQuery: |
+          WinFabLogs
+          | where ETWTimestamp between (datetime({StartTime})-1h..{Duration}+1h)
+          | where ClusterName =~ '{ClusterName}'
+          | where Text contains '{fabric_partition_id}' or Id =~ '{fabric_partition_id}'
+          | where EventType == 'DeactivateNode' and TaskName == 'FM'
+          | extend DBNodeName = extract(@"NodeName=\s*([\d\w_]+)", 1, Text), Phase = extract(@"Phase=\s*(\S+)", 1, Text), SafetyCheck = extract(@"SafetyCheck=\s*(\S+),", 1, Text)
+          | project ETWTimestamp, TaskName, EventType, DBNodeName, Phase, SafetyCheck, Text
+          | order by ETWTimestamp asc
+
+  # ──────────────────────────────────────────────────────
+  # HA1000 - Image Download Event
+  # ──────────────────────────────────────────────────────
+  - id: LS-HA1000
+    name: "Image Download Event"
+    source: "SQLLivesiteAgents/Availability/failover/references/queries.md"
+    table: WinFabLogs
+    RequiredParameters:
+      - StartTime
+      - Duration
+      - ClusterName
+      - AppName
+    KustoQueries:
+      - TableName: WinFabLogs
+        ExecutedQuery: |
+          WinFabLogs
+          | where ETWTimestamp between (datetime({StartTime})-1h..{Duration}+1h)
+          | where ClusterName =~ '{ClusterName}'
+          | where EventType =~ 'DownloadManager'
+          | where Text contains '{AppName}'
+          | where isnotnull(NodeName) and NodeName != ''
+          | where isnotnull(ETWTimestamp) and ETWTimestamp > datetime(2020-01-01)
+          | summarize arg_max(ETWTimestamp,*) by NodeName
+          | where isnotnull(ETWTimestamp) and ETWTimestamp > datetime(2020-01-01)
+          | project ETWTimestamp, ClusterName, NodeName, Id, EventType='ImageDownloaded', TaskName, Text
+
+  # ──────────────────────────────────────────────────────
+  # HA1005 - XDB SQL Launch Setup
+  # ──────────────────────────────────────────────────────
+  - id: LS-HA1005
+    name: "XDB SQL Launch Setup"
+    source: "SQLLivesiteAgents/Availability/failover/references/queries.md"
+    table: MonXdbLaunchSetup
+    RequiredParameters:
+      - StartTime
+      - Duration
+      - AppName
+      - PrimaryNodeName
+    KustoQueries:
+      - TableName: MonXdbLaunchSetup
+        ExecutedQuery: |
+          MonXdbLaunchSetup
+          | where TIMESTAMP between (datetime({StartTime})-1d..{Duration}+1d)
+          | where AppName =~ "{AppName}"
+          | where NodeName =~ '{PrimaryNodeName}'
+          | where message_systemmetadata contains "XdbLaunchSqlSetupEntryPointLog"
+          | project originalEventTimestamp, NodeName, message_systemmetadata
+          | order by originalEventTimestamp asc
+
+  # ──────────────────────────────────────────────────────
+  # HA1010 - CodePackage Activation Event
+  # ──────────────────────────────────────────────────────
+  - id: LS-HA1010
+    name: "CodePackage Activation Event"
+    source: "SQLLivesiteAgents/Availability/failover/references/queries.md"
+    table: WinFabLogs
+    RequiredParameters:
+      - StartTime
+      - Duration
+      - ClusterName
+      - AppName
+    KustoQueries:
+      - TableName: WinFabLogs
+        ExecutedQuery: |
+          WinFabLogs
+          | where ETWTimestamp between (datetime({StartTime})-1h..{Duration}+1h)
+          | where ClusterName =~ '{ClusterName}'
+          | where EventType =~ 'HostingHealthManager'
+          | where Text contains '{AppName}'
+          | where Text contains ' CodePackageActivation:Code' and Text contains 'The CodePackage was activated successfully'
+          | where isnotnull(NodeName) and NodeName != ''
+          | where isnotnull(ETWTimestamp) and ETWTimestamp > datetime(2020-01-01)
+          | summarize arg_max(ETWTimestamp,*) by NodeName
+          | where isnotnull(ETWTimestamp) and ETWTimestamp > datetime(2020-01-01)
+          | project ETWTimestamp, ClusterName, NodeName, Id, EventType='CodePackageActivated', TaskName, Text
+
+  # ──────────────────────────────────────────────────────
+  # HA2000 - SQL Process Started Event
+  # ──────────────────────────────────────────────────────
+  - id: LS-HA2000
+    name: "SQL Process Started Event"
+    source: "SQLLivesiteAgents/Availability/failover/references/queries.md"
+    table: MonNodeTraceETW
+    RequiredParameters:
+      - StartTime
+      - Duration
+      - ClusterName
+      - AppName
+      - PrimaryNodeName
+    KustoQueries:
+      - TableName: MonNodeTraceETW
+        ExecutedQuery: |
+          MonNodeTraceETW
+          | where PreciseTimeStamp between (datetime({StartTime})-1h..{Duration}+1h)
+          | where ClusterName =~ '{ClusterName}'
+          | where Message has '{AppName}'
+          | where Message contains 'ServiceManifest Name' and Message contains 'SQL' and Message contains '[InitFabric] Started InitFabric'
+          | where NodeName =~'{PrimaryNodeName}'
+          | where isnotnull(Pid) and Pid > 0
+          | summarize arg_max(PreciseTimeStamp, *) by NodeName, Pid
+          | project PreciseTimeStamp, EventType='SQLProcessStarted', originalEventTimestamp=PreciseTimeStamp, NodeName, Pid, Message
+          | order by PreciseTimeStamp asc
+
+  # ──────────────────────────────────────────────────────
+  # HA2010 - Tempdb Recovery Completed
+  # ──────────────────────────────────────────────────────
+  - id: LS-HA2010
+    name: "Tempdb Recovery Completed"
+    source: "SQLLivesiteAgents/Availability/failover/references/queries.md"
+    table: MonSQLSystemHealth
+    RequiredParameters:
+      - StartTime
+      - Duration
+      - AppName
+      - PrimaryNodeName
+    KustoQueries:
+      - TableName: MonSQLSystemHealth
+        ExecutedQuery: |
+          MonSQLSystemHealth
+          | where PreciseTimeStamp between (datetime({StartTime})..{Duration})
+          | where AppName =~ '{AppName}'
+          | where NodeName =~ '{PrimaryNodeName}'
+          | where message contains "Recovery completed for database tempdb"
+          | project PreciseTimeStamp, message
+          | order by PreciseTimeStamp asc
+
+  # ──────────────────────────────────────────────────────
+  # HA2020 - SQL Server Ready for Client Connections
+  # ──────────────────────────────────────────────────────
+  - id: LS-HA2020
+    name: "SQL Server Ready for Client Connections"
+    source: "SQLLivesiteAgents/Availability/failover/references/queries.md"
+    table: MonSQLSystemHealth
+    RequiredParameters:
+      - StartTime
+      - Duration
+      - AppName
+      - PrimaryNodeName
+    KustoQueries:
+      - TableName: MonSQLSystemHealth
+        ExecutedQuery: |
+          MonSQLSystemHealth
+          | where PreciseTimeStamp between (datetime({StartTime})..{Duration})
+          | where AppName =~ '{AppName}'
+          | where NodeName =~ '{PrimaryNodeName}'
+          | where message contains "SQL Server is now ready for client connections"
+          | project PreciseTimeStamp, message
+          | order by PreciseTimeStamp asc
+
+  # ──────────────────────────────────────────────────────
+  # HA2030 - CFabricReplicaManager Registered Service Type
+  # ──────────────────────────────────────────────────────
+  - id: LS-HA2030
+    name: "CFabricReplicaManager Registered Service Type"
+    source: "SQLLivesiteAgents/Availability/failover/references/queries.md"
+    table: MonSQLSystemHealth
+    RequiredParameters:
+      - StartTime
+      - Duration
+      - AppName
+      - PrimaryNodeName
+    KustoQueries:
+      - TableName: MonSQLSystemHealth
+        ExecutedQuery: |
+          MonSQLSystemHealth
+          | where PreciseTimeStamp between (datetime({StartTime})..{Duration})
+          | where AppName =~ '{AppName}'
+          | where NodeName =~ '{PrimaryNodeName}'
+          | where message contains 'CFabricReplicaManager::Start' and message contains 'Registered service type'
+          | project PreciseTimeStamp, message
+          | top 1 by PreciseTimeStamp asc
+
+  # ──────────────────────────────────────────────────────
+  # HA2040 - SF Requests SQL to Create Replica
+  # ──────────────────────────────────────────────────────
+  - id: LS-HA2040
+    name: "SF Requests SQL to Create Replica"
+    source: "SQLLivesiteAgents/Availability/failover/references/queries.md"
+    table: MonFabricApi
+    RequiredParameters:
+      - StartTime
+      - Duration
+      - AppName
+      - PrimaryNodeName
+      - fabric_partition_id
+    KustoQueries:
+      - TableName: MonFabricApi
+        ExecutedQuery: |
+          MonFabricApi
+          | where originalEventTimestamp between (datetime({StartTime})..{Duration})
+          | where AppName =~ '{AppName}'
+          | where NodeName =~ '{PrimaryNodeName}'
+          | where event == 'hadr_fabric_api_factory_create_replica'
+          | where partition_id =~ '{fabric_partition_id}'
+          | project originalEventTimestamp, NodeName, event
+          | order by originalEventTimestamp asc
+
+  # ──────────────────────────────────────────────────────
+  # HA400 - Write Status Granted on Primary Node
+  # ──────────────────────────────────────────────────────
+  - id: LS-HA400
+    name: "Write Status Granted on Primary Node"
+    source: "SQLLivesiteAgents/Availability/failover/references/queries.md"
+    table: MonFabricApi
+    RequiredParameters:
+      - StartTime
+      - Duration
+      - AppName
+      - physical_database_id
+    KustoQueries:
+      - TableName: MonFabricApi
+        ExecutedQuery: |
+          MonFabricApi
+          | where originalEventTimestamp between (datetime({StartTime})..{Duration})
+          | where AppName =~ '{AppName}'
+          | where physical_database_id =~ '{physical_database_id}'
+          | where event =~ 'hadr_fabric_api_partition_write_status'
+          | project originalEventTimestamp, previous_write_status_desc, current_write_status_desc, NodeName
+          | order by originalEventTimestamp asc
+
+  # ──────────────────────────────────────────────────────
+  # HA4000 - SQL Instance Level Error Messages
+  # ──────────────────────────────────────────────────────
+  - id: LS-HA4000
+    name: "SQL Instance Level Error Messages"
+    source: "SQLLivesiteAgents/Availability/failover/references/queries.md"
+    table: MonSQLSystemHealth
+    RequiredParameters:
+      - StartTime
+      - Duration
+      - AppName
+      - PrimaryNodeName
+      - physical_database_id
+      - LogicalDatabaseName
+      - fabric_partition_id
+      - logical_database_id
+    KustoQueries:
+      - TableName: MonSQLSystemHealth
+        ExecutedQuery: |
+          let IsRelevantMessage = (s: string)
+          {
+              s !contains 'accepting vlf header' and
+              s !contains 'CHadrTransportReplica' and
+              s !contains 'CFabricCommonUtils' and
+              s !contains 'HADR TRANSPOR' and
+              s !contains 'DbMgrPartnerCommitPolicy' and
+              s !contains 'AlwaysOn Availability Groups' and
+              s !contains 'Querying Property Manager' and
+              s !contains 'This is an informational message only'
+          };
+          let IsRelevantDatabase = (s: string)
+          {
+          s contains '{physical_database_id}'
+           or s contains '{LogicalDatabaseName}'
+              or s contains '{fabric_partition_id}'
+              or s contains '{logical_database_id}'
+          };
+          MonSQLSystemHealth
+          | where PreciseTimeStamp between (datetime({StartTime})..{Duration})
+          | where AppName =~ '{AppName}' and event == 'systemmetadata_written'
+          | where NodeName =~ '{PrimaryNodeName}'
+          | extend ErrorStateCode = extract('Error: [0-9]*, Severity: [0-9]*, State: [0-9]*', 0, message)
+          | extend DisplayMessage = replace('[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] [0-9][0-9]:[0-9][0-9]:[0-9][0-9].[0-9]+ [a-zA-Z0-9]* ', '', message)
+          | extend DisplayMessage = trim(@'[\t\n\f\r ]+', DisplayMessage)
+          | extend ErrorStateCode = iff(ErrorStateCode != '', ErrorStateCode, '(No specific error code)')
+          | where ErrorStateCode !contains '(No specific error code)'
+          | summarize FirstSeenTimestamp=min(PreciseTimeStamp), LastSeenTimeStamp=max(PreciseTimeStamp), ErrorCount=count(), SampleMessage=any(DisplayMessage) by ClusterName, NodeName, AppName, process_id, ErrorStateCode
+          | extend originalEventTimestamp=FirstSeenTimestamp
+          | extend EventType='Error'
+          | order by FirstSeenTimestamp asc
+
+  # ──────────────────────────────────────────────────────
+  # HA4010 - SQL Instance Errorlog Gaps
+  # ──────────────────────────────────────────────────────
+  - id: LS-HA4010
+    name: "SQL Instance Errorlog Gaps"
+    source: "SQLLivesiteAgents/Availability/failover/references/queries.md"
+    table: MonSQLSystemHealth
+    RequiredParameters:
+      - StartTime
+      - Duration
+      - AppName
+      - PrimaryNodeName
+    KustoQueries:
+      - TableName: MonSQLSystemHealth
+        ExecutedQuery: |
+          let Errormsg=
+          (MonSQLSystemHealth
+          | where PreciseTimeStamp between (datetime({StartTime})..{Duration})
+          | where AppName =~ '{AppName}' and NodeName =~ '{PrimaryNodeName}'
+          | summarize count() by bin(PreciseTimeStamp, 5min), NodeName, AppName
+          );
+           union Errormsg,(print PreciseTimeStamp=datetime({StartTime}), NodeName='{PrimaryNodeName}', AppName='{AppName}'),  (print PreciseTimeStamp=datetime({StartTime})+{Duration}, NodeName='{PrimaryNodeName}', AppName='{AppName}')
+          | order by PreciseTimeStamp asc
+          | serialize
+          | extend PreviousTimestamp = prev(PreciseTimeStamp, 1)
+          | extend GapMins = round((PreciseTimeStamp - PreviousTimestamp)/1min,0)
+          | where GapMins > 15
+          | project
+              GapStart = PreviousTimestamp,
+              GapEnd = PreciseTimeStamp,
+              GapMins,
+              EventType='MonSQLSystemHealthTimeGap',
+              NodeName,
+              AppName,
+              originalEventTimestamp = PreviousTimestamp
+          | order by GapStart asc
+
+  # ──────────────────────────────────────────────────────
+  # HA4020 - User Database Recovery Completed
+  # ──────────────────────────────────────────────────────
+  - id: LS-HA4020
+    name: "User Database Recovery Completed"
+    source: "SQLLivesiteAgents/Availability/failover/references/queries.md"
+    table: MonSQLSystemHealth
+    RequiredParameters:
+      - StartTime
+      - Duration
+      - AppName
+      - PrimaryNodeName
+      - physical_database_id
+    KustoQueries:
+      - TableName: MonSQLSystemHealth
+        ExecutedQuery: |
+          MonSQLSystemHealth
+          | where PreciseTimeStamp between (datetime({StartTime})..{Duration})
+          | where AppName =~ '{AppName}'
+          | where NodeName =~ '{PrimaryNodeName}'
+          | where message contains '{physical_database_id}' and (message contains 'Recovery Completed')
+          | project originalEventTimestamp, NodeName, message, process_id
+
+  # ──────────────────────────────────────────────────────
+  # HA5005 - Role Changed to Primary?
+  # ──────────────────────────────────────────────────────
+  - id: LS-HA5005
+    name: "Has Role Changed to Primary?"
+    source: "SQLLivesiteAgents/Availability/failover/references/queries.md"
+    table: MonFabricApi
+    RequiredParameters:
+      - StartTime
+      - Duration
+      - AppName
+      - PrimaryNodeName
+      - physical_database_id
+    KustoQueries:
+      - TableName: MonFabricApi
+        ExecutedQuery: |
+          MonFabricApi
+          | where originalEventTimestamp between (datetime({StartTime})..{Duration})
+          | where AppName =~ '{AppName}'
+          | where NodeName =~ '{PrimaryNodeName}'
+          | where event in ('hadr_fabric_api_replicator_begin_change_role', 'hadr_fabric_api_replicator_end_change_role')
+          | where physical_database_id =~ '{physical_database_id}' or service_name contains '{physical_database_id}'
+          | project originalEventTimestamp, NodeName, event, physical_database_id, current_state_desc, new_role_desc
+          | order by originalEventTimestamp asc
+
+  # ──────────────────────────────────────────────────────
+  # HA5000 - MonFabricApi Events (Full)
+  # ──────────────────────────────────────────────────────
+  - id: LS-HA5000
+    name: "MonFabricApi Events (Full)"
+    source: "SQLLivesiteAgents/Availability/failover/references/queries.md"
+    table: MonFabricApi
+    RequiredParameters:
+      - StartTime
+      - Duration
+      - AppName
+      - PrimaryNodeName
+      - physical_database_id
+    KustoQueries:
+      - TableName: MonFabricApi
+        ExecutedQuery: |
+          MonFabricApi
+          | where originalEventTimestamp between (datetime({StartTime})..{Duration})
+          | where AppName =~ '{AppName}'
+          | where NodeName =~ '{PrimaryNodeName}'
+          | where physical_database_id =~ '{physical_database_id}' or service_name contains '{physical_database_id}'
+          | where event in ('hadr_fabric_api_replicator_begin_change_role','hadr_fabric_api_replicator_end_change_role', 'hadr_fabric_replica_fault', 'hadr_fabric_api_partition_write_status', 'hadr_fabric_api_factory_create_replica')
+          | project originalEventTimestamp, NodeName, AppName, event, physical_database_id, current_state_desc, new_role_desc,
+              process_id, work_id, result_desc, fault_type_desc, fault_reason_desc, previous_write_status_desc, current_write_status_desc,
+              fabric_replica_id, partition_id, service_type, service_name, initialization_data
+          | order by originalEventTimestamp asc
+
+  # ──────────────────────────────────────────────────────
+  # HA6005 - Summarize Error Log Entries by Process
+  # ──────────────────────────────────────────────────────
+  - id: LS-HA6005
+    name: "Summarize Error Log Entries by Process"
+    source: "SQLLivesiteAgents/Availability/failover/references/queries.md"
+    table: MonSQLSystemHealth
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - AppName
+    KustoQueries:
+      - TableName: MonSQLSystemHealth
+        ExecutedQuery: |
+          MonSQLSystemHealth
+          | where originalEventTimestamp between (datetime({StartTime})-1h..datetime({EndTime})+1h)
+          | where AppName =~ '{AppName}'
+          | extend hour_present = toint(hourofday(originalEventTimestamp))
+          | summarize log_entry_count = count(), earliest_timestamp = min(originalEventTimestamp), latest_timestamp = max(originalEventTimestamp), hours_present = tostring(array_sort_asc(make_set(hour_present))) by ClusterName, NodeName, AppName, process_id
+          | order by earliest_timestamp asc, latest_timestamp desc, process_id asc
+          | serialize
+          | extend gap_from_previous_in_seconds = iif(earliest_timestamp > prev(latest_timestamp), datetime_diff('second', earliest_timestamp, prev(latest_timestamp)), -1)
+
+  # ──────────────────────────────────────────────────────
+  # HA6010 - SF Process Activations and Terminations
+  # ──────────────────────────────────────────────────────
+  - id: LS-HA6010
+    name: "SF Process Activations and Terminations"
+    source: "SQLLivesiteAgents/Availability/failover/references/queries.md"
+    table: WinFabLogs
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - ClusterName
+      - NodeName
+      - AppName
+    KustoQueries:
+      - TableName: WinFabLogs
+        ExecutedQuery: |
+          WinFabLogs
+          | where ETWTimestamp between (datetime({StartTime})-1h..datetime({EndTime})+1h)
+          | where ClusterName =~ '{ClusterName}'
+          | where NodeName =~ '{NodeName}'
+          | where Text contains '{AppName}'
+          | where TaskName =~ 'Hosting' and EventType =~ 'EventDispatcher'
+          | extend EventName = extract(@'.+ EventName:([^,]*), .+, ApplicationId=([^,]*), .+, ExitCode=([^,]*), ApplicationName=([^,]*), ServicePackageName=([^,]*), .+ApplicationHostId=([^,]+), .+', 1, Text)
+          | extend fabricApplicationURI = extract(@'.+ EventName:([^,]*), .+, ApplicationId=([^,]*), .+, ExitCode=([^,]*), ApplicationName=([^,]*), ServicePackageName=([^,]*), .+ApplicationHostId=([^,]+), .+', 4, Text)
+          | extend ApplicationID = extract(@'.+ EventName:([^,]*), .+, ApplicationId=([^,]*), .+, ExitCode=([^,]*), ApplicationName=([^,]*), ServicePackageName=([^,]*), .+ApplicationHostId=([^,]+), .+', 2, Text)
+          | extend ServicePackageName = extract(@'.+ EventName:([^,]*), .+, ApplicationId=([^,]*), .+, ExitCode=([^,]*), ApplicationName=([^,]*), ServicePackageName=([^,]*), .+ApplicationHostId=([^,]+), .+', 5, Text)
+          | extend ExitCode = toint(extract(@'.+ EventName:([^,]*), .+, ApplicationId=([^,]*), .+, ExitCode=([^,]*), ApplicationName=([^,]*), ServicePackageName=([^,]*), .+ApplicationHostId=([^,]+), .+', 3, Text))
+          | extend ApplicationHostID = extract(@'.+ EventName:([^,]*), .+, ApplicationId=([^,]*), .+, ExitCode=([^,]*), ApplicationName=([^,]*), ServicePackageName=([^,]*), .+ApplicationHostId=([^,]+), .+', 6, Text)
+          | where EventName in~ ('CodePackageActivated', 'CodePackageDeactivated')
+          | project ETWTimestamp, ClusterName, NodeName, TaskName, EventType, EventName, fabricApplicationURI, ApplicationID, ServicePackageName, ExitCode, ApplicationHostID, Text
+          | join kind = leftouter (
+              WinFabLogs
+              | where ETWTimestamp between (datetime({StartTime})-1h..datetime({EndTime})+1h)
+              | where ClusterName =~ '{ClusterName}'
+              | where NodeName =~ '{NodeName}'
+              | where TaskName =~ 'Hosting' and EventType =~ 'ApplicationService'
+              | where Text matches regex @'Application Service ([^\s]+) was activated with process id (\d+), ExeName (.+)'
+              | extend ApplicationHostID = extract(@'Application Service ([^\s]+) was activated with process id (\d+), ExeName (.+)', 1, Text)
+              | extend ProcessID = toint(extract(@'Application Service ([^\s]+) was activated with process id (\d+), ExeName (.+)', 2, Text))
+              | extend EXEName = extract(@'Application Service ([^\s]+) was activated with process id (\d+), ExeName (.+)', 3, Text)
+              | distinct ClusterName, NodeName, ApplicationHostID, ProcessID, EXEName
+          ) on ClusterName, NodeName, ApplicationHostID
+          | project ETWTimestamp, ClusterName, NodeName, TaskName, EventType, EventName, fabricApplicationURI, ApplicationHostID, ServicePackageName, ProcessID, EXEName, ExitCode
+          | order by ETWTimestamp asc
+
+  # ──────────────────────────────────────────────────────
+  # HA6015 - First and Last Log Entries from MonXdbLaunchSetup
+  # ──────────────────────────────────────────────────────
+  - id: LS-HA6015
+    name: "First and Last Log Entries from MonXdbLaunchSetup"
+    source: "SQLLivesiteAgents/Availability/failover/references/queries.md"
+    table: MonXdbLaunchSetup
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - AppName
+    KustoQueries:
+      - TableName: MonXdbLaunchSetup
+        ExecutedQuery: |
+          MonXdbLaunchSetup
+          | where originalEventTimestamp between (datetime({StartTime})-1h..datetime({EndTime})+1h)
+          | where AppName =~ '{AppName}'
+          | summarize LogEntryCount = count(), arg_min(originalEventTimestamp, message_systemmetadata), arg_max(originalEventTimestamp, message_systemmetadata) by ClusterName, NodeName, AppName, process_id
+          | project EarliestEventTimestamp = originalEventTimestamp, LatestEventTimestamp = originalEventTimestamp1, EntriesTimespanInSeconds = datetime_diff('second', originalEventTimestamp1, originalEventTimestamp), ClusterName, NodeName, AppName, process_id, LogEntryCount, FirstMessage = message_systemmetadata, LastMessage = message_systemmetadata1
+          | order by EarliestEventTimestamp asc, LatestEventTimestamp desc
+
+  # ──────────────────────────────────────────────────────
+  # HA6020 - First and Last Log Entries from MonNodeTraceETW
+  # ──────────────────────────────────────────────────────
+  - id: LS-HA6020
+    name: "First and Last Log Entries from MonNodeTraceETW"
+    source: "SQLLivesiteAgents/Availability/failover/references/queries.md"
+    table: MonNodeTraceETW
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - ClusterName
+      - AppName
+      - NodeName
+    KustoQueries:
+      - TableName: MonNodeTraceETW
+        ExecutedQuery: |
+          MonNodeTraceETW
+          | where TIMESTAMP between (datetime({StartTime})-1h..datetime({EndTime})+1h)
+          | where ClusterName =~ '{ClusterName}' and NodeName =~ '{NodeName}'
+          | where Message contains ' CodePackageName "Code" ServiceManifest Name "SQL"'
+          | where Message has '{AppName}'
+          | extend Message = extract(@' Message : "(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{2}\s+\w+\s+)?(.+?)[\r\n]?"', 2, Message)
+          | where isnotempty(Message)
+          | where Message !contains 'Not reporting metrics'
+          | summarize LogEntryCount = count(), arg_min(TIMESTAMP, Message), arg_max(TIMESTAMP, Message) by ClusterName, NodeName, Pid
+          | project EarliestEventTimestamp = TIMESTAMP, LatestEventTimestamp = TIMESTAMP1, EntriesTimespanInSeconds = datetime_diff('second', TIMESTAMP1, TIMESTAMP), ClusterName, NodeName, Pid, LogEntryCount, FirstMessage = Message, LastMessage = Message1
+          | order by EarliestEventTimestamp asc, LatestEventTimestamp desc
