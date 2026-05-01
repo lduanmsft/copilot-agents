@@ -23,8 +23,13 @@ distilled: 2026-05-01
 | EndTime | User/ICM | `2026-01-01 03:00:00` (UTC) |
 
 **Tips**:
-- 时间窗口建议在客户报告的时间上下各扩展 1 小时
-- 如果有 ICM: 优先用 `ObservedStartTime` → `ImpactStartTime` → `CreatedDate`; EndTime 用 `MitigateTime` → 当前时间 (cap at StartTime + 7h)
+- 时间窗口建议在客户报告的时间上下各扩展 1 小时: `StartTime = 报告时间 - 1h`, `EndTime = 报告时间 + 1h`
+- 如果有 ICM:
+  - **ServerName**: `ServerName` → `CustomerServerName` → parse from title
+  - **DatabaseName**: `DatabaseName` → `CustomerDatabaseName` → parse from title (多个用逗号分隔时取第一个)
+  - **StartTime**: `ObservedStartTime` → `ImpactStartTime` → `CreatedDate`, 然后 -1h
+  - **EndTime**: `MitigateTime` → 当前 UTC (cap at StartTime + 7h), 然后 +1h
+- **MI 案例**: 如果是 Managed Instance (Worker.CL), 请参考 `mi/availability/unhealthy-worker-cl/`
 
 ## Phase 0: Prerequisites
 
@@ -40,6 +45,7 @@ distilled: 2026-05-01
 - **Skill**: `get-db-info` (Common/get-db-info/SKILL.md)
 - 查询获取: AppName, ClusterName, NodeName, physical_database_id, fabric_partition_id, SLO, deployment_type, zone_resilient
 - 如果时间窗口内有 SLO 变更或 failover → 可能有多个配置，需为每个配置分别分析
+- **自动路由**: 如果 get-db-info 返回 `db_state` = `UpdateSloTarget` 或 `AddSecondary` → 自动加入 `update-slo` route
 
 ## Phase 1: Triage — 确定问题类型
 
