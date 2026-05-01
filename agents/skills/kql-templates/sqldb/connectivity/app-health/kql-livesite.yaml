@@ -1,0 +1,196 @@
+# ============================================================================
+# kql-livesite.yaml — App Health KQL Templates
+# ============================================================================
+# Priority: P1 (highest)
+# Source: SQLLivesiteAgents / Connectivity / connectivity-utilities / app-health / references/queries.md
+# Distilled: 2026-05-01
+# ============================================================================
+# Covers: sqlservr process restart, LoginOutages audit, MonNonPiiAudit trail,
+#         system health warning pattern aggregation, raw system health messages
+# ============================================================================
+
+SqlSkills:
+
+  # ──────────────────────────────────────────────────────
+  # AH100 - Process ID Change Detection (sqlservr restart)
+  # ──────────────────────────────────────────────────────
+  - id: LS-AH100
+    name: "Process ID Change Detection (sqlservr restart)"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-utilities/app-health/references/queries.md"
+    table: MonSQLSystemHealth
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - AppName
+      - ClusterName
+      - NodeName
+    KustoQueries:
+      - TableName: MonSQLSystemHealth
+        ExecutedQuery: |
+          let _startTime = datetime({StartTime});
+          let _endTime = datetime({EndTime});
+          MonSQLSystemHealth
+          | where originalEventTimestamp between (_startTime.._endTime)
+          | where AppName =~ '{AppName}'
+          | where ClusterName =~ '{ClusterName}'
+          | where NodeName =~ '{NodeName}'
+          | summarize min_time = min(originalEventTimestamp), max_time = max(originalEventTimestamp)
+              by process_id
+          | order by min_time asc
+
+  # ──────────────────────────────────────────────────────
+  # AH200 - LoginOutages Audit
+  # ──────────────────────────────────────────────────────
+  - id: LS-AH200
+    name: "LoginOutages Audit"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-utilities/app-health/references/queries.md"
+    table: LoginOutages
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - LogicalServerName
+      - LogicalDatabaseName
+    KustoQueries:
+      - TableName: LoginOutages
+        ExecutedQuery: |
+          let _startTime = datetime({StartTime});
+          let _endTime = datetime({EndTime});
+          LoginOutages
+          | where TIMESTAMP between (_startTime.._endTime)
+          | where logical_server_name =~ '{LogicalServerName}'
+          | where database_name =~ '{LogicalDatabaseName}'
+          | project TIMESTAMP, logical_server_name, database_name, OutageReasonLevel1, OutageReasonLevel2, OutageReasonLevel3
+          | order by TIMESTAMP asc
+
+  # ──────────────────────────────────────────────────────
+  # AH210 - MonNonPiiAudit Trail (App/Node actions)
+  # ──────────────────────────────────────────────────────
+  - id: LS-AH210
+    name: "MonNonPiiAudit Trail (App/Node actions)"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-utilities/app-health/references/queries.md"
+    table: MonNonPiiAudit
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - AppName
+      - ClusterName
+      - NodeName
+    KustoQueries:
+      - TableName: MonNonPiiAudit
+        ExecutedQuery: |
+          let _startTime = datetime({StartTime});
+          let _endTime = datetime({EndTime});
+          let _AppName = '{AppName}';
+          let _ClusterName = '{ClusterName}';
+          let _NodeName = '{NodeName}';
+          MonNonPiiAudit
+          | where TIMESTAMP between (_startTime.._endTime)
+          | where * contains _ClusterName and * contains _NodeName and * contains _AppName
+          | where request_action !in~ ("ExecuteCMSQuery", "FabricClusters()", "FabricNodes()", "ExecuteCMSQueryJSON", "ExecuteQuery") and request_action !startswith "Get"
+          | project time_created, username, request_action, request, parameters
+          | order by time_created asc
+
+  # ──────────────────────────────────────────────────────
+  # AH305 - Known Warning Pattern Aggregation
+  # ──────────────────────────────────────────────────────
+  - id: LS-AH305
+    name: "Known Warning Pattern Aggregation (System Health)"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-utilities/app-health/references/queries.md"
+    table: MonSQLSystemHealth
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - AppName
+      - ClusterName
+      - NodeName
+    KustoQueries:
+      - TableName: MonSQLSystemHealth
+        Note: "Run FIRST before AH300. Aggregates known warning patterns."
+        ExecutedQuery: |
+          let _startTime = datetime({StartTime});
+          let _endTime = datetime({EndTime});
+          MonSQLSystemHealth
+          | where originalEventTimestamp between (_startTime.._endTime)
+          | where AppName =~ '{AppName}'
+          | where ClusterName =~ '{ClusterName}'
+          | where NodeName =~ '{NodeName}'
+          | where isnotempty(message)
+          | extend Pattern = case(
+              message contains "I/O requests taking longer than 15 seconds", "I/O_slow",
+              message contains "significant part of sql server process memory has been paged out" or message contains "low on virtual memory" or message contains "memory broker", "Memory_pressure",
+              message contains "was deadlocked on" or message contains "chosen as the deadlock victim", "Deadlock",
+              message contains "stack dump" or message contains "stack signature", "StackDump",
+              message contains "fatal error" or message contains "exception" or message contains "access violation", "Crash_or_exception",
+              message contains "error: 823" or message contains "error: 824" or message contains "I/O error", "IO_error",
+              message contains "recovery of database" and message contains "is" and message contains "% complete", "Long_recovery",
+              message contains "connection forcibly closed" or message contains "login timeout" or message contains "transport-level error", "Connectivity_issue",
+              "Informational")
+          | where Pattern != "Informational"
+          | extend OccurrenceCount = toint(extract("encountered ([0-9]+) occurrence", 1, message))
+          | summarize MessageCount=count(), TotalOccurrences=sum(coalesce(OccurrenceCount, 1)), MinTime=min(originalEventTimestamp), MaxTime=max(originalEventTimestamp), SampleMessage=take_any(message) by Pattern
+          | order by MessageCount desc
+
+  # ──────────────────────────────────────────────────────
+  # AH305_pre - Warning Pattern Pre-Window Check
+  # ──────────────────────────────────────────────────────
+  - id: LS-AH305-pre
+    name: "Warning Pattern Pre-Window Check (Chronic vs Acute)"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-utilities/app-health/references/queries.md"
+    table: MonSQLSystemHealth
+    RequiredParameters:
+      - StartTime
+      - AppName
+      - ClusterName
+      - NodeName
+    KustoQueries:
+      - TableName: MonSQLSystemHealth
+        Note: "Checks 2 hours before incident start to classify chronic vs acute"
+        ExecutedQuery: |
+          let _checkStart = datetime({StartTime}) - 2h;
+          let _checkEnd = datetime({StartTime});
+          MonSQLSystemHealth
+          | where originalEventTimestamp between (_checkStart.._checkEnd)
+          | where AppName =~ '{AppName}'
+          | where ClusterName =~ '{ClusterName}'
+          | where NodeName =~ '{NodeName}'
+          | where isnotempty(message)
+          | extend Pattern = case(
+              message contains "I/O requests taking longer than 15 seconds", "I/O_slow",
+              message contains "significant part of sql server process memory has been paged out" or message contains "low on virtual memory" or message contains "memory broker", "Memory_pressure",
+              message contains "was deadlocked on" or message contains "chosen as the deadlock victim", "Deadlock",
+              message contains "stack dump" or message contains "stack signature", "StackDump",
+              message contains "fatal error" or message contains "exception" or message contains "access violation", "Crash_or_exception",
+              message contains "error: 823" or message contains "error: 824" or message contains "I/O error", "IO_error",
+              message contains "recovery of database" and message contains "is" and message contains "% complete", "Long_recovery",
+              message contains "connection forcibly closed" or message contains "login timeout" or message contains "transport-level error", "Connectivity_issue",
+              "Informational")
+          | where Pattern != "Informational"
+          | summarize MessageCount=count(), MinTime=min(originalEventTimestamp), MaxTime=max(originalEventTimestamp) by Pattern
+
+  # ──────────────────────────────────────────────────────
+  # AH300 - Raw System Health Messages (Optional Drill-Down)
+  # ──────────────────────────────────────────────────────
+  - id: LS-AH300
+    name: "Raw System Health Messages"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-utilities/app-health/references/queries.md"
+    table: MonSQLSystemHealth
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - AppName
+      - ClusterName
+      - NodeName
+    KustoQueries:
+      - TableName: MonSQLSystemHealth
+        Note: "Only run after AH305 finds a pattern needing investigation"
+        ExecutedQuery: |
+          let _startTime = datetime({StartTime});
+          let _endTime = datetime({EndTime});
+          MonSQLSystemHealth
+          | where originalEventTimestamp between (_startTime.._endTime)
+          | where AppName =~ '{AppName}'
+          | where ClusterName =~ '{ClusterName}'
+          | where NodeName =~ '{NodeName}'
+          | where isnotempty(message)
+          | project originalEventTimestamp, NodeName, message
+          | order by originalEventTimestamp asc

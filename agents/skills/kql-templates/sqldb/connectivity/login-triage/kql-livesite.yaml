@@ -1,0 +1,203 @@
+# ============================================================================
+# kql-livesite.yaml — Login Triage Base KQL Templates
+# ============================================================================
+# Priority: P1 (highest)
+# Source: SQLLivesiteAgents / Connectivity / connectivity-base / (inline SKILL.md)
+# Distilled: 2026-05-01
+# ============================================================================
+# Covers: determine-login-outage, determine-prevailing-error,
+#         determine-connectivity-ring, determine-login-target,
+#         connectivity-connection-type
+# ============================================================================
+
+SqlSkills:
+
+  # ──────────────────────────────────────────────────────
+  # CONN-BASE-01 - Check Login Outage by Server/Database
+  # ──────────────────────────────────────────────────────
+  - id: LS-CONN-BASE-01
+    name: "Check Login Outage by Server/Database"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-base/determine-login-outage/SKILL.md"
+    table: LoginOutages
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - LogicalServerName
+      - LogicalDatabaseName
+    KustoQueries:
+      - TableName: LoginOutages
+        ExecutedQuery: |
+          LoginOutages
+          | where outageStartTime between (datetime({StartTime})..datetime({EndTime}))
+          | where logical_server_name =~ "{LogicalServerName}" and database_name =~ "{LogicalDatabaseName}"
+          | project outageStartTime, outageEndTime, durationSeconds, OutageType, OutageReasonLevel1, OutageReasonLevel2, OutageReasonLevel3, OwningTeam
+          | order by outageStartTime asc
+
+  # ──────────────────────────────────────────────────────
+  # CONN-BASE-02 - Check DB Node Outage Events
+  # ──────────────────────────────────────────────────────
+  - id: LS-CONN-BASE-02
+    name: "Check DB Node Infra Health Events"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-base/determine-login-outage/SKILL.md"
+    table: MonSQLInfraHealthEvents
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - TenantRingName
+      - DBNodeName
+    KustoQueries:
+      - TableName: MonSQLInfraHealthEvents
+        Note: "Always query from cluster('sqlstage.kusto.windows.net').database('sqlazure1')"
+        ExecutedQuery: |
+          let _TargetTRRing = "{TenantRingName}";
+          let _TargetDBNode = "{DBNodeName}";
+          let _StartTime = datetime({StartTime});
+          let _EndTime = datetime({EndTime});
+          cluster('sqlstage.kusto.windows.net').database('sqlazure1').MonSQLInfraHealthEvents
+          | where FaultTime between (_StartTime.._EndTime)
+          | where ClusterName =~ _TargetTRRing and NodeName =~ _TargetDBNode
+
+  # ──────────────────────────────────────────────────────
+  # CONN-BASE-03 - Determine Connectivity Ring
+  # ──────────────────────────────────────────────────────
+  - id: LS-CONN-BASE-03
+    name: "Determine Connectivity Ring(s) for Server/Database"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-base/determine-connectivity-ring/SKILL.md"
+    table: MonLogin
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - LogicalServerName
+      - LogicalDatabaseName
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          MonLogin
+          | where originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where logical_server_name =~ '{LogicalServerName}' and database_name =~ '{LogicalDatabaseName}'
+          | where event =~ "process_login_finish"
+          | where AppTypeName =~ "Gateway"
+          | summarize TotalLogins=count(), LoginWithError=countif(is_success == false), min(TIMESTAMP), max(TIMESTAMP) by ConnectivityRing=ClusterName
+
+  # ──────────────────────────────────────────────────────
+  # CONN-BASE-04 - Determine Login Target (TR Ring + DB Node)
+  # ──────────────────────────────────────────────────────
+  - id: LS-CONN-BASE-04
+    name: "Determine Login Target TR Ring and DB Node"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-base/determine-login-target/SKILL.md"
+    table: MonLogin
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - LogicalServerName
+      - LogicalDatabaseName
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          let _logical_server_name = '{LogicalServerName}';
+          let _database_name = '{LogicalDatabaseName}';
+          let _StartTime = datetime({StartTime});
+          let _EndTime = datetime({EndTime});
+          MonLogin
+          | where TIMESTAMP between ((_StartTime - 30min)..(_EndTime + 30min))
+          | where logical_server_name =~ _logical_server_name or LogicalServerName =~ _logical_server_name
+          | where database_name =~ _database_name
+          | where package == "xdbgateway"
+          | where event == "process_login_finish"
+          | extend TargetTRRing = substring(instance_name, indexof(instance_name, ".") + 1)
+          | extend instance = tostring(split(instance_name, ".")[0])
+          | where TargetTRRing != ""
+          | extend TargetDBNode = tostring(split(fabric_node_name, "\\")[1])
+          | summarize count(), min(TIMESTAMP), max(TIMESTAMP) by instance_name, TargetTRRing, TargetDBNode
+
+  # ──────────────────────────────────────────────────────
+  # CONN-BASE-05 - Determine Prevailing Error (General Screen)
+  # ──────────────────────────────────────────────────────
+  - id: LS-CONN-BASE-05
+    name: "Determine Prevailing Error - General Screen"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-base/determine-prevailing-error/SKILL.md"
+    table: MonLogin
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - LogicalServerName
+      - LogicalDatabaseName
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          MonLogin
+          | where originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where logical_server_name =~ '{LogicalServerName}' and database_name =~ '{LogicalDatabaseName}'
+          | where event =~ "process_login_finish"
+          | where is_success == false
+          | summarize min(originalEventTimestamp), max(originalEventTimestamp), count(), take_any(message, extra_info), avg(total_time_ms) by ClusterName, package, AppTypeName, is_success, is_user_error, error, state, state_desc, lookup_state, read_only_intent = toint(login_flags / 2097152) % 2
+
+  # ──────────────────────────────────────────────────────
+  # CONN-BASE-06 - Narrow Down Error by GW/DB Node
+  # ──────────────────────────────────────────────────────
+  - id: LS-CONN-BASE-06
+    name: "Narrow Down Error by GW/DB Node"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-base/determine-prevailing-error/SKILL.md"
+    table: MonLogin
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - LogicalServerName
+      - LogicalDatabaseName
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          MonLogin
+          | where originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where logical_server_name =~ '{LogicalServerName}' and database_name =~ '{LogicalDatabaseName}'
+          | where event =~ "process_login_finish"
+          | summarize min(originalEventTimestamp), max(originalEventTimestamp), TotalLogins=count(), LoginWithError=countif(is_success == false), avg(total_time_ms) by ClusterName, NodeName, error, state
+
+  # ──────────────────────────────────────────────────────
+  # CONN-BASE-07 - Connection Type Analysis
+  # ──────────────────────────────────────────────────────
+  - id: LS-CONN-BASE-07
+    name: "Determine Connection Type (Proxy/Redirect/Endpoint)"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-base/connectivity-connection-type/SKILL.md"
+    table: MonLogin
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - LogicalServerName
+      - LogicalDatabaseName
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          MonLogin
+          | where originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where logical_server_name =~ '{LogicalServerName}' and database_name =~ '{LogicalDatabaseName}'
+          | where event =~ "process_login_finish"
+          | where package =~ 'xdbgateway'
+          | where proxy_override != 'eProxyOverrideBehaviorInvalid' and isnotempty(proxy_override)
+          | summarize min(originalEventTimestamp), max(originalEventTimestamp), count() by proxy_override, result, is_azure_ip, is_vnet_address, is_vnet_private_access_address, redirection_map_id, validated_driver_name_and_version, vnet_gre_key, vnet_subnet_id, vnet_link_identifier
+          | sort by min_originalEventTimestamp
+
+  # ──────────────────────────────────────────────────────
+  # CONN-BASE-08 - Brain Alert: Region to Kusto Cluster Resolution
+  # ──────────────────────────────────────────────────────
+  - id: LS-CONN-BASE-08
+    name: "Resolve Region to Kusto Cluster (for BRAIN alerts)"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-scenarios/brain-low-login-success-rate/SKILL.md"
+    table: MonSQLTenantSnapshot
+    RequiredParameters:
+      - Region
+    KustoQueries:
+      - TableName: MonSQLTenantSnapshot
+        Note: "Always query from sqlstage + sqladhoc regardless of target region"
+        ExecutedQuery: |
+          let _inputRegion = "{Region}";
+          let _clustername = cluster('sqlstage.kusto.windows.net').database('sqlazure1').MonSQLTenantSnapshot
+          | distinct AzureRegion, Region
+          | where AzureRegion =~ _inputRegion
+          | extend _cluster = tolower(Region)
+          | distinct _cluster;
+          cluster('sqladhoc.kusto.windows.net').database('sqlazure1').KustoConnectionConfiguration
+          | extend ClusterName = tolower(ClusterName)
+          | where ClusterName in (_clustername)
+          | project DataSource, InitialCatalog
+          | take 1

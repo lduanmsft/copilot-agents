@@ -1,0 +1,64 @@
+# ============================================================================
+# kql-livesite.yaml — Brain Login Alert KQL Templates
+# ============================================================================
+# Priority: P1 (highest)
+# Source: SQLLivesiteAgents / Connectivity / connectivity-scenarios / brain-low-login-success-rate / SKILL.md
+# Distilled: 2026-05-01
+# ============================================================================
+# Covers: connectivity ring system error rate, error/state distribution
+#         with target TR ring drill-down
+# ============================================================================
+
+SqlSkills:
+
+  # ──────────────────────────────────────────────────────
+  # BRAIN-01 - Connectivity Ring System Error Rate
+  # ──────────────────────────────────────────────────────
+  - id: LS-BRAIN-01
+    name: "Connectivity Ring System Error Rate"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-scenarios/brain-low-login-success-rate/SKILL.md"
+    table: MonLogin
+    RequiredParameters:
+      - StartTime
+      - EndTime
+    KustoQueries:
+      - TableName: MonLogin
+        Note: "Entries with SysErrRate > 1% have significant impact"
+        ExecutedQuery: |
+          let _startTime = datetime({StartTime});
+          let _endTime = datetime({EndTime});
+          MonLogin
+          | where TIMESTAMP between (_startTime.._endTime)
+          | where package =~ "xdbgateway" and AppName == "Gateway"
+          | where event == "process_login_finish"
+          | extend LoginResult = iff(is_success == 1, 'Success', iff(is_user_error == 0 or total_time_ms > 10000, 'SystemError', 'UserError'))
+          | summarize Total=count(), SysErr=countif(LoginResult == "SystemError") by ClusterName
+          | extend SysErrRate = round(100.0 * todouble(SysErr) / todouble(Total), 2)
+          | sort by SysErrRate desc
+
+  # ──────────────────────────────────────────────────────
+  # BRAIN-02 - Error/State Distribution with Target TR Ring
+  # ──────────────────────────────────────────────────────
+  - id: LS-BRAIN-02
+    name: "Error/State Distribution with Target TR Ring"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-scenarios/brain-low-login-success-rate/SKILL.md"
+    table: MonLogin
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - ConnectivityRings
+    KustoQueries:
+      - TableName: MonLogin
+        Note: "ConnectivityRings = list of ClusterNames with high SysErrRate from BRAIN-01"
+        ExecutedQuery: |
+          let _startTime = datetime({StartTime});
+          let _endTime = datetime({EndTime});
+          let _cr = dynamic([{ConnectivityRings}]);
+          MonLogin
+          | where TIMESTAMP between (_startTime.._endTime)
+          | where ClusterName in~ (_cr)
+          | where event == "process_login_finish" and is_user_error == 0 and is_success == 0 and error > 0
+          | extend TargetTRRing = substring(instance_name, indexof(instance_name, ".") + 1)
+          | summarize count() by err=strcat("error:", error, " state:", state), cr_node=strcat(ClusterName, ":", NodeName), TargetTRRing, fabric_node_name
+          | summarize impacted_cr_nodes=dcount(cr_node), sum(count_) by err, TargetTRRing, fabric_node_name
+          | sort by sum_count_ desc, impacted_cr_nodes desc

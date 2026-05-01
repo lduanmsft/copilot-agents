@@ -1,0 +1,290 @@
+# ============================================================================
+# kql-livesite.yaml — Gateway Ring Health KQL Templates
+# ============================================================================
+# Priority: P1 (highest)
+# Source: SQLLivesiteAgents / Connectivity / connectivity-base / connectivity-ring-health / SKILL.md
+# Distilled: 2026-05-01
+# ============================================================================
+# Covers: SNAT port exhaustion, GW process restart, code version, deployment,
+#         restart events/duration, repair tasks, AliasDB health, alias cache,
+#         DNS errors, WinFab health events
+# ============================================================================
+
+SqlSkills:
+
+  # ──────────────────────────────────────────────────────
+  # GW1100 - SNAT Port Exhaustion on Connectivity Ring
+  # ──────────────────────────────────────────────────────
+  - id: LS-GW1100
+    name: "SNAT Port Exhaustion Check"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-base/connectivity-ring-health/SKILL.md"
+    table: MonFabricClusters + SlbHealthEvent
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - ConnectivityRingName
+    KustoQueries:
+      - TableName: MonFabricClusters
+        Note: "Requires access to azslb.kusto.windows.net (AznwKustoReader group)"
+        ExecutedQuery: |
+          MonFabricClusters
+          | where name =~ '{ConnectivityRingName}'
+          | distinct ipv4_address
+          | join kind=inner (cluster('azslb.kusto.windows.net').database('azslbmds').SlbHealthEvent
+          | where env_time between (datetime({StartTime})..datetime({EndTime}))
+          | where HealthEventType in ("SnatPortExhaustion", "HighSnatPortUsage")
+          | where env_name == "##Microsoft.Networking.Slb.Core.Monitoring.SlbHealthEvent") on $left.ipv4_address == $right.VipOrIlbPA
+          | summarize count() by HealthEventType, bin(env_time, 5m)
+          | render timechart
+
+  # ──────────────────────────────────────────────────────
+  # GW1110 - Gateway Process Restart Detection
+  # ──────────────────────────────────────────────────────
+  - id: LS-GW1110
+    name: "Gateway Process Restart Detection"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-base/connectivity-ring-health/SKILL.md"
+    table: MonLogin
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - ConnectivityRingName
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          MonLogin
+          | where originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where ClusterName =~ '{ConnectivityRingName}'
+          | where event =~ "process_login_finish"
+          | where package =~ 'xdbgateway'
+          | summarize total_processes = dcount(process_id, 4) by NodeName
+          | where total_processes > 1
+
+  # ──────────────────────────────────────────────────────
+  # GW1111 - Gateway Code Package Version
+  # ──────────────────────────────────────────────────────
+  - id: LS-GW1111
+    name: "Gateway Code Package Version Check"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-base/connectivity-ring-health/SKILL.md"
+    table: MonLogin
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - ConnectivityRingName
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          MonLogin
+          | where originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where ClusterName =~ '{ConnectivityRingName}'
+          | where event =~ "process_login_finish" and package =~ "xdbgateway" and AppName =~ "Gateway"
+          | summarize min(originalEventTimestamp), max(originalEventTimestamp) by NodeName, process_id, code_package_version
+          | sort by NodeName asc, min_originalEventTimestamp asc
+
+  # ──────────────────────────────────────────────────────
+  # GW1112 - Gateway Deployment Traces
+  # ──────────────────────────────────────────────────────
+  - id: LS-GW1112
+    name: "Gateway Deployment Traces"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-base/connectivity-ring-health/SKILL.md"
+    table: MonRolloutProgress
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - ConnectivityRingName
+    KustoQueries:
+      - TableName: MonRolloutProgress
+        ExecutedQuery: |
+          MonRolloutProgress
+          | where originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where cluster_name =~ '{ConnectivityRingName}'
+          | where application_type_name == "Gateway" or application_name == "fabric:/Gateway"
+          | where event in ("start_upgrade_app_type", "app_instance_upgrade_progress", "start_upgrade_app_instance", "start_pause_upgrade_app_type", "start_resume_upgrade_app_type", "set_start_post_bake_blast")
+          | project originalEventTimestamp, event, cluster_name, target_version, rollout_key, upgrade_state, upgrade_progress, bake_start_time, bake_duration
+          | extend RolloutKeyCab = extract("^([0-9]*)_(.*)", 1, rollout_key)
+          | project-away rollout_key
+          | order by originalEventTimestamp asc
+
+  # ──────────────────────────────────────────────────────
+  # GW1114 - Gateway Process Restart Event (XE Session Start)
+  # ──────────────────────────────────────────────────────
+  - id: LS-GW1114
+    name: "Gateway Process Restart Event (XE Session Start)"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-base/connectivity-ring-health/SKILL.md"
+    table: MonRedirector
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - ConnectivityRingName
+    KustoQueries:
+      - TableName: MonRedirector
+        ExecutedQuery: |
+          MonRedirector
+          | where originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where ClusterName =~ '{ConnectivityRingName}'
+          | where AppTypeName == "Gateway"
+          | where text startswith "Started XE session xdbgateway_logins"
+          | project originalEventTimestamp, NodeName, process_id, text
+
+  # ──────────────────────────────────────────────────────
+  # GW1116 - Gateway Process Restart Duration
+  # ──────────────────────────────────────────────────────
+  - id: LS-GW1116
+    name: "Gateway Process Restart Duration"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-base/connectivity-ring-health/SKILL.md"
+    table: MonRedirector
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - ConnectivityRingName
+    KustoQueries:
+      - TableName: MonRedirector
+        ExecutedQuery: |
+          MonRedirector
+          | where originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where ClusterName =~ '{ConnectivityRingName}'
+          | where AppTypeName =~ "Gateway"
+          | summarize ST = min(originalEventTimestamp), ET = max(originalEventTimestamp) by NodeName, process_id
+          | order by NodeName, ST asc
+          | extend GapInSecond = iff(next(NodeName) == NodeName, datetime_diff('second', next(ST), ET), long(0))
+          | extend StartTime = ET, EndTime = next(ST), Restart = strcat(process_id, " -> ", next(process_id))
+          | where GapInSecond != 0
+          | project NodeName, Restart, StartTime, EndTime, GapInSecond
+          | sort by StartTime asc
+
+  # ──────────────────────────────────────────────────────
+  # GW1117 - Node Repair Tasks
+  # ──────────────────────────────────────────────────────
+  - id: LS-GW1117
+    name: "Node Repair Tasks on Connectivity Ring"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-base/connectivity-ring-health/SKILL.md"
+    table: WinFabLogs
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - ConnectivityRingName
+    KustoQueries:
+      - TableName: WinFabLogs
+        Note: "Add 3 days to EndTime as repair tasks may take long to complete"
+        ExecutedQuery: |
+          WinFabLogs
+          | where ETWTimestamp between (datetime({StartTime})..datetime({EndTime}) + 3d)
+          | where ClusterName =~ '{ConnectivityRingName}'
+          | where Text contains "RepairTask[scope=ClusterRepairScopeIdentifier, taskId="
+          | parse kind=regex Text with * "taskId=" TaskId ", version" * "state=" State ", flags" * "target=NodeRepairTargetDescription\\[nodeList = \\(" Node "\\)\\], executor" *
+          | project ClusterName, ETWTimestamp, TaskId, State, Node
+          | evaluate pivot(State, min(ETWTimestamp))
+
+  # ──────────────────────────────────────────────────────
+  # GW1120 - AliasDB SF App Health State
+  # ──────────────────────────────────────────────────────
+  - id: LS-GW1120
+    name: "AliasDB SF App Health State"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-base/connectivity-ring-health/SKILL.md"
+    table: AlrWinFabHealthApplicationState
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - ConnectivityRingName
+    KustoQueries:
+      - TableName: AlrWinFabHealthApplicationState
+        ExecutedQuery: |
+          AlrWinFabHealthApplicationState
+          | where TIMESTAMP between (datetime({StartTime})..datetime({EndTime}))
+          | where ClusterName =~ '{ConnectivityRingName}'
+          | where ApplicationName contains "Worker.ISO.Control"
+          | project ApplicationName, TIMESTAMP, HealthState, NodeName
+          | sort by ApplicationName asc, TIMESTAMP asc
+          | extend PrevTime = prev(TIMESTAMP)
+          | extend NextTime = next(TIMESTAMP)
+          | extend PrevHealthstate = prev(HealthState)
+          | extend PrevNodeName = prev(NodeName)
+          | extend PrevApplicationName = prev(ApplicationName)
+          | extend NextApplicationName = next(ApplicationName)
+          | where isnull(PrevTime) or isnull(NextTime) or (HealthState != PrevHealthstate) or (NodeName != PrevNodeName) or (ApplicationName != PrevApplicationName) or (ApplicationName != NextApplicationName)
+          | project ApplicationName, TIMESTAMP, HealthState, NodeName
+          | sort by ApplicationName asc, TIMESTAMP asc
+
+  # ──────────────────────────────────────────────────────
+  # GW1121 - AliasDB App Partition Event
+  # ──────────────────────────────────────────────────────
+  - id: LS-GW1121
+    name: "AliasDB App Partition Event"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-base/connectivity-ring-health/SKILL.md"
+    table: AlrWinFabHealthPartitionEvent
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - ConnectivityRingName
+    KustoQueries:
+      - TableName: AlrWinFabHealthPartitionEvent
+        ExecutedQuery: |
+          AlrWinFabHealthPartitionEvent
+          | where TIMESTAMP between (datetime({StartTime})..datetime({EndTime}))
+          | where ClusterName =~ '{ConnectivityRingName}'
+          | where ApplicationName contains "Worker.ISO.Control"
+          | summarize min(TIMESTAMP), max(TIMESTAMP), count(), take_any(Description) by PartitionId, ApplicationName
+
+  # ──────────────────────────────────────────────────────
+  # GW1122 - Node Health Events
+  # ──────────────────────────────────────────────────────
+  - id: LS-GW1122
+    name: "Node Health Events on Connectivity Ring"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-base/connectivity-ring-health/SKILL.md"
+    table: AlrWinFabHealthNodeEvent
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - ConnectivityRingName
+    KustoQueries:
+      - TableName: AlrWinFabHealthNodeEvent
+        ExecutedQuery: |
+          AlrWinFabHealthNodeEvent
+          | where TIMESTAMP between (datetime({StartTime})..datetime({EndTime}))
+          | where ClusterName =~ '{ConnectivityRingName}'
+          | where HealthState != "Ok"
+          | project TIMESTAMP, NodeName, NodeEntityName, HealthState, SourceId, Property, Description
+
+  # ──────────────────────────────────────────────────────
+  # GW1123 - SQL Alias Cache Refresh Latency
+  # ──────────────────────────────────────────────────────
+  - id: LS-GW1123
+    name: "SQL Alias Cache Refresh Latency (P90)"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-base/connectivity-ring-health/SKILL.md"
+    table: MonRedirector
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - ConnectivityRingName
+    KustoQueries:
+      - TableName: MonRedirector
+        Note: "P90 over 1000ms warrants attention"
+        ExecutedQuery: |
+          MonRedirector
+          | where originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where ClusterName =~ '{ConnectivityRingName}'
+          | where AppTypeName == "Gateway"
+          | where event == "sql_alias_cache_refresh"
+          | summarize percentile(duration_ms, 90) by NodeName, bin(originalEventTimestamp, 5m)
+          | render timechart
+
+  # ──────────────────────────────────────────────────────
+  # GW1130 - DNS Cache Errors
+  # ──────────────────────────────────────────────────────
+  - id: LS-GW1130
+    name: "DNS Cache Errors (Potential DNS Outage)"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-base/connectivity-ring-health/SKILL.md"
+    table: MonSqlDnsOverridePluginTrace
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - ConnectivityRingName
+    KustoQueries:
+      - TableName: MonSqlDnsOverridePluginTrace
+        ExecutedQuery: |
+          MonSqlDnsOverridePluginTrace
+          | where PreciseTimeStamp between (datetime({StartTime})..datetime({EndTime}))
+          | where ClusterName =~ '{ConnectivityRingName}'
+          | where FQDN != ""
+          | where TaskName =~ "DNS_result_override_begin" and Message contains "DNS_RCODE_SERVFAIL"
+          | summarize count() by strcat(Message, ":", Error), bin(PreciseTimeStamp, 3m)
+          | render timechart

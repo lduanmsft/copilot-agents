@@ -1,0 +1,295 @@
+# ============================================================================
+# kql-livesite.yaml — XdbHost High TCP Rejections KQL Templates
+# ============================================================================
+# Priority: P1 (highest)
+# Source: SQLLivesiteAgents / Connectivity / connectivity-scenarios / xdbhost-high-tcp-rejections / references/queries.md
+# Distilled: 2026-05-01
+# ============================================================================
+# Covers: TCP rejection confirmation, LSASS stress, crash loop detection,
+#         dump activity, automation actions, login volume, resource usage,
+#         TCP port statistics
+# ============================================================================
+
+SqlSkills:
+
+  # ──────────────────────────────────────────────────────
+  # TR100 - TCP Rejected Connections/sec on Node
+  # ──────────────────────────────────────────────────────
+  - id: LS-TR100
+    name: "TCP Rejected Connections/sec on Node"
+    source: "SQLLivesiteAgents/Connectivity/xdbhost-high-tcp-rejections/references/queries.md"
+    table: MonCounterOneMinute
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - ClusterName
+      - DBNodeName
+    KustoQueries:
+      - TableName: MonCounterOneMinute
+        ExecutedQuery: |
+          let StartTime = todatetime('{StartTime}');
+          let EndTime = todatetime('{EndTime}');
+          let _ClusterNameVar = '{ClusterName}';
+          let _NodeNameVar = '{DBNodeName}';
+          MonCounterOneMinute
+          | where TIMESTAMP between (StartTime..EndTime)
+          | where ClusterName =~ _ClusterNameVar
+          | where NodeName =~ _NodeNameVar
+          | where CounterName == '\\Microsoft Winsock BSP\\Rejected Connections/sec'
+          | project TIMESTAMP, MaxVal
+          | order by TIMESTAMP asc
+
+  # ──────────────────────────────────────────────────────
+  # TR200 - LSASS % Privileged Time on Node
+  # ──────────────────────────────────────────────────────
+  - id: LS-TR200
+    name: "LSASS % Privileged Time on Node"
+    source: "SQLLivesiteAgents/Connectivity/xdbhost-high-tcp-rejections/references/queries.md"
+    table: MonCounterOneMinute
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - ClusterName
+      - DBNodeName
+    KustoQueries:
+      - TableName: MonCounterOneMinute
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          let _ClusterNameVar = '{ClusterName}';
+          let _NodeNameVar = '{DBNodeName}';
+          MonCounterOneMinute
+          | where TIMESTAMP between (StartTime..EndTime)
+          | where ClusterName =~ _ClusterNameVar
+          | where NodeName =~ _NodeNameVar
+          | where CounterName == '\\Process(Lsass)\\% Privileged Time'
+          | project TIMESTAMP, MaxVal
+          | order by TIMESTAMP asc
+
+  # ──────────────────────────────────────────────────────
+  # TR300 - XdbHost Crash Loop Detection (Process ID Changes)
+  # ──────────────────────────────────────────────────────
+  - id: LS-TR300
+    name: "XdbHost Crash Loop Detection (Process ID Changes)"
+    source: "SQLLivesiteAgents/Connectivity/xdbhost-high-tcp-rejections/references/queries.md"
+    table: MonXdbhost
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - ClusterName
+      - DBNodeName
+    KustoQueries:
+      - TableName: MonXdbhost
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          let _ClusterNameVar = '{ClusterName}';
+          let _NodeNameVar = '{DBNodeName}';
+          MonXdbhost
+          | where TIMESTAMP between (StartTime..EndTime)
+          | where ClusterName =~ _ClusterNameVar and NodeName =~ _NodeNameVar
+          | summarize min_time = min(TIMESTAMP), max_time = max(TIMESTAMP)
+              by process_id
+          | order by min_time asc
+
+  # ──────────────────────────────────────────────────────
+  # TR400 - XdbHost Dump Activity on Node
+  # ──────────────────────────────────────────────────────
+  - id: LS-TR400
+    name: "XdbHost Dump Activity on Node"
+    source: "SQLLivesiteAgents/Connectivity/xdbhost-high-tcp-rejections/references/queries.md"
+    table: MonSqlDumperActivity
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - ClusterName
+      - DBNodeName
+    KustoQueries:
+      - TableName: MonSqlDumperActivity
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          let _ClusterNameVar = '{ClusterName}';
+          let _NodeNameVar = '{DBNodeName}';
+          MonSqlDumperActivity
+          | where TIMESTAMP between (StartTime..EndTime)
+          | where ClusterName =~ _ClusterNameVar
+          | where NodeName =~ _NodeNameVar
+          | project DumperStartTime, TargetProcess, DumpUID, DumpErrorText, DumpErrorDetails
+          | order by DumperStartTime asc
+
+  # ──────────────────────────────────────────────────────
+  # TR500 - Automation Actions on Node
+  # ──────────────────────────────────────────────────────
+  - id: LS-TR500
+    name: "Automation Actions on Node (TCP Rejections)"
+    source: "SQLLivesiteAgents/Connectivity/xdbhost-high-tcp-rejections/references/queries.md"
+    table: MonNonPiiAudit
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - ClusterName
+      - DBNodeName
+    KustoQueries:
+      - TableName: MonNonPiiAudit
+        ExecutedQuery: |
+          let _startTime = datetime({StartTime});
+          let _endTime = datetime({EndTime});
+          let _ClusterNameVar = '{ClusterName}';
+          let _NodeNameVar = '{DBNodeName}';
+          MonNonPiiAudit
+          | where TIMESTAMP between (_startTime.._endTime)
+          | where * contains _ClusterNameVar and * contains _NodeNameVar
+          | where request_action !in~ ('ExecuteCMSQuery', 'FabricClusters()', 'FabricNodes()', 'ExecuteCMSQueryJSON', 'ExecuteQuery') and request_action !startswith 'Get'
+          | project time_created, username, request_action, request, parameters
+          | order by time_created asc
+
+  # ──────────────────────────────────────────────────────
+  # TR600 - Login Count by Instance on Node
+  # ──────────────────────────────────────────────────────
+  - id: LS-TR600
+    name: "Login Count by Instance on Node"
+    source: "SQLLivesiteAgents/Connectivity/xdbhost-high-tcp-rejections/references/queries.md"
+    table: MonLogin
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - ClusterName
+      - DBNodeName
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          let _ClusterNameVar = '{ClusterName}';
+          let _NodeNameVar = '{DBNodeName}';
+          MonLogin
+          | where TIMESTAMP between (StartTime..EndTime)
+          | where ClusterName =~ _ClusterNameVar
+          | where NodeName =~ _NodeNameVar
+          | where event == 'process_login_finish'
+          | where package == 'xdbhost'
+          | summarize LoginCount = count() by instance_name
+          | order by LoginCount desc
+
+  # ──────────────────────────────────────────────────────
+  # TR610 - Login Volume per XdbHost Process ID (5-min bins)
+  # ──────────────────────────────────────────────────────
+  - id: LS-TR610
+    name: "Login Volume per XdbHost Process ID (5-min bins)"
+    source: "SQLLivesiteAgents/Connectivity/xdbhost-high-tcp-rejections/references/queries.md"
+    table: MonLogin
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - ClusterName
+      - DBNodeName
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          let _ClusterNameVar = '{ClusterName}';
+          let _NodeNameVar = '{DBNodeName}';
+          MonLogin
+          | where TIMESTAMP between (StartTime..EndTime)
+          | where ClusterName =~ _ClusterNameVar
+          | where NodeName =~ _NodeNameVar
+          | where event == 'process_login_finish'
+          | where package == 'xdbhost'
+          | summarize LoginCount = count()
+              by strcat(process_id, '__', code_package_version), bin(originalEventTimestamp, 5m)
+          | order by originalEventTimestamp asc
+
+  # ──────────────────────────────────────────────────────
+  # TR700 - Instance Resource Stats on Node
+  # ──────────────────────────────────────────────────────
+  - id: LS-TR700
+    name: "Instance Resource Stats on Node"
+    source: "SQLLivesiteAgents/Connectivity/xdbhost-high-tcp-rejections/references/queries.md"
+    table: MonDmRealTimeResourceStats
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - ClusterName
+      - DBNodeName
+    KustoQueries:
+      - TableName: MonDmRealTimeResourceStats
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          let _ClusterNameVar = '{ClusterName}';
+          let _NodeNameVar = '{DBNodeName}';
+          MonDmRealTimeResourceStats
+          | where originalEventTimestamp between (StartTime..EndTime)
+          | where ClusterName =~ _ClusterNameVar and NodeName =~ _NodeNameVar
+          | summarize max_avg_cpu = max(avg_cpu_percent),
+                      max_avg_memory = max(avg_memory_usage_percent),
+                      max_avg_instance_cpu = max(avg_instance_cpu_percent),
+                      max_worker_pct = max(max_worker_percent),
+                      max_session_pct = max(max_session_percent),
+                      max_login_rate_pct = max(avg_login_rate_percent)
+              by AppName, bin(originalEventTimestamp, 5m)
+          | order by originalEventTimestamp asc
+
+  # ──────────────────────────────────────────────────────
+  # TR800 - TCP Port Statistics on Node
+  # ──────────────────────────────────────────────────────
+  - id: LS-TR800
+    name: "TCP Port Statistics on Node"
+    source: "SQLLivesiteAgents/Connectivity/xdbhost-high-tcp-rejections/references/queries.md"
+    table: AlrWinFabHealthNodeEvent
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - ClusterName
+      - DBNodeName
+    KustoQueries:
+      - TableName: AlrWinFabHealthNodeEvent
+        ExecutedQuery: |
+          let _startTime = datetime({StartTime});
+          let _endTime = datetime({EndTime});
+          let _ClusterNameVar = '{ClusterName}';
+          let _NodeNameVar = '{DBNodeName}';
+          AlrWinFabHealthNodeEvent
+          | where TIMESTAMP between (_startTime.._endTime)
+          | where Property == 'PortUseWatchdog'
+          | where ClusterName =~ _ClusterNameVar and NodeEntityName =~ _NodeNameVar
+          | where Description contains 'TcpStats:'
+          | project TIMESTAMP, Description, NodeEntityName, ClusterName
+          | extend TcpStats = extract(".*?TcpStats: (.*)", 1, Description)
+          | extend TcpStatsArray = split(TcpStats, ",")
+          | mv-expand TcpStatsArray
+          | extend TcpStatsKeyValue = split(TcpStatsArray, "=")
+          | summarize TcpStatsValues = make_bag(pack(tostring(TcpStatsKeyValue[0]), tostring(TcpStatsKeyValue[1])))
+              by TIMESTAMP, ClusterName, NodeEntityName
+          | evaluate bag_unpack(TcpStatsValues)
+          | order by TIMESTAMP asc
+
+  # ──────────────────────────────────────────────────────
+  # TR900 - Login Volume for Specific Database (1-min bins)
+  # ──────────────────────────────────────────────────────
+  - id: LS-TR900
+    name: "Login Volume for Specific Database (1-min bins)"
+    source: "SQLLivesiteAgents/Connectivity/xdbhost-high-tcp-rejections/references/queries.md"
+    table: MonLogin
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - LogicalServerName
+      - LogicalDatabaseName
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          let ServerName = '{LogicalServerName}';
+          let DbName = '{LogicalDatabaseName}';
+          MonLogin
+          | where TIMESTAMP between (StartTime..EndTime)
+          | where logical_server_name =~ ServerName
+          | where database_name =~ DbName
+          | where event == 'process_login_finish'
+          | summarize LoginCount = count()
+              by package, bin(originalEventTimestamp, 1m)
+          | order by originalEventTimestamp asc

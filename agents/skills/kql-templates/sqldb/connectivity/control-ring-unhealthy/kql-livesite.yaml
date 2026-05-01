@@ -1,0 +1,252 @@
+# ============================================================================
+# kql-livesite.yaml — Control Ring Nodes Unhealthy KQL Templates
+# ============================================================================
+# Priority: P1 (highest)
+# Source: SQLLivesiteAgents / Connectivity / connectivity-scenarios / control-ring-nodes-unhealthy / references/queries.md
+# Distilled: 2026-05-01
+# ============================================================================
+# Covers: per-node login success rate, node health summary, deployment check,
+#         GW process restarts, LSASS CPU stress, TCP rejections,
+#         automation actions, impact assessment
+# ============================================================================
+
+SqlSkills:
+
+  # ──────────────────────────────────────────────────────
+  # CRNU100 - Per-Node Login Success Rate Across Cluster
+  # ──────────────────────────────────────────────────────
+  - id: LS-CRNU100
+    name: "Per-Node Login Success Rate Across Cluster"
+    source: "SQLLivesiteAgents/Connectivity/control-ring-nodes-unhealthy/references/queries.md"
+    table: MonLogin
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - ClusterName
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          let _ClusterName = '{ClusterName}';
+          MonLogin
+          | where originalEventTimestamp between (StartTime..EndTime)
+          | where ClusterName =~ _ClusterName
+          | where event == "process_login_finish"
+          | where AppTypeName =~ 'Gateway'
+          | summarize
+              TotalLogins = count(),
+              SystemErrors = countif(is_success == false and is_user_error == false),
+              UserErrors = countif(is_success == false and is_user_error == true),
+              DistinctServers = dcount(logical_server_name)
+              by NodeName
+          | extend LoginSuccessRate = round(100.0 * (TotalLogins - SystemErrors) / TotalLogins, 2)
+          | extend SystemErrorRate = round(100.0 * SystemErrors / TotalLogins, 2)
+          | order by LoginSuccessRate asc
+
+  # ──────────────────────────────────────────────────────
+  # CRNU110 - Node Health Summary (Total vs Unhealthy)
+  # ──────────────────────────────────────────────────────
+  - id: LS-CRNU110
+    name: "Node Health Summary (Total vs Unhealthy)"
+    source: "SQLLivesiteAgents/Connectivity/control-ring-nodes-unhealthy/references/queries.md"
+    table: MonLogin
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - ClusterName
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          let _ClusterName = '{ClusterName}';
+          let PerNodeStats = MonLogin
+          | where originalEventTimestamp between (StartTime..EndTime)
+          | where ClusterName =~ _ClusterName
+          | where event == "process_login_finish"
+          | where AppTypeName =~ 'Gateway'
+          | summarize
+              TotalLogins = count(),
+              SystemErrors = countif(is_success == false and is_user_error == false)
+              by NodeName
+          | extend LoginSuccessRate = round(100.0 * (TotalLogins - SystemErrors) / TotalLogins, 2)
+          | extend IsUnhealthy = iff(LoginSuccessRate < 95, true, false);
+          PerNodeStats
+          | summarize
+              TotalNodes = dcount(NodeName),
+              UnhealthyNodes = dcountif(NodeName, IsUnhealthy),
+              MinSuccessRate = min(LoginSuccessRate),
+              AvgSuccessRate = round(avg(LoginSuccessRate), 2)
+          | extend UnhealthyPercentage = iff(TotalNodes == 0, real(null), round(100.0 * UnhealthyNodes / TotalNodes, 1))
+
+  # ──────────────────────────────────────────────────────
+  # CRNU200 - GW Deployment / Upgrade Check
+  # ──────────────────────────────────────────────────────
+  - id: LS-CRNU200
+    name: "GW Deployment / Upgrade Check"
+    source: "SQLLivesiteAgents/Connectivity/control-ring-nodes-unhealthy/references/queries.md"
+    table: MonRolloutProgress
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - ClusterName
+    KustoQueries:
+      - TableName: MonRolloutProgress
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          let _ClusterName = '{ClusterName}';
+          MonRolloutProgress
+          | where originalEventTimestamp between (StartTime..EndTime)
+          | where ClusterName =~ _ClusterName
+          | where application_type_name == "Gateway" or application_name == "fabric:/Gateway"
+          | where event in ("start_upgrade_app_type", "app_instance_upgrade_progress", "start_upgrade_app_instance", "start_pause_upgrade_app_type", "start_resume_upgrade_app_type", "set_start_post_bake_blast")
+          | project originalEventTimestamp, event, target_version, upgrade_state, upgrade_progress, bake_start_time, bake_duration, rollout_key
+          | extend RolloutKeyCab = extract("^([0-9]*)_(.*)", 1, rollout_key)
+          | project-away rollout_key
+          | order by originalEventTimestamp asc
+
+  # ──────────────────────────────────────────────────────
+  # CRNU210 - GW Process Restarts Across Cluster
+  # ──────────────────────────────────────────────────────
+  - id: LS-CRNU210
+    name: "GW Process Restarts Across Cluster"
+    source: "SQLLivesiteAgents/Connectivity/control-ring-nodes-unhealthy/references/queries.md"
+    table: MonLogin
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - ClusterName
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          let _ClusterName = '{ClusterName}';
+          MonLogin
+          | where originalEventTimestamp between (StartTime..EndTime)
+          | where ClusterName =~ _ClusterName
+          | where event == "process_login_finish"
+          | where AppTypeName =~ 'Gateway'
+          | summarize
+              TotalProcesses = dcount(process_id, 4),
+              FirstSeen = min(originalEventTimestamp),
+              LastSeen = max(originalEventTimestamp)
+              by NodeName
+          | where TotalProcesses > 1
+          | order by TotalProcesses desc
+
+  # ──────────────────────────────────────────────────────
+  # CRNU300 - LSASS CPU Stress Per Node
+  # ──────────────────────────────────────────────────────
+  - id: LS-CRNU300
+    name: "LSASS CPU Stress Per Node"
+    source: "SQLLivesiteAgents/Connectivity/control-ring-nodes-unhealthy/references/queries.md"
+    table: MonCounterOneMinute
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - ClusterName
+    KustoQueries:
+      - TableName: MonCounterOneMinute
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          let _ClusterName = '{ClusterName}';
+          MonCounterOneMinute
+          | where TIMESTAMP between (StartTime..EndTime)
+          | where ClusterName =~ _ClusterName
+          | where CounterName == '\\Process(Lsass)\\% Privileged Time'
+          | summarize
+              AvgLsassPrivilegedTimePct = round(avg(CounterValue), 1),
+              MaxLsassPrivilegedTimePct = round(max(CounterValue), 1),
+              SampleCount = count()
+              by NodeName
+          | order by MaxLsassPrivilegedTimePct desc
+
+  # ──────────────────────────────────────────────────────
+  # CRNU310 - TCP Rejections Per Node
+  # ──────────────────────────────────────────────────────
+  - id: LS-CRNU310
+    name: "TCP Rejections Per Node"
+    source: "SQLLivesiteAgents/Connectivity/control-ring-nodes-unhealthy/references/queries.md"
+    table: MonCounterOneMinute
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - ClusterName
+    KustoQueries:
+      - TableName: MonCounterOneMinute
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          let _ClusterName = '{ClusterName}';
+          let TcpRejections = MonCounterOneMinute
+          | where TIMESTAMP between (StartTime..EndTime)
+          | where ClusterName =~ _ClusterName
+          | where CounterName == '\\Microsoft Winsock BSP\\Rejected Connections/sec'
+          | summarize AvgRejectedPerSec = round(avg(CounterValue), 1), MaxRejectedPerSec = round(max(CounterValue), 1) by NodeName;
+          let HandleCounts = MonCounterOneMinute
+          | where TIMESTAMP between (StartTime..EndTime)
+          | where ClusterName =~ _ClusterName
+          | where CounterName == '\\Process(_Total)\\Handle Count'
+          | summarize AvgHandleCount = round(avg(CounterValue), 0), MaxHandleCount = round(max(CounterValue), 0) by NodeName;
+          TcpRejections
+          | join kind=leftouter HandleCounts on NodeName
+          | where AvgRejectedPerSec > 0 or MaxRejectedPerSec > 0
+          | project NodeName, AvgRejectedPerSec, MaxRejectedPerSec, AvgHandleCount, MaxHandleCount
+          | order by MaxRejectedPerSec desc
+
+  # ──────────────────────────────────────────────────────
+  # CRNU400 - Automation Actions on Cluster
+  # ──────────────────────────────────────────────────────
+  - id: LS-CRNU400
+    name: "Automation Actions on Cluster"
+    source: "SQLLivesiteAgents/Connectivity/control-ring-nodes-unhealthy/references/queries.md"
+    table: MonNonPiiAudit
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - ClusterName
+    KustoQueries:
+      - TableName: MonNonPiiAudit
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          let _ClusterName = '{ClusterName}';
+          MonNonPiiAudit
+          | where TIMESTAMP between (StartTime..EndTime)
+          | where ClusterName =~ _ClusterName
+          | where request_action !in~ ('ExecuteCMSQuery', 'FabricClusters()', 'FabricNodes()', 'ExecuteCMSQueryJSON', 'ExecuteQuery') and request_action !startswith 'Get'
+          | project time_created, NodeName, username, request_action, request, parameters
+          | order by time_created desc
+
+  # ──────────────────────────────────────────────────────
+  # CRNU500 - Distinct Impacted Servers and Subscriptions
+  # ──────────────────────────────────────────────────────
+  - id: LS-CRNU500
+    name: "Distinct Impacted Servers and Subscriptions"
+    source: "SQLLivesiteAgents/Connectivity/control-ring-nodes-unhealthy/references/queries.md"
+    table: MonLogin
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - ClusterName
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          let _ClusterName = '{ClusterName}';
+          MonLogin
+          | where originalEventTimestamp between (StartTime..EndTime)
+          | where ClusterName =~ _ClusterName
+          | where event == "process_login_finish"
+          | where AppTypeName =~ 'Gateway'
+          | where is_success == false and is_user_error == false
+          | summarize
+              DistinctServersWithErrors = dcount(logical_server_name),
+              DistinctSubscriptions = dcount(subscription_id),
+              TotalSystemErrors = count(),
+              DistinctNodes = dcount(NodeName)

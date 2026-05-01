@@ -1,0 +1,216 @@
+# ============================================================================
+# kql-livesite.yaml — XdbHost Restart KQL Templates
+# ============================================================================
+# Priority: P1 (highest)
+# Source: SQLLivesiteAgents / Connectivity / connectivity-scenarios / xdbhost-restart / references/queries.md
+# Distilled: 2026-05-01
+# ============================================================================
+# Covers: process restart confirmation, trigger classification, automation audit,
+#         login error distribution, login volume, self-mitigation verification
+# ============================================================================
+
+SqlSkills:
+
+  # ──────────────────────────────────────────────────────
+  # XR100 - Detect XdbHost Process ID Change
+  # ──────────────────────────────────────────────────────
+  - id: LS-XR100
+    name: "Detect XdbHost Process ID Change (Restart Confirmation)"
+    source: "SQLLivesiteAgents/Connectivity/xdbhost-restart/references/queries.md"
+    table: MonXdbhost
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - ClusterName
+      - DBNodeName
+    KustoQueries:
+      - TableName: MonXdbhost
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          let _ClusterNameVar = '{ClusterName}';
+          let _NodeNameVar = '{DBNodeName}';
+          MonXdbhost
+          | where TIMESTAMP between (StartTime..EndTime)
+          | where ClusterName =~ _ClusterNameVar and NodeName =~ _NodeNameVar
+          | summarize min_time = min(TIMESTAMP), max_time = max(TIMESTAMP)
+              by process_id
+          | order by min_time asc
+
+  # ──────────────────────────────────────────────────────
+  # XR200 - XdbHost Process Logs (Trigger Classification)
+  # ──────────────────────────────────────────────────────
+  - id: LS-XR200
+    name: "XdbHost Process Logs (Trigger Classification)"
+    source: "SQLLivesiteAgents/Connectivity/xdbhost-restart/references/queries.md"
+    table: MonXdbhost
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - ClusterName
+      - DBNodeName
+    KustoQueries:
+      - TableName: MonXdbhost
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          let _ClusterNameVar = '{ClusterName}';
+          let _NodeNameVar = '{DBNodeName}';
+          MonXdbhost
+          | where TIMESTAMP between (StartTime..EndTime)
+          | where ClusterName =~ _ClusterNameVar and NodeName =~ _NodeNameVar
+          | where text contains "fail" or text contains "stuck"
+          | project TIMESTAMP, ClusterName, NodeName, process_id, text
+          | order by TIMESTAMP asc
+
+  # ──────────────────────────────────────────────────────
+  # XR300 - Audit Trail for Automation/User Actions on Node
+  # ──────────────────────────────────────────────────────
+  - id: LS-XR300
+    name: "Audit Trail for Automation/User Actions on Node"
+    source: "SQLLivesiteAgents/Connectivity/xdbhost-restart/references/queries.md"
+    table: MonNonPiiAudit
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - ClusterName
+      - DBNodeName
+    KustoQueries:
+      - TableName: MonNonPiiAudit
+        ExecutedQuery: |
+          let _startTime = datetime({StartTime});
+          let _endTime = datetime({EndTime});
+          let _ClusterNameVar = '{ClusterName}';
+          let _NodeNameVar = '{DBNodeName}';
+          MonNonPiiAudit
+          | where TIMESTAMP between (_startTime.._endTime)
+          | where * contains _ClusterNameVar and * contains _NodeNameVar
+          | where request_action !in~ ("ExecuteCMSQuery", "FabricClusters()", "FabricNodes()", "ExecuteCMSQueryJSON", "ExecuteQuery") and request_action !startswith "Get"
+          | project time_created, username, request_action, request, parameters
+          | order by time_created asc
+
+  # ──────────────────────────────────────────────────────
+  # XR400 - Login Error Breakdown by Error Code and State
+  # ──────────────────────────────────────────────────────
+  - id: LS-XR400
+    name: "Login Error Breakdown by Error Code and State"
+    source: "SQLLivesiteAgents/Connectivity/xdbhost-restart/references/queries.md"
+    table: MonLogin
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - LogicalServerName
+      - LogicalDatabaseName
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          let ServerName = '{LogicalServerName}';
+          let DbName = '{LogicalDatabaseName}';
+          MonLogin
+          | where originalEventTimestamp between (StartTime..EndTime)
+          | where logical_server_name =~ ServerName
+          | where database_name =~ DbName
+          | where event == "process_login_finish" and error > 0
+          | summarize ErrorCount = count()
+              by error, state, state_desc, is_user_error, bin(originalEventTimestamp, 5m)
+          | order by originalEventTimestamp asc, ErrorCount desc
+
+  # ──────────────────────────────────────────────────────
+  # XR410 - Login Error Time Distribution (1-Minute Bins)
+  # ──────────────────────────────────────────────────────
+  - id: LS-XR410
+    name: "Login Error Time Distribution (1-Minute Bins)"
+    source: "SQLLivesiteAgents/Connectivity/xdbhost-restart/references/queries.md"
+    table: MonLogin
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - LogicalServerName
+      - LogicalDatabaseName
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          let ServerName = '{LogicalServerName}';
+          let DbName = '{LogicalDatabaseName}';
+          MonLogin
+          | where originalEventTimestamp between (StartTime..EndTime)
+          | where logical_server_name =~ ServerName
+          | where database_name =~ DbName
+          | where event == "process_login_finish"
+          | summarize SuccessCount = countif(error == 0),
+                      FailCount = countif(error > 0),
+                      State10 = countif(error == 40613 and state == 10),
+                      State12 = countif(error == 40613 and state == 12),
+                      State13 = countif(error == 40613 and state == 13),
+                      State22 = countif(error == 40613 and state == 22),
+                      State44 = countif(error == 40613 and state == 44),
+                      State126 = countif(error == 40613 and state == 126),
+                      UserErrors = countif(is_user_error == true)
+              by bin(originalEventTimestamp, 1m)
+          | order by originalEventTimestamp asc
+
+  # ──────────────────────────────────────────────────────
+  # XR600 - Login Rate Per Minute Per Instance
+  # ──────────────────────────────────────────────────────
+  - id: LS-XR600
+    name: "Login Rate Per Minute Per Instance"
+    source: "SQLLivesiteAgents/Connectivity/xdbhost-restart/references/queries.md"
+    table: MonLogin
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - LogicalServerName
+      - LogicalDatabaseName
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          let ServerName = '{LogicalServerName}';
+          let DbName = '{LogicalDatabaseName}';
+          MonLogin
+          | where originalEventTimestamp between (StartTime..EndTime)
+          | where logical_server_name =~ ServerName
+          | where database_name =~ DbName
+          | where event == "process_login_finish"
+          | summarize TotalLogins = count(),
+                      SuccessLogins = countif(error == 0),
+                      FailedLogins = countif(error > 0),
+                      UserErrors = countif(is_user_error == true)
+              by bin(originalEventTimestamp, 1m)
+          | order by originalEventTimestamp asc
+
+  # ──────────────────────────────────────────────────────
+  # XR700 - Post-Restart Login Success Rate
+  # ──────────────────────────────────────────────────────
+  - id: LS-XR700
+    name: "Post-Restart Login Success Rate"
+    source: "SQLLivesiteAgents/Connectivity/xdbhost-restart/references/queries.md"
+    table: MonLogin
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - LogicalServerName
+      - LogicalDatabaseName
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          let StartTime = datetime({StartTime});
+          let EndTime = datetime({EndTime});
+          let ServerName = '{LogicalServerName}';
+          let DbName = '{LogicalDatabaseName}';
+          MonLogin
+          | where originalEventTimestamp between (StartTime..EndTime)
+          | where logical_server_name =~ ServerName
+          | where database_name =~ DbName
+          | where event == "process_login_finish"
+          | summarize SuccessCount = countif(error == 0),
+                      RestartErrors = countif(error == 40613 and state in (10, 12, 13, 44, 126)),
+                      ThrottleErrors = countif(error == 40613 and state == 22),
+                      OtherErrors = countif(error > 0 and not(error == 40613 and state in (10, 12, 13, 22, 44, 126)))
+              by bin(originalEventTimestamp, 5m)
+          | order by originalEventTimestamp asc

@@ -1,0 +1,73 @@
+# ============================================================================
+# kql-livesite.yaml — Session Disconnect KQL Templates
+# ============================================================================
+# Priority: P1 (highest)
+# Source: SQLLivesiteAgents / Connectivity / connectivity-scenarios / session-disconnect / SKILL.md
+# Distilled: 2026-05-01
+# ============================================================================
+# Covers: session disconnect events summary, detailed connection trace
+# ============================================================================
+
+SqlSkills:
+
+  # ──────────────────────────────────────────────────────
+  # SD-01 - Session Disconnect Events Summary
+  # ──────────────────────────────────────────────────────
+  - id: LS-SD-01
+    name: "Session Disconnect Events Summary"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-scenarios/session-disconnect/SKILL.md"
+    table: MonLogin
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - LogicalServerName
+      - LogicalDatabaseName
+    KustoQueries:
+      - TableName: MonLogin
+        ExecutedQuery: |
+          MonLogin
+          | where originalEventTimestamp between (datetime({StartTime})..datetime({EndTime}))
+          | where logical_server_name =~ '{LogicalServerName}' and database_name =~ '{LogicalDatabaseName}'
+          | where event in~ ("proxy_close_connection", "process_close_connection")
+          | where isnotempty(error) and error != 0
+          | summarize n=count() by error, state, package, event
+          | sort by n
+
+  # ──────────────────────────────────────────────────────
+  # SD-02 - Session Disconnect Detailed Connection Trace
+  # ──────────────────────────────────────────────────────
+  - id: LS-SD-02
+    name: "Session Disconnect Detailed Connection Trace"
+    source: "SQLLivesiteAgents/Connectivity/connectivity-scenarios/session-disconnect/SKILL.md"
+    table: MonLogin
+    RequiredParameters:
+      - StartTime
+      - EndTime
+      - LogicalServerName
+      - LogicalDatabaseName
+      - ErrorCode
+      - ErrorState
+    KustoQueries:
+      - TableName: MonLogin
+        Note: "Traces top 3 most-frequent connection_peer_ids for the given error/state"
+        ExecutedQuery: |
+          let startDT = datetime({StartTime});
+          let endDT = datetime({EndTime});
+          let serverName = '{LogicalServerName}';
+          let dbName = '{LogicalDatabaseName}';
+          let errorCode = {ErrorCode};
+          let errorState = {ErrorState};
+          let frequentCxPeerId = MonLogin
+          | where originalEventTimestamp between (startDT..endDT)
+          | where logical_server_name =~ serverName and database_name =~ dbName
+          | where event in~ ("proxy_close_connection", "process_close_connection")
+          | where error == errorCode and state == errorState
+          | summarize n=count() by connection_peer_id
+          | sort by n
+          | take 3
+          | project connection_peer_id;
+          MonLogin
+          | where originalEventTimestamp between (startDT - 30m..endDT + 30m)
+          | where connection_peer_id in (frequentCxPeerId)
+          | project originalEventTimestamp, AppName, package, event, is_success, is_user_error, is_mars, error, state, kill_reason, connection_id, connection_peer_id, total_time_ms, message, extra_info
+          | order by connection_peer_id asc, originalEventTimestamp asc
