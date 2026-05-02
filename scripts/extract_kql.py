@@ -328,7 +328,8 @@ stats = {}
 
 for cat, repo_path in repos_to_process.items():
     cat_dir = os.path.join(out_base, cat)
-    existing_yaml_path = os.path.join(cat_dir, f'{cat}.yaml')
+    # Output to kql-tsg.yaml (was: <cat>.yaml — renamed to clarify provenance)
+    existing_yaml_path = os.path.join(cat_dir, 'kql-tsg.yaml')
     
     # Load existing
     existing_skills = []

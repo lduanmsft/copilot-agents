@@ -112,7 +112,7 @@ SqlSkills:
 
 ### 保存位置
 ```
-~/.copilot/agents/skills/kql-templates/mi/{category}/{category}.yaml
+~/.copilot/agents/skills/kql-templates/mi/{category}/kql-tsg.yaml
 ```
 
 ## Step 3: 列出所有使用的表
@@ -310,7 +310,7 @@ msdata-search_code
 
 ```
 1. git clone .../TSG-SQL-MI-TransactionalReplication     → 51 .md files
-2. python extract → replication.yaml                      → N skills
+2. python extract → kql-tsg.yaml                          → N skills
 3. 提取表名 → MonTranReplTraces, MonLogReaderTraces, ...
 4. kusto_table_schema → 追加到 mi-tables-reference.md
 5. msdata-search_code → 追加到 mi-tables-code-reference.md

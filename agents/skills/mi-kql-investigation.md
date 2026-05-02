@@ -217,11 +217,13 @@ B. ⏭️ 跳过 — 手动从 mi/performance/{子类别}/ 目录搜 KQL + 搜 T
 │   ├── corruption/                       ...
 │   ├── fulltext/                         ...
 │   └── sqlos/                            ...
-├── availability/availability.yaml        ← B. Availability
-├── backup-restore/backup-restore.yaml    ← C. Backup & Restore
-├── networking/networking.yaml            ← D. Networking
-├── replication/replication.yaml          ← E. Replication
-└── general/general.yaml                  ← F. General
+├── availability/kql-tsg.yaml             ← B. Availability (TSG-extracted, was availability.yaml)
+├── backup-restore/kql-tsg.yaml           ← C. Backup & Restore (was backup-restore.yaml)
+├── networking/kql-tsg.yaml               ← D. Networking (was networking.yaml)
+├── replication/kql-tsg.yaml              ← E. Replication (was replication.yaml)
+└── general/kql-tsg.yaml                  ← F. General (was general.yaml)
+
+非 Performance 大类下还会有 kql-asmi.yaml (ASMI troubleshooter 原生 KQL)。
 ```
 
 **搜索优先级：**
@@ -239,8 +241,8 @@ grep -i "keyword" ~/.copilot/agents/skills/kql-templates/mi/performance/{子类�
 # Performance 大类 fallback: 全 performance 搜
 grep -i "keyword" ~/.copilot/agents/skills/kql-templates/mi/performance/**/*.yaml
 
-# 非 Performance: 单 YAML
-grep -i "keyword" ~/.copilot/agents/skills/kql-templates/mi/{category}/{category}.yaml
+# 非 Performance: 该目录下所有 yaml (P1 kql-asmi.yaml + P2 kql-tsg.yaml)
+grep -i "keyword" ~/.copilot/agents/skills/kql-templates/mi/{category}/*.yaml
 ```
 
 If match found → extract `ExecutedQuery` → fill parameters → proceed to Step 5.
@@ -366,7 +368,7 @@ Step 1: 问 region
   ↓
 Step 2: 查 CSV 找集群 + 搜 YAML 找模板
   → grep SQLClusterMappings.Followers.csv 找集群 URL
-  → grep availability.yaml 找 seeding 相关模板
+  → grep availability/*.yaml (kql-asmi + kql-tsg) 找 seeding 相关模板
   ↓
 Step 3: 展示查询，等用户确认
   → 展示 2 个查询:

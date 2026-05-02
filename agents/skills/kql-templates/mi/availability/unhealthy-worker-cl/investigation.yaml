@@ -1,0 +1,471 @@
+# ============================================================================
+# investigation.yaml — Unhealthy Worker.CL Investigation Workflow (MI Only)
+# ============================================================================
+# Source: SQLLivesiteAgents / Availability / unhealthy-worker-cl / SKILL.md
+# Distilled: 2026-05-02
+# Purpose: Layer 1 — 定义 Worker.CL 不健康调查的执行顺序、阈值判断、escalation 路由
+# KQL 模板引用: unhealthy-worker-cl/kql-livesite.yaml (Layer 2, 16 KQL)
+# ============================================================================
+# MI-only: Worker.CL is the Managed Instance Service Fabric application type.
+# SQLDB uses Worker/Worker.ISO and does not have these tables or scenarios.
+# ============================================================================
+
+Investigation:
+  id: avail-unhealthy-worker-cl
+  name: "Unhealthy Worker.CL Investigation"
+  description: >
+    Triages SQL Managed Instance Worker.CL applications detected in unhealthy state.
+    Runs ALL queries in a single parallel batch (Batch A/B/C), then interprets results
+    in priority order to identify root cause and route to the correct escalation queue.
+  source: "SQLLivesiteAgents/Availability/unhealthy-worker-cl"
+
+  # ────────────────────────────────────────────────────
+  # CSS Scope (CRITICAL — DO NOT VIOLATE)
+  # ────────────────────────────────────────────────────
+  # CSS 仅可执行 Kusto KQL 只读查询。以下操作 CSS 一律禁止:
+  #   ❌ JIT (Just-In-Time access / 提权)
+  #   ❌ CAS commands (Cluster Admin Shell / node 操作)
+  #   ❌ PowerShell / SSH / RDP / Enter-PSSession / Invoke-Command
+  #   ❌ kill / restart / reboot / Stop-Process / Restart-Service (e.g. kill fabricdns, restart containerd)
+  #   ❌ T-SQL 写操作 (ALTER / DROP / UPDATE / sp_configure / TRACE FLAG)
+  #   ❌ 配置变更 (SLO update / TDE rotate / cert reset / disable job)
+  #   ❌ Debugger / WinDbg / dump trigger
+  # CSS 工作流: 跑 KQL → 识别根因 → escalate to 对应 team → STOP.
+  # 任何 mitigation / fix / repair 步骤一律由接手 team 执行, CSS 只在 RCA 中提供 hint.
+  CSSScope:
+    allowed: ["kusto KQL read-only queries", "escalation routing", "ICM similar-incidents search", "RCA report generation"]
+    forbidden: ["JIT", "CAS commands", "PowerShell on nodes", "SSH/RDP", "kill/restart processes", "T-SQL writes", "config changes", "debugger"]
+
+  RequiredParameters:
+    - StartTime
+    - EndTime
+    - ClusterName              # Service Fabric cluster, e.g. tr2.lkgtst1-a.worker.sqltest-eg1.mscds.com
+    - AppName                  # Worker.CL application name, e.g. f4624352230a — at least ONE of AppName/LogicalServerName required
+    - LogicalServerName        # MI logical server name — preferred, enables Batch B/C
+
+  OptionalParameters:
+    - physical_database_id     # used by Step 12a (database-recovery sub-skill)
+    - NodeName                 # used by Step 12a
+
+  # ────────────────────────────────────────────────────
+  # MI Performance Optimizations (skip generic SQLDB shortcuts)
+  # ────────────────────────────────────────────────────
+  MIShortcuts:
+    skip_get_db_info: true
+    reason: "Worker.CL incidents have AppName / ClusterName / LogicalServerName in ICM custom fields. SKIP the get-db-info skill entirely. Populate a simplified Database Environment table from ICM data — do NOT run DBINFO100."
+    icm_field_mapping:
+      AppName: "Parsed from Incident Title (fabric:/Worker.CL.WCOW.SQL22/{AppName}) OR ICM custom field 'AppName'"
+      ClusterName: "Parsed from Incident Title (e.g. tr4431.useuapeast2-a.worker.database.windows.net) OR ICM custom field 'Primary Tenant Ring'"
+      LogicalServerName: "ICM custom field 'Server Name' or 'ServerName'"
+      fallback: "If AppName missing but LogicalServerName available → resolve AppName via Kusto (Step 0)"
+
+    region_extraction:
+      method: "Parse ClusterName second dot-segment, strip trailing -a/-b/etc."
+      example:
+        ClusterName: "tr4431.useuapeast2-a.worker.database.windows.net"
+        Region: "useuapeast2"
+      reason: "DO NOT do DNS lookup for MI. Extract region from ClusterName directly, then look up the Kusto cluster from XML."
+
+  # ────────────────────────────────────────────────────
+  # Reference Files
+  # ────────────────────────────────────────────────────
+  References:
+    knowledge: "references/knowledge.md"          # health state definitions, application architecture
+    principles: "references/principles.md"        # debug principles, escalation criteria
+    queries: "references/queries.md"              # markdown version of all KQL with step-by-step explanation
+
+  # ────────────────────────────────────────────────────
+  # Phase 0: Parameter Resolution (run once before main batch)
+  # ────────────────────────────────────────────────────
+  Steps:
+    - step: 0
+      name: "Parameter Resolution"
+      description: "Resolve missing AppName / LogicalServerName / ClusterName from MonAnalyticsDBSnapshot. Skip if all three already provided."
+      branching:
+        if_appname_only:
+          kql_ref: "unhealthy-worker-cl/kql-livesite.yaml#MI-LS-WCL-000a"
+        if_logicalservername_only:
+          kql_ref: "unhealthy-worker-cl/kql-livesite.yaml#MI-LS-WCL-000b"
+      output_fields:
+        - AppName
+        - LogicalServerName
+        - ClusterName
+      escalation:
+        on_failure_no_appname: "❌ FAIL — request AppName from caller"
+        on_failure_no_clustername: "❌ FAIL — request ClusterName from caller"
+
+    # ════════════════════════════════════════════════════
+    # PARALLEL BATCH — Run ALL queries below in single batch
+    # ════════════════════════════════════════════════════
+    # Why: Early-exit checks (Step 1, 2) are evaluated during INTERPRETATION,
+    # not during execution. Running QL100+QL200 sequentially adds 1-2 min overhead.
+    # Early exits are rare (~5%), so always-run-all is faster overall.
+    # ════════════════════════════════════════════════════
+
+    # ────────────────────────────────────────────────────
+    # Step 1: Verify Unhealthy State (Batch A — always run)
+    # ────────────────────────────────────────────────────
+    - step: 1
+      name: "Application Health State Timeline"
+      kql_ref: "unhealthy-worker-cl/kql-livesite.yaml#MI-LS-WCL-100"
+      description: "Verify the Worker.CL app is actually unhealthy in the time window"
+      table: AlrWinFabHealthApplicationState
+      batch: A
+      thresholds:
+        early_exit_resolved: "All states = 2 (Healthy) throughout window → Issue already resolved"
+        continue_investigation: "Any state = 0 (Unhealthy) persisting → Continue"
+      output_fields:
+        - HealthStateTimeline
+        - IssueDetected           # true if state=0 found
+        - UnhealthyEventSource    # used by Step 12 fallback
+      branching:
+        on_normal: "⛔ STOP — report as resolved (no longer unhealthy)"
+        on_issue: "Continue to interpretation phase"
+
+    # ────────────────────────────────────────────────────
+    # Step 2: Update SLO Exclusion Check (Batch A — always run)
+    # ────────────────────────────────────────────────────
+    - step: 2
+      name: "Check Update SLO Target Status"
+      kql_ref: "unhealthy-worker-cl/kql-livesite.yaml#MI-LS-WCL-200"
+      description: "Exclude case: instance is in UpdatingPricingTier (SLO change in progress)"
+      table: MonManagedServers
+      batch: A
+      thresholds:
+        early_exit_slo: "Rows returned with state=UpdatingPricingTier → No action; wait"
+      output_fields:
+        - IsUpdatingSLO
+      branching:
+        on_issue:
+          escalation: "⛔ STOP — wait for SLO completion (no team transfer needed)"
+        on_normal: "Continue to diagnostic interpretation"
+
+    # ────────────────────────────────────────────────────
+    # Step 3: TDE / AKV Certificate Issues (Batch A)
+    # ────────────────────────────────────────────────────
+    - step: 3
+      name: "TDE Certificate and Key Vault Issues"
+      kql_ref: "unhealthy-worker-cl/kql-livesite.yaml#MI-LS-WCL-300"
+      description: "Detect AKV/TDE errors blocking the app"
+      table: MonSQLSystemHealth
+      batch: A
+      thresholds:
+        issue: "Messages with 'Azure Key Vault' or 'Cannot find server asymmetric key with thumbprint' or error_id=15507 (excluding 'Triggering deny external connections' messages)"
+      output_fields:
+        - TdeAkvErrorMessages
+        - IssueDetected
+      branching:
+        on_issue:
+          escalation: "🚩 Transfer to **Azure SQL DB / SQL Managed Instance: TDE**"
+
+    # ────────────────────────────────────────────────────
+    # Step 4: CodePackage Launch Failures (Batch A)
+    # ────────────────────────────────────────────────────
+    - step: 4
+      name: "CodePackage Launch Failures"
+      kql_ref: "unhealthy-worker-cl/kql-livesite.yaml#MI-LS-WCL-400"
+      description: "Detect ProcessUnexpectedTermination / failed-to-start events for XdbPackageLauncher / MDS"
+      table: WinFabLogs
+      batch: A
+      thresholds:
+        issue: "Any rows returned (Launcher or MDS failures)"
+      output_fields:
+        - LaunchFailures
+        - transfer_queue          # Perf | Telemetry | ""
+        - IssueDetected
+      branching:
+        on_issue_perf:
+          condition: "transfer_queue == 'Perf'"
+          escalation: "🚩 Transfer to **Mi Perf - Azure SQL DB / SQL MI: SQL Engine Performance and Reliability**"
+        on_issue_telemetry:
+          condition: "transfer_queue == 'Telemetry'"
+          escalation: "🚩 Transfer to **Telemetry - Azure SQL DB / Telemetry, Monitoring, Runners**"
+
+    # ────────────────────────────────────────────────────
+    # Step 5: Storage Limits (Batch B — needs LogicalServerName)
+    # ────────────────────────────────────────────────────
+    - step: 5a
+      name: "Instance Storage Utilization"
+      kql_ref: "unhealthy-worker-cl/kql-livesite.yaml#MI-LS-WCL-500"
+      description: "Check if instance storage usage >= reserved storage"
+      table: MonManagedInstanceResourceStats
+      batch: B
+      thresholds:
+        issue: "storage_space_used_mb >= reserved_storage_mb"
+      output_fields:
+        - StorageHits
+        - IssueDetected
+      branching:
+        on_issue:
+          escalation: "🚩 Transfer to **Mi Perf - Azure SQL DB / SQL MI: SQL Engine Performance and Reliability**"
+
+    - step: 5b
+      name: "Storage Account Quota Exceeded"
+      kql_ref: "unhealthy-worker-cl/kql-livesite.yaml#MI-LS-WCL-501"
+      description: "Check for AccountQuotaExceeded errors in XStore requests"
+      table: MonSQLXStore
+      batch: B
+      thresholds:
+        issue: "blocked_action_count > 0"
+      output_fields:
+        - AccountQuotaErrors
+        - IssueDetected
+      branching:
+        on_issue:
+          escalation: "🚩 Transfer to **Mi Perf - Azure SQL DB / SQL MI: SQL Engine Performance and Reliability**"
+
+    # ────────────────────────────────────────────────────
+    # Step 6: Remote Storage Connectivity (Batch A)
+    # ────────────────────────────────────────────────────
+    - step: 6
+      name: "Remote Storage Request Failures"
+      kql_ref: "unhealthy-worker-cl/kql-livesite.yaml#MI-LS-WCL-600"
+      description: "Classify remote-storage failures by mapped_errorcode (network vs SQL)"
+      table: MonSQLXStore
+      batch: A
+      thresholds:
+        issue: "failure_count > 0 (mapped_errorcode in 87, 12002, 12030, 12007, 12017, 12175)"
+      output_fields:
+        - mapped_errorcode
+        - is_zero_request          # 1 = network never reached storage
+        - IssueDetected
+      branching:
+        on_issue_network:
+          condition: "mapped_errorcode in [12007, 12017, 12175] OR is_zero_request == 1"
+          escalation: "🚩 Transfer to **Azure SQL Managed Instance Connectivity and Networking** (customer network setup or SQL → storage path failure)"
+        on_issue_sql:
+          condition: "mapped_errorcode in [12002, 12030, 87]"
+          escalation: "🚩 Transfer to **Mi Perf - Azure SQL DB / SQL MI: SQL Engine Performance and Reliability**"
+
+    # ────────────────────────────────────────────────────
+    # Step 7: Database InCreate / InCopy / InRestore Mode (Batch A)
+    # ────────────────────────────────────────────────────
+    - step: 7
+      name: "Database Create/Copy/Restore Mode Status"
+      kql_ref: "unhealthy-worker-cl/kql-livesite.yaml#MI-LS-WCL-700"
+      description: "Detect DB still in create_mode lifecycle (Copy / Normal / Restore)"
+      table: MonManagement
+      batch: A
+      thresholds:
+        issue: "Any rows with property_name=IsInCreate AND event=fabric_property_updating"
+      output_fields:
+        - create_mode               # Copy | Normal | Restore
+        - transfer_queue            # GeoDR | DB CRUD | Backup and Restore
+        - IssueDetected
+      branching:
+        on_issue_copy:
+          condition: "create_mode == 'Copy'"
+          escalation: "🚩 Transfer to **GeoDR - Azure SQL DB / SQL MI: GeoDR**"
+        on_issue_normal:
+          condition: "create_mode == 'Normal'"
+          escalation: "🚩 Transfer to **DB CRUD - Azure SQL DB / SQL MI: Database CRUD**"
+        on_issue_restore:
+          condition: "create_mode == 'Restore'"
+          escalation: "🚩 Transfer to **B/R - Azure SQL DB / SQL MI: Backup and Restore**"
+
+    # ────────────────────────────────────────────────────
+    # Step 8: GeoDR Connectivity (Batch C — NorthEurope cluster override)
+    # ────────────────────────────────────────────────────
+    - step: 8
+      name: "GeoDR/Mirrored DR Connectivity Status"
+      kql_ref: "unhealthy-worker-cl/kql-livesite.yaml#MI-LS-WCL-800"
+      description: "Check FOG cross-region connectivity"
+      table: MonMIGeoDRFailoverGroupsConnectivity
+      batch: C
+      cluster_override:
+        uri: "https://sqlazureneu2.kusto.windows.net:443"
+        database: "sqlazure1"
+        reason: "GeoDR table only in NorthEurope cluster"
+      thresholds:
+        issue: "Multiple rows = ongoing connectivity issue"
+      output_fields:
+        - ConnectivityIssue
+        - RCA
+        - IssueDetected
+      branching:
+        on_issue:
+          escalation: "🚩 Note + optionally Transfer to **GeoDR - Azure SQL DB / SQL MI: GeoDR** (typically customer error; upgrade can proceed with InBuild replicas)"
+
+    # ────────────────────────────────────────────────────
+    # Step 9: SQL Process Container Issues (Batch A)
+    # ────────────────────────────────────────────────────
+    - step: 9a
+      name: "SQL Process Container Startup Check"
+      kql_ref: "unhealthy-worker-cl/kql-livesite.yaml#MI-LS-WCL-901"
+      description: "Verify SQL process is running inside Worker.CL.WCOW container"
+      table: MonNodeTraceETW
+      batch: A
+      thresholds:
+        issue: "row_count == 0 → SQL process NOT running (container-level failure)"
+      output_fields:
+        - SqlProcessRunning      # true if rows returned
+        - IssueDetected
+      branching:
+        on_issue:
+          # Always look at QL902 together
+          combine_with: "step-9b"
+          escalation: "🚩 Container issue confirmed. Transfer to **Azure SQL Managed Instance Connectivity and Networking**. Common root causes: fabricdns blocking NC creation; CRL import slowdown; containerd service issues."
+          css_warning: "⚠️ CSS: DO NOT execute 'kill fabricdns' or 'restart containerd' or any node-level commands. These mitigations require CAS / JIT access and MUST be performed by the platform team. CSS only identifies and transfers."
+
+    - step: 9b
+      name: "Container and Network Provider Events"
+      kql_ref: "unhealthy-worker-cl/kql-livesite.yaml#MI-LS-WCL-902"
+      description: "Container/ByoVnet hosting Warning+Error events (context for Step 9a)"
+      table: WinFabLogs
+      batch: A
+      condition: "Always run (provides context); only escalates if step-9a.SqlProcessRunning == false"
+      output_fields:
+        - HostingErrors
+        - ByoVnetEvents
+
+    # ────────────────────────────────────────────────────
+    # Step 10: MI Disabled State (Batch B — needs LogicalServerName)
+    # ────────────────────────────────────────────────────
+    - step: 10
+      name: "Managed Instance State"
+      kql_ref: "unhealthy-worker-cl/kql-livesite.yaml#MI-LS-WCL-903"
+      description: "Check if MI is in Disabled state (provisioning issue, not availability)"
+      table: MonManagedServers
+      batch: B
+      thresholds:
+        issue: "state == 'Disabled'"
+      output_fields:
+        - InstanceState
+        - IssueDetected
+      branching:
+        on_issue:
+          escalation: "🚩 Transfer to **SQL MI CRUD - SQL MI Provisioning team** (NOT an availability issue)"
+
+    # ────────────────────────────────────────────────────
+    # Step 11: Node Telemetry / Unresponsive Node (Batch A)
+    # ────────────────────────────────────────────────────
+    - step: 11
+      name: "Node Telemetry Emission Check"
+      kql_ref: "unhealthy-worker-cl/kql-livesite.yaml#MI-LS-WCL-904"
+      description: "If no telemetry rows → node is unresponsive"
+      table: MonNodeTraceETW
+      batch: A
+      thresholds:
+        issue: "0 rows returned → node not emitting telemetry"
+      output_fields:
+        - NodesWithTelemetry
+        - IssueDetected
+      branching:
+        on_issue:
+          escalation: "🚩 Transfer to **SQL MI Platform and T-Train Deployment queue** (unresponsive node)"
+
+    # ────────────────────────────────────────────────────
+    # Step 12: Database Services Health (Batch A)
+    # ────────────────────────────────────────────────────
+    - step: 12
+      name: "Database Services Health State"
+      kql_ref: "unhealthy-worker-cl/kql-livesite.yaml#MI-LS-WCL-905"
+      description: "Check per-DB service health (state 0 = Unhealthy)"
+      table: AlrWinFabHealthServiceState
+      batch: A
+      thresholds:
+        db_service_unhealthy: "state == 0 (Red)"
+        db_service_healthy_app_unhealthy: "state == 2 (Green) BUT step-1.IssueDetected == true"
+      output_fields:
+        - ServiceStateTimeline
+        - DbServicesUnhealthy
+        - IssueDetected
+      branching:
+        on_db_service_unhealthy:
+          # Cascade to Step 12a
+          next_step: "12a"
+          escalation: "🚩 After Step 12a → Transfer to **Azure SQL DB / Managed Instance: Availability queue**"
+        on_db_healthy_app_unhealthy_container:
+          condition: "step-1.UnhealthyEventSource contains 'ContainerShare.Code' OR Property == 'Periodic container connectivity check'"
+          escalation: "🚩 Transfer to **Azure SQL Managed Instance Connectivity and Networking** (container connectivity check failed)"
+        on_db_healthy_app_unhealthy_other:
+          escalation: "🚩 Default Transfer to **Azure SQL DB / Managed Instance: SQL Platform and T-Train Deployments** (analyze event component)"
+
+    - step: 12a
+      name: "Database Recovery In Progress (cross-skill)"
+      condition: "step-12.DbServicesUnhealthy == true"
+      external_skill: "../../StorageEngine/database-recovery/SKILL.md"
+      description: "Invoke StorageEngine/database-recovery skill to check whether DBs on this instance are in recovery"
+      pass_parameters:
+        - AppName
+        - physical_database_id    # use '*' or iterate known DB IDs
+        - ClusterName
+        - NodeName                # node(s) where QL905 reported unhealthy
+        - StartTime
+        - EndTime
+        - kusto-cluster-uri
+        - kusto-database
+      interpretation:
+        recovery_overlapping_unhealthy: "Recovery is likely root cause. Include in RCA: DB name, recovery duration, max % reached"
+        recovery_reaches_100_at_recovery: "✅ CONFIRMS recovery as root cause"
+        higher_priority_found: "If Steps 3-11 already identified an issue, treat recovery as consequence not cause"
+        recovery_resets_multiple_times: "🚨 SQL process likely killed → CSS: only WARN customer/escalation team in RCA: 'DO NOT kill SQL process'. CSS itself has no kill capability."
+      escalation:
+        all_recovery_paths: "🚩 Transfer to **Azure SQL DB / Managed Instance: Availability queue**"
+
+    # ────────────────────────────────────────────────────
+    # Final: Unknown Root Cause
+    # ────────────────────────────────────────────────────
+    - step: 99
+      name: "Unknown Root Cause Fallback"
+      condition: "All Steps 3-12 returned no IssueDetected"
+      description: "No clear root cause found. Engage similar-incidents agent + escalate to On-Call DRI."
+      actions:
+        - invoke_agent_skill: "similar-incidents"
+          parameters: [AppName, ClusterName, DynamicSearchTerms]
+        - escalation: "🚩 ESCALATE to **On-Call DRI** with all query results, health timeline, time window"
+
+  # ────────────────────────────────────────────────────
+  # Execution Order — Single Parallel Batch
+  # ────────────────────────────────────────────────────
+  ExecutionOrder:
+    phase_0_resolve: [0]                              # only if params missing
+    parallel_batch_A: [1, 2, 3, 4, 6, 7, 9a, 9b, 11, 12]   # main cluster, always run
+    parallel_batch_B: [5a, 5b, 10]                    # main cluster, requires LogicalServerName
+    parallel_batch_C: [8]                             # NorthEurope cluster override (requires LogicalServerName)
+    cross_skill: [12a]                                # only if step-12.DbServicesUnhealthy == true
+    fallback: [99]                                    # only if no IssueDetected anywhere
+
+  # ────────────────────────────────────────────────────
+  # Interpretation Order (priority)
+  # ────────────────────────────────────────────────────
+  # After all queries return, evaluate in this order. First IssueDetected wins:
+  InterpretationOrder:
+    early_exit:
+      - step: 1   # Healthy throughout → STOP (resolved)
+      - step: 2   # SLO update → STOP (no action)
+    diagnostic_priority:
+      - step: 3   # TDE/AKV
+      - step: 4   # CodePackage
+      - step: 5a  # Storage limit
+      - step: 5b  # Storage quota
+      - step: 6   # Remote storage
+      - step: 7   # DB InCreate mode
+      - step: 8   # GeoDR
+      - step: 9a  # SQL process not running (container)
+      - step: 10  # MI Disabled
+      - step: 11  # Unresponsive node
+      - step: 12  # DB services unhealthy
+    fallback:
+      - step: 99  # Unknown root cause
+
+  # ────────────────────────────────────────────────────
+  # Summary
+  # ────────────────────────────────────────────────────
+  Summary:
+    total_steps: 16     # 0, 1, 2, 3, 4, 5a, 5b, 6, 7, 8, 9a, 9b, 10, 11, 12, 12a (+ 99 fallback)
+    total_kql: 16       # WCL-000a/b, WCL-100/200/300/400/500/501/600/700/800/901/902/903/904/905
+    cross_skill: 1      # database-recovery
+    decision_branches: 13  # explicit on_issue / on_normal / condition branches
+    escalation_targets:
+      - "TDE team"
+      - "Mi Perf team"
+      - "Telemetry team"
+      - "Connectivity & Networking team"
+      - "GeoDR team"
+      - "DB CRUD team"
+      - "Backup & Restore team"
+      - "MI CRUD/Provisioning team"
+      - "MI Platform & T-Train Deployment"
+      - "Availability queue"
+      - "On-Call DRI (fallback)"
