@@ -47,8 +47,8 @@ SqlSkills:
 
       | where LogicalServerName =~ "{ServerName}" // managed instance name
 
-      | where file_path contains "https://wasdpwus1aprsmi8591.blob.core.windows.net/managedserver-0a8d89c3-c2af-446d-890a-ae3972932ca9/data/e08bc1d0-83b2-4bdb-b54c-c6deba2d728d_1.mdf"
-      // You can get this from the first query in the previous section
+      | where file_path contains "https://wasdpwus1aprsmi8591.blob.core.windows.net/managedserver-0a8d89c3-c2af-446d-890a-ae3972932ca9/data/e08bc1d0-83b2-4bdb-b54c-c6deba2d728d_1.mdf" // You can get this
+      from the first query in the previous section
 
       | where event == ''xstore_io_stats''
 
@@ -134,14 +134,12 @@ SqlSkills:
   - DatabaseName
   KustoQueries:
   - TableName: MonSQLXStore
-    ExecutedQuery: 'MonSQLXStore| where LogicalServerName =~ "{ServerName}"| where event == "xio_failed_request" | where TIMESTAMP > ago(1d)| project TIMESTAMP,LogicalServerName,event,file_path,
-      mapped_errorcode,request_type,http_errorcode,request_id, error_responselet SingleCluster=(clstr: string) {cluster(clstr).database(''sqlazure1'').MonManagementOperations|
-      where operation_type == "AlterFileManagedDatabase"| extend MaxFileSizeInKb = extract("<MaxFileSizesKb>([0-9]+)", 1, operation_parameters)| extend FileSizeInKb
-      = extract("<FileSizesKb>([0-9]+)", 1, operation_parameters)| extend MaxFileSizeInGb = toint(MaxFileSizeInKb) / (1024*1024)| extend FileSizeInGb = toint(FileSizeInKb)
-      / (1024*1024)| extend ManagedInstanceName = extract("<ManagedServerName>([a-zA-Z-0-9_]+)", 1, operation_parameters)//| where FileSizeInGb > 100 or MaxFileSizeInGb
-      > 100| where error_code == 0 or isempty( error_code)| where event != "management_operation_start"| where event == "management_operation_fatal_error"| project
-      TIMESTAMP, request_id, event,ManagedInstanceName, MaxFileSizeInGb, FileSizeInGb, toint( MaxFileSizeInKb) , toint( FileSizeInKb) , error_code, error_message,
-      operation_parameters};_ExecuteForProdClusters'
+    ExecutedQuery: 'MonSQLXStore| where LogicalServerName =~ "{ServerName}"| where event == "xio_failed_request" | where TIMESTAMP > ago(1d)| project TIMESTAMP,LogicalServerName,event,file_path, mapped_errorcode,request_type,http_errorcode,request_id,
+      error_responselet SingleCluster=(clstr: string) {cluster(clstr).database(''sqlazure1'').MonManagementOperations| where operation_type == "AlterFileManagedDatabase"| extend MaxFileSizeInKb = extract("<MaxFileSizesKb>([0-9]+)",
+      1, operation_parameters)| extend FileSizeInKb = extract("<FileSizesKb>([0-9]+)", 1, operation_parameters)| extend MaxFileSizeInGb = toint(MaxFileSizeInKb) / (1024*1024)| extend FileSizeInGb = toint(FileSizeInKb)
+      / (1024*1024)| extend ManagedInstanceName = extract("<ManagedServerName>([a-zA-Z-0-9_]+)", 1, operation_parameters)//| where FileSizeInGb > 100 or MaxFileSizeInGb > 100| where error_code == 0 or isempty(
+      error_code)| where event != "management_operation_start"| where event == "management_operation_fatal_error"| project TIMESTAMP, request_id, event,ManagedInstanceName, MaxFileSizeInGb, FileSizeInGb,
+      toint( MaxFileSizeInKb) , toint( FileSizeInKb) , error_code, error_message, operation_parameters};_ExecuteForProdClusters'
 - id: MI-ASMI-IO-STORAGE-08
   Topic: Storage (MonSQLXStore
   Source: kusto-queries/Storage (MonSQLXStore.md

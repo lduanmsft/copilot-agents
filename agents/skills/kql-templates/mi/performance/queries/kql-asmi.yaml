@@ -163,8 +163,8 @@ SqlSkills:
 
       | where AppName =~ "{AppName}"
 
-      | project originalEventTimestamp , query_id , plan_id ,exec_type , cpu_time , elapsed_time , dop, max_dop , logical_reads , logical_writes , physical_reads,
-      execution_count , memory_grant_kb = max_max_query_memory_pages * 8, query_hash , query_plan_hash'
+      | project originalEventTimestamp , query_id , plan_id ,exec_type , cpu_time , elapsed_time , dop, max_dop , logical_reads , logical_writes , physical_reads, execution_count , memory_grant_kb = max_max_query_memory_pages
+      * 8, query_hash , query_plan_hash'
 - id: MI-ASMI-QUERIES-10
   Topic: Investigation memory incidents
   Source: kusto-queries/Investigation memory incidents.md
@@ -555,3 +555,85 @@ SqlSkills:
       | where database_name =~ "{DatabaseName}"
 
       | where query_hash== "0x025ECF4ECDDC3477"//"0x025ECF4ECDDC3477"'
+- id: MI-ASMI-QUERIES-30
+  Topic: MonQueryProcessing(Statistic & Index create & drop
+  Source: kusto-queries/MonQueryProcessing(Statistic & Index create & drop.md
+  Prompts:
+  - MI MonQueryProcessing(Statistic & Index create & drop
+  - Managed Instance MonQueryProcessing(Statistic & Index create & drop
+  - Investigate MonQueryProcessing(Statistic & Index create & drop
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonQueryProcessing
+    ExecutedQuery: 'let serverName = "***************";
+
+      let DatabaseName = "***************";
+
+      MonQueryProcessing
+
+      | where originalEventTimestamp between (datetime(2023-01-12 13:00:00) .. datetime(2023-01-12 16:00:00))
+
+      | where event == "metadata_change"
+
+      | where LogicalServerName == serverName and logical_database_name  == DatabaseName
+
+      | project originalEventTimestamp,logical_database_name, event, operation_type, object_id,object_name'
+- id: MI-ASMI-QUERIES-31
+  Topic: MonQueryProcessing(Statistic & Index create & drop
+  Source: kusto-queries/MonQueryProcessing(Statistic & Index create & drop.md
+  Prompts:
+  - MI MonQueryProcessing(Statistic & Index create & drop
+  - Managed Instance MonQueryProcessing(Statistic & Index create & drop
+  - Investigate MonQueryProcessing(Statistic & Index create & drop
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonQueryProcessing
+    ExecutedQuery: MonQueryProcessing                        | where  (originalEventTimestamp > ago(1d))                        | where AppName !startswith 'b-' and AppName !startswith 'v-'                        |
+      where event == 'metadata_change'                        | extend database_name=logical_database_name                        | where LogicalServerName =~ "{ServerName}"                        | project
+      originalEventTimestamp, database_name, object_id,object_name, operation_type, operation_code                        | order by originalEventTimestamp desc
+- id: MI-ASMI-QUERIES-32
+  Topic: MonQueryProcessing(Statistic & Index create & drop
+  Source: kusto-queries/MonQueryProcessing(Statistic & Index create & drop.md
+  Prompts:
+  - MI MonQueryProcessing(Statistic & Index create & drop
+  - Managed Instance MonQueryProcessing(Statistic & Index create & drop
+  - Investigate MonQueryProcessing(Statistic & Index create & drop
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonQueryProcessing
+    ExecutedQuery: 'MonQueryProcessing
+
+      | where  (originalEventTimestamp > ago(1d))
+
+      | where AppName !startswith ''b-'' and AppName !startswith ''v-''
+
+      | where event == ''metadata_change''
+
+      | extend database_name=logical_database_name'
+- id: MI-ASMI-QUERIES-33
+  Topic: Query All Cluster
+  Source: kusto-queries/Query All Cluster.md
+  Prompts:
+  - MI Query All Cluster
+  - Managed Instance Query All Cluster
+  - Investigate Query All Cluster
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'let queryCluster = (clusterName: string, databaseName: string)
+
+      MonManagement
+
+      | where event == "managed_disk_azure_operation_complete"
+
+      | where operation_type == "UpdateVmDataDisksSection"
+
+      | extend api_version = tostring(split(arm_request_uri,''?'')[1])'

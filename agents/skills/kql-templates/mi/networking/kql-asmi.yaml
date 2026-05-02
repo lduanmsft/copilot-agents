@@ -1,0 +1,367 @@
+SqlSkills:
+- id: MI-ASMI-NETWORKING-01
+  Topic: AAD authentication
+  Source: kusto-queries/AAD authentication.md
+  Prompts:
+  - MI AAD authentication
+  - Managed Instance AAD authentication
+  - Investigate AAD authentication
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'MonLogin
+
+      | where TIMESTAMP >= datetime(2024-05-06 00:39:00Z) | where TIMESTAMP < datetime(2024-05-06 14:15:53Z)'
+- id: MI-ASMI-NETWORKING-02
+  Topic: AAD authentication
+  Source: kusto-queries/AAD authentication.md
+  Prompts:
+  - MI AAD authentication
+  - Managed Instance AAD authentication
+  - Investigate AAD authentication
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'let starttime= ago(1d);
+
+      let endtime= now();
+
+      let server= ''myazepmdb0011'';
+
+      let database= ''MerlotCADemo'';
+
+      MonLogin
+
+      | where originalEventTimestamp>= starttime and originalEventTimestamp<= endtime
+
+      | where logical_server_name=~ server //and database_name=~ database
+
+      //| where event == ''process_login_finish''
+
+      //| where error == 18456 and [''state''] == 132
+
+      | extend AADUser= iif( fedauth_adal_workflow> 0 or fedauth_library_type> 0, "AAD", "SQL")'
+- id: MI-ASMI-NETWORKING-03
+  Topic: AAD authentication
+  Source: kusto-queries/AAD authentication.md
+  Prompts:
+  - MI AAD authentication
+  - Managed Instance AAD authentication
+  - Investigate AAD authentication
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonFedAuthTicketService
+    ExecutedQuery: 'MonFedAuthTicketService
+
+      | where originalEventTimestamp>= starttime and originalEventTimestamp<= endtime
+
+      | where event== ''fedauth_webtoken_failure''
+
+      | project sql_connection_id, database_name, logical_database_name, JSONWebTokenErrorState= error_state, error_message'
+- id: MI-ASMI-NETWORKING-04
+  Topic: AAD authentication
+  Source: kusto-queries/AAD authentication.md
+  Prompts:
+  - MI AAD authentication
+  - Managed Instance AAD authentication
+  - Investigate AAD authentication
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAzureActivDirService
+    ExecutedQuery: 'MonAzureActivDirService
+
+      | where originalEventTimestamp between(startTime..endTime)
+
+      | where logical_server_name =~ serverName and (isempty(databaseName) or database_name =~ databaseName)
+
+      | project originalEventTimestamp, logical_database_name, NodeName, AppName, event'
+- id: MI-ASMI-NETWORKING-05
+  Topic: Check Read-scale out connection
+  Source: kusto-queries/Check Read-scale out connection.md
+  Prompts:
+  - MI Check Read-scale out connection
+  - Managed Instance Check Read-scale out connection
+  - Investigate Check Read-scale out connection
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'MonLogin
+
+      | where TIMESTAMP >= datetime(2024-03-25 20:00:00Z) | where TIMESTAMP < datetime(2024-03-26 22:35:53Z)'
+- id: MI-ASMI-NETWORKING-06
+  Topic: Gateway issue
+  Source: kusto-queries/Gateway issue.md
+  Prompts:
+  - MI Gateway issue
+  - Managed Instance Gateway issue
+  - Investigate Gateway issue
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'let timeBucket = iff(datetime_diff(''second'', datetime(2024-03-20 00:15:00), datetime(2024-03-26 02:30)) < 1000, 1s, iff(datetime_diff(''minute'',  datetime(2024-03-20 00:15), datetime(2024-03-26
+      02:30)) < 1000, 1m, 1h));
+
+      MonLogin
+
+      | where originalEventTimestamp between(datetime(2024-03-20 00:15).. datetime(2024-03-26 02:30))
+
+      | where event == ''process_login_finish''
+
+      | where logical_server_name =~ "{ServerName}"// and database_name =~ "{DatabaseName}"
+
+      | summarize count() by bin(originalEventTimestamp, timeBucket), iff(is_success == true, strcat(''Successful_'', package), strcat(''Failed_'', package, ''_'', error, ''_'', state)),AppName'
+- id: MI-ASMI-NETWORKING-07
+  Topic: Gateway issue
+  Source: kusto-queries/Gateway issue.md
+  Prompts:
+  - MI Gateway issue
+  - Managed Instance Gateway issue
+  - Investigate Gateway issue
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRedirector
+    ExecutedQuery: 'let startTime = datetime(''2024-03-20 00:00:00'');
+
+      let endTime = datetime(''2024-03-21 23:22:00'');
+
+      MonRedirector
+
+      | where originalEventTimestamp between(startTime..endTime)
+
+      | where ClusterName in (''tr5896.southeastasia1-a.worker.database.windows.net'')'
+- id: MI-ASMI-NETWORKING-08
+  Topic: Gateway issue
+  Source: kusto-queries/Gateway issue.md
+  Prompts:
+  - MI Gateway issue
+  - Managed Instance Gateway issue
+  - Investigate Gateway issue
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRedirector
+    ExecutedQuery: 'MonRedirector
+
+      | where TIMESTAMP > ago(7d)
+
+      | where ClusterName contains ''tr5896.southeastasia1-a.worker.database.windows.net'''
+- id: MI-ASMI-NETWORKING-09
+  Topic: Gateway issue
+  Source: kusto-queries/Gateway issue.md
+  Prompts:
+  - MI Gateway issue
+  - Managed Instance Gateway issue
+  - Investigate Gateway issue
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'let tenantRing = ''tr5896.southeastasia1-a.worker.database.windows.net'';
+
+      let serverName = ''thazefmdb0029'';
+
+      MonLogin
+
+      | where originalEventTimestamp > ago(7d)
+
+      | where ClusterName == tenantRing
+
+      | where event == ''process_login_finish''
+
+      | where error != 0 or is_success == 0
+
+      | where AppTypeName startswith ''Gateway.PDC''
+
+      | where logical_server_name =~ serverName'
+- id: MI-ASMI-NETWORKING-10
+  Topic: Gateway issue
+  Source: kusto-queries/Gateway issue.md
+  Prompts:
+  - MI Gateway issue
+  - Managed Instance Gateway issue
+  - Investigate Gateway issue
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCounterOneMinute
+    ExecutedQuery: 'MonCounterOneMinute
+
+      | where ClusterName == ''tr5896.southeastasia1-a.worker.database.windows.net'''
+- id: MI-ASMI-NETWORKING-11
+  Topic: Gateway issue
+  Source: kusto-queries/Gateway issue.md
+  Prompts:
+  - MI Gateway issue
+  - Managed Instance Gateway issue
+  - Investigate Gateway issue
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRgLoad
+    ExecutedQuery: 'let tenantRing = ''tr5896.southeastasia1-a.worker.database.windows.net'';
+
+      MonRgLoad
+
+      | extend originalEventTimestamp = originalEventTimestampFrom'
+- id: MI-ASMI-NETWORKING-12
+  Topic: Linked Server
+  Source: kusto-queries/Linked Server.md
+  Prompts:
+  - MI Linked Server
+  - Managed Instance Linked Server
+  - Investigate Linked Server
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLinkedServerInfo
+    ExecutedQuery: 'MonLinkedServerInfo
+
+      | where LogicalServerName == "mi name" or LogicalServerName == "server name"
+
+      | where linked_server_name startswith "10.1.9.60"
+
+      | where originalEventTimestamp > ago(10d)
+
+      | project originalEventTimestamp, LogicalServerName, linked_server_name, provider_name'
+- id: MI-ASMI-NETWORKING-13
+  Topic: Proxy error 40613 v.s. 42127
+  Source: kusto-queries/Proxy error 40613 v.s. 42127.md
+  Prompts:
+  - MI Proxy error 40613 v.s. 42127
+  - Managed Instance Proxy error 40613 v.s. 42127
+  - Investigate Proxy error 40613 v.s. 42127
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'MonLogin
+
+      | where originalEventTimestamp > datetime(''2025-02-17 00:27:00'') and originalEventTimestamp < datetime(''2025-02-17 02:27:00'')
+
+      | where connection_id == ''D275504B-C4D8-4F1B-B6BA-927A17732349''
+
+      | project originalEventTimestamp, event, total_time_ms,  proxy_dispacther_time_ms, action, ssl_protocol,ssl_cipher,extra_info'
+- id: MI-ASMI-NETWORKING-14
+  Topic: Proxy or Redirect
+  Source: kusto-queries/Proxy or Redirect.md
+  Prompts:
+  - MI Proxy or Redirect
+  - Managed Instance Proxy or Redirect
+  - Investigate Proxy or Redirect
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'let startTime = datetime(2022-06-03 12:00:00);
+
+      let endTime = datetime(2022-06-03 14:00:00);
+
+      let srv = "{ServerName}";
+
+      let db = "{DatabaseName}";
+
+      MonLogin
+
+      | where TIMESTAMP >= startTime and TIMESTAMP <= endTime'
+- id: MI-ASMI-NETWORKING-15
+  Topic: Proxy or Redirect
+  Source: kusto-queries/Proxy or Redirect.md
+  Prompts:
+  - MI Proxy or Redirect
+  - Managed Instance Proxy or Redirect
+  - Investigate Proxy or Redirect
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'let startTime = todatetime(''2024-08-19 21:20:00'');
+
+      let endTime = todatetime(''2024-08-26 18:03:47'');
+
+      let serverName = ''bhazms0512001p'';
+
+      MonLogin
+
+      | where originalEventTimestamp between(startTime..endTime)
+
+      | where logical_server_name =~ "{ServerName}"
+
+      | where event == "process_login_finish" and is_success==true
+
+      | where NodeName =="_WF2C_3"
+
+      | extend AADUser= iif( fedauth_adal_workflow> 0 or fedauth_library_type> 0, "AAD", "SQL")'
+- id: MI-ASMI-NETWORKING-16
+  Topic: Proxy or Redirect
+  Source: kusto-queries/Proxy or Redirect.md
+  Prompts:
+  - MI Proxy or Redirect
+  - Managed Instance Proxy or Redirect
+  - Investigate Proxy or Redirect
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'let starttime= ago(1d);
+
+      let endtime= now();
+
+      let server= ''mtcacuat'';
+
+      let database= ''MerlotCADemo'';
+
+      MonLogin
+
+      | where originalEventTimestamp>= starttime and originalEventTimestamp<= endtime
+
+      | where logical_server_name=~ server and database_name=~ database
+
+      //| where event == ''process_login_finish''
+
+      //| where error == 18456 and [''state''] == 132
+
+      | extend AADUser= iif( fedauth_adal_workflow> 0 or fedauth_library_type> 0, "AAD", "SQL")'
+- id: MI-ASMI-NETWORKING-17
+  Topic: Tips with Azure Network team
+  Source: kusto-queries/Tips with Azure Network team.md
+  Prompts:
+  - MI Tips with Azure Network team
+  - Managed Instance Tips with Azure Network team
+  - Investigate Tips with Azure Network team
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCapacityTenantSnapshot
+    ExecutedQuery: 'let clusterName = ''tr11909.westus2-a.worker.database.windows.net'';
+
+      let timestape = ago(5d);
+
+      MonCapacityTenantSnapshot
+
+      | where TIMESTAMP > timestape
+
+      | summarize arg_max(TIMESTAMP, *) by tenant_ring_name, tenant_name'

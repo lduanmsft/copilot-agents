@@ -64,3 +64,82 @@ SqlSkills:
       | make-series SqlAliasErrorCount = count() on originalEventTimestamp from bin(startTime, 1m) to bin(endTime, 1m) step 1m
 
       | mv-expand originalEventTimestamp, SqlAliasErrorCount'
+- id: MI-ASMI-NODE-HEALTH-04
+  Topic: Node history status
+  Source: kusto-queries/Node history status.md
+  Prompts:
+  - MI Node history status
+  - Managed Instance Node history status
+  - Investigate Node history status
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: AlrWinFabHealthNodeEvent
+    ExecutedQuery: 'AlrWinFabHealthNodeEvent
+
+      | where ClusterName startswith "tr3.chinaeast1-a." and NodeEntityName == "DB.102"
+
+      | where TIMESTAMP > datetime(3/30/2023 4:00:09 AM) and TIMESTAMP < datetime(4/10/2023 4:47:09 AM)'
+- id: MI-ASMI-NODE-HEALTH-05
+  Topic: Node history status
+  Source: kusto-queries/Node history status.md
+  Prompts:
+  - MI Node history status
+  - Managed Instance Node history status
+  - Investigate Node history status
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonClusterLoad
+    ExecutedQuery: 'MonClusterLoad
+
+      | where ClusterName contains "tr3.chinaeast1-a."
+
+      | where  TIMESTAMP>= datetime(2023-03-30 04:00:00) and TIMESTAMP<= datetime(2023-04-10 04:28:00)'
+- id: MI-ASMI-NODE-HEALTH-06
+  Topic: Node-wide info
+  Source: kusto-queries/Node-wide info.md
+  Prompts:
+  - MI Node-wide info
+  - Managed Instance Node-wide info
+  - Investigate Node-wide info
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCounterOneMinute
+    ExecutedQuery: 'MonCounterOneMinute
+
+      | where TIMESTAMP > datetime({StartTime}) and TIMESTAMP < datetime({EndTime})'
+- id: MI-ASMI-NODE-HEALTH-07
+  Topic: Node-wide info
+  Source: kusto-queries/Node-wide info.md
+  Prompts:
+  - MI Node-wide info
+  - Managed Instance Node-wide info
+  - Investigate Node-wide info
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSystemEventLogErrors
+    ExecutedQuery: 'MonSystemEventLogErrors
+
+      | where TIMESTAMP > datetime({StartTime}) and TIMESTAMP < datetime({EndTime})'
+- id: MI-ASMI-NODE-HEALTH-08
+  Topic: Node-wide info
+  Source: kusto-queries/Node-wide info.md
+  Prompts:
+  - MI Node-wide info
+  - Managed Instance Node-wide info
+  - Investigate Node-wide info
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAppEventLogErrors
+    ExecutedQuery: 'MonAppEventLogErrors
+
+      | where TIMESTAMP > datetime({StartTime}) and TIMESTAMP < datetime({EndTime})'

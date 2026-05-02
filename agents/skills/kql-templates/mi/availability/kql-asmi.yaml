@@ -1,0 +1,266 @@
+SqlSkills:
+- id: MI-ASMI-AVAILABILITY-01
+  Topic: Failover - Planned_Unplanned
+  Source: kusto-queries/Failover - Planned_Unplanned.md
+  Prompts:
+  - MI Failover - Planned_Unplanned
+  - Managed Instance Failover - Planned_Unplanned
+  - Investigate Failover - Planned_Unplanned
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: Unknown
+    ExecutedQuery: 'let ServerName = "{ServerName}";
+
+      let DatabaseName = "MarketManProd";
+
+      | where TIMESTAMP between (datetime(2024-04-30 12:00:56.3012018) .. datetime(2024-04-30 15:00:50.5268716))'
+- id: MI-ASMI-AVAILABILITY-02
+  Topic: Failover - Planned_Unplanned
+  Source: kusto-queries/Failover - Planned_Unplanned.md
+  Prompts:
+  - MI Failover - Planned_Unplanned
+  - Managed Instance Failover - Planned_Unplanned
+  - Investigate Failover - Planned_Unplanned
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: SqlFailovers
+    ExecutedQuery: '//|  order by outageStartTime desc
+
+      //check database unavailable event
+
+      UnavailabilityEvents
+
+      | where LogicalServerName =~ "{ServerName}" //and logical_database_name =~ "{DatabaseName}"
+
+      | where StartTime >= datetime(2023-04-10 00:33:00Z)
+
+      | where StartTime < datetime(2023-08-14 22:45:53Z)
+
+      SqlFailovers
+
+      | where logical_server_name =~ "{ServerName}" //and logical_database_name =~ "{DatabaseName}"
+
+      | where TIMESTAMP >= datetime(2023-07-10 00:33:00Z)'
+- id: MI-ASMI-AVAILABILITY-03
+  Topic: Failover - Planned_Unplanned
+  Source: kusto-queries/Failover - Planned_Unplanned.md
+  Prompts:
+  - MI Failover - Planned_Unplanned
+  - Managed Instance Failover - Planned_Unplanned
+  - Investigate Failover - Planned_Unplanned
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonFabricApi
+    ExecutedQuery: 'MonFabricApi
+
+      | where AppName== "a703f2b710af"
+
+      | where PreciseTimeStamp> datetime(2023-08-24 00:20)
+
+      //| where PreciseTimeStamp < datetime(2019-05-06 01:00)
+
+      | project originalEventTimestamp, NodeName, event, current_state_desc, new_role_desc, current_write_status_desc'
+- id: MI-ASMI-AVAILABILITY-04
+  Topic: Failover Group
+  Source: kusto-queries/Failover Group.md
+  Prompts:
+  - MI Failover Group
+  - Managed Instance Failover Group
+  - Investigate Failover Group
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonGeoDRFailoverGroups
+    ExecutedQuery: 'MonGeoDRFailoverGroups
+
+      | where logical_server_name == {ServerName}
+
+      | summarize arg_max(PreciseTimeStamp, *)
+
+      | project GroupId = failover_group_id, GroupName = failover_group_name, Policy = failover_policy, Server = logical_server_name, Role = role,PartnerRegion = partner_region, PartnerServer = partner_server_name'
+- id: MI-ASMI-AVAILABILITY-05
+  Topic: Failover Group
+  Source: kusto-queries/Failover Group.md
+  Prompts:
+  - MI Failover Group
+  - Managed Instance Failover Group
+  - Investigate Failover Group
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonGeoDRFailoverGroups
+    ExecutedQuery: 'MonGeoDRFailoverGroups
+
+      | where TIMESTAMP >= {startTime}
+
+      | where TIMESTAMP <= {endTime}
+
+      | where logical_server_name == {ServerName}
+
+      | project PreciseTimeStamp, start_utc_date, end_utc_date, logical_server_name, role'
+- id: MI-ASMI-AVAILABILITY-06
+  Topic: Health of replica
+  Source: kusto-queries/Health of replica.md
+  Prompts:
+  - MI Health of replica
+  - Managed Instance Health of replica
+  - Investigate Health of replica
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmDbHadrReplicaStates
+    ExecutedQuery: 'MonDmDbHadrReplicaStates
+
+      | where LogicalServerName =~ "{LogicalServerName}"  and AppName =~ "{AppName}"  //and  logical_database_name  =~ "{LogicalDatabaseName}"
+
+      | where TIMESTAMP > datetime({StartTime}) and TIMESTAMP < datetime({EndTime})'
+- id: MI-ASMI-AVAILABILITY-07
+  Topic: Health of replica
+  Source: kusto-queries/Health of replica.md
+  Prompts:
+  - MI Health of replica
+  - Managed Instance Health of replica
+  - Investigate Health of replica
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonFabricApi
+    ExecutedQuery: 'MonFabricApi
+
+      | filter LogicalServerName =~ "{LogicalServerName}" and AppName =~ "{AppName}"
+
+      | filter event in ("hadr_fabric_api_replicator_begin_change_role", "hadr_fabric_api_replica_end_change_role")
+
+      | where TIMESTAMP >datetime({StartTime}) and TIMESTAMP < datetime({EndTime})'
+- id: MI-ASMI-AVAILABILITY-08
+  Topic: Slow seeding - GeoDR
+  Source: kusto-queries/Slow seeding - GeoDR.md
+  Prompts:
+  - MI Slow seeding - GeoDR
+  - Managed Instance Slow seeding - GeoDR
+  - Investigate Slow seeding - GeoDR
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: 'MonAnalyticsDBSnapshot
+
+      | where TIMESTAMP >= ago(3h)
+
+      | where database_type == "SQL.ManagedUserDb"
+
+      | where [''state''] == "Copying"
+
+      | summarize arg_max(TIMESTAMP, [''state''], physical_database_state) by tenant_ring_name, customer_subscription_id, sql_instance_name, logical_server_name, logical_database_name'
+- id: MI-ASMI-AVAILABILITY-09
+  Topic: Slow seeding - GeoDR
+  Source: kusto-queries/Slow seeding - GeoDR.md
+  Prompts:
+  - MI Slow seeding - GeoDR
+  - Managed Instance Slow seeding - GeoDR
+  - Investigate Slow seeding - GeoDR
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDbSeedTraces
+    ExecutedQuery: 'MonDbSeedTraces
+
+      | where TIMESTAMP >= ago(24h)
+
+      | where AppTypeName == "Worker.CL"
+
+      | where LogicalServerName startswith "{managed_server_name}"
+
+      | where event == ''hadr_physical_seeding_progress''
+
+      | where role_desc == "Destination"
+
+      | extend transfer_rate_mb_per_second = transfer_rate_bytes_per_second / 1024.0 / 1024.0'
+- id: MI-ASMI-AVAILABILITY-10
+  Topic: Slow seeding - GeoDR
+  Source: kusto-queries/Slow seeding - GeoDR.md
+  Prompts:
+  - MI Slow seeding - GeoDR
+  - Managed Instance Slow seeding - GeoDR
+  - Investigate Slow seeding - GeoDR
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDbSeedTraces
+    ExecutedQuery: 'MonDbSeedTraces
+
+      | where TIMESTAMP >= ago(24h)
+
+      | where AppTypeName == "Worker.CL"
+
+      | where LogicalServerName startswith "{managed_server_name}"
+
+      | where event == "hadr_physical_seeding_progress"
+
+      | where role_desc == "Destination"
+
+      | where internal_state_desc == "Success"
+
+      | extend transfer_rate_mb_per_second = transfer_rate_bytes_per_second / 1024.0 / 1024.0'
+- id: MI-ASMI-AVAILABILITY-11
+  Topic: Slow seeding - GeoDR
+  Source: kusto-queries/Slow seeding - GeoDR.md
+  Prompts:
+  - MI Slow seeding - GeoDR
+  - Managed Instance Slow seeding - GeoDR
+  - Investigate Slow seeding - GeoDR
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonNonPiiAudit
+    ExecutedQuery: 'MonNonPiiAudit
+
+      | where TIMESTAMP >= ago(24h)
+
+      | where request_action contains "KillProcess"
+
+      | where * contains "{sql_instance_name}"
+
+      | project TIMESTAMP, username, parameters, request, request_action'
+- id: MI-ASMI-AVAILABILITY-12
+  Topic: Zone-Redundant Config
+  Source: kusto-queries/Zone-Redundant Config.md
+  Prompts:
+  - MI Zone-Redundant Config
+  - Managed Instance Zone-Redundant Config
+  - Investigate Zone-Redundant Config
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: MonAnalyticsDBSnapshot| where TIMESTAMP > datetime(2024-04-20) and TIMESTAMP < datetime(2024-05-24)| where logical_server_name =~ "{ServerName}"
+- id: MI-ASMI-AVAILABILITY-13
+  Topic: Zone-Redundant Config
+  Source: kusto-queries/Zone-Redundant Config.md
+  Prompts:
+  - MI Zone-Redundant Config
+  - Managed Instance Zone-Redundant Config
+  - Investigate Zone-Redundant Config
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: 'MonAnalyticsDBSnapshot
+
+      | where TIMESTAMP > datetime(2024-04-20) and TIMESTAMP < datetime(2024-05-24)'

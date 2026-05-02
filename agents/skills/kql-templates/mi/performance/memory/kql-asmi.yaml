@@ -92,8 +92,8 @@ SqlSkills:
 
       | where store_type endswith "CP"
 
-      | project PreciseTimeStamp, store_name, clock_hand_id, rounds_count, visited_last_round, removed_last_round, is_system_physical_memory_low, is_process_physical_memory_low,
-      is_process_virtual_memory_low, pool_physical_memory_indicator_mask'
+      | project PreciseTimeStamp, store_name, clock_hand_id, rounds_count, visited_last_round, removed_last_round, is_system_physical_memory_low, is_process_physical_memory_low, is_process_virtual_memory_low,
+      pool_physical_memory_indicator_mask'
 - id: MI-ASMI-MEMORY-05
   Topic: Investigation memory incidents
   Source: kusto-queries/Investigation memory incidents.md
@@ -131,8 +131,8 @@ SqlSkills:
 
       | where NodeName == "{NodeName}"
 
-      | project PreciseTimeStamp, tag_id, store_name, store_type, store_address, table_level, buckets_count, buckets_in_use_count, buckets_min_length, buckets_max_length,
-      buckets_avg_length, buckets_max_length_ever, hits_count, misses_count, buckets_avg_scan_hit_length, buckets_avg_scan_miss_length'
+      | project PreciseTimeStamp, tag_id, store_name, store_type, store_address, table_level, buckets_count, buckets_in_use_count, buckets_min_length, buckets_max_length, buckets_avg_length, buckets_max_length_ever,
+      hits_count, misses_count, buckets_avg_scan_hit_length, buckets_avg_scan_miss_length'
 - id: MI-ASMI-MEMORY-07
   Topic: Investigation memory incidents
   Source: kusto-queries/Investigation memory incidents.md
@@ -218,8 +218,8 @@ SqlSkills:
 
       | where pool_metadata_id == 2000000012
 
-      | project TIMESTAMP, broker, notification, currently_allocated_kb=currently_allocated*8, previously_allocated_kb=previously_allocated*8, overall_kb=overall*8,
-      currently_predicated_kb=currently_predicated*8, new_target_kb=new_target*8'
+      | project TIMESTAMP, broker, notification, currently_allocated_kb=currently_allocated*8, previously_allocated_kb=previously_allocated*8, overall_kb=overall*8, currently_predicated_kb=currently_predicated*8,
+      new_target_kb=new_target*8'
 - id: MI-ASMI-MEMORY-11
   Topic: Investigation memory incidents
   Source: kusto-queries/Investigation memory incidents.md
@@ -272,8 +272,8 @@ SqlSkills:
 
       | where AppName =~ "{AppName}"
 
-      | project end_utc_date , name , pool_id , delta_total_request_count , delta_active_memgrant_kb, delta_used_memgrant_kb , delta_active_memgrant_count , delta_memgrant_waiter_count
-      , delta_total_memgrant_timeout_count , delta_is_valid'
+      | project end_utc_date , name , pool_id , delta_total_request_count , delta_active_memgrant_kb, delta_used_memgrant_kb , delta_active_memgrant_count , delta_memgrant_waiter_count , delta_total_memgrant_timeout_count
+      , delta_is_valid'
 - id: MI-ASMI-MEMORY-14
   Topic: Investigation memory incidents
   Source: kusto-queries/Investigation memory incidents.md
@@ -290,8 +290,7 @@ SqlSkills:
 
       | where AppName =~ "{AppName}"
 
-      | project TIMESTAMP, AppName, LogicalServerName, failure, factor, last_error, task, pool_metadata_id, committed_kb, job_object_limit_job_mem_kb, is_system_physical_memory_low,
-      instance_rg_size'
+      | project TIMESTAMP, AppName, LogicalServerName, failure, factor, last_error, task, pool_metadata_id, committed_kb, job_object_limit_job_mem_kb, is_system_physical_memory_low, instance_rg_size'
 - id: MI-ASMI-MEMORY-15
   Topic: Investigation memory incidents
   Source: kusto-queries/Investigation memory incidents.md
@@ -569,8 +568,7 @@ SqlSkills:
 
       | where NodeName == "{NodeName}"
 
-      | project TIMESTAMP, initial_job_memory_cap, current_job_memory_cap, node_available_physical_memory, ideal_target, current_target, memory_usage, current_commit,
-      non_sos_usage, memory_pressure'
+      | project TIMESTAMP, initial_job_memory_cap, current_job_memory_cap, node_available_physical_memory, ideal_target, current_target, memory_usage, current_commit, non_sos_usage, memory_pressure'
 - id: MI-ASMI-MEMORY-29
   Topic: Memory-optimized object
   Source: kusto-queries/Memory-optimized object.md
@@ -631,8 +629,8 @@ SqlSkills:
 
       | where AppName =~ "{AppName}"
 
-      | where message contains "Failed allocate pages: FAIL_PAGE_ALLOCATION" or message contains "Failed Virtual Allocate Bytes: FAIL_VIRTUAL_RESERVE" or message
-      contains "Failed to reserve pages: FAIL_PAGE_RESERVATION" or message contains "FAIL_VIRTUAL_COMMIT"
+      | where message contains "Failed allocate pages: FAIL_PAGE_ALLOCATION" or message contains "Failed Virtual Allocate Bytes: FAIL_VIRTUAL_RESERVE" or message contains "Failed to reserve pages: FAIL_PAGE_RESERVATION"
+      or message contains "FAIL_VIRTUAL_COMMIT"
 
       | project TIMESTAMP, AppName, LogicalServerName, NodeName, message'
 - id: MI-ASMI-MEMORY-32
@@ -653,8 +651,8 @@ SqlSkills:
 
       | where AppName == UserAppName
 
-      | project TIMESTAMP, ClusterName, AppName, AppTypeName, LogicalServerName, NodeName, factor, failure, pool_metadata_id, committed_kb, job_object_limit_job_mem_kb,
-      is_system_physical_memory_low, is_process_physical_memory_low, is_process_virtual_memory_low
+      | project TIMESTAMP, ClusterName, AppName, AppTypeName, LogicalServerName, NodeName, factor, failure, pool_metadata_id, committed_kb, job_object_limit_job_mem_kb, is_system_physical_memory_low, is_process_physical_memory_low,
+      is_process_virtual_memory_low
 
       | join kind= inner (
 
@@ -668,8 +666,8 @@ SqlSkills:
 
       | extend MaxPoolSizeKb=job_object_limit_job_mem_kb-min_sos_gap_with_job_mem_limit_in_mb*1024
 
-      | project TIMESTAMP, AppName, AppTypeName, LogicalServerName, NodeName, factor, failure, pool_metadata_id, committed_kb, job_object_limit_job_mem_kb, MaxPoolSizeKb,
-      min_sos_gap_with_job_mem_limit_in_mb, slo_name Table 2'
+      | project TIMESTAMP, AppName, AppTypeName, LogicalServerName, NodeName, factor, failure, pool_metadata_id, committed_kb, job_object_limit_job_mem_kb, MaxPoolSizeKb, min_sos_gap_with_job_mem_limit_in_mb,
+      slo_name Table 2'
 - id: MI-ASMI-MEMORY-33
   Topic: OOM
   Source: kusto-queries/OOM.md
@@ -690,8 +688,8 @@ SqlSkills:
 
       | where AppName == UserAppName
 
-      | project TIMESTAMP, ClusterName, AppName, AppTypeName, LogicalServerName, NodeName, factor, failure, pool_metadata_id, committed_kb, job_object_limit_job_mem_kb,
-      is_system_physical_memory_low, is_process_physical_memory_low, is_process_virtual_memory_low
+      | project TIMESTAMP, ClusterName, AppName, AppTypeName, LogicalServerName, NodeName, factor, failure, pool_metadata_id, committed_kb, job_object_limit_job_mem_kb, is_system_physical_memory_low, is_process_physical_memory_low,
+      is_process_virtual_memory_low
 
       | join kind= inner (
 
@@ -705,8 +703,8 @@ SqlSkills:
 
       | extend MaxPoolSizeKb=job_object_limit_job_mem_kb-min_sos_gap_with_job_mem_limit_in_mb*1024
 
-      | project TIMESTAMP, AppName, AppTypeName, LogicalServerName, NodeName, factor, failure, pool_metadata_id, committed_kb, job_object_limit_job_mem_kb, MaxPoolSizeKb,
-      min_sos_gap_with_job_mem_limit_in_mb, slo_name'
+      | project TIMESTAMP, AppName, AppTypeName, LogicalServerName, NodeName, factor, failure, pool_metadata_id, committed_kb, job_object_limit_job_mem_kb, MaxPoolSizeKb, min_sos_gap_with_job_mem_limit_in_mb,
+      slo_name'
 - id: MI-ASMI-MEMORY-34
   Topic: Performance Counter + Alias ODBC failure
   Source: kusto-queries/Performance Counter + Alias ODBC failure.md
@@ -732,3 +730,272 @@ SqlSkills:
       | where NodeName contains ''WF''
 
       | where CounterName == ''\\Memory\\Available MBytes'''
+- id: MI-ASMI-MEMORY-35
+  Topic: Memory Troubleshooting Basics
+  Source: kusto-queries/Memory Troubleshooting Basics.md
+  Prompts:
+  - MI Memory Troubleshooting Basics
+  - Managed Instance Memory Troubleshooting Basics
+  - Investigate Memory Troubleshooting Basics
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'let oomApps = MonSQLSystemHealth
+
+      | where AppTypeName == "Worker.ISO.Premium" or AppTypeName == "Worker.ISO"
+
+      | where message contains "Failed allocate pages: FAIL_PAGE_ALLOCATION" or message contains "Failed Virtual Allocate Bytes: FAIL_VIRTUAL_RESERVE"
+
+      | summarize oom_count=count(message) by ClusterName, AppTypeName, AppName, LogicalServerName, NodeName, bin(TIMESTAMP, 15m);'
+- id: MI-ASMI-MEMORY-36
+  Topic: Memory Troubleshooting Basics
+  Source: kusto-queries/Memory Troubleshooting Basics.md
+  Prompts:
+  - MI Memory Troubleshooting Basics
+  - Managed Instance Memory Troubleshooting Basics
+  - Investigate Memory Troubleshooting Basics
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmDbResourceGovernance
+    ExecutedQuery: 'let singleDbApps = MonDmDbResourceGovernance
+
+      | where AppTypeName == "Worker.ISO.Premium" or AppTypeName == "Worker.ISO"
+
+      | where slo_name !startswith "M"
+
+      | summarize by ClusterName, AppTypeName, AppName, LogicalServerName, NodeName, slo_name;'
+- id: MI-ASMI-MEMORY-37
+  Topic: Memory Troubleshooting Basics
+  Source: kusto-queries/Memory Troubleshooting Basics.md
+  Prompts:
+  - MI Memory Troubleshooting Basics
+  - Managed Instance Memory Troubleshooting Basics
+  - Investigate Memory Troubleshooting Basics
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: Unknown
+    ExecutedQuery: 'let oomSingleDbs = oomApps
+
+      | join kind= inner (singleDbApps) on ClusterName, AppTypeName, AppName, LogicalServerName, NodeName'
+- id: MI-ASMI-MEMORY-38
+  Topic: Memory grant feedback
+  Source: kusto-queries/Memory grant feedback.md
+  Prompts:
+  - MI Memory grant feedback
+  - Managed Instance Memory grant feedback
+  - Investigate Memory grant feedback
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: 'let nodename = "<node name>";
+
+      let appname =   "<app name>";
+
+      let startTime =   "<start time>";
+
+      let endTime =   "<end time>";
+
+      MonWiQdsExecStats
+
+      |  where  TIMESTAMP >= startTime and  TIMESTAMP <= endTime'
+- id: MI-ASMI-MEMORY-39
+  Topic: Memory grant feedback
+  Source: kusto-queries/Memory grant feedback.md
+  Prompts:
+  - MI Memory grant feedback
+  - Managed Instance Memory grant feedback
+  - Investigate Memory grant feedback
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonQueryProcessing
+    ExecutedQuery: 'let sname =   "<server name>";
+
+      let dname =   "<db name>";
+
+      let aname =   "<app name>";
+
+      let phash = tolong("<hex plan hash>");
+
+      let startTime =   "<start time>";
+
+      let endTime =   "<end time>";
+
+      MonQueryProcessing
+
+      |   where   originalEventTimestamp  between(startTime..endTime)
+
+      |   where   AppName == aname
+
+      |   where   logical_database_name == dname
+
+      |   where   LogicalServerName == sname
+
+      |   where   query_plan_hash_signed == phash
+
+      |   where   event ==   "memory_grant_updated_by_feedback"
+
+      |   mv-expand   parse_json(memory_summary_by_operator_kb)
+
+      |   extend   ni = parse_json(memory_summary_by_operator_kb)'
+- id: MI-ASMI-MEMORY-40
+  Topic: Memory grant feedback
+  Source: kusto-queries/Memory grant feedback.md
+  Prompts:
+  - MI Memory grant feedback
+  - Managed Instance Memory grant feedback
+  - Investigate Memory grant feedback
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonQueryProcessing
+    ExecutedQuery: 'let sname =   "<server name>";
+
+      let dname =   "<db name>";
+
+      let aname =   "<app name>";
+
+      let phash = tolong("<hex plan hash>");
+
+      let startTime =   "<start time>";
+
+      let endTime =   "<end time>";
+
+      MonQueryProcessing
+
+      |   where   originalEventTimestamp  between(startTime..endTime)
+
+      |   where   AppName == aname
+
+      |   where   logical_database_name == dname
+
+      |   where   LogicalServerName == sname
+
+      |   where   query_plan_hash_signed == phash
+
+      |   where   event ==   "memory_grant_updated_by_feedback"
+
+      |   extend   overestimate_kb = ideal_additional_memory_before_kb - ideal_additional_memory_after_kb'
+- id: MI-ASMI-MEMORY-41
+  Topic: Memory grant feedback
+  Source: kusto-queries/Memory grant feedback.md
+  Prompts:
+  - MI Memory grant feedback
+  - Managed Instance Memory grant feedback
+  - Investigate Memory grant feedback
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQueryParamData
+    ExecutedQuery: 'let sname =   "<server name>";
+
+      let dname =   "<db name>";
+
+      let aname =   "<app name>";
+
+      let phash = tolong("<hex plan hash>");
+
+      let startTime =   "<start time>";
+
+      let endTime =   "<end time>";
+
+      MonWiQueryParamData
+
+      |   where   originalEventTimestamp between(startTime..endTime)
+
+      |   where   AppName == aname
+
+      |   where   logical_database_name == dname
+
+      |   where   LogicalServerName == sname
+
+      |   where   event ==   "query_parameterization_data"
+
+      |   where   query_plan_hash == phash
+
+      |   where   mgf_persistence_used_status ==   ''FeedbackApplied'''
+- id: MI-ASMI-MEMORY-42
+  Topic: Memory grant feedback
+  Source: kusto-queries/Memory grant feedback.md
+  Prompts:
+  - MI Memory grant feedback
+  - Managed Instance Memory grant feedback
+  - Investigate Memory grant feedback
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonQueryProcessing
+    ExecutedQuery: 'let sname =   "<server name>";
+
+      let dname =   "<db name>";
+
+      let aname =   "<app name>";
+
+      let phash = tolong("<hex plan hash>");
+
+      let startTime =   "<start time>";
+
+      let endTime =   "<end time>";
+
+      MonQueryProcessing
+
+      |   where   originalEventTimestamp  between(startTime..endTime)
+
+      |   where   AppName == aname
+
+      |   where   logical_database_name == dname
+
+      |   where   LogicalServerName == sname
+
+      |   where   query_plan_hash_signed == phash
+
+      |   where   event ==   "memory_grant_feedback_percentile_grant"
+
+      |   summarize   countExec = sum(current_interval), countSpill = sum(spill_count_pg), totalOverestimate_kb = sum(overestimate_error_pg_kb)'
+- id: MI-ASMI-MEMORY-43
+  Topic: Memory grant feedback
+  Source: kusto-queries/Memory grant feedback.md
+  Prompts:
+  - MI Memory grant feedback
+  - Managed Instance Memory grant feedback
+  - Investigate Memory grant feedback
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonQueryProcessing
+    ExecutedQuery: 'let sname =   "<server name>";
+
+      let dname =   "<db name>";
+
+      let aname =   "<app name>";
+
+      let startTime =   "<start time>";
+
+      let endTime =   "<end time>";
+
+      MonQueryProcessing
+
+      |   where   originalEventTimestamp  between(startTime..endTime)
+
+      |   where   AppName == aname
+
+      |   where   logical_database_name == dname
+
+      |   where   LogicalServerName == sname
+
+      |   where   event ==   "memory_grant_feedback_percentile_grant"
+
+      |   summarize   countExec = sum(current_interval), countSpill = sum(spill_count_pg), totalOverestimate_kb= sum(overestimate_error_pg_kb)'

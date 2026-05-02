@@ -355,3 +355,528 @@ SqlSkills:
       |filter request_url contains "/startManagedInstanceOperationResults/c5db2528-f7a8-477f-9ea8-162f16f76e48"
 
       | where correlation_id == "c5af5cb3-d3cb-4a73-9fe2-fc5b65451c99"'
+- id: MI-ASMI-MISCELLANEOUS-19
+  Topic: Export & Import
+  Source: kusto-queries/Export & Import.md
+  Prompts:
+  - MI Export & Import
+  - Managed Instance Export & Import
+  - Investigate Export & Import
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where TIMESTAMP > datetime(2022-06-15 12:20)'
+- id: MI-ASMI-MISCELLANEOUS-20
+  Topic: Export & Import
+  Source: kusto-queries/Export & Import.md
+  Prompts:
+  - MI Export & Import
+  - Managed Instance Export & Import
+  - Investigate Export & Import
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagementResourceProvider
+    ExecutedQuery: 'MonManagementResourceProvider
+
+      | where TIMESTAMP > datetime(2022-06-15 12:00)'
+- id: MI-ASMI-MISCELLANEOUS-21
+  Topic: Export & Import
+  Source: kusto-queries/Export & Import.md
+  Prompts:
+  - MI Export & Import
+  - Managed Instance Export & Import
+  - Investigate Export & Import
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where TIMESTAMP > datetime(2022-06-15 11:00)'
+- id: MI-ASMI-MISCELLANEOUS-22
+  Topic: Export & Import
+  Source: kusto-queries/Export & Import.md
+  Prompts:
+  - MI Export & Import
+  - Managed Instance Export & Import
+  - Investigate Export & Import
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonImportExport
+    ExecutedQuery: '| where event in ("management_workflow_create_importexport_request_start")
+
+      | join kind=inner (MonImportExport // Determine the time the job started based on the first traces from the TR'
+- id: MI-ASMI-MISCELLANEOUS-23
+  Topic: Get database id
+  Source: kusto-queries/Get database id.md
+  Prompts:
+  - MI Get database id
+  - Managed Instance Get database id
+  - Investigate Get database id
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: 'MonAnalyticsDBSnapshot
+
+      | where TIMESTAMP>= ago(1d)'
+- id: MI-ASMI-MISCELLANEOUS-24
+  Topic: Get database id
+  Source: kusto-queries/Get database id.md
+  Prompts:
+  - MI Get database id
+  - Managed Instance Get database id
+  - Investigate Get database id
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: 'let serverName = ''sqlmi-rms-test-ausoutheast-10'';
+
+      MonAnalyticsDBSnapshot
+
+      | where TIMESTAMP>= ago(1d)
+
+      | where LogicalServerName =~ "{ServerName}" or logical_server_name =~ "{ServerName}"
+
+      //| where logical_database_name =~ "{DatabaseName}"
+
+      |distinct logical_server_name,logical_database_name,logical_database_id
+
+      //| where * has @''6541a05c-073c-4773-bbef-a33967c099a2''
+
+      | limit 100
+
+      //get database status'
+- id: MI-ASMI-MISCELLANEOUS-25
+  Topic: Get database id
+  Source: kusto-queries/Get database id.md
+  Prompts:
+  - MI Get database id
+  - Managed Instance Get database id
+  - Investigate Get database id
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: 'let startTime = datetime(''2025-05-13 12:25:00'');
+
+      let endTime = datetime(''2025-05-20 08:25:00'');
+
+      let databaseName = ('''');
+
+      MonAnalyticsDBSnapshot
+
+      | where TIMESTAMP between(startTime..endTime)'
+- id: MI-ASMI-MISCELLANEOUS-26
+  Topic: MonLogin - most used
+  Source: kusto-queries/MonLogin - most used.md
+  Prompts:
+  - MI MonLogin - most used
+  - Managed Instance MonLogin - most used
+  - Investigate MonLogin - most used
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'MonLogin
+
+      | where LogicalServerName =~ ''<MI_name>'' or logical_server_name =~ ''<MI_name>''
+
+      //| where ClusterName == "tr2252.australiasoutheast1-a.worker.database.windows.net"//filter only ClusterName may give you more information'
+- id: MI-ASMI-MISCELLANEOUS-27
+  Topic: MonLogin - most used
+  Source: kusto-queries/MonLogin - most used.md
+  Prompts:
+  - MI MonLogin - most used
+  - Managed Instance MonLogin - most used
+  - Investigate MonLogin - most used
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'let timeBucket = iff(datetime_diff(''second'', datetime(2024-05-06 00:15:00), datetime(2024-05-06 05:30)) < 1000, 1s iff(datetime_diff(''minute'',  datetime(2024-05-06 00:15), datetime(2024-05-06
+      05:30)) < 1000, 1m, 1h));
+
+      MonLogin
+
+      | where originalEventTimestamp between(datetime(2024-05-06 00:15).. datetime(2024-05-06 05:30))
+
+      | where event == ''process_login_finish''
+
+      | where logical_server_name =~ "{ServerName}"// and database_name =~ "{DatabaseName}"
+
+      | summarize count() by bin(originalEventTimestamp, timeBucket), iff(is_success == true, strcat(''Successful_'', package), strcat(''Failed_'', package, ''_'', error, ''_'', state)),AppName'
+- id: MI-ASMI-MISCELLANEOUS-28
+  Topic: MonLogin - most used
+  Source: kusto-queries/MonLogin - most used.md
+  Prompts:
+  - MI MonLogin - most used
+  - Managed Instance MonLogin - most used
+  - Investigate MonLogin - most used
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'MonLogin
+
+      | where originalEventTimestamp > datetime(2024-05-15 08:20) and originalEventTimestamp < datetime(2024-05-15 09:00)
+
+      | where LogicalServerName =~ "{ServerName}" or logical_server_name =~ "{ServerName}"
+
+      | where event=="process_login_finish"
+
+      | summarize Success = countif(is_success == 1), UserFailed = countif(is_success == 0 and is_user_error == 1), TrueFailed = countif(is_success == 0 and is_user_error == 0) by bin(PreciseTimeStamp,
+      1min)'
+- id: MI-ASMI-MISCELLANEOUS-29
+  Topic: MonManagement - most used
+  Source: kusto-queries/MonManagement - most used.md
+  Prompts:
+  - MI MonManagement - most used
+  - Managed Instance MonManagement - most used
+  - Investigate MonManagement - most used
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where TIMESTAMP>= datetime(2024-06-07 00:00) and TIMESTAMP<= datetime(2024-06-07 15:00)'
+- id: MI-ASMI-MISCELLANEOUS-30
+  Topic: MonManagement - most used
+  Source: kusto-queries/MonManagement - most used.md
+  Prompts:
+  - MI MonManagement - most used
+  - Managed Instance MonManagement - most used
+  - Investigate MonManagement - most used
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where TIMESTAMP >= ago(12h)
+
+      | where request_id =~ ''6314EBE4-C80A-4989-9BD6-4EDF82A12633''
+
+      | project originalEventTimestamp, state_machine_type, action, event, error,  fsm_event, old_state, new_state, operation_parameters, operation_id,  keys,  message, stack_trace, request_id, caller_state_machine_type
+      , caller_keys , process_id, collect_current_thread_id'
+- id: MI-ASMI-MISCELLANEOUS-31
+  Topic: Performance Counter + Alias ODBC failure
+  Source: kusto-queries/Performance Counter + Alias ODBC failure.md
+  Prompts:
+  - MI Performance Counter + Alias ODBC failure
+  - Managed Instance Performance Counter + Alias ODBC failure
+  - Investigate Performance Counter + Alias ODBC failure
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCounterOneMinute
+    ExecutedQuery: 'let startTime = todatetime(''2024-08-18 2:00:00'');
+
+      let endTime = todatetime(''2024-08-24 02:01:00'');
+
+      let clusterName = ''tr52896.eastus1''; //Specify affected cluster name
+
+      MonCounterOneMinute
+
+      | where TIMESTAMP > ago(6d)
+
+      | where ClusterName contains clusterName
+
+      | where NodeName contains ''WF''
+
+      | where CounterName == ''\\Memory\\Available MBytes''
+
+      | project PreciseTimeStamp, AvailableMemory=CounterValue, NodeName'
+- id: MI-ASMI-MISCELLANEOUS-32
+  Topic: Performance Counter + Alias ODBC failure
+  Source: kusto-queries/Performance Counter + Alias ODBC failure.md
+  Prompts:
+  - MI Performance Counter + Alias ODBC failure
+  - Managed Instance Performance Counter + Alias ODBC failure
+  - Investigate Performance Counter + Alias ODBC failure
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRedirector
+    ExecutedQuery: 'MonRedirector
+
+      | where TIMESTAMP > ago(6d)
+
+      | where ClusterName contains clusterName
+
+      | where event == ''sql_alias_odbc_failure'' or event == ''sql_alias_cache_refresh''
+
+      | where error_code != ''FABRIC_E_SERVICE_DOES_NOT_EXIST''
+
+      | make-series SqlAliasErrorCount = count() on originalEventTimestamp from bin(startTime, 1m) to bin(endTime, 1m) step 1m
+
+      | mv-expand originalEventTimestamp, SqlAliasErrorCount
+
+      | project todatetime(originalEventTimestamp), toint(SqlAliasErrorCount)'
+- id: MI-ASMI-MISCELLANEOUS-33
+  Topic: TDE
+  Source: kusto-queries/TDE.md
+  Prompts:
+  - MI TDE
+  - Managed Instance TDE
+  - Investigate TDE
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDatabaseEncryptionKeys
+    ExecutedQuery: 'MonDatabaseEncryptionKeys
+
+      | where TIMESTAMP >= {StartDateTime} and TIMESTAMP <= {EndDateTime}'
+- id: MI-ASMI-MISCELLANEOUS-34
+  Topic: Wait DB level (MonDmCloudDatabaseWaitStats
+  Source: kusto-queries/Wait DB level (MonDmCloudDatabaseWaitStats.md
+  Prompts:
+  - MI Wait DB level (MonDmCloudDatabaseWaitStats
+  - Managed Instance Wait DB level (MonDmCloudDatabaseWaitStats
+  - Investigate Wait DB level (MonDmCloudDatabaseWaitStats
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmCloudDatabaseWaitStats
+    ExecutedQuery: 'MonDmCloudDatabaseWaitStats
+
+      | where LogicalServerName =~ "{ServerName}" and database_name =~ "{DatabaseName}"
+
+      | where end_utc_date > now(-1d)
+
+      | extend avg_wait_time_ms= delta_wait_time_ms* 1.0 / delta_waiting_tasks_count'
+- id: MI-ASMI-MISCELLANEOUS-35
+  Topic: Wait DB level (MonDmCloudDatabaseWaitStats
+  Source: kusto-queries/Wait DB level (MonDmCloudDatabaseWaitStats.md
+  Prompts:
+  - MI Wait DB level (MonDmCloudDatabaseWaitStats
+  - Managed Instance Wait DB level (MonDmCloudDatabaseWaitStats
+  - Investigate Wait DB level (MonDmCloudDatabaseWaitStats
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmCloudDatabaseWaitStats
+    ExecutedQuery: 'MonDmCloudDatabaseWaitStats
+
+      | where LogicalServerName =~ "{ServerName}" and database_name =~ "{DatabaseName}"
+
+      | where end_utc_date > now(-2d)
+
+      | extend avg_wait_time_ms= delta_wait_time_ms* 1.0 / delta_waiting_tasks_count'
+- id: MI-ASMI-MISCELLANEOUS-36
+  Topic: Wait DB level (MonDmCloudDatabaseWaitStats
+  Source: kusto-queries/Wait DB level (MonDmCloudDatabaseWaitStats.md
+  Prompts:
+  - MI Wait DB level (MonDmCloudDatabaseWaitStats
+  - Managed Instance Wait DB level (MonDmCloudDatabaseWaitStats
+  - Investigate Wait DB level (MonDmCloudDatabaseWaitStats
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmCloudDatabaseWaitStats
+    ExecutedQuery: 'MonDmCloudDatabaseWaitStats
+
+      | where LogicalServerName =~ "{ServerName}" and database_name =~ "{DatabaseName}"
+
+      | where end_utc_date> now(-12h)
+
+      | extend avg_wait_time_ms= delta_wait_time_ms* 1.0 / delta_waiting_tasks_count'
+- id: MI-ASMI-MISCELLANEOUS-37
+  Topic: Wait DB level (MonDmCloudDatabaseWaitStats
+  Source: kusto-queries/Wait DB level (MonDmCloudDatabaseWaitStats.md
+  Prompts:
+  - MI Wait DB level (MonDmCloudDatabaseWaitStats
+  - Managed Instance Wait DB level (MonDmCloudDatabaseWaitStats
+  - Investigate Wait DB level (MonDmCloudDatabaseWaitStats
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: Unknown
+    ExecutedQuery: 'let clusterFilter= "tr36.australiasoutheast1-a.worker.database.windows.net"; //"tr11.eastus2-a.worker.database.windows.net";
+
+      //| order by end_utc_date asc
+
+      | order by avg_wait_time_ms desc'
+- id: MI-ASMI-MISCELLANEOUS-38
+  Topic: Wait DB level (MonDmCloudDatabaseWaitStats
+  Source: kusto-queries/Wait DB level (MonDmCloudDatabaseWaitStats.md
+  Prompts:
+  - MI Wait DB level (MonDmCloudDatabaseWaitStats
+  - Managed Instance Wait DB level (MonDmCloudDatabaseWaitStats
+  - Investigate Wait DB level (MonDmCloudDatabaseWaitStats
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmCloudDatabaseWaitStats
+    ExecutedQuery: 'let nodeFilter= "DB.5";
+
+      let appName= "fe8a4b3bc3ac";
+
+      let startTime= datetime(2021-12-15 21:50:00Z);
+
+      let endTime= datetime(2021-12-15 23:00:00Z) ;
+
+      MonDmCloudDatabaseWaitStats
+
+      | where ClusterName== clusterFilter and NodeName contains nodeFilter
+
+      | where AppName contains appName
+
+      | where TIMESTAMP> startTime and TIMESTAMP< endTime'
+- id: MI-ASMI-MISCELLANEOUS-39
+  Topic: Wait DB level (MonDmCloudDatabaseWaitStats
+  Source: kusto-queries/Wait DB level (MonDmCloudDatabaseWaitStats.md
+  Prompts:
+  - MI Wait DB level (MonDmCloudDatabaseWaitStats
+  - Managed Instance Wait DB level (MonDmCloudDatabaseWaitStats
+  - Investigate Wait DB level (MonDmCloudDatabaseWaitStats
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmCloudDatabaseWaitStats
+    ExecutedQuery: 'MonDmCloudDatabaseWaitStats
+
+      | where (AppName=~  "b2169d058157" and ((PreciseTimeStamp between (datetime(2022-01-24 00:27:00)..datetime(2022-01-25 12:27:00)) and ClusterName=~ ''tr1796.australiaeast1-a.worker.database.windows.net''
+      and NodeName=~ ''DB24C.2'')'
+- id: MI-ASMI-MISCELLANEOUS-40
+  Topic: Wait DB level (MonDmCloudDatabaseWaitStats
+  Source: kusto-queries/Wait DB level (MonDmCloudDatabaseWaitStats.md
+  Prompts:
+  - MI Wait DB level (MonDmCloudDatabaseWaitStats
+  - Managed Instance Wait DB level (MonDmCloudDatabaseWaitStats
+  - Investigate Wait DB level (MonDmCloudDatabaseWaitStats
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmCloudDatabaseWaitStats
+    ExecutedQuery: 'let AggInterval=time(4h);
+
+      MonDmCloudDatabaseWaitStats'
+- id: MI-ASMI-MISCELLANEOUS-41
+  Topic: Wait Type (MonWiQdsWaitStats
+  Source: kusto-queries/Wait Type (MonWiQdsWaitStats.md
+  Prompts:
+  - MI Wait Type (MonWiQdsWaitStats
+  - Managed Instance Wait Type (MonWiQdsWaitStats
+  - Investigate Wait Type (MonWiQdsWaitStats
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsWaitStats
+    ExecutedQuery: 'MonWiQdsWaitStats
+
+      | where LogicalServerName =~ "{ServerName}" and database_name =~ "{DatabaseName}"
+
+      | summarize sum(total_query_wait_time_ms) by query_id,query_hash'
+- id: MI-ASMI-MISCELLANEOUS-42
+  Topic: Wait Type (MonWiQdsWaitStats
+  Source: kusto-queries/Wait Type (MonWiQdsWaitStats.md
+  Prompts:
+  - MI Wait Type (MonWiQdsWaitStats
+  - Managed Instance Wait Type (MonWiQdsWaitStats
+  - Investigate Wait Type (MonWiQdsWaitStats
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsWaitStats
+    ExecutedQuery: 'MonWiQdsWaitStats
+
+      | whereLogicalServerName =~ "{ServerName}"anddatabase_name =~ "{DatabaseName}"
+
+      | wherequery_hash== "0x763F8997F8880161"//LATCH//"0x8F6D35DC427A7D53"PARALLELISM//"0x06EEC8AFB05283A3" CPU
+
+      | summarize sum(total_query_wait_time_ms) by wait_category'
+- id: MI-ASMI-MISCELLANEOUS-43
+  Topic: Wait Type (MonWiQdsWaitStats
+  Source: kusto-queries/Wait Type (MonWiQdsWaitStats.md
+  Prompts:
+  - MI Wait Type (MonWiQdsWaitStats
+  - Managed Instance Wait Type (MonWiQdsWaitStats
+  - Investigate Wait Type (MonWiQdsWaitStats
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsWaitStats
+    ExecutedQuery: 'MonWiQdsWaitStats
+
+      | where LogicalServerName =~ "{ServerName}" and database_name =~ "{DatabaseName}"
+
+      | where query_hash== "0x763F8997F8880161"
+
+      //| where query_plan_hash =="0x789E8CA48FD78137"
+
+      //| where wait_category == "NETWORKIO"
+
+      | extend plan_id_string= tostring(plan_id)'
+- id: MI-ASMI-MISCELLANEOUS-44
+  Topic: Wait Type (MonWiQdsWaitStats
+  Source: kusto-queries/Wait Type (MonWiQdsWaitStats.md
+  Prompts:
+  - MI Wait Type (MonWiQdsWaitStats
+  - Managed Instance Wait Type (MonWiQdsWaitStats
+  - Investigate Wait Type (MonWiQdsWaitStats
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsWaitStats
+    ExecutedQuery: 'MonWiQdsWaitStats
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where database_name =~ "{DatabaseName}"
+
+      | where query_hash== "0x025ECF4ECDDC3477"//"0x025ECF4ECDDC3477"
+
+      //| filter TIMESTAMP >= datetime(2022-01-13 16:00:00Z)| filter TIMESTAMP <= datetime(2022-01-13 17:30:00Z)
+
+      | filter TIMESTAMP>= datetime(2022-01-24 04:20:00Z) | filter TIMESTAMP<= datetime(2022-01-24 5:00:00Z)
+
+      | extend wait_time_s= 1.0 * total_query_wait_time_ms/ 1000000'
+- id: MI-ASMI-MISCELLANEOUS-45
+  Topic: Wait Type (MonWiQdsWaitStats
+  Source: kusto-queries/Wait Type (MonWiQdsWaitStats.md
+  Prompts:
+  - MI Wait Type (MonWiQdsWaitStats
+  - Managed Instance Wait Type (MonWiQdsWaitStats
+  - Investigate Wait Type (MonWiQdsWaitStats
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsWaitStats
+    ExecutedQuery: 'MonWiQdsWaitStats
+
+      //| where TIMESTAMP >= datetime(2019-11-04 01:10:23 ) | where TIMESTAMP <= datetime(2019-11-07 22:00:07)'

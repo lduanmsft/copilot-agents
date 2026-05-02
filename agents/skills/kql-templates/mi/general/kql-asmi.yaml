@@ -1,0 +1,1167 @@
+SqlSkills:
+- id: MI-ASMI-GENERAL-01
+  Topic: Audit
+  Source: kusto-queries/Audit.md
+  Prompts:
+  - MI Audit
+  - Managed Instance Audit
+  - Investigate Audit
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAuditSessionStatus
+    ExecutedQuery: 'let serverName = ''<MI_name>'';
+
+      MonAuditSessionStatus
+
+      | where TIMESTAMP > ago(100d)
+
+      | where LogicalServerName =~ serverName
+
+      | where audit_name == "SQL_DB_EAE_AUDIT"
+
+      //| where audit_name !has ''SqlDbThreatDetection''
+
+      | summarize min(originalEventTimestamp),max(originalEventTimestamp) by audit_name, status'
+- id: MI-ASMI-GENERAL-02
+  Topic: Audit
+  Source: kusto-queries/Audit.md
+  Prompts:
+  - MI Audit
+  - Managed Instance Audit
+  - Investigate Audit
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAuditOperational
+    ExecutedQuery: 'MonAuditOperational
+
+      //| where logical_server_name == ''<MI name>''
+
+      | where audit_name == "<Audit Name>"
+
+      | summarize min(TIMESTAMP), max(TIMESTAMP) by logical_server_name,audit_name,event'
+- id: MI-ASMI-GENERAL-03
+  Topic: Audit
+  Source: kusto-queries/Audit.md
+  Prompts:
+  - MI Audit
+  - Managed Instance Audit
+  - Investigate Audit
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAuditOperationalTelemetry
+    ExecutedQuery: 'MonAuditOperationalTelemetry
+
+      | where audit_name == "<Audit name>"
+
+      |project originalEventTimestamp,logical_server_name,logical_database_name,audit_name,event,audit_specification_name,audit_action_groups_added,audit_action_groups_dropped,category'
+- id: MI-ASMI-GENERAL-04
+  Topic: Audit
+  Source: kusto-queries/Audit.md
+  Prompts:
+  - MI Audit
+  - Managed Instance Audit
+  - Investigate Audit
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAuditRuntimeTelemetry
+    ExecutedQuery: 'MonAuditRuntimeTelemetry
+
+      | where audit_name == "<Audit name>"
+
+      | where fired_events_count !=0
+
+      | project originalEventTimestamp, logical_server_name,logical_database_name,audit_name,event,fired_events_count,dropped_events_count,audited_queries,successful_blob_writes,failed_blob_writes,statement_avg_chars_len,statement_max_chars_len'
+- id: MI-ASMI-GENERAL-05
+  Topic: Audit
+  Source: kusto-queries/Audit.md
+  Prompts:
+  - MI Audit
+  - Managed Instance Audit
+  - Investigate Audit
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDatabaseMetadata
+    ExecutedQuery: 'MonDatabaseMetadata
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where table_name == "sysclsobjs"
+
+      | where class == 64
+
+      | project TIMESTAMP, id, type, logical_db_name, name'
+- id: MI-ASMI-GENERAL-06
+  Topic: Audit
+  Source: kusto-queries/Audit.md
+  Prompts:
+  - MI Audit
+  - Managed Instance Audit
+  - Investigate Audit
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      //| where AppName has "bdeb050658e5" //userdb
+
+      | where AppName has "cd0c87e17d2f" //master
+
+      | where message has "Audit: "//Server Audit: "
+
+      | where TIMESTAMP >= datetime(2023-04-05 08:27:00Z)'
+- id: MI-ASMI-GENERAL-07
+  Topic: Audit
+  Source: kusto-queries/Audit.md
+  Prompts:
+  - MI Audit
+  - Managed Instance Audit
+  - Investigate Audit
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAuditSessionStatus
+    ExecutedQuery: 'MonAuditSessionStatus
+
+      | where TIMESTAMP > ago(1d)
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      //| where audit_name !contains "Threat"
+
+      | summarize by bin(TIMESTAMP, 1h), logical_database_name, audit_name, AppName, NodeName, status'
+- id: MI-ASMI-GENERAL-08
+  Topic: Audit
+  Source: kusto-queries/Audit.md
+  Prompts:
+  - MI Audit
+  - Managed Instance Audit
+  - Investigate Audit
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: Unknown
+    ExecutedQuery: 'let serverName = ''thazepmdb0005'';
+
+      | order by TIMESTAMP asc, NodeName asc
+
+      | project-reorder TIMESTAMP, NodeName'
+- id: MI-ASMI-GENERAL-09
+  Topic: Audit
+  Source: kusto-queries/Audit.md
+  Prompts:
+  - MI Audit
+  - Managed Instance Audit
+  - Investigate Audit
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAuditSessionStatus
+    ExecutedQuery: 'MonAuditSessionStatus
+
+      | where TIMESTAMP > ago(1d)
+
+      | where LogicalServerName =~ serverName
+
+      | where audit_name == "SQLMIAUDITING_GIS"
+
+      //| where audit_name !has ''SqlDbThreatDetection''
+
+      //| summarize arg_max(originalEventTimestamp,*) by audit_name, audit_guid'
+- id: MI-ASMI-GENERAL-10
+  Topic: Audit
+  Source: kusto-queries/Audit.md
+  Prompts:
+  - MI Audit
+  - Managed Instance Audit
+  - Investigate Audit
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAuditSessionStatus
+    ExecutedQuery: 'MonAuditSessionStatus
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where logical_database_name =~ "{DatabaseName}"
+
+      | where TIMESTAMP > ago(6d)'
+- id: MI-ASMI-GENERAL-11
+  Topic: Billing
+  Source: kusto-queries/Billing.md
+  Prompts:
+  - MI Billing
+  - Managed Instance Billing
+  - Investigate Billing
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDwBilling
+    ExecutedQuery: MonDwBilling| where AppName has "af44ed44da39"| where TIMESTAMP <= datetime(2023-10-19 06:38:24.8978878)| where billing_metric_name in ("DatabaseSize", "Snapshot", "GeoSnapshot")| where
+      event == "billing_metric_calculated"| summarize avg(todecimal(size_in_bytes)) by SubscriptionId, LogicalServerName, logical_database_id, physical_database_name, file_type, billing_metric_name,bin(TIMESTAMP,
+      1d)| summarize SizeInGB =sum(avg_size_in_bytes)/1024/1024/1024 by TIMESTAMP, SubscriptionId, LogicalServerName, logical_database_id, billing_metric_name
+- id: MI-ASMI-GENERAL-12
+  Topic: Billing
+  Source: kusto-queries/Billing.md
+  Prompts:
+  - MI Billing
+  - Managed Instance Billing
+  - Investigate Billing
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDwBilling
+    ExecutedQuery: 'MonDwBilling
+
+      | where AppName has "af44ed44da39"
+
+      | where TIMESTAMP <= datetime(2023-10-19 06:38:24.8978878)'
+- id: MI-ASMI-GENERAL-13
+  Topic: Billing
+  Source: kusto-queries/Billing.md
+  Prompts:
+  - MI Billing
+  - Managed Instance Billing
+  - Investigate Billing
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmRealTimeResourceStats
+    ExecutedQuery: 'let dt = ago(2h);MonDmRealTimeResourceStats| where TIMESTAMP > dt| where LogicalServerName =~ "{ServerName}" //and database_name =~ "{DatabaseName}"| extend myAppName = extract(@''(\w+)'',
+      1, AppName)| summarize oTime = any(TIMESTAMP) by myAppName| join kind=leftouter (MonDwBilling| where TIMESTAMP > dt| extend myAppName = extract(@''(\w+)'', 1, AppName)| summarize oTime = any(TIMESTAMP)
+      by myAppName, logical_database_id| where logical_database_id != "") on myAppName| join kind=leftouter (MonBillingBackupDatabaseSize| summarize max(todouble(size_bytes)) by ClusterName, LogicalServerName,
+      SubscriptionId, logical_database_id, physical_database_name, file_type, bin(TIMESTAMP, 1h), AppName| summarize DatabaseSizeInGB = sum(max_size_bytes) / (1024.0 * 1024.0 * 1024.0), DatabaseSizeRecordCount
+      = count(logical_database_id) by TIMESTAMP, ClusterName, LogicalServerName, SubscriptionId, logical_database_id) on logical_database_id|  join kind=leftouter (MonBillingSnapshotSize | summarize max(todouble(size_bytes))
+      by ClusterName, LogicalServerName, SubscriptionId, logical_database_id, physical_database_name, file_type, backup_time, bin(TIMESTAMP, 1h), AppName| summarize BackupSizeInGB = sum(max_size_bytes)
+      / (1024.0 * 1024.0 * 1024.0), BackupSizeRecordCount = count(logical_database_id) by TIMESTAMP, ClusterName, LogicalServerName, SubscriptionId, logical_database_id) on TIMESTAMP, ClusterName, LogicalServerName,
+      SubscriptionId, logical_database_id| join kind=leftouter (MonBillingGeoSnapshotSize| summarize max(todouble(size_bytes)) by ClusterName, LogicalServerName, SubscriptionId, logical_database_id, physical_database_name,
+      file_type, bin(TIMESTAMP, 1h), AppName| summarize GeoBackupSizeInGB = sum(max_size_bytes) / (1024.0 * 1024.0 * 1024.0), GeoBackupSizeRecordCount = count(logical_database_id) by TIMESTAMP, ClusterName,
+      LogicalServerName, SubscriptionId, logical_database_id) on TIMESTAMP, ClusterName, LogicalServerName, SubscriptionId, logical_database_id| project TIMESTAMP, DatabaseSizeInGB, BackupSizeInGB, GeoBackupSizeInGB
+
+      let dt = ago(2h);
+
+      MonDmRealTimeResourceStats
+
+      | where TIMESTAMP > dt
+
+      | where LogicalServerName =~ "{ServerName}" //and database_name =~ "{DatabaseName}"
+
+      | extend myAppName = extract(@''(\w+)'', 1, AppName)'
+- id: MI-ASMI-GENERAL-14
+  Topic: Billing
+  Source: kusto-queries/Billing.md
+  Prompts:
+  - MI Billing
+  - Managed Instance Billing
+  - Investigate Billing
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDwBilling
+    ExecutedQuery: 'MonDwBilling
+
+      | where TIMESTAMP > dt
+
+      | extend myAppName = extract(@''(\w+)'', 1, AppName)'
+- id: MI-ASMI-GENERAL-15
+  Topic: Billing
+  Source: kusto-queries/Billing.md
+  Prompts:
+  - MI Billing
+  - Managed Instance Billing
+  - Investigate Billing
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonBillingBackupDatabaseSize
+    ExecutedQuery: 'MonBillingBackupDatabaseSize
+
+      | summarize max(todouble(size_bytes)) by ClusterName, LogicalServerName, SubscriptionId, logical_database_id, physical_database_name, file_type, bin(TIMESTAMP, 1h), AppName'
+- id: MI-ASMI-GENERAL-16
+  Topic: Billing
+  Source: kusto-queries/Billing.md
+  Prompts:
+  - MI Billing
+  - Managed Instance Billing
+  - Investigate Billing
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonBillingSnapshotSize
+    ExecutedQuery: 'MonBillingSnapshotSize
+
+      | summarize max(todouble(size_bytes)) by ClusterName, LogicalServerName, SubscriptionId, logical_database_id, physical_database_name, file_type, backup_time, bin(TIMESTAMP, 1h), AppName'
+- id: MI-ASMI-GENERAL-17
+  Topic: Billing
+  Source: kusto-queries/Billing.md
+  Prompts:
+  - MI Billing
+  - Managed Instance Billing
+  - Investigate Billing
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonBillingGeoSnapshotSize
+    ExecutedQuery: 'MonBillingGeoSnapshotSize
+
+      | summarize max(todouble(size_bytes)) by ClusterName, LogicalServerName, SubscriptionId, logical_database_id, physical_database_name, file_type, bin(TIMESTAMP, 1h), AppName'
+- id: MI-ASMI-GENERAL-18
+  Topic: DB info (MonManagedDatabases
+  Source: kusto-queries/DB info (MonManagedDatabases.md
+  Prompts:
+  - MI DB info (MonManagedDatabases
+  - Managed Instance DB info (MonManagedDatabases
+  - Investigate DB info (MonManagedDatabases
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedDatabases
+    ExecutedQuery: 'let startTime = ago(12d);
+
+      let endTime = ago(5d);
+
+      let serverId = ''<managed_server_id>'';
+
+      let databaseName = ''<Databasename>'';
+
+      MonManagedDatabases
+
+      | where PreciseTimeStamp >= startTime and PreciseTimeStamp <= endTime
+
+      | where managed_server_id == serverId
+
+      | where managed_database_name == databaseName
+
+      | summarize arg_max(TIMESTAMP,*) by [''state'']'
+- id: MI-ASMI-GENERAL-19
+  Topic: DB info (MonManagedDatabases
+  Source: kusto-queries/DB info (MonManagedDatabases.md
+  Prompts:
+  - MI DB info (MonManagedDatabases
+  - Managed Instance DB info (MonManagedDatabases
+  - Investigate DB info (MonManagedDatabases
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'MonManagedServers
+
+      | where managed_server_id == serverId
+
+      | distinct managed_server_id, name) on managed_server_id
+
+      | project TIMESTAMP, managed_server_id, managed_server_name = name, managed_database_id, managed_database_name, [''state'']'
+- id: MI-ASMI-GENERAL-20
+  Topic: Dump
+  Source: kusto-queries/Dump.md
+  Prompts:
+  - MI Dump
+  - Managed Instance Dump
+  - Investigate Dump
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlDump
+    ExecutedQuery: 'let ServerName = "{ServerName}" ;let daysAgo=7d;MonSqlDump| where LogicalServerName =~ ServerName| where TIMESTAMP > ago(7d)| where CompleteFileName endswith ''.dmp''| summarize TIMESTAMP
+      = min(TIMESTAMP) by AppName, ClusterName, NodeName, CompleteFileName| project TIMESTAMP, AppName, ClusterName, NodeName, CompleteFileName
+
+      let ServerName = "{ServerName}" ;
+
+      let daysAgo=7d;
+
+      MonSqlDump
+
+      | where LogicalServerName =~ ServerName
+
+      | where TIMESTAMP > ago(7d)
+
+      | where CompleteFileName endswith ''.dmp''
+
+      | summarize TIMESTAMP = min(TIMESTAMP) by AppName, ClusterName, NodeName, CompleteFileName'
+- id: MI-ASMI-GENERAL-21
+  Topic: Dump
+  Source: kusto-queries/Dump.md
+  Prompts:
+  - MI Dump
+  - Managed Instance Dump
+  - Investigate Dump
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where operation_parameters contains "wipswsqlmieastus2prd1
+
+      //| where operation_type == "UpdateLogicalDatabase"
+
+      | where operation_type != "GetPurviewScanRunInfo"
+
+      |where originalEventTimestamp > ago(2d)
+
+      | project request_id ,subscription_id, originalEventTimestamp , operation_type, correlation_id,event,elapsed_time,operation_parameters,message, ClusterName,transaction_id'
+- id: MI-ASMI-GENERAL-22
+  Topic: Dump
+  Source: kusto-queries/Dump.md
+  Prompts:
+  - MI Dump
+  - Managed Instance Dump
+  - Investigate Dump
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where AppName == "f7d31acfad4a" //wuz-c-dbg-world01 <= datetime(2023-12-19 17:38:00)
+
+      | where  TIMESTAMP>= datetime(2023-12-18 21:12:00) and TIMESTAMP<= datetime(2023-12-18 21:16:00)'
+- id: MI-ASMI-GENERAL-23
+  Topic: Dump
+  Source: kusto-queries/Dump.md
+  Prompts:
+  - MI Dump
+  - Managed Instance Dump
+  - Investigate Dump
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: Unknown
+    ExecutedQuery: 'let startTime = datetime(2023-12-01);
+
+      let endTime = datetime(2023-12-19);
+
+      let appName = "f7d31acfad4a";  // app name or SQL instance name
+
+      let serverName = "wipswsqlmieastus2prd1";  // logical server name
+
+      | extend packedRecord = pack_all()
+
+      | summarize Result = make_list (packedRecord) by DumpCrashTime'
+- id: MI-ASMI-GENERAL-24
+  Topic: Error Log (MonSQLSystemHealth
+  Source: kusto-queries/Error Log (MonSQLSystemHealth.md
+  Prompts:
+  - MI Error Log (MonSQLSystemHealth
+  - Managed Instance Error Log (MonSQLSystemHealth
+  - Investigate Error Log (MonSQLSystemHealth
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | filter TIMESTAMP>= datetime(2022-01-18 21:00:00Z)'
+- id: MI-ASMI-GENERAL-25
+  Topic: Error code (AlrSQLErrorsReported
+  Source: kusto-queries/Error code (AlrSQLErrorsReported.md
+  Prompts:
+  - MI Error code (AlrSQLErrorsReported
+  - Managed Instance Error code (AlrSQLErrorsReported
+  - Investigate Error code (AlrSQLErrorsReported
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: AlrSQLErrorsReported
+    ExecutedQuery: 'AlrSQLErrorsReported
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      //| where error_number in (3908,1205,3617)
+
+      | where TIMESTAMP >= ago(7d)
+
+      | project TIMESTAMP, error_number,severity,state,user_defined,session_id,database_id,is_azure_connection,query_hash,query_plan_hash,sessionName,origin'
+- id: MI-ASMI-GENERAL-26
+  Topic: Error code (AlrSQLErrorsReported
+  Source: kusto-queries/Error code (AlrSQLErrorsReported.md
+  Prompts:
+  - MI Error code (AlrSQLErrorsReported
+  - Managed Instance Error code (AlrSQLErrorsReported
+  - Investigate Error code (AlrSQLErrorsReported
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: AlrSQLErrorsReported
+    ExecutedQuery: 'let startTime = datetime(2022-10-12 06:30:00Z);
+
+      let endTime = datetime(2022-10-12 08:00:00Z);
+
+      let srv = "{ServerName}";
+
+      let db = "{DatabaseName}";
+
+      let app = "e4aeb2328e63";
+
+      AlrSQLErrorsReported
+
+      | where  TIMESTAMP >= startTime
+
+      | where  TIMESTAMP <= endTime
+
+      | where LogicalServerName =~ srv
+
+      //| where database_name =~ db
+
+      //| where AppName =~ app
+
+      //| where error_number in (1101, 1105, 9001, 9002)
+
+      | project originalEventTimestamp, database_name, AppName, NodeName, error_number, severity, state, category, destination, message'
+- id: MI-ASMI-GENERAL-27
+  Topic: Failed upgrade storage or SKU
+  Source: kusto-queries/Failed upgrade storage or SKU.md
+  Prompts:
+  - MI Failed upgrade storage or SKU
+  - Managed Instance Failed upgrade storage or SKU
+  - Investigate Failed upgrade storage or SKU
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where TIMESTAMP >= ago(12h)
+
+      //where logical_server_name contains "kd-mi"
+
+      | where request_id =~ ''6314EBE4-C80A-4989-9BD6-4EDF82A12633''
+
+      | project originalEventTimestamp, state_machine_type, action, event, error,  fsm_event, old_state, new_state, operation_parameters, operation_id,  keys,  message, stack_trace, request_id, caller_state_machine_type
+      , caller_keys , process_id, collect'
+- id: MI-ASMI-GENERAL-28
+  Topic: How to find MI located Subscription ID and attach in ASC_
+  Source: kusto-queries/How to find MI located Subscription ID and attach in ASC_.md
+  Prompts:
+  - MI How to find MI located Subscription ID and attach in ASC_
+  - Managed Instance How to find MI located Subscription ID and attach in ASC_
+  - Investigate How to find MI located Subscription ID and attach in ASC_
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'let managedInstanceName = ''misql-data-dev01'';//''dbs-azmssqlmi-intranetapps2-prdizdb-sharepoint'';
+
+      MonManagedServers
+
+      | where name == managedInstanceName
+
+      | summarize arg_max(TIMESTAMP,*) by managed_server_id'
+- id: MI-ASMI-GENERAL-29
+  Topic: How to find MI located Subscription ID and attach in ASC_
+  Source: kusto-queries/How to find MI located Subscription ID and attach in ASC_.md
+  Prompts:
+  - MI How to find MI located Subscription ID and attach in ASC_
+  - Managed Instance How to find MI located Subscription ID and attach in ASC_
+  - Investigate How to find MI located Subscription ID and attach in ASC_
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonPrivateClusters
+    ExecutedQuery: '| join kind=leftouter ( MonPrivateClusters'
+- id: MI-ASMI-GENERAL-30
+  Topic: MI info, VC info (MonManagedServer
+  Source: kusto-queries/MI info, VC info (MonManagedServer.md
+  Prompts:
+  - MI MI info, VC info (MonManagedServer
+  - Managed Instance MI info, VC info (MonManagedServer
+  - Investigate MI info, VC info (MonManagedServer
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'MonManagedServers
+
+      //| where TIMESTAMP >= {startTime} and TIMESTAMP <= {endTime}'
+- id: MI-ASMI-GENERAL-31
+  Topic: MI info, VC info (MonManagedServer
+  Source: kusto-queries/MI info, VC info (MonManagedServer.md
+  Prompts:
+  - MI MI info, VC info (MonManagedServer
+  - Managed Instance MI info, VC info (MonManagedServer
+  - Investigate MI info, VC info (MonManagedServer
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'let managedInstanceName = ''xxxxxx'';
+
+      MonManagedServers
+
+      | where name == managedInstanceName
+
+      | summarize arg_max(TIMESTAMP,*) by managed_server_id'
+- id: MI-ASMI-GENERAL-32
+  Topic: MI info, VC info (MonManagedServer
+  Source: kusto-queries/MI info, VC info (MonManagedServer.md
+  Prompts:
+  - MI MI info, VC info (MonManagedServer
+  - Managed Instance MI info, VC info (MonManagedServer
+  - Investigate MI info, VC info (MonManagedServer
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'let managedInstanceName = ''****''; MonManagedServers | where name == managedInstanceName | summarize StartTime = min(TIMESTAMP), EndTime=max(TIMESTAMP) by managed_server_id,private_cluster_id,name,create_time
+      | join kind=leftouter ( MonPrivateClusters | summarize StartTime = min(TIMESTAMP), EndTime=max(TIMESTAMP) by private_cluster_id,name,create_time ) on $left.private_cluster_id == $right.private_cluster_id
+      | project StartTime,EndTime, InstanceName = name, InstanceCreateTime = create_time, VC_Id=private_cluster_id1, VC_Name= name1, VC_CreateTime = create_time1
+
+      let managedInstanceName = ''****'';
+
+      MonManagedServers
+
+      | where name == managedInstanceName
+
+      | summarize StartTime = min(TIMESTAMP), EndTime=max(TIMESTAMP) by managed_server_id,private_cluster_id,name,create_time'
+- id: MI-ASMI-GENERAL-33
+  Topic: MI info, VC info (MonManagedServer
+  Source: kusto-queries/MI info, VC info (MonManagedServer.md
+  Prompts:
+  - MI MI info, VC info (MonManagedServer
+  - Managed Instance MI info, VC info (MonManagedServer
+  - Investigate MI info, VC info (MonManagedServer
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'MonManagedServers
+
+      | where TIMESTAMP >= {startTime} and TIMESTAMP <= {endTime}'
+- id: MI-ASMI-GENERAL-34
+  Topic: MI info, VC info (MonManagedServer
+  Source: kusto-queries/MI info, VC info (MonManagedServer.md
+  Prompts:
+  - MI MI info, VC info (MonManagedServer
+  - Managed Instance MI info, VC info (MonManagedServer
+  - Investigate MI info, VC info (MonManagedServer
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'MonManagedServers
+
+      | where name in ('
+- id: MI-ASMI-GENERAL-35
+  Topic: MI info, VC info (MonManagedServer
+  Source: kusto-queries/MI info, VC info (MonManagedServer.md
+  Prompts:
+  - MI MI info, VC info (MonManagedServer
+  - Managed Instance MI info, VC info (MonManagedServer
+  - Investigate MI info, VC info (MonManagedServer
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'MonManagedServers
+
+      | where private_cluster_tenant_ring_name contains "tr5911.southeastasia1-a.worker.database.windows.net"'
+- id: MI-ASMI-GENERAL-36
+  Topic: Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  Source: kusto-queries/Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation.md
+  Prompts:
+  - MI Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  - Managed Instance Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  - Investigate Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonPrivateClusterCapacityManagement
+    ExecutedQuery: 'MonPrivateClusterCapacityManagement
+
+      | where subscription_id =~''820471c7-56ff-47e6-9d77-1ac11d9daa9b''
+
+      | where subnet_resource_id contains "/subscriptions/820471c7-56ff-47e6-9d77-1ac11d9daa9b/resourceGroups/rg-hkg-eas-npd-shared-02/providers/Microsoft.Network/virtualNetworks/vnet-hkg-eas-npd-shared-02/subnets/snet-vnet-hkg-eas-dev-nbs-01-db"
+
+      | where TIMESTAMP > ago (8d)
+
+      | project TIMESTAMP,ClusterName, last_subnet_seps_count_time,migration_state ,virtual_cluster_name,migration_type,state,cosmos_db_account_name'
+- id: MI-ASMI-GENERAL-37
+  Topic: Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  Source: kusto-queries/Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation.md
+  Prompts:
+  - MI Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  - Managed Instance Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  - Investigate Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'MonManagedServers
+
+      | where customer_subscription_id =~''820471c7-56ff-47e6-9d77-1ac11d9daa9b''
+
+      | where name=~''sql-mi-eas-dev-nbs-01''
+
+      | where TIMESTAMP > ago (7d)'
+- id: MI-ASMI-GENERAL-38
+  Topic: Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  Source: kusto-queries/Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation.md
+  Prompts:
+  - MI Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  - Managed Instance Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  - Investigate Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'MonManagedServers
+
+      | where customer_subscription_id =~''820471c7-56ff-47e6-9d77-1ac11d9daa9b''
+
+      | where name=~''sql-mi-eas-dev-nbs-01''
+
+      | where TIMESTAMP > ago (8d)
+
+      | summarize min(TIMESTAMP),max(TIMESTAMP) by  private_cluster_id,managed_server_id'
+- id: MI-ASMI-GENERAL-39
+  Topic: Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  Source: kusto-queries/Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation.md
+  Prompts:
+  - MI Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  - Managed Instance Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  - Investigate Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonPrivateClusters
+    ExecutedQuery: 'MonPrivateClusters
+
+      | where private_cluster_id =~ ''9FC94FEB-A73F-42EA-B5EC-B54B2F6AC0EC''
+
+      | project-reorder private_cluster_id, TIMESTAMP, state, ring_buildout_id, tenant_ring_name
+
+      | where TIMESTAMP > ago (7d)'
+- id: MI-ASMI-GENERAL-40
+  Topic: Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  Source: kusto-queries/Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation.md
+  Prompts:
+  - MI Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  - Managed Instance Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  - Investigate Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonPrivateClusters
+    ExecutedQuery: 'MonPrivateClusters
+
+      //| where private_cluster_id =~ ''9FC94FEB-A73F-42EA-B5EC-B54B2F6AC0EC''
+
+      | where tenant_ring_name =~ "tr4882.eastasia1-a.worker.database.windows.net"'
+- id: MI-ASMI-GENERAL-41
+  Topic: Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  Source: kusto-queries/Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation.md
+  Prompts:
+  - MI Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  - Managed Instance Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  - Investigate Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonPrivateClusters
+    ExecutedQuery: 'MonPrivateClusters
+
+      | where private_cluster_id in( ''9FC94FEB-A73F-42EA-B5EC-B54B2F6AC0EC'',''A7D82BEB-01DA-48C2-950E-BA46888E6A33'')
+
+      | summarize min(TIMESTAMP),max(TIMESTAMP) by InstanceName = name, InstanceCreateTime = create_time,name,private_cluster_id'
+- id: MI-ASMI-GENERAL-42
+  Topic: Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  Source: kusto-queries/Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation.md
+  Prompts:
+  - MI Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  - Managed Instance Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  - Investigate Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonUpsertTenantRingRequests
+    ExecutedQuery: 'MonUpsertTenantRingRequests
+
+      | where ring_buildout_id =~ ''6ADB6873-4F1E-47CC-A089-81ADA0151513''
+
+      | where TIMESTAMP > ago (7d)
+
+      | project-reorder ring_buildout_id, TIMESTAMP, tenant_ring_name, build_fabric_cluster_da_instance_id, create_fabric_cluster_da_instance_id, initialize_fabric_cluster_da_instance_id,'
+- id: MI-ASMI-GENERAL-43
+  Topic: Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  Source: kusto-queries/Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation.md
+  Prompts:
+  - MI Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  - Managed Instance Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  - Investigate Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonUpsertTenantRingRequests
+    ExecutedQuery: 'MonUpsertTenantRingRequests
+
+      | where ring_buildout_id =~ ''2F36046B-ABE8-40D5-AFBB-B675D476050A''
+
+      | where TIMESTAMP > ago (7d)
+
+      | project-reorder ring_buildout_id, TIMESTAMP, tenant_ring_name, build_fabric_cluster_da_instance_id, create_fabric_cluster_da_instance_id, initialize_fabric_cluster_da_instance_id,'
+- id: MI-ASMI-GENERAL-44
+  Topic: Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  Source: kusto-queries/Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation.md
+  Prompts:
+  - MI Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  - Managed Instance Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  - Investigate Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonUpsertTenantRingRequests
+    ExecutedQuery: 'MonUpsertTenantRingRequests
+
+      | where ring_buildout_id =~ ''2F36046B-ABE8-40D5-AFBB-B675D476050A''
+
+      | where TIMESTAMP > ago (8d)
+
+      | project-reorder ring_buildout_id, TIMESTAMP, tenant_ring_name, build_fabric_cluster_da_instance_id, create_fabric_cluster_da_instance_id, initialize_fabric_cluster_da_instance_id,'
+- id: MI-ASMI-GENERAL-45
+  Topic: Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  Source: kusto-queries/Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation.md
+  Prompts:
+  - MI Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  - Managed Instance Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  - Investigate Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDeploymentAutomationInstances
+    ExecutedQuery: 'MonDeploymentAutomationInstances
+
+      | where instance_id in( "B4658E03-B1CA-4835-A345-C9D59C948886","FBA14393-4BB6-4E59-8A6E-DB8F3800E9B2","1BD4A255-76C9-48DC-A46C-CFE9E75A0F77")'
+- id: MI-ASMI-GENERAL-46
+  Topic: Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  Source: kusto-queries/Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation.md
+  Prompts:
+  - MI Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  - Managed Instance Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  - Investigate Provisioning Telemetry (PCCM,Ring_rollout, UpertTenantRing,DeploymentAutomation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDeploymentAutomationInstances
+    ExecutedQuery: 'MonDeploymentAutomationInstances
+
+      //| where instance_id in( "B4658E03-B1CA-4835-A345-C9D59C948886","FBA14393-4BB6-4E59-8A6E-DB8F3800E9B2","1BD4A255-76C9-48DC-A46C-CFE9E75A0F77")
+
+      | where scenario_parameters  contains "tr4882"'
+- id: MI-ASMI-GENERAL-47
+  Topic: SLO history
+  Source: kusto-queries/SLO history.md
+  Prompts:
+  - MI SLO history
+  - Managed Instance SLO history
+  - Investigate SLO history
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: 'MonAnalyticsDBSnapshot
+
+      | where logical_server_name =~ "{ServerName}"//| where logical_database_name =~ "{DatabaseName}"
+
+      | order by TIMESTAMP asc nulls first
+
+      | serialize
+
+      | project TIMESTAMP, service_level_objective'
+- id: MI-ASMI-GENERAL-48
+  Topic: SLO history
+  Source: kusto-queries/SLO history.md
+  Prompts:
+  - MI SLO history
+  - Managed Instance SLO history
+  - Investigate SLO history
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: 'MonAnalyticsDBSnapshot
+
+      | where logical_server_name =~ "{ServerName}"
+
+      | where logical_database_name =~ "{DatabaseName}"
+
+      | order by TIMESTAMP asc nulls first
+
+      | serialize
+
+      | project TIMESTAMP, service_level_objective, logical_database_name,max_size_bytes'
+- id: MI-ASMI-GENERAL-49
+  Topic: SLO history
+  Source: kusto-queries/SLO history.md
+  Prompts:
+  - MI SLO history
+  - Managed Instance SLO history
+  - Investigate SLO history
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: Unknown
+    ExecutedQuery: 'let ServerName = "" ;
+
+      | order by StartTime asc'
+- id: MI-ASMI-GENERAL-50
+  Topic: SLO history
+  Source: kusto-queries/SLO history.md
+  Prompts:
+  - MI SLO history
+  - Managed Instance SLO history
+  - Investigate SLO history
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmRealTimeResourceStats
+    ExecutedQuery: 'MonDmRealTimeResourceStats
+
+      | where AppName !startswith ''b-'' and AppName !startswith ''v-''
+
+      | where LogicalServerName =~ ServerName
+
+      | where replica_type == 0
+
+      | summarize StartTime=min(TIMESTAMP), EndTime=max(TIMESTAMP) by AppName, slo_name'
+- id: MI-ASMI-GENERAL-51
+  Topic: SLO history
+  Source: kusto-queries/SLO history.md
+  Prompts:
+  - MI SLO history
+  - Managed Instance SLO history
+  - Investigate SLO history
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmDbResourceGovernance
+    ExecutedQuery: 'MonDmDbResourceGovernance
+
+      | where AppName !startswith ''b-'' and AppName !startswith ''v-''
+
+      | extend MaxCPUCores = case (primary_bucket_fill_rate_cpu == 0, (primary_group_max_cpu*min_cores)/100.0, primary_bucket_fill_rate_cpu/1000.0)'
+- id: MI-ASMI-GENERAL-52
+  Topic: SQL node trace _ Trace Flags
+  Source: kusto-queries/SQL node trace _ Trace Flags.md
+  Prompts:
+  - MI SQL node trace _ Trace Flags
+  - Managed Instance SQL node trace _ Trace Flags
+  - Investigate SQL node trace _ Trace Flags
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonNodeTraceETW
+    ExecutedQuery: 'MonNodeTraceETW
+
+      | where TIMESTAMP > ago(45min)
+
+      | where ClusterName == {cluster_name}
+
+      | summarize min(TIMESTAMP), max(TIMESTAMP), count() by NodeName'
+- id: MI-ASMI-GENERAL-53
+  Topic: SQL node trace _ Trace Flags
+  Source: kusto-queries/SQL node trace _ Trace Flags.md
+  Prompts:
+  - MI SQL node trace _ Trace Flags
+  - Managed Instance SQL node trace _ Trace Flags
+  - Investigate SQL node trace _ Trace Flags
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonNodeTraceETW
+    ExecutedQuery: 'MonNodeTraceETW
+
+      | where Message contains ''trace''
+
+      | where Message contains "{AppName}"
+
+      | where TIMESTAMP > ago(1d)'
+- id: MI-ASMI-GENERAL-54
+  Topic: SQL node trace _ Trace Flags
+  Source: kusto-queries/SQL node trace _ Trace Flags.md
+  Prompts:
+  - MI SQL node trace _ Trace Flags
+  - Managed Instance SQL node trace _ Trace Flags
+  - Investigate SQL node trace _ Trace Flags
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonNodeTraceETW
+    ExecutedQuery: 'let appName = {app_name};
+
+      MonNodeTraceETW
+
+      | where Message contains appName
+
+      | where NodeName contains "DB"
+
+      | where Message contains "Worker.CL.WCOW"
+
+      | where Message contains "\" CodePackageName \""
+
+      | parse Message with * "\" CodePackageName \"" packageName "\"" *
+
+      | summarize count(), min(TIMESTAMP), max(TIMESTAMP) by ClusterName, packageName'
+- id: MI-ASMI-GENERAL-55
+  Topic: SQL node trace _ Trace Flags
+  Source: kusto-queries/SQL node trace _ Trace Flags.md
+  Prompts:
+  - MI SQL node trace _ Trace Flags
+  - Managed Instance SQL node trace _ Trace Flags
+  - Investigate SQL node trace _ Trace Flags
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: Unknown
+    ExecutedQuery: 'let clusterName = {cluster_name};
+
+      | where ClusterName == clusterName
+
+      | where TaskName contains "Hosting"
+
+      | where Level !contains "info"
+
+      | where TIMESTAMP > ago(12h)
+
+      | where EventType contains "container" or EventType == ''ByoVnetProvider''
+
+      | project ETWTimestamp, NodeName, EventType, Level, Id, Text'
+- id: MI-ASMI-GENERAL-56
+  Topic: Tips with ADF team
+  Source: kusto-queries/Tips with ADF team.md
+  Prompts:
+  - MI Tips with ADF team
+  - Managed Instance Tips with ADF team
+  - Investigate Tips with ADF team
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'MonLogin
+
+      | where logical_server_name =~ "{ServerName}" and database_name =~ "{DatabaseName}"
+
+      //| where TIMESTAMP >= datetime(2022-04-29 00:10:00Z)| where TIMESTAMP <= datetime(2022-04-29 00:40:00Z)'
+- id: MI-ASMI-GENERAL-57
+  Topic: Tips with ARM team for failed operation
+  Source: kusto-queries/Tips with ARM team for failed operation.md
+  Prompts:
+  - MI Tips with ARM team for failed operation
+  - Managed Instance Tips with ARM team for failed operation
+  - Investigate Tips with ARM team for failed operation
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagementResourceProvider
+    ExecutedQuery: 'let startTime = datetime(2024-04-16 22:00:00Z) ;
+
+      let endTime = datetime(2024-04-17 00:00:00Z);
+
+      let instanceName = ''mcssitdb1'';
+
+      let subId = ''820471c7-56ff-47e6-9d77-1ac11d9daa9b'';
+
+      MonManagementResourceProvider
+
+      |filter request_url contains "/startManagedInstanceOperationResults/c5db2528-f7a8-477f-9ea8-162f16f76e48"
+
+      | where correlation_id == "c5af5cb3-d3cb-4a73-9fe2-fc5b65451c99"
+
+      //| where request_id in (''41A33F9A-0E6B-4F2D-83DA-F1CACBDC9B16'')
+
+      | where originalEventTimestamp between (startTime .. endTime)
+
+      | where subscription_id =~ subId
+
+      |project TIMESTAMP,originalEventTimestamp,response_code,elapsed_time_milliseconds,request_url,http_verb,correlation_id,action_name'
+- id: MI-ASMI-GENERAL-58
+  Topic: Whether the feature wave is enabled
+  Source: kusto-queries/Whether the feature wave is enabled.md
+  Prompts:
+  - MI Whether the feature wave is enabled
+  - Managed Instance Whether the feature wave is enabled
+  - Investigate Whether the feature wave is enabled
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: Unknown
+    ExecutedQuery: 'let subscriptionId = "32beb3f0-c4b9-4e25-a89e-5f7a042c1433";cluster(''azportalpartner.kusto.windows.net '').database(''AzurePortal'').ExtEvents| where TIMESTAMP >= ago(30d)| where area
+      =~ ''SubscriptionsData.getRegionsEnabledForFeaturePack.parsedResponse''| where message has subscriptionId| order by TIMESTAMP desc | take 1| parse message with "SubscriptionsData.getRegionsEnabledForFeaturePack.parsedResponse:
+      " RegionsEnabledForFeatureWave| project TIMESTAMP, RegionsEnabledForFeatureWave = parse_json(RegionsEnabledForFeatureWave)| mv-expand RegionsEnabledForFeatureWave| where RegionsEnabledForFeatureWave
+      has subscriptionIdOr check under ASC:
+
+      let subscriptionId = "32beb3f0-c4b9-4e25-a89e-5f7a042c1433";
+
+      | where TIMESTAMP >= ago(30d)
+
+      | where area =~ ''SubscriptionsData.getRegionsEnabledForFeaturePack.parsedResponse''
+
+      | where message has subscriptionId
+
+      | order by TIMESTAMP desc | take 1
+
+      | parse message with "SubscriptionsData.getRegionsEnabledForFeaturePack.parsedResponse: " RegionsEnabledForFeatureWave
+
+      | project TIMESTAMP, RegionsEnabledForFeatureWave = parse_json(RegionsEnabledForFeatureWave)'

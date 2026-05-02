@@ -1,0 +1,672 @@
+SqlSkills:
+- id: MI-ASMI-BACKUP-RESTORE-01
+  Topic: Backup
+  Source: kusto-queries/Backup.md
+  Prompts:
+  - MI Backup
+  - Managed Instance Backup
+  - Investigate Backup
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonBackup
+    ExecutedQuery: 'MonBackup
+
+      | where TIMESTAMP >= ago(72h)
+
+      | where event == ''database_backup''
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where logical_database_name =~ "{DatabaseName}"
+
+      //| where backup_type == ''Full''
+
+      | project originalEventTimestamp, logical_database_name, backup_type,event_type, br_exception_message'
+- id: MI-ASMI-BACKUP-RESTORE-02
+  Topic: Backup
+  Source: kusto-queries/Backup.md
+  Prompts:
+  - MI Backup
+  - Managed Instance Backup
+  - Investigate Backup
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonBackup
+    ExecutedQuery: 'MonBackup
+
+      | where PreciseTimeStamp >= datetime(2023-07-19 17:50) and PreciseTimeStamp <= datetime(2023-07-19 18:20)
+
+      | where logical_server_name =~ {ServerName}  //source server
+
+      | where logical_database_name =~ {logical_database_guid}  //source database guid
+
+      | where event_type == ''BACKUP_METADATA_DETAILS''
+
+      | extend BackupSizeMB = round(todecimal(backup_size)/1024/1024,2)'
+- id: MI-ASMI-BACKUP-RESTORE-03
+  Topic: Backup
+  Source: kusto-queries/Backup.md
+  Prompts:
+  - MI Backup
+  - Managed Instance Backup
+  - Investigate Backup
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: 'MonAnalyticsDBSnapshot
+
+      | where LogicalServerName =~ ''{serverName}'' or logical_server_name == ''{serverName}''
+
+      | where logical_database_name == ''{databaseName}''  //this is the source db from where the PiTR is requested
+
+      | summarize max(TIMESTAMP) by logical_database_name, physical_database_id, logical_database_id, backup_retention_days, create_time, create_mode'
+- id: MI-ASMI-BACKUP-RESTORE-04
+  Topic: Backup
+  Source: kusto-queries/Backup.md
+  Prompts:
+  - MI Backup
+  - Managed Instance Backup
+  - Investigate Backup
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonBackup
+    ExecutedQuery: 'MonBackup
+
+      | where originalEventTimestamp >= ago(10d)
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where event startswith ''database_backup''
+
+      | where event_type == ''BACKUP_METADATA_DETAILS''
+
+      | where backup_type != ''Log''
+
+      | where logical_database_id =~ {logical_database_id}    //can be fetched from ASC Resource Explorer under MI/DB properties as ''Managed Database Id''
+
+      | extend backup_size_gb = todouble(uncompressed_backup_size) / 1024.0 /1024.0 /1024.0'
+- id: MI-ASMI-BACKUP-RESTORE-05
+  Topic: Backup
+  Source: kusto-queries/Backup.md
+  Prompts:
+  - MI Backup
+  - Managed Instance Backup
+  - Investigate Backup
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagedServers
+    ExecutedQuery: 'let instanceName = ''sqlmi'';
+
+      MonManagedServers
+
+      | where LogicalServerName =~ instanceName or name =~ instanceName
+
+      | extend config_params = parse_xml(configuration_parameters).ConfigurationParameters'
+- id: MI-ASMI-BACKUP-RESTORE-06
+  Topic: Backup
+  Source: kusto-queries/Backup.md
+  Prompts:
+  - MI Backup
+  - Managed Instance Backup
+  - Investigate Backup
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonBackup
+    ExecutedQuery: 'let topNumber=10;
+
+      let backuptype = ''Log''; //Change this to ''Diff'' when looking for Differential backups
+
+      let MIName = ''{ServerName}'';
+
+      let DBName = ''{DatabaseName}'';
+
+      let AllDatabases = materialize( MonBackup
+
+      | where TIMESTAMP >= ago(2d)
+
+      | where logical_server_name =~ MIName
+
+      | where backup_type =~ backuptype
+
+      | where event_type == ''BACKUP_METADATA_DETAILS''
+
+      | extend BackupSizeMB = round(todecimal(backup_size)/1024/1024,2)'
+- id: MI-ASMI-BACKUP-RESTORE-07
+  Topic: Backup
+  Source: kusto-queries/Backup.md
+  Prompts:
+  - MI Backup
+  - Managed Instance Backup
+  - Investigate Backup
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonAnalyticsDBSnapshot
+    ExecutedQuery: 'MonAnalyticsDBSnapshot
+
+      | where logical_server_name =~ MIName
+
+      | summarize arg_max(TIMESTAMP,*) by logical_database_id'
+- id: MI-ASMI-BACKUP-RESTORE-08
+  Topic: Backup
+  Source: kusto-queries/Backup.md
+  Prompts:
+  - MI Backup
+  - Managed Instance Backup
+  - Investigate Backup
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: Unknown
+    ExecutedQuery: 'let topX = (AllDatabases | summarize sum(BackupSizeMB) by DatabaseName
+
+      | top topNumber by sum_BackupSizeMB | project DatabaseName);'
+- id: MI-ASMI-BACKUP-RESTORE-09
+  Topic: Backup
+  Source: kusto-queries/Backup.md
+  Prompts:
+  - MI Backup
+  - Managed Instance Backup
+  - Investigate Backup
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonBackup
+    ExecutedQuery: 'MonBackup
+
+      | where  TIMESTAMP >= ago(2d)
+
+      | where LogicalServerName contains "{ServerName}"
+
+      | where logical_database_name =~ "{logical_database_guid}"
+
+      | where event == "database_backup"
+
+      | where event_type == ''BACKUP_SKIPPED_DATABASE_BACKUP''
+
+      | where backup_type == "Log"
+
+      |summarize count() by skipped_backup_reason'
+- id: MI-ASMI-BACKUP-RESTORE-10
+  Topic: LTR
+  Source: kusto-queries/LTR.md
+  Prompts:
+  - MI LTR
+  - Managed Instance LTR
+  - Investigate LTR
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLtrConfiguration
+    ExecutedQuery: 'MonLtrConfiguration
+
+      | where server_type =~ ''ManagedInstance''
+
+      | where TIMESTAMP > datetime(2024-09-25 21:30:00) and TIMESTAMP < datetime(2024-09-26 09:46:18)'
+- id: MI-ASMI-BACKUP-RESTORE-11
+  Topic: PVS
+  Source: kusto-queries/PVS.md
+  Prompts:
+  - MI PVS
+  - Managed Instance PVS
+  - Investigate PVS
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlTransactions
+    ExecutedQuery: 'MonSqlTransactions
+
+      | where AppName in( "f9c4f0a401a0")
+
+      | where database_id== 5
+
+      | where persisted_version_store_kb> 0
+
+      | project PreciseTimeStamp,database_id, persisted_version_store_kb'
+- id: MI-ASMI-BACKUP-RESTORE-12
+  Topic: PVS
+  Source: kusto-queries/PVS.md
+  Prompts:
+  - MI PVS
+  - Managed Instance PVS
+  - Investigate PVS
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlTransactions
+    ExecutedQuery: 'MonSqlTransactions
+
+      | where AppName== "f9c4f0a401a0"
+
+      //| where database_id == 7
+
+      | where isnotempty(pvs_off_row_page_skipped_oldest_active_xdesid)
+
+      | where TIMESTAMP> ago(3d)
+
+      | extend pvs_size_gb_heldup_by_active_scan_or_tx= (pvs_off_row_page_skipped_oldest_active_xdesid+pvs_off_row_page_skipped_low_water_mark+pvs_off_row_page_skipped_min_useful_xts+pvs_off_row_page_skipped_oldest_snapshot)*8/(1024*1024)'
+- id: MI-ASMI-BACKUP-RESTORE-13
+  Topic: PVS
+  Source: kusto-queries/PVS.md
+  Prompts:
+  - MI PVS
+  - Managed Instance PVS
+  - Investigate PVS
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlRgHistory
+    ExecutedQuery: 'MonSqlRgHistory
+
+      | where AppName== "f9c4f0a401a0"
+
+      | where database_id in(4,5)
+
+      | where TIMESTAMP>= ago(60min)
+
+      | where isnotempty(physical_database_name)
+
+      | summarize arg_max(TIMESTAMP, size_on_disk_bytes, max_size_mb, code_package_version, hotpatch_data_package_version) by LogicalServerName, database_id, AppName, type_desc, file_id'
+- id: MI-ASMI-BACKUP-RESTORE-14
+  Topic: PVS
+  Source: kusto-queries/PVS.md
+  Prompts:
+  - MI PVS
+  - Managed Instance PVS
+  - Investigate PVS
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmIoVirtualFileStats
+    ExecutedQuery: 'MonDmIoVirtualFileStats
+
+      | where TIMESTAMP>= ago(120min)
+
+      | where isnotempty(logical_database_id)
+
+      | summarize arg_max(TIMESTAMP, spaceused_mb) by LogicalServerName, database_id, AppName, type_desc, file_id'
+- id: MI-ASMI-BACKUP-RESTORE-15
+  Topic: PVS
+  Source: kusto-queries/PVS.md
+  Prompts:
+  - MI PVS
+  - Managed Instance PVS
+  - Investigate PVS
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonResourcePoolStats
+    ExecutedQuery: '| join kind= leftouter( MonResourcePoolStats'
+- id: MI-ASMI-BACKUP-RESTORE-16
+  Topic: Recovery
+  Source: kusto-queries/Recovery.md
+  Prompts:
+  - MI Recovery
+  - Managed Instance Recovery
+  - Investigate Recovery
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRecoveryTrace
+    ExecutedQuery: 'MonRecoveryTrace
+
+      | where TIMESTAMP >= datetime(2023-04-13 00:35:00Z) | where TIMESTAMP < datetime(2023-04-13 01:25:53Z)'
+- id: MI-ASMI-BACKUP-RESTORE-17
+  Topic: Recovery
+  Source: kusto-queries/Recovery.md
+  Prompts:
+  - MI Recovery
+  - Managed Instance Recovery
+  - Investigate Recovery
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRecoveryTrace
+    ExecutedQuery: 'MonRecoveryTrace
+
+      | where trace_message in (''Starting database recovery.'', ''Redo phase done.'')'
+- id: MI-ASMI-BACKUP-RESTORE-18
+  Topic: Recovery
+  Source: kusto-queries/Recovery.md
+  Prompts:
+  - MI Recovery
+  - Managed Instance Recovery
+  - Investigate Recovery
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRecoveryTrace
+    ExecutedQuery: 'MonRecoveryTrace
+
+      | where AppName == "a40dc3f0b944"
+
+      | where TIMESTAMP >= ago(6h)
+
+      | where NodeName=="DB.33"
+
+      | where trace_message contains "Recovery of database"
+
+      | project TIMESTAMP, trace_message
+
+      //Duration of recovery'
+- id: MI-ASMI-BACKUP-RESTORE-19
+  Topic: Recovery
+  Source: kusto-queries/Recovery.md
+  Prompts:
+  - MI Recovery
+  - Managed Instance Recovery
+  - Investigate Recovery
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRecoveryTrace
+    ExecutedQuery: 'MonRecoveryTrace
+
+      | where AppName == "{AppName}"
+
+      | where database_name =~ "{LogicalDatabaseId}"
+
+      | where event == "database_recovery_times"
+
+      | project TIMESTAMP, recovery_time, recovery_step'
+- id: MI-ASMI-BACKUP-RESTORE-20
+  Topic: Restore Error
+  Source: kusto-queries/Restore Error.md
+  Prompts:
+  - MI Restore Error
+  - Managed Instance Restore Error
+  - Investigate Restore Error
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRestoreRequests
+    ExecutedQuery: 'MonRestoreRequests
+
+      | where restore_request_id == "6B26CD32-14B6-40DA-9C56-9E3E81570756"
+
+      | project TIMESTAMP,restore_request_id,point_in_time,state,start_time,end_time,operation_type,operation_details,error_message'
+- id: MI-ASMI-BACKUP-RESTORE-21
+  Topic: Restore Error
+  Source: kusto-queries/Restore Error.md
+  Prompts:
+  - MI Restore Error
+  - Managed Instance Restore Error
+  - Investigate Restore Error
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRestoreRequests
+    ExecutedQuery: 'MonRestoreRequests
+
+      | where source_managed_server_name =~ "{ServerName}" or target_managed_server_name =~ "{ServerName}" or LogicalServerName =~ "{ServerName}"
+
+      | project TIMESTAMP, restore_request_id, restore_type,point_in_time,state,start_time,end_time,operation_type,operation_details,source_logical_server_name,source_logical_database_name,target_logical_server_name,target_logical_database_name'
+- id: MI-ASMI-BACKUP-RESTORE-22
+  Topic: Restore Error
+  Source: kusto-queries/Restore Error.md
+  Prompts:
+  - MI Restore Error
+  - Managed Instance Restore Error
+  - Investigate Restore Error
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRestoreEvents
+    ExecutedQuery: 'MonRestoreEvents
+
+      | where originalEventTimestamp >= datetime(2024-04-05 01:15:10.9943774)
+
+      | where restore_request_id  == "6b26cd32-14b6-40da-9c56-9e3e81570756"
+
+      | project originalEventTimestamp, restore_database_progress, details, message, br_error_details, br_error_type, sql_error_message, sql_error_number'
+- id: MI-ASMI-BACKUP-RESTORE-23
+  Topic: Restore Error
+  Source: kusto-queries/Restore Error.md
+  Prompts:
+  - MI Restore Error
+  - Managed Instance Restore Error
+  - Investigate Restore Error
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagement
+    ExecutedQuery: 'MonManagement
+
+      | where TIMESTAMP >= datetime(2024-04-03 01:15:51.7268937)'
+- id: MI-ASMI-BACKUP-RESTORE-24
+  Topic: Restore Slow (PITR)
+  Source: kusto-queries/Restore Slow (PITR).md
+  Prompts:
+  - MI Restore Slow (PITR)
+  - Managed Instance Restore Slow (PITR)
+  - Investigate Restore Slow (PITR)
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRestoreEvents
+    ExecutedQuery: 'MonRestoreEvents
+
+      //|where TIMESTAMP >=datetime(2024-03-09 2:30:00Z) |where TIMESTAMP <datetime(2024-03-09 5:00:00Z)'
+- id: MI-ASMI-BACKUP-RESTORE-25
+  Topic: Restore Slow (PITR)
+  Source: kusto-queries/Restore Slow (PITR).md
+  Prompts:
+  - MI Restore Slow (PITR)
+  - Managed Instance Restore Slow (PITR)
+  - Investigate Restore Slow (PITR)
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRestoreEvents
+    ExecutedQuery: 'MonRestoreEvents
+
+      //| where restore_request_id == "ecb420e5-2a9b-4aa5-a332-d92dbb770b70"//datetime(2024-03-09 02:46:18.0771326)
+
+      | where restore_request_id == "be426800-0c81-456f-ac6a-7748b38117e4"//datetime(2024-02-14 18:36:28.8806307)//''be502333-8d9a-474d-b31e-6850ccf6605e''
+
+      | where restore_database_progress contains "have been restored in"
+
+      | extend BackupType = iff(backup_file_name contains "Full", "Full", iff(backup_file_name  contains "Diff", "Diff", "Log"))'
+- id: MI-ASMI-BACKUP-RESTORE-26
+  Topic: Restore Slow (PITR)
+  Source: kusto-queries/Restore Slow (PITR).md
+  Prompts:
+  - MI Restore Slow (PITR)
+  - Managed Instance Restore Slow (PITR)
+  - Investigate Restore Slow (PITR)
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonRestoreEvents
+    ExecutedQuery: 'MonRestoreEvents
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where restore_database_progress contains "have been restored in"
+
+      | extend BackupType = iff(backup_file_name contains "Full", "Full", iff(backup_file_name  contains "Diff", "Diff", "Log"))'
+- id: MI-ASMI-BACKUP-RESTORE-27
+  Topic: Shrink
+  Source: kusto-queries/Shrink.md
+  Prompts:
+  - MI Shrink
+  - Managed Instance Shrink
+  - Investigate Shrink
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlShrinkInfo
+    ExecutedQuery: MonSqlShrinkInfo| where TIMESTAMP >= ago(3d)| where LogicalServerName =~ "{ServerName}"//| where database_id == long(5)//| where file_id == 1| where AppName == "ad8977560ab9"//| where
+      isnotempty(failure_reason) or status  == "shrink_fail"| project TIMESTAMP, LogicalServerName, AppName, database_id, file_id, shrink_id, tag, status, target_mb = (toint(target_size)/128), file_size_mb
+      = (toint(file_size)/128), diffingb = ((toint(file_size)-toint(target_size))*8/1024/1024), percent_complete, failure_reason, code_package_version| order by TIMESTAMP ascMonSqlShrinkInfo| where shrink_id
+      == "FF5CF3FB-45D8-4421-AC9F-1DF6404E4FAD" //shrink hit exception 3908, state 1//| where shrink_id == "C932BD1D-B383-4E4E-8F49-40D4B514F3D7"//shrink hit exception 1205, state 18//| where shrink_id
+      == "4C4F31A4-9FB4-4B9B-9B44-9B4FACC47C0A"//shrink hit exception 3617, state 145| project originalEventTimestamp, AppName, database_id, file_id, shrink_id, tag, status, failure_reasonMonSqlShrinkInfo|
+      where TIMESTAMP >= ago(3d)| where LogicalServerName =~ "{ServerName}"| where status contains "shrink_last_pages_columnstore"| project TIMESTAMP, LogicalServerName, AppName, database_id, file_id, shrink_id,
+      tag, status, target_mb = (toint(target_size)/128), file_size_mb = (toint(file_size)/128), diffingb = ((toint(file_size)-toint(target_size))*8/1024/1024), percent_complete, failure_reason, code_package_version|
+      order by TIMESTAMP asc(refer to Shrink Database that have ColumnStore Indexes - Overview (visualstudio.com)) MonSQLSystemHealth| where TIMESTAMP >= ago(3d)| where LogicalServerName =~ "{ServerName}"|
+      where message contains "Page information during shrink" and message contains "IsColumnstore 1"| project TIMESTAMP, messageMonSqlDumperActivity| where TargetLogicalServerName =~ "{ServerName}"| project
+      PreciseTimeStamp,NodeName,DumpUID,DumperStartTime,DumperEndTime,DumpErrorDetails,TargetAppName,ClusterName| extend WatsonLink = strcat('https://azurewatson.microsoft.com/DUMPUID/',DumpUID )| sort
+      by PreciseTimeStamp ascAlrSQLErrorsReported| where LogicalServerName =~ "{ServerName}"| where error_number in (3908,1205,3617)| where TIMESTAMP >= ago(7d)| project TIMESTAMP, error_number,severity,state,user_defined,session_id,database_id,is_azure_connection,query_hash,query_plan_hash,sessionName,origin
+- id: MI-ASMI-BACKUP-RESTORE-28
+  Topic: Shrink
+  Source: kusto-queries/Shrink.md
+  Prompts:
+  - MI Shrink
+  - Managed Instance Shrink
+  - Investigate Shrink
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlShrinkInfo
+    ExecutedQuery: 'MonSqlShrinkInfo
+
+      | where TIMESTAMP >= ago(3d)
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      //| where database_id == long(5)
+
+      //| where file_id == 1
+
+      | where AppName == "ad8977560ab9"
+
+      //| where isnotempty(failure_reason) or status  == "shrink_fail"
+
+      | project TIMESTAMP, LogicalServerName, AppName, database_id, file_id, shrink_id, tag, status, target_mb = (toint(target_size)/128), file_size_mb = (toint(file_size)/128), diffingb = ((toint(file_size)-toint(target_size))*8/1024/1024),
+      percent_complete, failure_reason, code_package_version'
+- id: MI-ASMI-BACKUP-RESTORE-29
+  Topic: Shrink
+  Source: kusto-queries/Shrink.md
+  Prompts:
+  - MI Shrink
+  - Managed Instance Shrink
+  - Investigate Shrink
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlShrinkInfo
+    ExecutedQuery: 'MonSqlShrinkInfo
+
+      | where shrink_id == "FF5CF3FB-45D8-4421-AC9F-1DF6404E4FAD" //shrink hit exception 3908, state 1
+
+      //| where shrink_id == "C932BD1D-B383-4E4E-8F49-40D4B514F3D7"//shrink hit exception 1205, state 18
+
+      //| where shrink_id == "4C4F31A4-9FB4-4B9B-9B44-9B4FACC47C0A"//shrink hit exception 3617, state 145
+
+      | project originalEventTimestamp, AppName, database_id, file_id, shrink_id, tag, status, failure_reason'
+- id: MI-ASMI-BACKUP-RESTORE-30
+  Topic: Shrink
+  Source: kusto-queries/Shrink.md
+  Prompts:
+  - MI Shrink
+  - Managed Instance Shrink
+  - Investigate Shrink
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlShrinkInfo
+    ExecutedQuery: 'MonSqlShrinkInfo
+
+      | where TIMESTAMP >= ago(3d)
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where status contains "shrink_last_pages_columnstore"
+
+      | project TIMESTAMP, LogicalServerName, AppName, database_id, file_id, shrink_id, tag, status, target_mb = (toint(target_size)/128), file_size_mb = (toint(file_size)/128), diffingb = ((toint(file_size)-toint(target_size))*8/1024/1024),
+      percent_complete, failure_reason, code_package_version'
+- id: MI-ASMI-BACKUP-RESTORE-31
+  Topic: Shrink
+  Source: kusto-queries/Shrink.md
+  Prompts:
+  - MI Shrink
+  - Managed Instance Shrink
+  - Investigate Shrink
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where TIMESTAMP >= ago(3d)
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where message contains "Page information during shrink" and message contains "IsColumnstore 1"
+
+      | project TIMESTAMP, message'
+- id: MI-ASMI-BACKUP-RESTORE-32
+  Topic: Shrink
+  Source: kusto-queries/Shrink.md
+  Prompts:
+  - MI Shrink
+  - Managed Instance Shrink
+  - Investigate Shrink
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlDumperActivity
+    ExecutedQuery: 'MonSqlDumperActivity
+
+      | where TargetLogicalServerName =~ "{ServerName}"
+
+      | project PreciseTimeStamp,NodeName,DumpUID,DumperStartTime,DumperEndTime,DumpErrorDetails,TargetAppName,ClusterName'
+- id: MI-ASMI-BACKUP-RESTORE-33
+  Topic: Shrink
+  Source: kusto-queries/Shrink.md
+  Prompts:
+  - MI Shrink
+  - Managed Instance Shrink
+  - Investigate Shrink
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: AlrSQLErrorsReported
+    ExecutedQuery: 'AlrSQLErrorsReported
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where error_number in (3908,1205,3617)
+
+      | where TIMESTAMP >= ago(7d)
+
+      | project TIMESTAMP, error_number,severity,state,user_defined,session_id,database_id,is_azure_connection,query_hash,query_plan_hash,sessionName,origin'

@@ -1,0 +1,464 @@
+SqlSkills:
+- id: MI-ASMI-REPLICATION-01
+  Topic: CDC & CT
+  Source: kusto-queries/CDC & CT.md
+  Prompts:
+  - MI CDC & CT
+  - Managed Instance CDC & CT
+  - Investigate CDC & CT
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCDCTraces
+    ExecutedQuery: 'MonCDCTraces
+
+      | where TIMESTAMP > ago(2d)
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where logical_database_name =~ "{DatabaseName}"
+
+      | where event == "cdc_session"
+
+      | summarize max(TIMESTAMP), max(tran_count), max(log_record_count), max(latency) by session_id'
+- id: MI-ASMI-REPLICATION-02
+  Topic: CDC & CT
+  Source: kusto-queries/CDC & CT.md
+  Prompts:
+  - MI CDC & CT
+  - Managed Instance CDC & CT
+  - Investigate CDC & CT
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCDCTraces
+    ExecutedQuery: 'MonCDCTraces
+
+      | where SubscriptionId =~ "{SubscriptionId}"
+
+      //| where LogicalServerName =~ "{ServerName}"
+
+      //| where LogicalServerName =~ "{ServerName}" | where logical_database_name =~ "{DatabaseName}"
+
+      //| where LogicalServerName =~ "{ServerName}" | where logical_database_name =~ "{DatabaseName}"//"BPSOA01"//
+
+      | where event =~ "cdc_db_enable"
+
+      | summarize by originalEventTimestamp, LogicalServerName, logical_database_name, enabled'
+- id: MI-ASMI-REPLICATION-03
+  Topic: CDC & CT
+  Source: kusto-queries/CDC & CT.md
+  Prompts:
+  - MI CDC & CT
+  - Managed Instance CDC & CT
+  - Investigate CDC & CT
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCDCTraces
+    ExecutedQuery: 'MonCDCTraces
+
+      | summarize min(TIMESTAMP)'
+- id: MI-ASMI-REPLICATION-04
+  Topic: CDC & CT
+  Source: kusto-queries/CDC & CT.md
+  Prompts:
+  - MI CDC & CT
+  - Managed Instance CDC & CT
+  - Investigate CDC & CT
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCTTraces
+    ExecutedQuery: 'MonCTTraces
+
+      | where LogicalServerName =~ "{ServerName}"//"thazepmdb0034"
+
+      | summarize min(originalEventTimestamp), max(originalEventTimestamp), count() by event, logical_database_name'
+- id: MI-ASMI-REPLICATION-05
+  Topic: CDC & CT
+  Source: kusto-queries/CDC & CT.md
+  Prompts:
+  - MI CDC & CT
+  - Managed Instance CDC & CT
+  - Investigate CDC & CT
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where message has "change_tracking"
+
+      | project originalEventTimestamp, message'
+- id: MI-ASMI-REPLICATION-06
+  Topic: CDC & CT
+  Source: kusto-queries/CDC & CT.md
+  Prompts:
+  - MI CDC & CT
+  - Managed Instance CDC & CT
+  - Investigate CDC & CT
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCTTraces
+    ExecutedQuery: 'MonCTTraces
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | summarize min(originalEventTimestamp), max(originalEventTimestamp), count() by event, logical_database_name'
+- id: MI-ASMI-REPLICATION-07
+  Topic: CDC & CT
+  Source: kusto-queries/CDC & CT.md
+  Prompts:
+  - MI CDC & CT
+  - Managed Instance CDC & CT
+  - Investigate CDC & CT
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCDCTraces
+    ExecutedQuery: 'MonCDCTraces
+
+      | where LogicalServerName =~ "{ServerName}"
+
+      | where logical_database_name != "COASTBECP"
+
+      | project TIMESTAMP,LogicalServerName,logical_database_name,event,retention, start_time,end_time, command_count,session_id'
+- id: MI-ASMI-REPLICATION-08
+  Topic: CDC & CT
+  Source: kusto-queries/CDC & CT.md
+  Prompts:
+  - MI CDC & CT
+  - Managed Instance CDC & CT
+  - Investigate CDC & CT
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCDCTraces
+    ExecutedQuery: 'MonCDCTraces
+
+      | where LogicalServerName =~ "{ServerName}" //and logical_database_name =~ "{DatabaseName}"
+
+      //| where physical_database_guid =~ "{PhysicalDatabaseGUID}"
+
+      //| where event=~ "cdc_error"
+
+      | where event !in ("cdc_session")
+
+      | summarize min(originalEventTimestamp), max(originalEventTimestamp), count() by error_number'
+- id: MI-ASMI-REPLICATION-09
+  Topic: CDC & CT
+  Source: kusto-queries/CDC & CT.md
+  Prompts:
+  - MI CDC & CT
+  - Managed Instance CDC & CT
+  - Investigate CDC & CT
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCDCTraces
+    ExecutedQuery: 'MonCDCTraces
+
+      | where LogicalServerName =~ "{ServerName}" //and logical_database_name =~ "{DatabaseName}"
+
+      //| where physical_database_guid =~ "{PhysicalDatabaseGUID}"
+
+      //| where event=~ "cdc_error"
+
+      //| where event !="cdc_mon_session"
+
+      | summarize min(originalEventTimestamp), max(originalEventTimestamp), count() by error_number'
+- id: MI-ASMI-REPLICATION-10
+  Topic: CDC & CT
+  Source: kusto-queries/CDC & CT.md
+  Prompts:
+  - MI CDC & CT
+  - Managed Instance CDC & CT
+  - Investigate CDC & CT
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCDCTraces
+    ExecutedQuery: 'MonCDCTraces
+
+      | where TIMESTAMP >= datetime(2023-06-10 00:00) and TIMESTAMP <= datetime(2023-06-25 00:00:00)'
+- id: MI-ASMI-REPLICATION-11
+  Topic: CDC & CT
+  Source: kusto-queries/CDC & CT.md
+  Prompts:
+  - MI CDC & CT
+  - Managed Instance CDC & CT
+  - Investigate CDC & CT
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where AppName == "b8fcdf9810a1"
+
+      //| where LogicalServerName =~ "{ServerName}"
+
+      //| where message has "change_tracking"
+
+      | where message !contains "Backup("
+
+      | where TIMESTAMP >= datetime(2023-06-10 14:00) and TIMESTAMP <= datetime(2023-06-10 15:00:00)'
+- id: MI-ASMI-REPLICATION-12
+  Topic: CDC & CT
+  Source: kusto-queries/CDC & CT.md
+  Prompts:
+  - MI CDC & CT
+  - Managed Instance CDC & CT
+  - Investigate CDC & CT
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCDCTraces
+    ExecutedQuery: 'MonCDCTraces
+
+      | where event contains "scheduler"
+
+      | where event_details contains "Capture job started." or event_details contains "Cdc capture started." or  event_details contains "Finished capture job."
+
+      | where AppName =~ "fc30f3be3eef"//"b8fcdf9810a1"
+
+      | project TIMESTAMP, NodeName, job_id, logical_database_name,'
+- id: MI-ASMI-REPLICATION-13
+  Topic: CDC & CT
+  Source: kusto-queries/CDC & CT.md
+  Prompts:
+  - MI CDC & CT
+  - Managed Instance CDC & CT
+  - Investigate CDC & CT
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCDCTraces
+    ExecutedQuery: 'MonCDCTraces
+
+      | where AppName =~ "fc30f3be3eef"//"b8fcdf9810a1"
+
+      | where originalEventTimestamp >= ago(5h)
+
+      | where event contains ("cdc_session")'
+- id: MI-ASMI-REPLICATION-14
+  Topic: CDC & CT
+  Source: kusto-queries/CDC & CT.md
+  Prompts:
+  - MI CDC & CT
+  - Managed Instance CDC & CT
+  - Investigate CDC & CT
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCDCTraces
+    ExecutedQuery: 'MonCDCTraces
+
+      | where AppName =~ "fc30f3be3eef"//"b8fcdf9810a1"
+
+      | where originalEventTimestamp >= ago(5h)
+
+      | where event contains ("cdc_error")'
+- id: MI-ASMI-REPLICATION-15
+  Topic: CDC & CT
+  Source: kusto-queries/CDC & CT.md
+  Prompts:
+  - MI CDC & CT
+  - Managed Instance CDC & CT
+  - Investigate CDC & CT
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonCDCTraces
+    ExecutedQuery: 'MonCDCTraces
+
+      | where LogicalServerName =~ "{ServerName}"'
+- id: MI-ASMI-REPLICATION-16
+  Topic: Managed Instance Link
+  Source: kusto-queries/Managed Instance Link.md
+  Prompts:
+  - MI Managed Instance Link
+  - Managed Instance Managed Instance Link
+  - Investigate Managed Instance Link
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonUcsConnections
+    ExecutedQuery: 'MonUcsConnections
+
+      | where AppName == "d29e9b9f1d10"
+
+      | where PreciseTimeStamp >= ago(1d)
+
+      | project PreciseTimeStamp, AppName, LogicalServerName, event,endpoint_type, error_code, error_message, stream_status, target_address'
+- id: MI-ASMI-REPLICATION-17
+  Topic: Managed Instance Link
+  Source: kusto-queries/Managed Instance Link.md
+  Prompts:
+  - MI Managed Instance Link
+  - Managed Instance Managed Instance Link
+  - Investigate Managed Instance Link
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonManagementOperations
+    ExecutedQuery: 'MonManagementOperations
+
+      | where operation_type == "DistributedAvailabilityGroupsLinkCreate"
+
+      | project PreciseTimeStamp, request_id, operation_parameters'
+- id: MI-ASMI-REPLICATION-18
+  Topic: Replication
+  Source: kusto-queries/Replication.md
+  Prompts:
+  - MI Replication
+  - Managed Instance Replication
+  - Investigate Replication
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonTranReplTraces
+    ExecutedQuery: 'MonTranReplTraces
+
+      | where TIMESTAMP >= datetime(2022-04-12 12:00:00Z)'
+- id: MI-ASMI-REPLICATION-19
+  Topic: Replication
+  Source: kusto-queries/Replication.md
+  Prompts:
+  - MI Replication
+  - Managed Instance Replication
+  - Investigate Replication
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonTranReplTraces
+    ExecutedQuery: 'MonTranReplTraces
+
+      | where TIMESTAMP >= datetime(2023-08-08 08:45:00)'
+- id: MI-ASMI-REPLICATION-20
+  Topic: Replication
+  Source: kusto-queries/Replication.md
+  Prompts:
+  - MI Replication
+  - Managed Instance Replication
+  - Investigate Replication
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogReaderTraces
+    ExecutedQuery: 'MonLogReaderTraces
+
+      | where TIMESTAMP >= datetime(2022-04-22 09:0:00)'
+- id: MI-ASMI-REPLICATION-21
+  Topic: Replication
+  Source: kusto-queries/Replication.md
+  Prompts:
+  - MI Replication
+  - Managed Instance Replication
+  - Investigate Replication
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSqlAgent
+    ExecutedQuery: 'let srv = "{ServerName}";  // Distributor instance name
+
+      let startTime = datetime(2022-12-19 06:00:00Z);
+
+      let endTime = datetime(2022-12-20 23:00:00Z);
+
+      let timeRange = ago(7d);
+
+      MonSqlAgent
+
+      | where  TIMESTAMP >= startTime
+
+      | where  TIMESTAMP <= endTime
+
+      //| where  TIMESTAMP >= timeRange
+
+      | where LogicalServerName =~ srv
+
+      | where message_type in~ ("ERROR", "STARTUP_MSG", "WARNING")
+
+      //| where message_type !in~ ("INFORMATION", "STARTUP_MSG")
+
+      | project TIMESTAMP, AppName, LogicalServerName, event, resource_id, message_type, message'
+- id: MI-ASMI-REPLICATION-22
+  Topic: Replication
+  Source: kusto-queries/Replication.md
+  Prompts:
+  - MI Replication
+  - Managed Instance Replication
+  - Investigate Replication
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonSQLSystemHealth
+    ExecutedQuery: 'MonSQLSystemHealth
+
+      | where TIMESTAMP >= datetime(2024-05-08 12:00:00Z)'
+- id: MI-ASMI-REPLICATION-23
+  Topic: Replication
+  Source: kusto-queries/Replication.md
+  Prompts:
+  - MI Replication
+  - Managed Instance Replication
+  - Investigate Replication
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: 'let srv = "{ServerName}";     // Subscriber server
+
+      let db  = "{DatabaseName}";   // Subscriber database
+
+      let startTime = datetime(2024-05-08 12:00:00Z);
+
+      let endTime   = datetime(2024-05-28 12:00:00Z);
+
+      let timeRange = ago(7d);
+
+      MonWiQdsExecStats
+
+      | where TIMESTAMP >= startTime
+
+      | where TIMESTAMP <= endTime
+
+      // | where TIMESTAMP >= timeRange
+
+      | where LogicalServerName =~ srv
+
+      | where database_name =~ db
+
+      | where statement_type in ("x_estypInsertBulk")
+
+      //| where statement_type in ("x_estypInsertBulk", "x_estypInsert")
+
+      | extend interval_start_time_date = interval_start_time / 4294967296'

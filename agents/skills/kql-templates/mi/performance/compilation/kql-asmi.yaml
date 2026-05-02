@@ -182,9 +182,8 @@ SqlSkills:
   - DatabaseName
   KustoQueries:
   - TableName: MonQueryProcessing
-    ExecutedQuery: MonQueryProcessing | where (originalEventTimestamp > ago(1d)) | where AppName !startswith 'b-' and AppName !startswith 'v-' | where event == 'metadata_change'
-      | extend database_name=logical_database_name | where LogicalServerName =~ '{ServerName}' | project originalEventTimestamp, database_name, object_id,object_name,
-      operation_type, operation_code | order by originalEventTimestamp desc
+    ExecutedQuery: MonQueryProcessing | where (originalEventTimestamp > ago(1d)) | where AppName !startswith 'b-' and AppName !startswith 'v-' | where event == 'metadata_change' | extend database_name=logical_database_name
+      | where LogicalServerName =~ '{ServerName}' | project originalEventTimestamp, database_name, object_id,object_name, operation_type, operation_code | order by originalEventTimestamp desc
 - id: MI-ASMI-COMPILATION-07
   Topic: MonQueryProcessing(Statistic & Index create & drop
   Source: kusto-queries/MonQueryProcessing(Statistic & Index create & drop.md

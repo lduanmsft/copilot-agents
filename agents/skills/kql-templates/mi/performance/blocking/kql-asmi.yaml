@@ -168,3 +168,73 @@ SqlSkills:
       | where NodeName == "{NodeName}"
 
       | project TIMESTAMP, duration, database_name, object_id, index_id, lock_mode, transaction_id, resource_owner_type, blocked_process_filtered'
+- id: MI-ASMI-BLOCKING-10
+  Topic: Lock request timeout
+  Source: kusto-queries/Lock request timeout.md
+  Prompts:
+  - MI Lock request timeout
+  - Managed Instance Lock request timeout
+  - Investigate Lock request timeout
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: AlrSQLErrorsReported
+    ExecutedQuery: 'AlrSQLErrorsReported
+
+      | where TIMESTAMP between ({StartDateTime}..{EndDateTime})'
+- id: MI-ASMI-BLOCKING-11
+  Topic: Lock request timeout
+  Source: kusto-queries/Lock request timeout.md
+  Prompts:
+  - MI Lock request timeout
+  - Managed Instance Lock request timeout
+  - Investigate Lock request timeout
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonLogin
+    ExecutedQuery: 'MonLogin
+
+      | where TIMESTAMP between ({StartDateTime}..{EndDateTime})'
+- id: MI-ASMI-BLOCKING-12
+  Topic: Lock request timeout
+  Source: kusto-queries/Lock request timeout.md
+  Prompts:
+  - MI Lock request timeout
+  - Managed Instance Lock request timeout
+  - Investigate Lock request timeout
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonWiQdsExecStats
+    ExecutedQuery: 'MonWiQdsExecStats
+
+      | where TIMESTAMP between ({StartDateTime}..{EndDateTime})'
+- id: MI-ASMI-BLOCKING-13
+  Topic: Open transaction (MonDmTranActiveTransactions
+  Source: kusto-queries/Open transaction (MonDmTranActiveTransactions.md
+  Prompts:
+  - MI Open transaction (MonDmTranActiveTransactions
+  - Managed Instance Open transaction (MonDmTranActiveTransactions
+  - Investigate Open transaction (MonDmTranActiveTransactions
+  CustomizedParameters:
+  - ServerName
+  - DatabaseName
+  KustoQueries:
+  - TableName: MonDmTranActiveTransactions
+    ExecutedQuery: 'let appname_name_input = ''appname'';
+
+      let startTime = datetime(2019-11-26 04:51:00);
+
+      let endTime = datetime(2019-11-27 05:11:00);
+
+      MonDmTranActiveTransactions
+
+      | where AppName !startswith ''b-'' and AppName !startswith ''v-''
+
+      | where AppName contains appname_name_input
+
+      | where TIMESTAMP >= startTime and TIMESTAMP < endTime'
