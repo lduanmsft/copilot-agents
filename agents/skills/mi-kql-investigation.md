@@ -113,6 +113,86 @@ MonManagedServers
 - 确认 Region 是否正确
 - MI 可能刚创建或已删除
 
+### Step 2.5: 子类别选择 + Investigation.yaml 自动调查检查 (MANDATORY)
+
+**Step 2 选择大类后 (e.g. A. Performance / B. Availability), 再进一步定位子类别。**
+
+#### Step 2.5a: 询问子类别 (Performance only)
+
+如果 Step 2 选 **A. Performance**, ask_user 子类别:
+
+```
+Performance 想看哪个维度?
+A. 自动 8 维度 triage 扫描 (跑 mi/performance/triage.yaml)
+B. CPU
+C. Blocking & Deadlock
+D. Memory / OOM
+E. Queries (slow / wait / failed)
+F. Query Store (readonly)
+G. Compilation
+H. Out-of-disk / Storage
+I. IO Storage (MI 特有)
+J. Miscellaneous (worker / corruption / AKV)
+K. SQLOS (non-yielding scheduler)
+L. Node Health
+M. Corruption
+N. Fulltext
+```
+
+> 其他大类 (B/C/D/E/F) 是单 YAML, 不需要子类别选择, 直接跳到 Step 2.5c。
+
+#### Step 2.5b: 检查 investigation.yaml 是否存在
+
+用户选定子类别后 (e.g. CPU → `mi/performance/cpu/`), 检查目录下是否有 `investigation.yaml`:
+
+```bash
+ls ~/.copilot/agents/skills/kql-templates/mi/performance/{子类别}/investigation.yaml
+```
+
+**如果存在**, 读取 yaml 顶层信息 (id, name, description, Steps 数量), 然后 ask_user:
+
+```
+📋 检测到 mi/performance/{子类别}/investigation.yaml 自动调查模板:
+
+   名称: {Investigation.name}
+   描述: {Investigation.description}
+   步骤: {N} steps ({always_run_count} 必查 + {conditional_count} 条件)
+   来源: {source}  (e.g. SQLLivesiteAgents/Performance/CPU)
+
+请选择:
+A. 🤖 自动调查 — 按 investigation.yaml 流程执行
+   → 跑 always_run steps → 阈值评估 → 触发 conditional steps → RCA
+B. ⏭️ 跳过 — 手动从 mi/performance/{子类别}/ 目录搜 KQL + 搜 TSG (Step 3)
+```
+
+**如果不存在**, 直接走手动模式 (Step 3), 跳过 ask_user。
+
+#### Step 2.5c: 自动调查执行 (用户选 A)
+
+按 `investigation.yaml` 的 `ExecutionOrder` 执行:
+
+1. **Phase 1**: 执行所有 `always_run` steps
+   - 每步从 `kql_ref` (e.g. `cpu/kql-livesite.yaml#1.1`) 加载 KQL
+   - 填充参数 (ServerName, AppName, StartTime, EndTime, etc.)
+   - **展示 KQL 给用户确认** (遵循核心原则: 永远不静默执行)
+   - 用户确认后执行
+   - 提取 `output_fields` 存入变量
+
+2. **Phase 2**: 评估 `thresholds`, 决定 `branching`:
+   - `on_issue` / `on_high` / `on_warning` → 触发对应 conditional sub-steps
+   - `on_normal` → 跳过, 进入下一个 always_run step
+   - `condition: "step-X.IssueDetected == true"` 类条件直接判断
+
+3. **Phase 3**: 跑选中的 conditional sub-steps (重复 Phase 1 流程)
+
+4. **Phase 4**: RCA 输出
+   - 汇总每步的 IssueDetected 和 output_fields
+   - 应用 cross_ref 推荐其他 skill (e.g. CPU 高 → 推荐 Queries / Compilation)
+
+#### Step 2.5d: 手动模式 (用户选 B 或 investigation.yaml 不存在)
+
+→ 进入 **Step 3 手动模式**, 但**搜索范围限定在 `mi/performance/{子类别}/`** (不是全 mi/performance/).
+
 ### Step 3: Find KQL + Search TSG（并行两条线）
 
 **并行执行两条线路：**
@@ -148,11 +228,18 @@ MonManagedServers
 - **P1**: `kql-livesite.yaml` + `kql-asmi.yaml` — 工程团队模板 + MI 原生手工 KQL
 - **P2**: `kql-tsg.yaml` — TSG 文档批量抽取的 KQL
 
+**⚠️ 搜索范围 (从 Step 2.5 子类别选择继承)**:
+- 如果 Step 2.5 选了具体子类别 (e.g. CPU) → **只搜 `mi/performance/cpu/`** (不是全 performance/)
+- 如果 Step 2 选大类没指定子类别 → 搜整个 `mi/{category}/`
+
 ```bash
-# Performance: 在对应子目录搜
+# Performance + 子类别已选 (推荐): 只搜该子目录
+grep -i "keyword" ~/.copilot/agents/skills/kql-templates/mi/performance/{子类别}/*.yaml
+
+# Performance 大类 fallback: 全 performance 搜
 grep -i "keyword" ~/.copilot/agents/skills/kql-templates/mi/performance/**/*.yaml
 
-# 非 Performance: 在对应分类文件搜
+# 非 Performance: 单 YAML
 grep -i "keyword" ~/.copilot/agents/skills/kql-templates/mi/{category}/{category}.yaml
 ```
 
@@ -160,25 +247,39 @@ If match found → extract `ExecutedQuery` → fill parameters → proceed to St
 
 #### 线路 2: 搜 msdata TSG Repos + CSS Wiki（得到调查指南和最新 KQL）
 
-**与线路 1 并行执行。**目的：
-- 获取最新调查指南（TSG 可能已更新，本地 YAML 是静态快照）
-- 获取调查上下文、阈值判断标准、下一步建议
-- 如果本地没有匹配的 KQL，从 TSG 中提取
+**与线路 1 并行执行。** 完整搜索方法（工具选型/参数/陷阱）见 [search-tsg](search-tsg.md)。
 
-按问题分类**只搜对应的** msdata TSG repo（不要全搜）：
+**按 Step 2 分类只搜对应的 repo**（不要全搜）：
 
-| Step 2 分类 | 只搜这个 msdata TSG Repo | 搜索工具 |
-|-------------|-------------------------|----------|
-| **A. Performance** | [TSG-SQL-MI-Performance](https://msdata.visualstudio.com/Database%20Systems/_git/TSG-SQL-MI-Performance) | `msdata-search_code` / `msdata-search_wiki` |
-| **B. Availability** | [TSG-SQL-MI-Availability](https://msdata.visualstudio.com/Database%20Systems/_git/TSG-SQL-MI-Availability) | `msdata-search_code` / `msdata-search_wiki` |
-| **C. Backup & Restore** | [TSG-SQL-MI-BackupRestore](https://msdata.visualstudio.com/Database%20Systems/_git/TSG-SQL-MI-BackupRestore) | `msdata-search_code` / `msdata-search_wiki` |
-| **D. Networking** | [TSG-SQL-MI-Networking](https://msdata.visualstudio.com/Database%20Systems/_git/TSG-SQL-MI-Networking) | `msdata-search_code` / `msdata-search_wiki` |
-| **E. Replication** | [TSG-SQL-MI-TransactionalReplication](https://msdata.visualstudio.com/Database%20Systems/_git/TSG-SQL-MI-TransactionalReplication) | `msdata-search_code` / `msdata-search_wiki` |
-| **F. General** | [Database Systems Wiki](https://msdata.visualstudio.com/Database%20Systems/_wiki) | `msdata-search_wiki` |
-| FOG/GeoDR | [TSG-SQL-DB-GeoDr](https://msdata.visualstudio.com/Database%20Systems/_git/TSG-SQL-DB-GeoDr) | `msdata-search_code` |
+| Step 2 分类 | 目标 msdata Repo | 推荐工具 |
+|-------------|-----------------|----------|
+| **A. Performance** | [TSG-SQL-MI-Performance](https://msdata.visualstudio.com/Database%20Systems/_git/TSG-SQL-MI-Performance) | `mcp_msdata_search_code` + path filter ⚠️ wiki search 已坏 |
+| **B. Availability** | [TSG-SQL-MI-Availability](https://msdata.visualstudio.com/Database%20Systems/_git/TSG-SQL-MI-Availability) | `mcp_msdata_search_wiki` 或 `search_code` |
+| **C. Backup & Restore** | [TSG-SQL-MI-BackupRestore](https://msdata.visualstudio.com/Database%20Systems/_git/TSG-SQL-MI-BackupRestore) | `mcp_msdata_search_wiki` 或 `search_code` |
+| **D. Networking** | [TSG-SQL-MI-Networking](https://msdata.visualstudio.com/Database%20Systems/_git/TSG-SQL-MI-Networking) | `mcp_msdata_search_wiki` 或 `search_code` |
+| **E. Replication** | [TSG-SQL-MI-TransactionalReplication](https://msdata.visualstudio.com/Database%20Systems/_git/TSG-SQL-MI-TransactionalReplication) | `mcp_msdata_search_wiki` 或 `search_code` |
+| **F. General** | [Database Systems Wiki](https://msdata.visualstudio.com/Database%20Systems/_wiki) | `mcp_msdata_search_wiki` |
+| FOG/GeoDR | [TSG-SQL-DB-GeoDr](https://msdata.visualstudio.com/Database%20Systems/_git/TSG-SQL-DB-GeoDr) | `mcp_msdata_search_code` |
 
-**同时搜 CSS Wiki**（所有分类都搜，不受 Step 2 限制）：
-- `csswiki-search_wiki` project=["AzureSQLMI"] — CSS 支持团队的 MI TSG 和 case 经验
+**Performance 调用模板**（必加 path filter，否则会被 `_site/` HTML 噪音淹没）：
+```jsonc
+{
+  "tool": "mcp_msdata_search_code",
+  "project": ["Database Systems"],
+  "repository": ["TSG-SQL-MI-Performance"],
+  "path": [
+    "/content/sql_cloud_lifter_notebook/",
+    "/content/Hermes/",
+    "/content/Azure SQL Managed Instance (CloudLifter) Performance TSGs and SOPs/"
+  ],
+  "searchText": "<token>", "top": 30
+}
+```
+
+**同时搜 CSS Wiki**（所有分类都搜）：
+- `mcp_csswiki_search_wiki` project=["AzureSQLMI"] — CSS 团队 MI TSG 和 case 经验
+
+**取单页全文** → `mcp_enghub_fetch <url>`（`mcp_msdata_repo_get_file_content` 已被禁用）。
 
 **合并两条线路的结果：**
 - 本地 KQL 为主 → 填充参数后直接用

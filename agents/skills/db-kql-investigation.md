@@ -357,28 +357,44 @@ Recommended search order:
 
 ### Step 3.2: Search msdata TSG Repos + CSS Wiki（并行线路 2）
 
-**与线路 1（本地 YAML）并行执行。**按 Step 2 分类**只搜对应的** msdata TSG repo：
+**与线路 1（本地 YAML）并行执行。** 完整搜索方法（工具选型/参数/陷阱）见 [search-tsg](search-tsg.md)。
 
-| Step 2 分类 | 只搜这个 msdata TSG Repo | 搜索工具 |
-|-------------|-------------------------|----------|
-| **A. Performance** | [TSG-SQL-DB-Performance](https://msdata.visualstudio.com/Database%20Systems/_git/TSG-SQL-DB-Performance) | `msdata-search_code` / `msdata-search_wiki` |
-| **B. Availability** | [TSG-SQL-DB-Availability](https://msdata.visualstudio.com/Database%20Systems/_git/TSG-SQL-DB-Availability) | `msdata-search_code` / `msdata-search_wiki` |
-| **C. Connectivity** | [TSG-SQL-DB-Connectivity](https://msdata.visualstudio.com/Database%20Systems/_git/TSG-SQL-DB-Connectivity) | `msdata-search_code` / `msdata-search_wiki` |
-| **D. GeoDR / FOG** | [TSG-SQL-DB-GeoDr](https://msdata.visualstudio.com/Database%20Systems/_git/TSG-SQL-DB-GeoDr) | `msdata-search_code` / `msdata-search_wiki` |
-| **E. Backup & Restore** | [TSG-SQL-DB-BackupRestore](https://msdata.visualstudio.com/Database%20Systems/_git/TSG-SQL-DB-BackupRestore) | `msdata-search_code` / `msdata-search_wiki` |
-| **F. General** | [Database Systems Wiki](https://msdata.visualstudio.com/Database%20Systems/_wiki) | `msdata-search_wiki` |
-| Query Store | [TSG-SQL-DB-QueryStore](https://msdata.visualstudio.com/Database%20Systems/_git/TSG-SQL-DB-QueryStore) | `msdata-search_code` |
-| Resource Governance | [TSG-SQL-DB-ResourceGovernance](https://msdata.visualstudio.com/Database%20Systems/_git/TSG-SQL-DB-ResourceGovernance) | `msdata-search_code` |
-| Data Integration | [TSG-SQL-DB-DataIntegration](https://msdata.visualstudio.com/Database%20Systems/_git/TSG-SQL-DB-DataIntegration) | `msdata-search_code` |
+**按 Step 2 分类只搜对应的 repo**：
 
-**同时搜 CSS Wiki**（所有分类都搜，不受 Step 2 限制）：
-- `csswiki-search_wiki` project=["AzureSQLDB"] — CSS 支持团队的 SQLDB TSG 和 case 经验
+| Step 2 分类 | 目标 msdata Repo |
+|-------------|-----------------|
+| **A. Performance** | [TSG-SQL-DB-Performance](https://msdata.visualstudio.com/Database%20Systems/_git/TSG-SQL-DB-Performance) |
+| **B. Availability** | [TSG-SQL-DB-Availability](https://msdata.visualstudio.com/Database%20Systems/_git/TSG-SQL-DB-Availability) |
+| **C. Connectivity** | [TSG-SQL-DB-Connectivity](https://msdata.visualstudio.com/Database%20Systems/_git/TSG-SQL-DB-Connectivity) |
+| **D. GeoDR / FOG** | [TSG-SQL-DB-GeoDr](https://msdata.visualstudio.com/Database%20Systems/_git/TSG-SQL-DB-GeoDr) |
+| **E. Backup & Restore** | [TSG-SQL-DB-BackupRestore](https://msdata.visualstudio.com/Database%20Systems/_git/TSG-SQL-DB-BackupRestore) |
+| **F. General** | [Database Systems Wiki](https://msdata.visualstudio.com/Database%20Systems/_wiki) |
+| Query Store | [TSG-SQL-DB-QueryStore](https://msdata.visualstudio.com/Database%20Systems/_git/TSG-SQL-DB-QueryStore) |
+| Resource Governance | [TSG-SQL-DB-RG](https://msdata.visualstudio.com/Database%20Systems/_git/TSG-SQL-DB-RG) |
+| Data Integration | [TSG-SQL-DB-DataIntegration](https://msdata.visualstudio.com/Database%20Systems/_git/TSG-SQL-DB-DataIntegration) |
 
-**合并两条线路的结果：**
-- 本地 KQL 为主 → 填充参数后直接用
-- TSG 补充：调查思路、结果解读、阈值判断、下一步建议
-- 如果 TSG 里有更新的 KQL → 优先用 TSG 版本
-- 如果本地没有匹配 → 用 TSG 里的 KQL
+**主用工具**: `mcp_msdata_search_code` 一次传入 `repository` 数组并行搜多个 repo。
+**结果后处理**: 过滤 `_site/` 和 `.attachments/` 噪音, 只保留 `.md`/`.ipynb`/`.yml`。
+
+**调用模板**（跨 10 个 SQL DB TSG repo 一次搜索）：
+```jsonc
+{
+  "tool": "mcp_msdata_search_code",
+  "project": ["Database Systems"],
+  "repository": [
+    "TSG-SQL-DB-Airgap","TSG-SQL-DB-Availability","TSG-SQL-DB-Connectivity",
+    "TSG-SQL-DB-DataIntegration","TSG-SQL-DB-GeoDr","TSG-SQL-DB-Native",
+    "TSG-SQL-DB-Performance","TSG-SQL-DB-QueryStore","TSG-SQL-DB-RG",
+    "TSG-SQL-DB-Telemetry"
+  ],
+  "searchText": "<token>", "top": 50
+}
+```
+
+**同时搜 CSS Wiki**（所有分类都搜）：
+- `mcp_csswiki_search_wiki` project=["AzureSQLDB"] — CSS 团队 SQLDB TSG 和 case 经验
+
+**取单页全文** → `mcp_enghub_fetch <url>`（`mcp_msdata_repo_get_file_content` 已被禁用）。
 
 ### Step 3.3: 兜底 — AI Generate with Schema Reference
 If no suitable template exists, generate KQL using:
