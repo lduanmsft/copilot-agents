@@ -262,9 +262,14 @@ If match found → extract `ExecutedQuery` → fill parameters → proceed to St
 | **E. Replication** | [TSG-SQL-MI-TransactionalReplication](https://msdata.visualstudio.com/Database%20Systems/_git/TSG-SQL-MI-TransactionalReplication) | `mcp_msdata_search_wiki` 或 `search_code` |
 | **F. General** | [Database Systems Wiki](https://msdata.visualstudio.com/Database%20Systems/_wiki) | `mcp_msdata_search_wiki` |
 
-> **GeoDR/FOG**: MI 没有独立 GeoDR repo. 调查 GeoDR/FOG 时同时搜:
-> - `TSG-SQL-MI-Availability` (主, failover/seeding/long-reconfig)
-> - `TSG-SQL-MI-BackupRestore` (geo-restore/full backup skipped after geo-failover)
+> **GeoDR 和 FOG 是两个东西** (常被混淆):
+> - **GeoDR (Geo-Replication)** = 底层跨区数据复制 (log shipping). 症状: replication lag, seeding 慢, log 中断
+> - **FOG (Failover Group)** = 管理层封装 (listener + auto-failover policy). 症状: FOG endpoint DNS 不通, FOG failover 卡住, marker service 跟 user DB primary 不对齐
+> - FOG ⊃ GeoDR (FOG 用 GeoDR 做底层)
+>
+> **MI 没有独立的 GeoDR/FOG repo**. 调查时同时搜:
+> - `TSG-SQL-MI-Availability` (主 — failover/seeding/long-reconfig/torn-affinity)
+> - `TSG-SQL-MI-BackupRestore` (geo-restore / full backup skipped after geo-failover)
 
 **Performance 调用模板**（必加 path filter，否则会被 `_site/` HTML 噪音淹没）：
 ```jsonc
