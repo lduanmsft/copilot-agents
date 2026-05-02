@@ -262,14 +262,11 @@ If match found → extract `ExecutedQuery` → fill parameters → proceed to St
 | **E. Replication** | [TSG-SQL-MI-TransactionalReplication](https://msdata.visualstudio.com/Database%20Systems/_git/TSG-SQL-MI-TransactionalReplication) | `mcp_msdata_search_wiki` 或 `search_code` |
 | **F. General** | [Database Systems Wiki](https://msdata.visualstudio.com/Database%20Systems/_wiki) | `mcp_msdata_search_wiki` |
 
-> **GeoDR 和 FOG 是两个东西** (常被混淆):
-> - **GeoDR (Geo-Replication)** = 底层跨区数据复制 (log shipping). 症状: replication lag, seeding 慢, log 中断
-> - **FOG (Failover Group)** = 管理层封装 (listener + auto-failover policy). 症状: FOG endpoint DNS 不通, FOG failover 卡住, marker service 跟 user DB primary 不对齐
-> - FOG ⊃ GeoDR (FOG 用 GeoDR 做底层)
->
-> **MI 没有独立的 GeoDR/FOG repo**. 调查时同时搜:
+> **FOG (Failover Group)**: MI 跨 region HA 只有 FOG (没有裸 GeoDR pair, 跟 SQLDB 不同). 调查 FOG 时同时搜:
 > - `TSG-SQL-MI-Availability` (主 — failover/seeding/long-reconfig/torn-affinity)
 > - `TSG-SQL-MI-BackupRestore` (geo-restore / full backup skipped after geo-failover)
+>
+> 注意: Kusto 表名仍含 `GeoDR` (如 `MonGeoDRFailoverGroups`, `MonMIGeoDRFailoverGroupsConnectivity`) 是历史遗留命名, 业务上等同 FOG.
 
 **Performance 调用模板**（必加 path filter，否则会被 `_site/` HTML 噪音淹没）：
 ```jsonc
