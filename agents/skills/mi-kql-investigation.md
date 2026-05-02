@@ -1,6 +1,27 @@
 # MI KQL Investigation Skill
 # This skill defines how to find and execute KQL queries for SQL Managed Instance troubleshooting.
 
+## ⚠️ MANDATORY: No Column-Name Guessing
+
+Before writing **any** ad-hoc KQL query, look up the column names. Never guess.
+
+1. **First**: check `~/.copilot/agents/skills/kql-templates/mi/mi-hot-tables.md` (5 most-used tables, all common pitfalls flagged)
+2. **If table not in hot-tables.md**: grep `~/.copilot/agents/skills/kql-templates/mi/mi-tables-reference.md`:
+   ```
+   grep -A 50 '^## TableName' mi-tables-reference.md
+   ```
+3. **If a query fails with `SEM0100: Failed to resolve column ...`**: STOP. Do not retry with another guessed column name. Go back to step 1/2.
+
+Common known traps (full list in `mi-hot-tables.md`):
+- `MonGeoDRFailoverGroups.partner_logical_server_name` ❌ → use `partner_server_name`
+- `MonManagementOperations.operation_name` ❌ → use `operation_type`
+- `MonDbSeedTraces.logical_database_name` ❌ → use `database_name` (stores GUID)
+- `MonDmDbHadrReplicaStates.database_name` ❌ → use `logical_database_name`
+- `MonSQLSystemHealth.error_severity` ❌ → column does not exist; use `error_id`
+- `where ... has 'CamelCaseToken'` often misses; prefer `contains` for `CreateManagedFailoverGroup`-style names
+
+---
+
 ## Interactive KQL Investigation Flow
 
 When the user asks to investigate an MI issue using Kusto/KQL, follow this **standard interaction flow**:
@@ -191,7 +212,47 @@ B. ⏭️ 跳过 — 手动从 mi/performance/{子类别}/ 目录搜 KQL + 搜 T
 
 #### Step 2.5d: 手动模式 (用户选 B 或 investigation.yaml 不存在)
 
-→ 进入 **Step 3 手动模式**, 但**搜索范围限定在 `mi/performance/{子类别}/`** (不是全 mi/performance/).
+→ 进入 **Step 2.7 检查特定问题 skill**, 然后才走 **Step 3 手动模式**, 搜索范围限定在 `mi/{category}/{子类别}/`.
+
+### Step 2.7: Check for problem-specific `skill-*.md` (MANDATORY)
+
+每个分类目录 (e.g. `mi/availability/`, `mi/performance/cpu/`) 下面除了 KQL 知识库 (`kql-asmi.yaml` / `kql-livesite.yaml` / `kql-tsg.yaml`) 之外，可能还有针对**具体问题模式**的 skill 文件:
+
+```
+mi/{category}/skill-*.md          ← 大类级别 skill (e.g. mi/availability/skill-fog-creation-failure.md)
+mi/{category}/{subcat}/skill-*.md ← 子类别级别 skill
+```
+
+每个 `skill-*.md` 在文件开头会描述 **Symptom** (适用症状) — 用 grep 列出所有候选, 然后对照用户的问题描述判断是否匹配.
+
+**操作步骤**:
+
+```bash
+# 列出当前分类下所有 skill 文件
+ls ~/.copilot/agents/skills/kql-templates/mi/{category}/skill-*.md 2>/dev/null
+ls ~/.copilot/agents/skills/kql-templates/mi/{category}/{subcat}/skill-*.md 2>/dev/null
+
+# 读取每个 skill 的 Symptom 段落 (前 30 行)
+head -30 skill-*.md
+```
+
+**判断**:
+- 如果有一个 skill 的 Symptom 跟用户问题**强相关** (关键词命中, 错误码命中, 表现命中) → 告知用户:
+  ```
+  📋 检测到匹配的 skill: skill-fog-creation-failure.md
+     Symptom: User creates a FOG, portal shows "Seeding" persistently, MonDbSeedTraces empty on both sides.
+  
+  请选择:
+  A. ✅ 按这个 skill 的 4 阶段流程调查 (推荐)
+  B. ⏭️ 跳过 skill, 走 Step 3 通用 KQL 搜索
+  ```
+- 如果没有匹配 → 静默跳过, 直接走 Step 3
+- 如果有多个匹配 → 列出所有, 让用户选
+
+**执行 skill**:
+- 按 skill 文件里定义的 Phase 0 → Phase 1 → ... 顺序执行
+- 每个 KQL **必须先展示给用户确认** (遵循核心原则)
+- skill 里的 KQL 通常已经验证过 schema, 直接用; 如果遇到 SEM0100 错误回 mi-hot-tables.md
 
 ### Step 3: Find KQL + Search TSG（并行两条线）
 
@@ -296,9 +357,10 @@ If match found → extract `ExecutedQuery` → fill parameters → proceed to St
 
 #### 兜底: AI Generate with Schema Reference
 If no template found, generate KQL using:
-- Table schema from `~/.copilot/agents/skills/kql-templates/mi/mi-tables-reference.md` (148 tables, all columns)
+- **First**: hot-table cheatsheet `~/.copilot/agents/skills/kql-templates/mi/mi-hot-tables.md` (5 most-used tables)
+- **Then**: full schema `~/.copilot/agents/skills/kql-templates/mi/mi-tables-reference.md` (148 tables, all columns)
 - Table code definitions from `~/.copilot/agents/skills/kql-templates/mi/mi-tables-code-reference.md`
-- Always verify column names against schema before generating
+- **MUST** verify column names against schema before generating — see "No Column-Name Guessing" rule at top of this file
 
 ### Step 4: Determine Cluster Endpoint
 集群 URL 已在 Step 1.5a 通过 Region 查 CSV 获得。
