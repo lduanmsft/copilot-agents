@@ -262,11 +262,9 @@ If match found → extract `ExecutedQuery` → fill parameters → proceed to St
 | **E. Replication** | [TSG-SQL-MI-TransactionalReplication](https://msdata.visualstudio.com/Database%20Systems/_git/TSG-SQL-MI-TransactionalReplication) | `mcp_msdata_search_wiki` 或 `search_code` |
 | **F. General** | [Database Systems Wiki](https://msdata.visualstudio.com/Database%20Systems/_wiki) | `mcp_msdata_search_wiki` |
 
-> **GeoDR/FOG 注意**: MI **没有独立的 GeoDR repo**（`TSG-SQL-DB-GeoDr` 仅 SQLDB 用）。MI 的 GeoDR/FOG TSG 散在:
-> - `TSG-SQL-MI-Availability` (failover/seeding/long-reconfig 等, 主) 
-> - `TSG-SQL-MI-BackupRestore` (geo-restore/full backup skipped after geo-failover 等)
-> 
-> 调查 GeoDR/FOG 时同时搜上面两个 repo, **不要**搜 `TSG-SQL-DB-GeoDr`.
+> **GeoDR/FOG**: MI 没有独立 GeoDR repo. 调查 GeoDR/FOG 时同时搜:
+> - `TSG-SQL-MI-Availability` (主, failover/seeding/long-reconfig)
+> - `TSG-SQL-MI-BackupRestore` (geo-restore/full backup skipped after geo-failover)
 
 **Performance 调用模板**（必加 path filter，否则会被 `_site/` HTML 噪音淹没）：
 ```jsonc
