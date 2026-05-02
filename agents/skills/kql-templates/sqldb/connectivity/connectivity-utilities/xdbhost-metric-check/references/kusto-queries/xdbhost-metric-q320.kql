@@ -1,0 +1,63 @@
+// xdbhost-metric-q320
+
+let ClusterNameVar = dynamic(['{ClusterName}']);
+let NodeNameVar = dynamic(['{NodeName}']);
+let SqlInstances = dynamic(['{SqlInstance}']);
+let _endTime = datetime({EndTime});
+let _startTime = datetime({StartTime});
+let tempVmSizes = datatable (VmSize: string, LogicalCores: int)
+[
+    "SQLVM1", 12,
+    "SQLVM2", 12,
+    "Standard_D16ds_v5", 16,
+    "Standard_NC96ads_A100_v4", 96,
+    "SQLG3", 16,
+    "SQLG4VM", 24,
+    "SQLG5", 80,
+    "SQLG6", 96,
+    "SQLG7", 104,
+    "Internal_GPGen8MM_128iad", 128,
+    "Internal_GPGen8HH_128iad", 128,
+    "Internal_GPGen8MM_128id", 128,
+    "Internal_GPGen8HH_128id", 128,
+    "Internal_GPGen8MMv2_128id", 128,
+    "Internal_ACCGen8MM_64id", 64,
+    "Internal_NPMM_128ids", 128,
+    "Internal_GPGen8HH_128ids", 128
+];
+MonLogin
+ |where PreciseTimeStamp between (_startTime .. _endTime)
+| where event == "process_login_finish"
+| where ClusterName in~ (ClusterNameVar) and NodeName in~ (NodeNameVar)
+| extend AppName =
+    iif(instance_name has @"\",
+        tostring(split(instance_name, @"\")[array_length(split(instance_name, @"\")) - 1]),
+        tostring(split(instance_name, ".")[0])
+    )
+| where AppName in (SqlInstances)
+| where package == "xdbhost"
+ | summarize ActualLogins=count() by ClusterName, NodeName, AppName,  bin(originalEventTimestamp,1m)
+ | join kind=leftouter (
+MonRgLoad
+| where TIMESTAMP between (_startTime .. _endTime)
+| where ClusterName in~ (ClusterNameVar)
+| where event == "instance_load"
+| where service_manifest_name == "SQL"
+| where code_package_name == "Code"
+| extend AppName = tostring(split(application_name, '/')[-1])
+| where AppName in~ (SqlInstances)
+| where NodeName in~ (NodeNameVar)
+| summarize by application_name, AppName, cpu_count, NodeName
+| join kind=leftouter (MonRgManager
+| where TIMESTAMP > ago(30d)
+| where ClusterName in~ (ClusterNameVar)
+| where NodeName in~ (NodeNameVar)
+| where event == "rgmanager_start"
+| summarize by NodeName, vm_size
+| join kind=leftouter  tempVmSizes on $left.vm_size ==$right.VmSize
+) on $left.NodeName==$right.NodeName
+| extend LoginRateCapPerMin = cpu_count*1400*60/LogicalCores 
+ ) on $left.AppName == $right.AppName
+ | where ActualLogins > LoginRateCapPerMin
+ | project originalEventTimestamp, ActualLogins, LoginRateCapPerMin
+

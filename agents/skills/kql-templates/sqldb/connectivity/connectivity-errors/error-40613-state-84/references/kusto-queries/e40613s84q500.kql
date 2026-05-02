@@ -1,0 +1,12 @@
+//e40613s84q500
+let startTime = datetime({StartTime});
+let endTime = datetime({EndTime});
+let TenantRing= "tr41482.westeurope1-a.worker.database.windows.net"; // Replace with ring where user DB locates
+let DBNode= "_DB_30"; // Replace with DB node where user DB locates
+MonCounterOneMinute
+    | where PreciseTimeStamp between(startTime..endTime)
+    | where ClusterName =~ TenantRing
+    | where NodeName =~ DBNode
+    | where CounterName startswith "\\Processor Information" and CounterName endswith "Processor Time"
+    | where MaxVal >=90
+    | summarize avg(MaxVal) by CounterName, bin(TIMESTAMP,3m)

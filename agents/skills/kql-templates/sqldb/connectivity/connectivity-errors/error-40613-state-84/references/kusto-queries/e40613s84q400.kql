@@ -1,0 +1,15 @@
+//e40613s84q400
+let startTime = datetime({StartTime});
+let endTime = datetime({EndTime});
+let Cr_Connection_ID =
+dynamic([
+ "4DB0C2C7-5B16-431C-ADF6-00D66958DEBB",
+ "E6F0DB19-5E96-4280-AA1B-55BE0567160B", 
+ "AE5C4AB1-BE1B-4305-8FD2-7B4673423EC1"
+]);  //This is array variable based on the output of e40613s84q300.kql
+MonLogin
+| where TIMESTAMP >= startTime
+| where TIMESTAMP <= endTime
+| where connection_peer_id in ( Cr_Connection_ID) 
+or odbc_connection_id in ( Cr_Connection_ID) 
+| project ClusterName, NodeName, event, error, state, extra_info, tds_flags

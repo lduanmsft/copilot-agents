@@ -1,0 +1,55 @@
+//xdbhost-metric-q420
+
+let ClusterNameVar ='tr11099.westus2-a.worker.database.windows.net';
+let NodeNameVar= '_DB_44'; 
+let _startTime = datetime(2026-03-05T01:00:00Z);
+let _endTime = datetime(2026-03-05T03:00:00Z);
+let SqlInstances= "bae2a08ff15c";
+// DO not change the following Content 
+let _cpuFilters = MonRgLoad
+| where ClusterName =~ ClusterNameVar and NodeName =~ NodeNameVar
+| where TIMESTAMP between (_startTime-2h .. _endTime)
+| where event == "instance_load"
+| where service_manifest_name == "SQL"
+| where code_package_name == "Code"
+| summarize min(TIMESTAMP), max(TIMESTAMP) by application_name, allocated_cpus, event, cpu_count, rg_instance_process_id
+| extend allocated_cpus = parse_json(allocated_cpus)
+| extend group0Cpus = tostring(allocated_cpus.Group0), group1Cpus = tostring(allocated_cpus.Group1)
+| extend cpuGroup0Mask = iff(isnotempty(group0Cpus), group0Cpus, "0")
+| extend cpuGroup1Mask = iff(isnotempty(group1Cpus), group1Cpus, "0")
+// --- Replaces hexDigitToBimap + generateBitMap + generateCpuFilter for Group 0 ---
+| mv-apply with_itemindex=hexPos hexChar = 
+    array_reverse(extract_all("(.)", tostring(split(cpuGroup0Mask, '0x')[-1]))) on (
+    extend hexVal = indexof("0123456789abcdef", tolower(tostring(hexChar)))
+    | extend b0 = hexVal % 2 >= 1, b1 = (hexVal / 2) % 2 >= 1,
+             b2 = (hexVal / 4) % 2 >= 1, b3 = (hexVal / 8) % 2 >= 1
+    | summarize cpuFilters0 = array_concat(
+        make_list_if(strcat('Processor Information(0,', hexPos * 4    , ')'), b0),
+        make_list_if(strcat('Processor Information(0,', hexPos * 4 + 1, ')'), b1),
+        make_list_if(strcat('Processor Information(0,', hexPos * 4 + 2, ')'), b2),
+        make_list_if(strcat('Processor Information(0,', hexPos * 4 + 3, ')'), b3))
+)
+// --- Same for Group 1 ---
+| mv-apply with_itemindex=hexPos hexChar = 
+    array_reverse(extract_all("(.)", tostring(split(cpuGroup1Mask, '0x')[-1]))) on (
+    extend hexVal = indexof("0123456789abcdef", tolower(tostring(hexChar)))
+    | extend b0 = hexVal % 2 >= 1, b1 = (hexVal / 2) % 2 >= 1,
+             b2 = (hexVal / 4) % 2 >= 1, b3 = (hexVal / 8) % 2 >= 1
+    | summarize cpuFilters1 = array_concat(
+        make_list_if(strcat('Processor Information(1,', hexPos * 4    , ')'), b0),
+        make_list_if(strcat('Processor Information(1,', hexPos * 4 + 1, ')'), b1),
+        make_list_if(strcat('Processor Information(1,', hexPos * 4 + 2, ')'), b2),
+        make_list_if(strcat('Processor Information(1,', hexPos * 4 + 3, ')'), b3))
+)
+| extend cpuFilters = array_concat(cpuFilters0, cpuFilters1)
+| where application_name has SqlInstances
+| project cpuFilters;
+MonCounterOneMinute
+    | where PreciseTimeStamp between(_startTime.._endTime)
+    | where ClusterName =~  ClusterNameVar
+    | where NodeName =~  NodeNameVar
+    | where CounterName startswith "\\Processor Information" and CounterName endswith "Processor Time"
+    | where CounterName has_any (_cpuFilters) 
+    | project TIMESTAMP, CounterName, MaxVal
+    | where MaxVal >90
+    

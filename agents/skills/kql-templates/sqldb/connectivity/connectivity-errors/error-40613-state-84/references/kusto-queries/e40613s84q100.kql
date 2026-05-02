@@ -1,0 +1,20 @@
+
+//e40613s84q100
+let servername = '{LogicalServerName}';
+let dbname = '{LogicalDatabaseName}';
+let masterdbname= "master";
+let startTime = datetime({StartTime});
+let endTime = datetime({EndTime});
+MonLogin
+| where TIMESTAMP >= (startTime -5h)
+| where TIMESTAMP <= endTime
+| where logical_server_name =~ servername
+| where database_name =~ dbname or database_name =~masterdbname
+| where  package =~"xdbgateway"
+| summarize count(), min(TIMESTAMP), max(TIMESTAMP) by database_name, instance_name, fabric_node_name
+| where isnotempty( instance_name)
+| extend TargetTRRing = substring(instance_name, indexof(instance_name, ".") + 1)
+| extend instance = tostring( split(instance_name, ".")[0])
+| where TargetTRRing != ""
+| extend DBNode = tostring(split(fabric_node_name, "\\")[1])
+| project database_name, min_TIMESTAMP, max_TIMESTAMP, instance, TargetTRRing, DBNode, count_

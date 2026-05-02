@@ -1,0 +1,50 @@
+//e40613s84q600
+let _clustername ='tr32565.eastus1-a.worker.database.windows.net'; // Replace with ring where user DB locates
+let _nodename= '_DB_60'; // Replace with DB node where user DB locates
+let _startTime = datetime({StartTime});
+let _endTime = datetime({EndTime});
+let _interested_cores= 
+dynamic([
+  "Processor Information(0,13)",
+  "Processor Information(1,20)"
+]); //a dynamic array derived from the output of e40613s84q500.kql 
+// DO not change the following Content 
+MonRgLoad
+| where ClusterName =~ _clustername and NodeName =~ _nodename
+| where TIMESTAMP between (_startTime -3h .. _endTime)
+| where event == "instance_load"
+| where service_manifest_name == "SQL"
+| where code_package_name == "Code"
+| summarize min(TIMESTAMP), max(TIMESTAMP) by application_name, allocated_cpus, event, cpu_count, rg_instance_process_id
+| extend allocated_cpus = parse_json(allocated_cpus)
+| extend group0Cpus = tostring(allocated_cpus.Group0), group1Cpus = tostring(allocated_cpus.Group1)
+| extend cpuGroup0Mask = iff(isnotempty(group0Cpus), group0Cpus, "0")
+| extend cpuGroup1Mask = iff(isnotempty(group1Cpus), group1Cpus, "0")
+// --- Replaces hexDigitToBimap + generateBitMap + generateCpuFilter for Group 0 ---
+| mv-apply with_itemindex=hexPos hexChar = 
+    array_reverse(extract_all("(.)", tostring(split(cpuGroup0Mask, '0x')[-1]))) on (
+    extend hexVal = indexof("0123456789abcdef", tolower(tostring(hexChar)))
+    | extend b0 = hexVal % 2 >= 1, b1 = (hexVal / 2) % 2 >= 1,
+             b2 = (hexVal / 4) % 2 >= 1, b3 = (hexVal / 8) % 2 >= 1
+    | summarize cpuFilters0 = array_concat(
+        make_list_if(strcat('Processor Information(0,', hexPos * 4    , ')'), b0),
+        make_list_if(strcat('Processor Information(0,', hexPos * 4 + 1, ')'), b1),
+        make_list_if(strcat('Processor Information(0,', hexPos * 4 + 2, ')'), b2),
+        make_list_if(strcat('Processor Information(0,', hexPos * 4 + 3, ')'), b3))
+)
+// --- Same for Group 1 ---
+| mv-apply with_itemindex=hexPos hexChar = 
+    array_reverse(extract_all("(.)", tostring(split(cpuGroup1Mask, '0x')[-1]))) on (
+    extend hexVal = indexof("0123456789abcdef", tolower(tostring(hexChar)))
+    | extend b0 = hexVal % 2 >= 1, b1 = (hexVal / 2) % 2 >= 1,
+             b2 = (hexVal / 4) % 2 >= 1, b3 = (hexVal / 8) % 2 >= 1
+    | summarize cpuFilters1 = array_concat(
+        make_list_if(strcat('Processor Information(1,', hexPos * 4    , ')'), b0),
+        make_list_if(strcat('Processor Information(1,', hexPos * 4 + 1, ')'), b1),
+        make_list_if(strcat('Processor Information(1,', hexPos * 4 + 2, ')'), b2),
+        make_list_if(strcat('Processor Information(1,', hexPos * 4 + 3, ')'), b3))
+)
+| extend cpuFilters = array_concat(cpuFilters0, cpuFilters1)
+| project application_name, allocated_cpus, event, cpu_count, cpuGroup0Mask, cpuGroup1Mask, cpuFilters, min_TIMESTAMP, max_TIMESTAMP, rg_instance_process_id
+| extend IsOfInterest = iff(cpuFilters has_any (_interested_cores), 1, 0)
+| where IsOfInterest == 1

@@ -1,0 +1,13 @@
+//e40613s84q300
+let startTime = datetime({StartTime});
+let endTime = datetime({EndTime});
+let ConnectionID= 
+dynamic([
+  "FC4EF645-7271-4E72-8D7A-7445A4DBBF6B", 
+  "9A52CA8B-A638-41E2-AD45-0443749C5F1E", 
+  "6575DA07-9351-4382-A3F3-C5C863B02C53"
+]);
+MonXOdbcWrapper
+| where PreciseTimeStamp between (startTime ..endTime )
+|where sql_connection_id in~ (ConnectionID)
+| project originalEventTimestamp, error_code, odbc_cr_connection_id, message, logical_server_name, logical_database_name

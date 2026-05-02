@@ -1238,3 +1238,62 @@ SqlSkills:
       2. Set {{IssueDetected}} to 'true'.
       3. Set {{ResultMessage}} to {{longRunningMessage}}.
 
+
+# ── Distilled by lduan-agent (2026-05-01) ──
+# Gap fix: SQLLivesiteAgents has no "Top by elapsed_time" KQL.
+# All 22 LS-QUERIES use cpu_time/wait_time/reads/writes — no direct duration ranking.
+# This skill ranks queries by total elapsed_time (= cpu_time + wait_time approx),
+# which is the most intuitive metric for "slowest queries" investigations.
+  - id: "DIST-QUERIES-TopDuration"
+    Prompts:
+      - "Top Duration Queries"
+      - "Top queries by elapsed time"
+      - "Top slowest queries"
+      - "Slowest queries by total execution time"
+      - "Find slowest statements"
+      - "最慢的语句"
+      - "执行时间最长的查询"
+    KustoQueries:
+      - TableName: "MonWiQdsExecStats_TopDurationQuery"
+        ExecutedQuery: |
+          MonWiQdsExecStats
+          | where {AppNamesNodeNamesWithOriginalEventTimeRange}
+          | where LogicalServerName =~ '{LogicalServerName}' and database_name =~ '{LogicalDatabaseName}'
+          | summarize
+              TotalElapsed_ms     = sum(elapsed_time)/1000.0,
+              TotalCpu_ms         = sum(cpu_time)/1000.0,
+              TotalExecutionCount = sum(execution_count),
+              MaxElapsed_ms       = max(max_elapsed_time)/1000.0,
+              dcount_plan         = dcount(query_plan_hash)
+              by query_hash
+          | extend AvgElapsed_ms      = round(TotalElapsed_ms / iif(TotalExecutionCount==0, 1.0, todouble(TotalExecutionCount)), 1)
+          | extend WaitPortion_ms     = round(TotalElapsed_ms - TotalCpu_ms, 1)
+          | extend WaitPercent        = round(100.0 * WaitPortion_ms / iif(TotalElapsed_ms==0, 1.0, TotalElapsed_ms), 1)
+          | order by TotalElapsed_ms desc
+          | take 10
+          | project query_hash, TotalElapsed_ms, AvgElapsed_ms, MaxElapsed_ms,
+                    TotalCpu_ms, WaitPortion_ms, WaitPercent,
+                    TotalExecutionCount, dcount_plan
+    MessageForEmptyKustoResult: "No query execution stats found for this database in the specified time period (MonWiQdsExecStats has no rows). Verify QDS is enabled and the time window covers actual query activity."
+    QuestionToAI: |-
+      -  Top 10 queries by total elapsed time. The data type is Table.
+
+      ### Columns
+      | Column | Description |
+      |--------|-------------|
+      | query_hash | Unique identifier of the query |
+      | TotalElapsed_ms | Sum of elapsed_time across all executions (= the "slowest" ranking metric) |
+      | AvgElapsed_ms | Average elapsed_time per execution |
+      | MaxElapsed_ms | Single worst execution duration |
+      | TotalCpu_ms | Sum of cpu_time |
+      | WaitPortion_ms | TotalElapsed_ms - TotalCpu_ms (time spent waiting/blocked) |
+      | WaitPercent | Percentage of time waiting (>=30% suggests heavy blocking/IO) |
+      | TotalExecutionCount | How many times the query ran |
+      | dcount_plan | Number of distinct execution plans (>1 may indicate plan regression) |
+
+      ### Rules
+      1. Store the entire table in {{TopDurationTable}}.
+      2. If dcount_plan > 1 for any top query, set {{HasPlanRegression}} = 'true' and recommend running APRC skill.
+      3. If WaitPercent >= 30 for top query, set {{HasHighWait}} = 'true' and recommend running LS-QUERIES-13 (Top Wait Types).
+      4. Set {{ResultMessage}} to "Top {{count}} slowest queries identified. Slowest: {{top1.query_hash}} with {{top1.TotalElapsed_ms}} ms total elapsed."
+      5. Set {{IssueDetected}} to 'true' if {{top1.TotalElapsed_ms}} > 1000.

@@ -100,7 +100,67 @@ MonAnalyticsDBSnapshot
 
 → 选择后路由到对应子目录搜 KQL 模板（见 Step 3）
 
+## Step 2a: Phase 0 Prerequisites (MANDATORY — 在 A/B/C 之前)
+
+**⚠️ 不论后续选 A、B 还是 C，都必须先执行 Phase 0 三步获取 KQL 必备变量。**
+
+> 原因: SQLDB 的 KQL 模板（尤其 Performance）严重依赖 `{AppNamesNodeNamesWithOriginalEventTimeRange}`、`{KustoClusterUri}`、`{SumCpuMillisecondOfAllApp}` 等变量。没有这些变量, KQL 无法填充也无法执行。
+>
+> 如果跳过 Phase 0 直接选 C, 后续 KQL 会因缺变量而失败。
+
+### Phase 0.1: execute-kusto-query (识别 Kusto cluster)
+
+- **Skill**: `Common/execute-kusto-query/SKILL.md` (在 SQLLivesiteAgents repo)
+- **动作**: DNS 解析 `{LogicalServerName}.database.windows.net` → 找 region → 查 KustoConnectionConfiguration.xml → 得到 cluster URI 和 database
+- **输出**: `{KustoClusterUri}`, `{KustoDatabase}`
+- **永远不要猜或硬编码 cluster URI**
+
+### Phase 0.2: get-db-info (获取数据库环境)
+
+- **Skill**: `Common/get-db-info/SKILL.md` 或直接跑 db-kql-investigation.md Step 1 的 MonAnalyticsDBSnapshot 查询
+- **输出**: `{AppName}` (= sql_instance_name), `{ClusterName}` (= tenant_ring_name), `{edition}`, `{service_level_objective}`, `{zone_resilient}`, `{fabric_partition_id}`, `{physical_database_id}`, `{sql_database_id}`, `{logical_resource_pool_id}`
+
+### Phase 0.3: appnameandnodeinfo (Performance 必备 — 6 tasks)
+
+- **Skill**: `performance/triage/appnameandnodeinfo-SKILL.md`
+- **必须执行 6 个 task** (Performance 类别强制, Availability/Connectivity 可选):
+  - Task 1: 复用 Phase 0.1 输出
+  - Task 2: AppNames + NodeNames + 时间范围 filter strings (主输出)
+  - Task 3: 7-day 历史 filter
+  - Task 4: SumCpuMillisecondOfAllApp (CPU 容量)
+  - Task 5: ActualSumCpuMillisecondOfAllApp (CPU 实际消耗)
+  - Task 6: edition + isInElasticPool + service_level_objective
+- **输出变量** (10+ 个, 后续所有 Performance KQL 必备):
+  - `{AppNamesOnly}`
+  - `{AppNamesNodeNamesWithOriginalEventTimeRange}` ← 最关键
+  - `{AppNamesNodeNamesWithPreciseTimeRange}`
+  - `{ApplicationNamesNodeNamesWithOriginalEventTimeRange}`
+  - `{NodeNamesWithOriginalEventTimeRange}`
+  - `{NodeNamesWithPreciseTimeRange}`
+  - `{AppNamesNodeNamesWith7DayOriginalEventTimeRange}`
+  - `{SumCpuMillisecondOfAllApp}`
+  - `{ActualSumCpuMillisecondOfAllApp}`
+  - `{isInElasticPool}`
+  - `{edition}`
+  - `{service_level_objective}`
+- **🚩 Managed Instance 检查**: Task 2 如果 `IsManagedInstance == true` → 立即终止, 提示用户使用 MI 流程
+
+### 类别 → Phase 0 强制范围
+
+| 选择的类别 (Step 2) | Phase 0.1 | Phase 0.2 | Phase 0.3 |
+|--------------------|-----------|-----------|-----------|
+| **A. Performance** | ✅ 必须 | ✅ 必须 | ✅ 必须 (KQL 全部依赖) |
+| **B. Availability** | ✅ 必须 | ✅ 必须 | ⚠️ 推荐 (部分 KQL 依赖, e.g. node-health) |
+| **C. Connectivity** | ✅ 必须 | ✅ 必须 | ⚠️ 部分场景需要 (gateway-node-low-login, xdbhost-*) |
+| **D. GeoDR** | ✅ 必须 | ✅ 必须 | ❌ 不需要 |
+| **E. Backup & Restore** | ✅ 必须 | ✅ 必须 | ❌ 不需要 |
+| **F. General** | ✅ 必须 | ⚠️ 视情况 | ❌ 不需要 |
+
+### Phase 0 完成后, 才进入 Step 2b
+
 ## Step 2b: 是否执行自动调查流程 (Optional)
+
+> **前置**: Step 2a Phase 0 已完成, 变量已就绪。
 
 **在选择问题类型后，如果该类别有 `auto_investigation.md`，询问用户：**
 
@@ -110,7 +170,7 @@ MonAnalyticsDBSnapshot
 请选择:
 A. 🤖 自动调查 — 自动 triage + 执行诊断流程 + RCA 输出
 B. 📂 手动选择子类别 — 直接选择要调查的子问题 (跳过 triage, 直接执行选定的 SKILL.md)
-C. ⏭️ 跳过 — 继续手动搜 KQL + TSG (Step 3)
+C. ⏭️ 跳过 — 继续手动搜 KQL + TSG (Step 3) — Phase 0 变量已可用, 可直接填充 KQL
 ```
 
 **子类别列表 (选 B 时展示，含执行的 SKILL 路径):**
@@ -141,29 +201,114 @@ C. ⏭️ 跳过 — 继续手动搜 KQL + TSG (Step 3)
 | 6 | xdbhost-tcp-rejections | `auto_investigation.md` Branch E (Step 60) | 8 |
 | 7 | brain-login-alert | `auto_investigation.md` Branch F (Step 70) | 2 |
 
-> **注意**: Availability 每个子类别有独立的 SKILL.md；Connectivity 的调查流程内联在 auto_investigation.md 的各 Branch 中。
+**Performance** 子类别:
+
+| # | 子类别 | 执行的 Skill | KQL 数 (livesite) |
+|---|--------|-------------|------------------|
+| 1 | cpu | `performance/cpu/SKILL.md` | 8 |
+| 2 | memory | `performance/memory/SKILL.md` | 5 |
+| 3 | out-of-disk | `performance/out-of-disk/SKILL.md` | 8 |
+| 4 | query-store | `performance/query-store/SKILL.md` | 13 |
+| 5 | aprc | `performance/aprc/SKILL.md` (共用 query-store APRC KQL) | 4 |
+| 6 | queries | `performance/queries/SKILL.md` | 22 |
+| 7 | compilation | `performance/compilation/SKILL.md` | 7 |
+| 8 | miscellaneous | `performance/miscellaneous/SKILL.md` | 11 |
+| 9 | sqlos | `performance/sqlos/references/non-yielding.md` (无 SKILL.md) | 2 |
+| 10 | blocking | `performance/blocking/SKILL.md` | 9 |
+| 11 | lsass | `performance/lsass/SKILL.md` (流程在 references) | 0 |
+| **default** | **5 skills 并行**: cpu + memory + out-of-disk + query-store + miscellaneous | 各对应 SKILL.md | 45 (合计) |
+
+> **注意**: 
+> - Availability 每个子类别有独立的 SKILL.md；Connectivity 的调查流程内联在 auto_investigation.md 的各 Branch 中。
+> - Performance 与 Availability 类似 (子类别独立 SKILL.md), 但 triage 可同时返回**多个** skill (e.g., cpu + memory)。
+> - Performance 必须在 Phase 0 执行 `appnameandnodeinfo` skill 获取 `{AppNamesNodeNamesWithOriginalEventTimeRange}` 等变量, 传给所有诊断 skill。
 
 **用户选定后，告知用户**: "将执行 `{skill路径}`，包含 N 步 workflow / N 条 KQL。"
 
 **当前有 auto_investigation.md 的类别：**
 - `availability/auto_investigation.md` — 11 routes (路由到独立 SKILL.md)
 - `connectivity/auto_investigation.md` — 7 routes (流程内联在各 Branch)
+- `performance/auto_investigation.md` — 11 routes (路由到独立 SKILL.md, 可多选并行执行)
 
 **选择 A → 执行 auto_investigation.md 的完整流程 (Phase 0 → Phase 1 Triage → 自动选 Route → 执行对应 SKILL.md/Branch → RCA)**
 **选择 B → 展示子类别列表，用户选定后告知将执行哪个 SKILL.md/Branch，跳过 Phase 1 Triage 直接执行 (仍需 Phase 0 Prerequisites)**
 **选择 A/B 完成后询问: "自动调查已完成，是否还需要继续搜索 KQL/TSG 补充调查？(Step 3-7)"**
-**选择 C → 继续正常的 Step 3 (搜 KQL + TSG) 流程。**
+**选择 C → 继续 Step 3 手动调查流程（triage 路由 → 搜目录下 YAML KQL 库 + TSG）。**
 
-## Step 3: Find KQL + Search TSG（并行两条线）
+## Step 3: Find KQL + Search TSG
 
-**并行执行两条线路：**
+### Step 3.0: Triage 路由 — 确定搜索的子目录
+
+**根据用户描述的问题，使用关键词 triage 定位到具体子目录，再搜该目录下的 YAML KQL 库。**
+
+```
+用户描述问题 (e.g. "database had an outage", "high CPU", "login failure")
+  ↓
+Triage 路由（关键词匹配）
+  ├── 匹配到关键词 → 定位到具体子目录 (e.g. availability/failover/)
+  │   → 搜该子目录下的 kql-livesite.yaml / kql-sqldri-*.yaml
+  │
+  ├── 无明确关键词但有 ICM → 从 ICM title/description 提取关键词 → 同上
+  │
+  └── 完全不确定方向 → 使用默认路由:
+      - Availability → availability/failover/ (最常见)
+      - Performance → 跑 5 维度入口 skill: CPU + memory + out-of-disk + QDS + miscellaneous
+      - Connectivity → connectivity/connectivity-scenarios/login-failure/
+```
+
+**各类别 triage 路由表：**
+
+**Availability** (关键词 → 子目录，来自 `availability/triage/SKILL.md`):
+
+| 关键词 | 路由到 | yaml 文件 |
+|--------|--------|-----------|
+| "failover", "role change", "replica transition" | `availability/failover/` | kql-livesite.yaml (25 skills) |
+| "quorum", "quorum loss", "insufficient replicas" | `availability/quorum-loss/` | kql-livesite.yaml (20 skills) |
+| "40613 state 126", "database in transition" | `availability/error-40613/` | kql-livesite.yaml (20 skills) |
+| "40613 state 127", "warmup" | `availability/error-40613/` | kql-livesite.yaml (20 skills) |
+| "node down", "bugcheck", "node health" | `availability/node-health/` | kql-livesite.yaml (8 skills) |
+| "update slo", "tier change", "scaling" | `availability/update-slo/` | kql-livesite.yaml (10 skills) |
+| "seeding", "seed failure", "TRDB0058" | `availability/seeding-rca/` | kql-livesite.yaml (11 skills) |
+| "HADR_SYNC_COMMIT", "sync commit wait" | `availability/high-sync-commit-wait/` | kql-livesite.yaml (11 skills, BC only) |
+| "long reconfig", "stuck reconfiguration" | `availability/long-reconfig/` | kql-livesite.yaml (21 skills) |
+| "login failure" (非 connectivity 类) | `availability/login-failure/` | kql-livesite.yaml (6 skills) |
+| (无匹配 — 默认) | `availability/failover/` | kql-livesite.yaml |
+
+**Performance** (关键词 → 子目录，来自 `performance/triage/SKILL.md`):
+
+| 关键词 | 路由到 | 入口 skill |
+|--------|--------|-----------|
+| "high CPU", "CPU spike" | `performance/cpu/` | LS-CPU-01 |
+| "blocking", "deadlock" | `performance/blocking/` | LS-BLOCKING-01 |
+| "memory", "OOM", "buffer pool" | `performance/memory/` | LS-MEMORY-01 |
+| "slow query", "query performance" | `performance/queries/` | LS-QUERIES-01 |
+| "QDS", "Query Store", "readonly" | `performance/query-store/` | LS-QDS-01 |
+| "compilation", "compile error" | `performance/compilation/` | LS-COMPILE-01 |
+| "disk space", "tempdb full", "quota" | `performance/out-of-disk/` | LS-OOD-01 |
+| "worker thread", "corruption", "AKV" | `performance/miscellaneous/` | LS-MISC-01 |
+| "non-yielding", "scheduler", "dump" | `performance/sqlos/` | LS-SQLOS-01 |
+| (无匹配 — 默认) | 跑 5 维度扫描: CPU + memory + out-of-disk + QDS + miscellaneous | 各 *-01 skill |
+
+**Connectivity** (关键词 → 子目录，来自 `connectivity/connectivity-triage/SKILL.md`):
+
+| 关键词 | 路由到 | yaml 位置 |
+|--------|--------|-----------|
+| "login failure", "connectivity" | `connectivity/connectivity-scenarios/` | login-failure/ |
+| "session disconnect", "timeout" | `connectivity/connectivity-scenarios/` | session-disconnect/ |
+| "xdbhost restart", "HasXdbHostRestarts" | `connectivity/connectivity-scenarios/` | xdbhost-restart/ |
+| "gateway node low login" | `connectivity/connectivity-scenarios/` | gateway-node-low-login-success-rate/ |
+| "nodes unhealthy", "control ring" | `connectivity/connectivity-scenarios/` | control-ring-nodes-unhealthy/ |
+| "TCP rejections" | `connectivity/connectivity-scenarios/` | xdbhost-high-tcp-rejections/ |
+| "BRAIN", "login success rate SLI" | `connectivity/connectivity-scenarios/` | brain-low-login-success-rate/ |
+| (无匹配 — 默认) | `connectivity/connectivity-scenarios/` | login-failure/ |
+
+### Step 3.1: 搜定位到的子目录下的 YAML KQL 库 + 并行搜 TSG
+
+**Triage 确定子目录后，并行执行两条线路：**
 
 #### 线路 1: 搜本地 YAML Templates（得到可执行 KQL）
 
-按 Step 2 的分类定位目录，在对应目录下搜 KQL 模板：
-
-### 2a. Search local templates first
-Use local YAML / extracted skills first because they are fastest and usually already parameterized.
+在 triage 定位到的子目录下搜 KQL 模板：
 
 ```text
 ~/.copilot/agents/skills/kql-templates/sqldb/
@@ -210,7 +355,7 @@ Recommended search order:
 3. CSS Wiki / msdata / EngHub
 4. AI-generated KQL using table schema references
 
-### 3b. Search msdata TSG Repos + CSS Wiki（并行线路 2）
+### Step 3.2: Search msdata TSG Repos + CSS Wiki（并行线路 2）
 
 **与线路 1（本地 YAML）并行执行。**按 Step 2 分类**只搜对应的** msdata TSG repo：
 
@@ -235,7 +380,7 @@ Recommended search order:
 - 如果 TSG 里有更新的 KQL → 优先用 TSG 版本
 - 如果本地没有匹配 → 用 TSG 里的 KQL
 
-### 3c. 兜底: AI Generate with Schema Reference
+### Step 3.3: 兜底 — AI Generate with Schema Reference
 If no suitable template exists, generate KQL using:
 - `~/.copilot/agents/skills/kql-templates/sqldb/db-tables-reference.md`
 - `~/.copilot/agents/skills/kql-templates/sqldb/db-tables-list.txt`
@@ -295,6 +440,46 @@ Common handling patterns:
 - **Case mismatch** → normalize server/database filters using `=~`
 
 ## Step 7: Analyze Results
+
+### Step 7.0: Apply `QuestionToAI` Rules (if KQL came from a YAML skill)
+
+**⚠️ MANDATORY when the executed KQL came from a `kql-distilled.yaml` / `kql-livesite.yaml` / `kql-sqldri-*.yaml` skill that has a `QuestionToAI:` field.**
+
+The `QuestionToAI:` field is structured AI post-processing logic. After the KQL returns:
+
+1. **Read the skill's `QuestionToAI` field** from the YAML where the KQL was sourced
+2. **Bind result columns to placeholders** (`{{column_name}}` → actual value from row 0 or row "top1")
+3. **Apply each rule sequentially** in the `### Rules` block
+4. **Compute output variables** (e.g. `{{IssueDetected}}`, `{{ResultMessage}}`, `{{HasPlanRegression}}`)
+5. **Display the variable bindings AND the rules outcome** in the analysis section, so the user sees exactly what was inferred
+
+**Common output variables** (convention from sqldri-copilot):
+
+| Variable | Type | Meaning |
+|----------|------|---------|
+| `{{IssueDetected}}` | bool string | `'true'` if skill found a problem, `'false'` otherwise — drives next-step routing |
+| `{{ResultMessage}}` | string | Human-readable one-line summary of the result |
+| `{{<custom>Message}}` | string | Skill-specific message (e.g. `{{cpuMessage}}`, `{{longRunningMessage}}`) |
+| `{{Has<Indicator>}}` | bool string | Skill-specific flag (e.g. `{{HasPlanRegression}}`, `{{HasHighWait}}`) — drives recommended follow-up skills |
+
+**Skip rule application if**:
+- The KQL was hand-written or modified beyond placeholder substitution
+- The skill has no `QuestionToAI` field
+- The query result is empty (use the skill's `MessageForEmptyKustoResult` instead)
+
+**Example** (DIST-QUERIES-TopDuration):
+
+```
+Result row[0]: query_hash=0xC610B2E4522D75C1, TotalElapsed_ms=215.2, WaitPercent=62.7, dcount_plan=1
+            ↓ Apply QuestionToAI rules
+Rule 2: dcount_plan=1, not > 1     → {{HasPlanRegression}} = 'false'
+Rule 3: WaitPercent=62.7 >= 30      → {{HasHighWait}}       = 'true'
+                                        → recommend LS-QUERIES-13 (Top Wait Types)
+Rule 5: TotalElapsed_ms=215.2 < 1000 → {{IssueDetected}}    = 'false'
+```
+
+### Step 7.1: Structured Summary
+
 Use a structured summary:
 - **Conclusion** — healthy vs unhealthy, issue type, confidence
 - **Rationale** — what evidence supports the conclusion

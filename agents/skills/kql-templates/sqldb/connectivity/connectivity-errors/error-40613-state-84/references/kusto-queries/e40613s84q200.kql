@@ -1,0 +1,14 @@
+//e40613s84q200
+let servername = '{LogicalServerName}';
+let dbname = '{LogicalDatabaseName}';
+let startTime = datetime({StartTime});
+let endTime = datetime({EndTime});
+MonLogin
+| where TIMESTAMP >= startTime
+| where TIMESTAMP <= endTime
+| where logical_server_name =~ servername
+| where database_name =~ dbname
+| where error == 40613 and state == 84 
+| summarize arg_max(total_time_ms, *) by bin( TIMESTAMP, 3m)
+| project TIMESTAMP, logical_server_name, database_name, error, state, is_contained_user, lookup_state,peer_address,xodbc_authentication_time_ms, connection_id, application_name,message, total_time_ms
+| order by total_time_ms desc
